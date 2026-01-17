@@ -9,7 +9,7 @@ type ObjectActionSlice = Pick<
 
 export const createObjectActions: StateCreator<
   ProjectStore,
-  [],
+  [["zustand/immer", never]],
   [],
   ObjectActionSlice
 > = (set) => ({

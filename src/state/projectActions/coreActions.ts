@@ -39,7 +39,7 @@ type CoreActionSlice = Pick<
 
 export const createCoreActions: StateCreator<
   ProjectStore,
-  [],
+  [["zustand/immer", never]],
   [],
   CoreActionSlice
 > = (set, get) => ({

@@ -15,7 +15,7 @@ type SquadActionSlice = Pick<
 
 export const createSquadActions: StateCreator<
   ProjectStore,
-  [],
+  [["zustand/immer", never]],
   [],
   SquadActionSlice
 > = (set) => ({

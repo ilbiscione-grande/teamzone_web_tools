@@ -7,10 +7,11 @@ import type { ProjectStore } from "./types";
 
 export type { ProjectActions, ProjectStateSlice, ProjectStore } from "./types";
 
-export const createProjectActions: StateCreator<ProjectStore, [], []> = (
-  set,
-  get
-) => ({
+export const createProjectActions: StateCreator<
+  ProjectStore,
+  [["zustand/immer", never]],
+  []
+> = (set, get) => ({
   ...createCoreActions(set, get),
   ...createBoardActions(set, get),
   ...createObjectActions(set, get),

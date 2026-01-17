@@ -26,7 +26,7 @@ type BoardActionSlice = Pick<
 
 export const createBoardActions: StateCreator<
   ProjectStore,
-  [],
+  [["zustand/immer", never]],
   [],
   BoardActionSlice
 > = (
