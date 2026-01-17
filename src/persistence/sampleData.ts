@@ -22,7 +22,10 @@ const createSampleSquad = (name: string, kit: Squad["kit"]): Squad => ({
   ],
 });
 
-const createFrame = (name: string, objects = []): BoardFrame => ({
+const createFrame = (
+  name: string,
+  objects: BoardFrame["objects"] = []
+): BoardFrame => ({
   id: createId(),
   name,
   objects,
