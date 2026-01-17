@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useEditorStore, type Tool } from "@/state/useEditorStore";
 import SquadEditor from "@/components/squad/SquadEditor";
 import { useProjectStore } from "@/state/useProjectStore";
@@ -87,7 +87,7 @@ const SquadIcon = () => (
   </svg>
 );
 
-const itemTools: { id: Tool; label: string; hint: string; icon: JSX.Element }[] = [
+const itemTools: { id: Tool; label: string; hint: string; icon: ReactNode }[] = [
   { id: "player", label: "Player", hint: "Double-click to add", icon: <PlayerIcon /> },
   { id: "ball", label: "Ball", hint: "Double-click to add", icon: <BallIcon /> },
   { id: "cone", label: "Cone", hint: "Double-click to add", icon: <ConeIcon /> },
@@ -95,14 +95,14 @@ const itemTools: { id: Tool; label: string; hint: string; icon: JSX.Element }[] 
   { id: "text", label: "Text", hint: "Double-click to add", icon: <TextIcon /> },
 ];
 
-const lineTools: { id: Tool; label: string; hint: string; icon: JSX.Element }[] = [
+const lineTools: { id: Tool; label: string; hint: string; icon: ReactNode }[] = [
   { id: "line", label: "Solid line", hint: "Drag to draw", icon: <LineIcon /> },
   { id: "line_dashed", label: "Dashed line", hint: "Drag to draw", icon: <DashedLineIcon /> },
   { id: "arrow", label: "Arrow", hint: "Drag to draw", icon: <ArrowIcon /> },
   { id: "arrow_dashed", label: "Dashed arrow", hint: "Drag to draw", icon: <DashedArrowIcon /> },
 ];
 
-const formTools: { id: Tool; label: string; hint: string; icon: JSX.Element }[] = [
+const formTools: { id: Tool; label: string; hint: string; icon: ReactNode }[] = [
   { id: "circle", label: "Circle", hint: "Drag to draw", icon: <CircleIcon /> },
   { id: "rect", label: "Rect", hint: "Drag to draw", icon: <RectIcon /> },
   { id: "triangle", label: "Triangle", hint: "Drag to draw", icon: <TriangleIcon /> },
