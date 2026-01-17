@@ -148,7 +148,10 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       window.alert("No layers to record.");
       return;
     }
-    const pixelRatio = stage.getPixelRatio?.() ?? window.devicePixelRatio ?? 1;
+    const pixelRatio =
+      (stage as Konva.Stage).getPixelRatio?.() ??
+      window.devicePixelRatio ??
+      1;
     const width = stage.width() * pixelRatio;
     const height = stage.height() * pixelRatio;
     const recordCanvas =
