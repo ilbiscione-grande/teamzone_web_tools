@@ -75,11 +75,6 @@ export default function BoardObject({
     onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => {
       onDragEnd(object.id, { x: event.target.x(), y: event.target.y() });
     },
-    ref: (node: Konva.Node) => {
-      if (node) {
-        registerNode(object.id, node);
-      }
-    },
   };
 
   if (object.type === "player") {
@@ -149,7 +144,14 @@ export default function BoardObject({
       labelRotation
     );
     return (
-      <Group {...commonProps}>
+      <Group
+        {...commonProps}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
+      >
         {player.hasBall && (
           <Circle
             radius={playerTokenSize + 0.8}
@@ -221,6 +223,11 @@ export default function BoardObject({
         stroke={ball.style.stroke}
         strokeWidth={ball.style.strokeWidth}
         draggable={!ball.locked}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
         onDragStart={(event) => {
           onDragStart();
           if (ball.attachedToId && onBallDragStart) {
@@ -241,6 +248,11 @@ export default function BoardObject({
         strokeWidth={circle.style.strokeWidth}
         fill={circle.style.fill}
         dash={circle.style.dash}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
       />
     );
   }
@@ -257,6 +269,11 @@ export default function BoardObject({
         strokeWidth={cone.style.strokeWidth}
         fill={cone.style.fill}
         dash={cone.style.dash}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
       />
     );
   }
@@ -272,6 +289,11 @@ export default function BoardObject({
         strokeWidth={goal.style.strokeWidth}
         fill={goal.style.fill}
         dash={goal.style.dash}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
       />
     );
   }
@@ -288,6 +310,11 @@ export default function BoardObject({
         strokeWidth={rect.style.strokeWidth}
         fill={rect.style.fill}
         dash={rect.style.dash}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
       />
     );
   }
@@ -304,6 +331,11 @@ export default function BoardObject({
         strokeWidth={triangle.style.strokeWidth}
         fill={triangle.style.fill}
         dash={triangle.style.dash}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
       />
     );
   }
@@ -320,6 +352,11 @@ export default function BoardObject({
         pointerLength={arrow.head ? 2.5 : 0}
         pointerWidth={arrow.head ? 2 : 0}
         dash={arrow.dashed ? [1, 1] : []}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
       />
     );
   }
@@ -327,7 +364,14 @@ export default function BoardObject({
   if (object.type === "text") {
     const label = object as TextLabel;
     return (
-      <Group {...commonProps}>
+      <Group
+        {...commonProps}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
+      >
         {label.background && (
           <Rect
             width={label.width}
