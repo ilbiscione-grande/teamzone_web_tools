@@ -34,7 +34,7 @@ type UseBoardInteractionsProps = {
   viewport: { zoom: number; offsetX: number; offsetY: number };
   rotation: number;
   rotationPivot: { x: number; y: number };
-  stageRef: RefObject<Konva.Stage>;
+  stageRef: RefObject<Konva.Stage | null>;
   setViewport: (viewport: {
     zoom?: number;
     offsetX?: number;
