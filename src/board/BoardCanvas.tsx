@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
 import { Stage, Layer, Rect, Arrow, Group } from "react-konva";
-import type { Board } from "@/models";
+import type { BallToken, Board } from "@/models";
 import Pitch, { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { useEditorStore } from "@/state/useEditorStore";
 import { useProjectStore } from "@/state/useProjectStore";
@@ -78,6 +78,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
           rotation: item.rotation + (next.rotation - item.rotation) * t,
         };
         if (item.type === "ball") {
+          const blendedBall = blended as BallToken;
           const baseAttach = item.attachedToId;
           const nextAttach =
             next.type === "ball" ? next.attachedToId : undefined;
@@ -86,8 +87,8 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
               ? baseAttach
               : undefined;
           if (!attachId) {
-            blended.attachedToId = undefined;
-            blended.offset = undefined;
+            blendedBall.attachedToId = undefined;
+            blendedBall.offset = undefined;
           }
           if (attachId) {
             const basePlayer = baseMap.get(attachId);
