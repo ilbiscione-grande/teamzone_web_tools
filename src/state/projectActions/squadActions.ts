@@ -1,11 +1,24 @@
 import type { StateCreator } from "zustand";
-import type { ProjectStore } from "./types";
+import type { ProjectActions, ProjectStore } from "./types";
 import type { Squad, SquadPlayer } from "@/models";
 import { createId } from "@/utils/id";
 
-export const createSquadActions: StateCreator<ProjectStore, [], []> = (
-  set
-) => ({
+type SquadActionSlice = Pick<
+  ProjectActions,
+  | "addSquad"
+  | "addSquadWithData"
+  | "updateSquad"
+  | "addSquadPlayer"
+  | "updateSquadPlayer"
+  | "removeSquadPlayer"
+>;
+
+export const createSquadActions: StateCreator<
+  ProjectStore,
+  [],
+  [],
+  SquadActionSlice
+> = (set) => ({
   addSquad: (name) => {
     set((state) => {
       if (!state.project) {

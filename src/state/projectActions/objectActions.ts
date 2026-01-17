@@ -1,10 +1,18 @@
 import type { StateCreator } from "zustand";
-import type { ProjectStore } from "./types";
+import type { ProjectActions, ProjectStore } from "./types";
 import type { DrawableObject } from "@/models";
 
-export const createObjectActions: StateCreator<ProjectStore, [], []> = (
-  set
-) => ({
+type ObjectActionSlice = Pick<
+  ProjectActions,
+  "setFrameObjects" | "addObject" | "updateObject" | "removeObject"
+>;
+
+export const createObjectActions: StateCreator<
+  ProjectStore,
+  [],
+  [],
+  ObjectActionSlice
+> = (set) => ({
   setFrameObjects: (boardId, frameIndex, objects) => {
     set((state) => {
       const board = state.project?.boards.find((item) => item.id === boardId);

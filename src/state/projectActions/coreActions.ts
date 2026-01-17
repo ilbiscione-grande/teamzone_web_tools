@@ -1,5 +1,5 @@
 import type { StateCreator } from "zustand";
-import type { ProjectStore } from "./types";
+import type { ProjectActions, ProjectStore } from "./types";
 import {
   deleteProject as deleteStoredProject,
   loadProject,
@@ -22,7 +22,27 @@ import {
   syncProjects,
 } from "@/persistence/cloud";
 
-export const createCoreActions: StateCreator<ProjectStore, [], []> = (set, get) => ({
+type CoreActionSlice = Pick<
+  ProjectActions,
+  | "hydrateIndex"
+  | "setPlan"
+  | "setAuthUser"
+  | "clearAuthUser"
+  | "setSyncStatus"
+  | "createProject"
+  | "openProject"
+  | "closeProject"
+  | "deleteProject"
+  | "loadSample"
+  | "updateProjectMeta"
+>;
+
+export const createCoreActions: StateCreator<
+  ProjectStore,
+  [],
+  [],
+  CoreActionSlice
+> = (set, get) => ({
   hydrateIndex: () => {
     set((state) => {
       const plan = state.plan;

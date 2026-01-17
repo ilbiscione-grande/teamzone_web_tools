@@ -1,5 +1,5 @@
 import type { StateCreator } from "zustand";
-import type { ProjectStore } from "./types";
+import type { ProjectActions, ProjectStore } from "./types";
 import type { Board, BoardFrame } from "@/models";
 import { createId } from "@/utils/id";
 import {
@@ -10,7 +10,26 @@ import {
 } from "@/state/projectHelpers";
 import { getPlanLimits } from "@/utils/plan";
 
-export const createBoardActions: StateCreator<ProjectStore, [], []> = (
+type BoardActionSlice = Pick<
+  ProjectActions,
+  | "setActiveBoard"
+  | "addBoard"
+  | "updateBoard"
+  | "setBoardNotes"
+  | "setBoardPitchView"
+  | "setBoardMode"
+  | "setActiveFrameIndex"
+  | "addFrame"
+  | "duplicateFrame"
+  | "deleteFrame"
+>;
+
+export const createBoardActions: StateCreator<
+  ProjectStore,
+  [],
+  [],
+  BoardActionSlice
+> = (
   set,
   get
 ) => ({
