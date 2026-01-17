@@ -49,7 +49,8 @@ const normalizeCustomFormations = (value: unknown): CustomFormation[] => {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value.flatMap((entry) => {
+  const result: CustomFormation[] = [];
+  value.forEach((entry) => {
     if (
       entry &&
       typeof entry === "object" &&
@@ -61,33 +62,32 @@ const normalizeCustomFormations = (value: unknown): CustomFormation[] => {
         (entry as CustomFormation).slots.length > 0
       ) {
         const side = (entry as CustomFormation).side === "away" ? "away" : "home";
-        return [
-          {
-            name,
-            side,
-            slots: (entry as CustomFormation).slots
-              .map((slot) => ({
-                position: slot.position,
-                playerId: slot.playerId,
-              }))
-              .filter((slot) => slot.position && Number.isFinite(slot.position.x)),
-          },
-        ];
+        const slots = (entry as CustomFormation).slots
+          .map((slot) => ({
+            position: slot.position,
+            playerId: slot.playerId,
+          }))
+          .filter((slot) => slot.position && Number.isFinite(slot.position.x));
+        if (slots.length > 0) {
+          result.push({ name, side, slots });
+        }
+        return;
       }
       if (Array.isArray((entry as LegacyCustomFormation).pattern)) {
         const pattern = (entry as LegacyCustomFormation).pattern;
         const positions = getFormationPositions(pattern, "home");
-        return [
-          {
-            name,
-            side: "home",
-            slots: positions.map((position) => ({ position })),
-          },
-        ];
+        result.push({
+          name,
+          side: "home",
+          slots: positions.map((position) => ({
+            position,
+            playerId: undefined,
+          })),
+        });
       }
     }
-    return [];
   });
+  return result;
 };
 
 const getLineYs = (count: number) => {
