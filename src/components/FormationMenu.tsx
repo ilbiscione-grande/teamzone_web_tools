@@ -308,7 +308,11 @@ export default function FormationMenu() {
         custom.side === formationSide
           ? custom.slots
           : custom.slots.map((slot) => ({
-              position: { x: PITCH_LENGTH - slot.position.x, y: slot.position.y },
+              position: {
+                x: PITCH_LENGTH - slot.position.x,
+                y: slot.position.y,
+              },
+              playerId: slot.playerId,
             }));
       const usedPlayers = new Set<string>();
       const squadPlayers = ensureSquadPlayers(slots.length);
