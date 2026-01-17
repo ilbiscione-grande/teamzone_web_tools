@@ -1,0 +1,108 @@
+import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
+import type { ProjectSummary, Project, Plan, AuthUser } from "@/models";
+import { saveProject, saveProjectIndex } from "@/persistence/storage";
+import { saveProjectCloud } from "@/persistence/cloud";
+import { createProjectActions, type ProjectActions } from "@/state/projectActions";
+import { updateIndex } from "@/state/projectHelpers";
+import { can } from "@/utils/plan";
+
+const PLAN_KEY = "tacticsboard:plan";
+const AUTH_USER_KEY = "tacticsboard:authUser";
+
+const loadAuthUser = (): AuthUser | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const raw = window.localStorage.getItem(AUTH_USER_KEY);
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as AuthUser;
+  } catch {
+    return null;
+  }
+};
+
+const loadPlan = (): Plan => {
+  if (typeof window === "undefined") {
+    return "FREE";
+  }
+  const stored = window.localStorage.getItem(PLAN_KEY) as Plan | null;
+  if (stored) {
+    return stored;
+  }
+  return loadAuthUser() ? "AUTH" : "FREE";
+};
+
+export type ProjectState = {
+  index: ProjectSummary[];
+  activeProjectId: string | null;
+  project: Project | null;
+  plan: Plan;
+  authUser: AuthUser | null;
+  syncStatus: {
+    state: "idle" | "syncing" | "saved" | "error";
+    message?: string;
+    updatedAt: string;
+  };
+} & ProjectActions;
+
+export const useProjectStore = create<ProjectState>()(
+  immer((set, get) => ({
+    index: [],
+    activeProjectId: null,
+    project: null,
+    plan: loadPlan(),
+    authUser: loadAuthUser(),
+    syncStatus: {
+      state: "idle",
+      updatedAt: new Date().toISOString(),
+    },
+    ...createProjectActions(set, get),
+  }))
+);
+
+export const persistActiveProject = () => {
+  const { project, index, plan, authUser } = useProjectStore.getState();
+  if (!project) {
+    return;
+  }
+  if (!can(plan, "project.save")) {
+    return;
+  }
+  saveProject(project);
+  saveProjectIndex(updateIndex(index, project));
+  if (authUser) {
+    useProjectStore.getState().setSyncStatus({
+      state: "syncing",
+      updatedAt: new Date().toISOString(),
+    });
+    saveProjectCloud(project).then((ok) => {
+      useProjectStore.getState().setSyncStatus({
+        state: ok ? "saved" : "error",
+        message: ok ? undefined : "Cloud save failed.",
+        updatedAt: new Date().toISOString(),
+      });
+    });
+  }
+};
+
+export const persistPlan = (plan: Plan) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(PLAN_KEY, plan);
+};
+
+export const persistAuthUser = (user: AuthUser | null) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (!user) {
+    window.localStorage.removeItem(AUTH_USER_KEY);
+    return;
+  }
+  window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+};

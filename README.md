@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tactics Board Web
 
-## Getting Started
+Digital taktiktavla for fotboll med statiskt och dynamiskt lage (frames).
 
-First, run the development server:
+## Tech stack och motiv
+- Next.js (App Router) + TypeScript: snabb routing, modern build, strict typing.
+- react-konva/konva: canvas-baserad rendering med React-komponenter och bra transformer/drag.
+- Zustand + immer: litet och snabbt state, enkel undo/redo och snapshots.
+- Tailwind CSS: snabbt UI-bygge med låg overhead.
 
+## Kom igang
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+Appen startar pa `http://localhost:3000`.
+
+Build:
+```bash
+npm run build
+npm run start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Tester:
+```bash
+npm run test
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Arkitektur (kort)
+- `src/app` routes
+- `src/components` UI (toolbox, panels, frames, list)
+- `src/board` canvas och pitch-rendering
+- `src/state` Zustand stores
+- `src/models` datatyper
+- `src/persistence` serialize/deserialize, localStorage, sample data
+- `src/utils` delade helpers
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Datamodell (kort)
+- `Project`: id, name, createdAt, updatedAt, schemaVersion, boards, squads
+- `Board`: id, name, mode, pitchView, notes, layers, frames, activeFrameIndex
+- `BoardFrame`: id, name, objects (snapshot per frame i MVP)
+- `DrawableObject`: player, ball, shapes, arrow, text, path
+- `Squad`: name, kit colors, clubLogo (dataURL), players
 
-## Learn More
+`schemaVersion` finns for framtida migrering.
 
-To learn more about Next.js, take a look at the following resources:
+## MVP-funktioner
+- Pitch vyer: full plan, offensiv/defensiv half, tom gronyta
+- Zoom/drag-pan + reset view
+- Tools: select, player, ball, shapes, arrow, text
+- Selection, drag, resize/rotate (Konva Transformer)
+- Squad editor med logo och kit colors
+- Dynamic boards med frame list, play/stop
+- Autosave i localStorage
+- Export/import av JSON
+- Undo/redo (50 steg)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Kända begränsningar
+- Inga snapshots per lager (endast objektlista per frame)
+- Text editor ar prompt-baserad (ingen inline editor)
+- Interpolering mellan frames ar ej implementerad
+- Full validering av importer ar minimal
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Roadmap
+- Backend-lagring och projekt-sync
+- Realtime collaboration
+- Export till bild/PDF
+- Forbattrad anim interpolation
+- Bättre inlinetext-editor och rich text
