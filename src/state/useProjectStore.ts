@@ -60,7 +60,7 @@ export const useProjectStore = create<ProjectState>()(
       state: "idle",
       updatedAt: new Date().toISOString(),
     },
-    ...createProjectActions(set, get),
+    ...createProjectActions(set, get, undefined),
   }))
 );
 
