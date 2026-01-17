@@ -12,7 +12,7 @@ export const createObjectActions: StateCreator<
   [["zustand/immer", never]],
   [],
   ObjectActionSlice
-> = (set) => ({
+> = (set, _get, _store) => ({
   setFrameObjects: (boardId, frameIndex, objects) => {
     set((state) => {
       const board = state.project?.boards.find((item) => item.id === boardId);

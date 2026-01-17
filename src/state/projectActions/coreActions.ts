@@ -42,7 +42,7 @@ export const createCoreActions: StateCreator<
   [["zustand/immer", never]],
   [],
   CoreActionSlice
-> = (set, get) => ({
+> = (set, get, _store) => ({
   hydrateIndex: () => {
     set((state) => {
       const plan = state.plan;

@@ -12,9 +12,9 @@ export const createProjectActions: StateCreator<
   [["zustand/immer", never]],
   [],
   ProjectActions
-> = (set, get) => ({
-  ...createCoreActions(set, get),
-  ...createBoardActions(set, get),
-  ...createObjectActions(set, get),
-  ...createSquadActions(set, get),
+> = (set, get, store) => ({
+  ...createCoreActions(set, get, store),
+  ...createBoardActions(set, get, store),
+  ...createObjectActions(set, get, store),
+  ...createSquadActions(set, get, store),
 });

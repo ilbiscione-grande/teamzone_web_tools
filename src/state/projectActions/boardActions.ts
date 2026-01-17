@@ -31,7 +31,8 @@ export const createBoardActions: StateCreator<
   BoardActionSlice
 > = (
   set,
-  get
+  get,
+  _store
 ) => ({
   setActiveBoard: (boardId) => {
     set((state) => {

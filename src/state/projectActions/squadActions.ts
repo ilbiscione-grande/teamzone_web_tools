@@ -18,7 +18,7 @@ export const createSquadActions: StateCreator<
   [["zustand/immer", never]],
   [],
   SquadActionSlice
-> = (set) => ({
+> = (set, _get, _store) => ({
   addSquad: (name) => {
     set((state) => {
       if (!state.project) {
