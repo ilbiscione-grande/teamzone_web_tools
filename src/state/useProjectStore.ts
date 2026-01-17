@@ -50,7 +50,7 @@ export type ProjectState = {
 } & ProjectActions;
 
 export const useProjectStore = create<ProjectState>()(
-  immer((set, get) => ({
+  immer((set, get, store) => ({
     index: [],
     activeProjectId: null,
     project: null,
@@ -60,7 +60,7 @@ export const useProjectStore = create<ProjectState>()(
       state: "idle",
       updatedAt: new Date().toISOString(),
     },
-    ...createProjectActions(set, get, undefined),
+    ...createProjectActions(set, get, store),
   }))
 );
 
