@@ -11,6 +11,11 @@ create index if not exists projects_user_id_idx on projects(user_id);
 
 alter table projects enable row level security;
 
+drop policy if exists "Users can view their projects" on projects;
+drop policy if exists "Users can insert their projects" on projects;
+drop policy if exists "Users can update their projects" on projects;
+drop policy if exists "Users can delete their projects" on projects;
+
 create policy "Users can view their projects"
 on projects
 for select
