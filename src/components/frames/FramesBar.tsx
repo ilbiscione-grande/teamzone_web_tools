@@ -8,13 +8,17 @@ import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { can } from "@/utils/plan";
 
+// Props for the FramesBar component
+
 type FramesBarProps = {
   board: Board;
   stage: Konva.Stage | null;
 };
 
 export default function FramesBar({ board, stage }: FramesBarProps) {
-  const setActiveFrameIndex = useProjectStore((state) => state.setActiveFrameIndex);
+  const setActiveFrameIndex = useProjectStore(
+    (state) => state.setActiveFrameIndex
+  );
   const addFrame = useProjectStore((state) => state.addFrame);
   const duplicateFrame = useProjectStore((state) => state.duplicateFrame);
   const deleteFrame = useProjectStore((state) => state.deleteFrame);
@@ -48,11 +52,18 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
   const canRecord = can(plan, "video.export");
 
   const timelineValue = playheadFrame;
-  const ticks = useMemo(() => board.frames.map((frame, index) => ({
-    id: frame.id,
-    index,
-    left: board.frames.length > 1 ? (index / (board.frames.length - 1)) * 100 : 0,
-  })), [board.frames]);
+  const ticks = useMemo(
+    () =>
+      board.frames.map((frame, index) => ({
+        id: frame.id,
+        index,
+        left:
+          board.frames.length > 1
+            ? (index / (board.frames.length - 1)) * 100
+            : 0,
+      })),
+    [board.frames]
+  );
 
   useEffect(() => {
     if (!isPlaying) {
@@ -314,25 +325,50 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </button>
           </div>
           <div className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--ink-0)]">
-          <button
-            className="rounded-full border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={() => setPlaying(!isPlaying)}
-            title={isPlaying ? "Pause" : "Play"}
-            aria-label={isPlaying ? "Pause" : "Play"}
-          >
-            {isPlaying ? (
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M9 6v12M15 6v12" />
-              </svg>
-            ) : (
+            <button
+              className="rounded-full border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={() => setPlaying(!isPlaying)}
+              title={isPlaying ? "Pause" : "Play"}
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? (
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <path d="M9 6v12M15 6v12" />
+                </svg>
+              ) : (
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M8 6l10 6-10 6V6z" />
+                </svg>
+              )}
+            </button>
+            <button
+              className="rounded-full border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={() =>
+                setActiveFrameIndex(
+                  board.id,
+                  Math.max(0, board.activeFrameIndex - 1)
+                )
+              }
+              title="Previous frame"
+              aria-label="Previous frame"
+            >
               <svg
                 aria-hidden
                 viewBox="0 0 24 24"
@@ -343,132 +379,109 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M8 6l10 6-10 6V6z" />
+                <path d="M18 6l-8 6 8 6V6z" />
+                <path d="M6 6v12" />
               </svg>
-            )}
-          </button>
-          <button
-            className="rounded-full border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={() =>
-              setActiveFrameIndex(
-                board.id,
-                Math.max(0, board.activeFrameIndex - 1)
-              )
-            }
-            title="Previous frame"
-            aria-label="Previous frame"
-          >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            </button>
+            <button
+              className="rounded-full border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={() =>
+                setActiveFrameIndex(
+                  board.id,
+                  Math.min(board.frames.length - 1, board.activeFrameIndex + 1)
+                )
+              }
+              title="Next frame"
+              aria-label="Next frame"
             >
-              <path d="M18 6l-8 6 8 6V6z" />
-              <path d="M6 6v12" />
-            </svg>
-          </button>
-          <button
-            className="rounded-full border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={() =>
-              setActiveFrameIndex(
-                board.id,
-                Math.min(board.frames.length - 1, board.activeFrameIndex + 1)
-              )
-            }
-            title="Next frame"
-            aria-label="Next frame"
-          >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M6 6l8 6-8 6V6z" />
-              <path d="M18 6v12" />
-            </svg>
-          </button>
-          <button
-            className="rounded-full border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={() => addFrame(board.id)}
-            title="Add frame"
-            aria-label="Add frame"
-          >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          </button>
-          <button
-            className="rounded-full border border-[var(--line)] p-2 hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-            onClick={() => deleteFrame(board.id, board.frames[board.activeFrameIndex].id)}
-            title="Delete frame"
-            aria-label="Delete frame"
-          >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 7h16" />
-              <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-              <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
-              <path d="M10 11v6M14 11v6" />
-            </svg>
-          </button>
-          <button
-            className={`rounded-full border p-2 ${
-              recording
-                ? "border-[var(--accent-1)] text-[var(--accent-1)]"
-                : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            }`}
-            onClick={recording ? stopRecording : startRecording}
-            title={recording ? "Stop recording" : "Record video"}
-            aria-label={recording ? "Stop recording" : "Record video"}
-            disabled={!canRecord}
-            data-locked={!canRecord}
-          >
-            {recording ? (
               <svg
                 aria-hidden
                 viewBox="0 0 24 24"
                 className="h-4 w-4"
-                fill="currentColor"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <rect x="7" y="7" width="10" height="10" rx="2" />
+                <path d="M6 6l8 6-8 6V6z" />
+                <path d="M18 6v12" />
               </svg>
-            ) : (
+            </button>
+            <button
+              className="rounded-full border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={() => addFrame(board.id)}
+              title="Add frame"
+              aria-label="Add frame"
+            >
               <svg
                 aria-hidden
                 viewBox="0 0 24 24"
                 className="h-4 w-4"
-                fill="currentColor"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
               >
-                <circle cx="12" cy="12" r="6" />
+                <path d="M12 5v14M5 12h14" />
               </svg>
-            )}
-          </button>
+            </button>
+            <button
+              className="rounded-full border border-[var(--line)] p-2 hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+              onClick={() =>
+                deleteFrame(board.id, board.frames[board.activeFrameIndex].id)
+              }
+              title="Delete frame"
+              aria-label="Delete frame"
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 7h16" />
+                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
+                <path d="M10 11v6M14 11v6" />
+              </svg>
+            </button>
+            <button
+              className={`rounded-full border p-2 ${
+                recording
+                  ? "border-[var(--accent-1)] text-[var(--accent-1)]"
+                  : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              }`}
+              onClick={recording ? stopRecording : startRecording}
+              title={recording ? "Stop recording" : "Record video"}
+              aria-label={recording ? "Stop recording" : "Record video"}
+              disabled={!canRecord}
+              data-locked={!canRecord}
+            >
+              {recording ? (
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="currentColor"
+                >
+                  <rect x="7" y="7" width="10" height="10" rx="2" />
+                </svg>
+              ) : (
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="currentColor"
+                >
+                  <circle cx="12" cy="12" r="6" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -486,9 +499,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
           <span className="display-font text-sm text-[var(--accent-0)]">
             Frames
           </span>
-          <span className="text-[11px]">
-            {board.frames.length} frames
-          </span>
+          <span className="text-[11px]">{board.frames.length} frames</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -511,7 +522,9 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
           </button>
           <button
             className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-            onClick={() => deleteFrame(board.id, board.frames[board.activeFrameIndex].id)}
+            onClick={() =>
+              deleteFrame(board.id, board.frames[board.activeFrameIndex].id)
+            }
             title="Delete frame"
             aria-label="Delete frame"
           >
@@ -533,7 +546,9 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
           </button>
           <button
             className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={() => duplicateFrame(board.id, board.frames[board.activeFrameIndex].id)}
+            onClick={() =>
+              duplicateFrame(board.id, board.frames[board.activeFrameIndex].id)
+            }
             title="Duplicate frame"
             aria-label="Duplicate frame"
           >
@@ -671,7 +686,9 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             <select
               className="h-8 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
               value={frameDurationMs}
-              onChange={(event) => setFrameDurationMs(Number(event.target.value))}
+              onChange={(event) =>
+                setFrameDurationMs(Number(event.target.value))
+              }
             >
               <option value={1500}>Very slow (1.5s)</option>
               <option value={1000}>Slow (1.0s)</option>
@@ -712,7 +729,11 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
         <div className="relative h-10">
           <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-[var(--line)]" />
           {ticks.map((tick) => (
-            <div key={tick.id} className="absolute" style={{ left: `${tick.left}%` }}>
+            <div
+              key={tick.id}
+              className="absolute"
+              style={{ left: `${tick.left}%` }}
+            >
               <div className="absolute top-1/2 h-3 w-[2px] -translate-y-1/2 rounded-full bg-[var(--accent-0)]" />
               {tick.index === board.activeFrameIndex && (
                 <div className="absolute top-1/2 mt-3 h-[6px] w-[6px] -translate-x-1/2 rounded-full bg-[var(--accent-0)]" />
