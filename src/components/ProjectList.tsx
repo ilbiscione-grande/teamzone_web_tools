@@ -345,7 +345,15 @@ export default function ProjectList() {
                       </button>
                       <button
                         className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                        onClick={() => deleteProject(project.id)}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Delete "${project.name}"? This cannot be undone.`
+                            )
+                          ) {
+                            deleteProject(project.id);
+                          }
+                        }}
                       >
                         Delete
                       </button>

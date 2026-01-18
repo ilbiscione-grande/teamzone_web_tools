@@ -80,7 +80,7 @@ export const persistActiveProject = () => {
   }
   saveProject(project);
   saveProjectIndex(updateIndex(index, project));
-  if (authUser) {
+  if (authUser && plan === "PAID") {
     useProjectStore.getState().setSyncStatus({
       state: "syncing",
       updatedAt: new Date().toISOString(),

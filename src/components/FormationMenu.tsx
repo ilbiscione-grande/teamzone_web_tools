@@ -364,7 +364,7 @@ export default function FormationMenu() {
         Formations
       </button>
       {open && (
-        <div className="absolute right-0 top-10 z-40 w-60 rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[11px] text-[var(--ink-1)] shadow-xl shadow-black/40">
+        <div className="absolute right-0 top-10 z-40 w-72 rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[11px] text-[var(--ink-1)] shadow-xl shadow-black/40">
           <p className="mb-2 uppercase text-[var(--ink-1)]">Formation</p>
           <div className="grid gap-2">
             <div className="grid grid-cols-2 gap-2">

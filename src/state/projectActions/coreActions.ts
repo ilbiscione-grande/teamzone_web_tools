@@ -50,7 +50,7 @@ export const createCoreActions: StateCreator<
       state.index = can(plan, "project.save") ? loadProjectIndex() : [];
     });
     const { authUser } = get();
-    if (authUser) {
+    if (authUser && get().plan === "PAID") {
       get().setSyncStatus({
         state: "syncing",
         updatedAt: new Date().toISOString(),
@@ -149,7 +149,7 @@ export const createCoreActions: StateCreator<
     const project = ensureBoardSquads(createDefaultProject(name, options));
     if (can(get().plan, "project.save")) {
       saveProject(project);
-      if (get().authUser) {
+      if (get().authUser && get().plan === "PAID") {
         saveProjectCloud(project);
       }
     }
@@ -178,7 +178,7 @@ export const createCoreActions: StateCreator<
     const project = ensureBoardSquads(createSampleProject());
     if (can(get().plan, "project.save")) {
       saveProject(project);
-      if (get().authUser) {
+      if (get().authUser && get().plan === "PAID") {
         saveProjectCloud(project);
       }
     }
@@ -194,7 +194,7 @@ export const createCoreActions: StateCreator<
     }
   },
   openProject: (id) => {
-    if (get().authUser) {
+    if (get().authUser && get().plan === "PAID") {
       fetchProjectCloud(id).then((project) => {
         if (!project) {
           return;
@@ -238,7 +238,7 @@ export const createCoreActions: StateCreator<
   deleteProject: (id) => {
     if (can(get().plan, "project.save")) {
       deleteStoredProject(id);
-      if (get().authUser) {
+      if (get().authUser && get().plan === "PAID") {
         deleteProjectCloud(id);
       }
     }
