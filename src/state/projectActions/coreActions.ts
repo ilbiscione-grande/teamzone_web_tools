@@ -125,6 +125,8 @@ export const createCoreActions: StateCreator<
       state.authUser = null;
       state.plan = "FREE";
       state.index = [];
+      state.project = null;
+      state.activeProjectId = null;
       state.syncStatus = {
         state: "idle",
         updatedAt: new Date().toISOString(),

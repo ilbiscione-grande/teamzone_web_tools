@@ -41,6 +41,7 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
   const [name, setName] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const canSignIn = email.trim().length > 0;
+  const [upgradeBusy, setUpgradeBusy] = useState(false);
 
   if (!open) {
     return null;
@@ -138,6 +139,33 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
     }
     setPlan("PAID");
     onClose();
+  };
+
+  const onCheckout = async () => {
+    if (!supabase) {
+      return;
+    }
+    setUpgradeBusy(true);
+    setStatus(null);
+    const { data, error } = await supabase.auth.getSession();
+    const accessToken = data.session?.access_token;
+    if (error || !accessToken) {
+      setStatus("Please sign in before upgrading.");
+      setUpgradeBusy(false);
+      return;
+    }
+    const response = await fetch("/api/stripe/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accessToken }),
+    });
+    const result = (await response.json()) as { url?: string; error?: string };
+    if (!response.ok || !result.url) {
+      setStatus(result.error ?? "Checkout failed.");
+      setUpgradeBusy(false);
+      return;
+    }
+    window.location.href = result.url;
   };
 
   return (
@@ -300,18 +328,20 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                   {tier === "PAID" && (
                     <button
                       className="mt-3 rounded-full border border-[var(--line)] px-3 py-2 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      onClick={onEnablePaid}
-                      disabled={isCurrent || !!authUser}
+                      onClick={authUser ? onCheckout : onEnablePaid}
+                      disabled={isCurrent || upgradeBusy}
                       title={
                         authUser
-                          ? "Plan is managed by your account."
+                          ? "Upgrade with Stripe."
                           : "Enable PAID (demo)"
                       }
                     >
                       {isCurrent
                         ? "Current plan"
                         : authUser
-                        ? "Managed by account"
+                        ? upgradeBusy
+                          ? "Opening Stripe..."
+                          : "Upgrade"
                         : "Enable PAID (demo)"}
                     </button>
                   )}
