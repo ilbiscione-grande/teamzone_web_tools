@@ -28,6 +28,9 @@ export default function AuthListener() {
     }
 
     const syncProfilePlan = async (userId: string) => {
+      if (!supabase) {
+        return;
+      }
       const { data } = await supabase
         .from("profiles")
         .select("plan")
