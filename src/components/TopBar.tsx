@@ -27,6 +27,7 @@ export default function TopBar() {
   const index = useProjectStore((state) => state.index);
   const authUser = useProjectStore((state) => state.authUser);
   const syncStatus = useProjectStore((state) => state.syncStatus);
+  const syncNow = useProjectStore((state) => state.syncNow);
   const setPlan = useProjectStore((state) => state.setPlan);
   const exportGate = usePlanGate("project.export");
   const importGate = usePlanGate("project.import");
@@ -278,6 +279,8 @@ export default function TopBar() {
                 ? "border-[var(--accent-1)] text-[var(--accent-1)]"
                 : syncStatus.state === "syncing"
                 ? "border-[var(--accent-2)] text-[var(--accent-2)]"
+                : syncStatus.state === "offline"
+                ? "border-[var(--accent-1)] text-[var(--accent-1)]"
                 : "border-[var(--line)] text-[var(--ink-1)]"
             }`}
             title={
@@ -285,6 +288,8 @@ export default function TopBar() {
                 ? syncStatus.message ?? "Cloud sync error."
                 : syncStatus.state === "syncing"
                 ? "Syncing to cloud..."
+                : syncStatus.state === "offline"
+                ? syncStatus.message ?? "Offline."
                 : "Cloud synced."
             }
           >
@@ -292,8 +297,19 @@ export default function TopBar() {
               ? "Syncing"
               : syncStatus.state === "error"
               ? "Sync error"
+              : syncStatus.state === "offline"
+              ? "Offline"
               : "Synced"}
           </div>
+        )}
+        {authUser && plan === "PAID" && (
+          <button
+            className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            onClick={syncNow}
+            title="Sync now"
+          >
+            Sync now
+          </button>
         )}
         <button
           className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"

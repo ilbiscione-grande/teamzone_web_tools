@@ -46,7 +46,7 @@ export type ProjectState = {
   plan: Plan;
   authUser: AuthUser | null;
   syncStatus: {
-    state: "idle" | "syncing" | "saved" | "error";
+    state: "idle" | "syncing" | "saved" | "error" | "offline";
     message?: string;
     updatedAt: string;
   };
@@ -81,6 +81,14 @@ export const persistActiveProject = () => {
   saveProject(project);
   saveProjectIndex(updateIndex(index, project));
   if (authUser && plan === "PAID") {
+    if (typeof window !== "undefined" && !window.navigator.onLine) {
+      useProjectStore.getState().setSyncStatus({
+        state: "offline",
+        message: "Offline. Will sync when online.",
+        updatedAt: new Date().toISOString(),
+      });
+      return;
+    }
     useProjectStore.getState().setSyncStatus({
       state: "syncing",
       updatedAt: new Date().toISOString(),

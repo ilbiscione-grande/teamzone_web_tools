@@ -16,7 +16,7 @@ export type ProjectStateSlice = {
   plan: Plan;
   authUser: AuthUser | null;
   syncStatus: {
-    state: "idle" | "syncing" | "saved" | "error";
+    state: "idle" | "syncing" | "saved" | "error" | "offline";
     message?: string;
     updatedAt: string;
   };
@@ -29,6 +29,7 @@ export type ProjectActions = {
   setAuthUser: (user: AuthUser) => void;
   clearAuthUser: () => void;
   setSyncStatus: (status: ProjectStateSlice["syncStatus"]) => void;
+  syncNow: () => void;
   createProject: (
     name: string,
     options?: {

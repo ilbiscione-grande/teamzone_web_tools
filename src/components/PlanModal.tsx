@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { getPlanLimits } from "@/utils/plan";
 import { supabase } from "@/utils/supabaseClient";
@@ -42,6 +42,29 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
   const [status, setStatus] = useState<string | null>(null);
   const canSignIn = email.trim().length > 0;
   const [upgradeBusy, setUpgradeBusy] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get("checkout");
+    if (checkout === "success") {
+      setStatus("Payment successful. Your plan will update shortly.");
+      params.delete("checkout");
+      const nextUrl = params.toString()
+        ? `${window.location.pathname}?${params.toString()}`
+        : window.location.pathname;
+      window.history.replaceState({}, "", nextUrl);
+    } else if (checkout === "cancel") {
+      setStatus("Checkout canceled.");
+      params.delete("checkout");
+      const nextUrl = params.toString()
+        ? `${window.location.pathname}?${params.toString()}`
+        : window.location.pathname;
+      window.history.replaceState({}, "", nextUrl);
+    }
+  }, []);
 
   if (!open) {
     return null;

@@ -30,6 +30,7 @@ type CoreActionSlice = Pick<
   | "setAuthUser"
   | "clearAuthUser"
   | "setSyncStatus"
+  | "syncNow"
   | "createProject"
   | "openProject"
   | "closeProject"
@@ -51,6 +52,14 @@ export const createCoreActions: StateCreator<
     });
     const { authUser } = get();
     if (authUser && get().plan === "PAID") {
+      if (typeof window !== "undefined" && !window.navigator.onLine) {
+        get().setSyncStatus({
+          state: "offline",
+          message: "Offline. Will sync when online.",
+          updatedAt: new Date().toISOString(),
+        });
+        return;
+      }
       get().setSyncStatus({
         state: "syncing",
         updatedAt: new Date().toISOString(),
@@ -106,6 +115,41 @@ export const createCoreActions: StateCreator<
     set((state) => {
       state.syncStatus = status;
     });
+  },
+  syncNow: () => {
+    const { authUser, plan } = get();
+    if (!authUser || plan !== "PAID") {
+      return;
+    }
+    if (typeof window !== "undefined" && !window.navigator.onLine) {
+      get().setSyncStatus({
+        state: "offline",
+        message: "Offline. Will sync when online.",
+        updatedAt: new Date().toISOString(),
+      });
+      return;
+    }
+    get().setSyncStatus({
+      state: "syncing",
+      updatedAt: new Date().toISOString(),
+    });
+    syncProjects()
+      .then((index) => {
+        set((state) => {
+          state.index = index;
+        });
+        get().setSyncStatus({
+          state: "saved",
+          updatedAt: new Date().toISOString(),
+        });
+      })
+      .catch(() => {
+        get().setSyncStatus({
+          state: "error",
+          message: "Cloud sync failed.",
+          updatedAt: new Date().toISOString(),
+        });
+      });
   },
   setAuthUser: (user) => {
     set((state) => {
