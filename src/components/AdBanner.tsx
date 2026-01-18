@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 
 type AdBannerProps = {
@@ -25,6 +25,7 @@ export default function AdBanner({ variant = "top" }: AdBannerProps) {
   const adsenseClient = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
   const slotId = useMemo(() => getSlotId(variant), [variant]);
   const isEnabled = plan === "FREE" && !!adsenseClient && !!slotId;
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isEnabled) {
@@ -33,10 +34,18 @@ export default function AdBanner({ variant = "top" }: AdBannerProps) {
     try {
       window.adsbygoogle = window.adsbygoogle || [];
       window.adsbygoogle.push({});
+      setDebugInfo(
+        `adsbygoogle pushed | client=${adsenseClient} | slot=${slotId}`
+      );
     } catch {
       // Ignore ad script errors to avoid breaking UI.
+      setDebugInfo("adsbygoogle push failed");
     }
   }, [isEnabled, slotId]);
+
+  const debugEnabled =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("ads");
 
   if (plan !== "FREE") {
     return null;
@@ -50,6 +59,12 @@ export default function AdBanner({ variant = "top" }: AdBannerProps) {
         }`}
       >
         Ad space
+        {debugEnabled && (
+          <div className="mt-2 text-[9px] uppercase tracking-widest text-[var(--accent-1)]">
+            Missing env: {adsenseClient ? "" : "client"}{" "}
+            {slotId ? "" : "slot"}
+          </div>
+        )}
       </div>
     );
   }
@@ -68,8 +83,13 @@ export default function AdBanner({ variant = "top" }: AdBannerProps) {
         data-ad-slot={slotId}
         data-ad-format="auto"
         data-full-width-responsive="true"
-        data-adtest={process.env.NODE_ENV !== "production" ? "on" : undefined}
+        data-adtest={debugEnabled ? "on" : undefined}
       />
+      {debugEnabled && (
+        <div className="mt-2 text-[9px] uppercase tracking-widest text-[var(--accent-2)]">
+          {debugInfo ?? "adsbygoogle not pushed yet"}
+        </div>
+      )}
     </div>
   );
 }

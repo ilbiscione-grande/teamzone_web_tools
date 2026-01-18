@@ -27,7 +27,6 @@ export default function TopBar() {
   const index = useProjectStore((state) => state.index);
   const authUser = useProjectStore((state) => state.authUser);
   const syncStatus = useProjectStore((state) => state.syncStatus);
-  const syncNow = useProjectStore((state) => state.syncNow);
   const setPlan = useProjectStore((state) => state.setPlan);
   const exportGate = usePlanGate("project.export");
   const importGate = usePlanGate("project.import");
@@ -108,12 +107,6 @@ export default function TopBar() {
         <h1 className="display-font text-2xl text-[var(--ink-0)]">
           Tactics Board
         </h1>
-        {!can(plan, "project.save") && (
-          <div className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-1)]">
-            Free mode - no save · Max {getPlanLimits(plan).maxProjects} project · Max{" "}
-            {getPlanLimits(plan).maxBoards} boards
-          </div>
-        )}
         <input
           className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
           value={project.name}
@@ -264,14 +257,6 @@ export default function TopBar() {
           Projects {projectCount}/{maxProjects} · Boards {project.boards.length}/
           {maxBoards}
         </div>
-        <div className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-          {plan}
-        </div>
-        {authUser && (
-          <div className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
-            {authUser.name}
-          </div>
-        )}
         {authUser && (
           <div
             className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-widest ${
@@ -293,23 +278,31 @@ export default function TopBar() {
                 : "Cloud synced."
             }
           >
-            {syncStatus.state === "syncing"
-              ? "Syncing"
-              : syncStatus.state === "error"
-              ? "Sync error"
-              : syncStatus.state === "offline"
-              ? "Offline"
-              : "Synced"}
+            <span className="inline-flex items-center gap-1">
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-3 w-3"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M20 6v6h-6" />
+                <path d="M4 18v-6h6" />
+                <path d="M20 12a8 8 0 0 0-14-5" />
+                <path d="M4 12a8 8 0 0 0 14 5" />
+              </svg>
+              {syncStatus.state === "syncing"
+                ? "Syncing"
+                : syncStatus.state === "error"
+                ? "Sync error"
+                : syncStatus.state === "offline"
+                ? "Offline"
+                : "Synced"}
+            </span>
           </div>
-        )}
-        {authUser && plan === "PAID" && (
-          <button
-            className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={syncNow}
-            title="Sync now"
-          >
-            Sync now
-          </button>
         )}
         <button
           className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"

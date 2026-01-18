@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
-import { getPlanLimits } from "@/utils/plan";
+import { can, getPlanLimits } from "@/utils/plan";
 import { supabase } from "@/utils/supabaseClient";
 
 type PlanModalProps = {
@@ -232,6 +232,24 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
 
         <div className="mt-6 grid gap-6 md:grid-cols-[1fr_1.2fr]">
           <div className="space-y-4">
+            <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-4 text-xs text-[var(--ink-1)]">
+              <p className="mb-2 text-[11px] uppercase">Plan</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-widest">
+                  {plan}
+                </div>
+                {authUser && (
+                  <div className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
+                    {authUser.name}
+                  </div>
+                )}
+                {!can(plan, "project.save") && (
+                  <div className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-1)]">
+                    Free mode - no save
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-4">
               <p className="mb-3 text-[11px] uppercase">Account</p>
               {authUser ? (
