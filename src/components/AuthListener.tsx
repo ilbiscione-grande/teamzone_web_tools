@@ -44,7 +44,7 @@ export default function AuthListener() {
       const confirmKick = window.confirm(
         "Sign out other devices to keep only this session active?"
       );
-      if (confirmKick) {
+      if (confirmKick && supabase) {
         try {
           await supabase.auth.signOut({ scope: "others" });
         } catch {
