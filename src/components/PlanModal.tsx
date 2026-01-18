@@ -160,6 +160,33 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
     window.location.href = result.url;
   };
 
+  const onPortal = async () => {
+    if (!supabase) {
+      return;
+    }
+    setUpgradeBusy(true);
+    setStatus(null);
+    const { data, error } = await supabase.auth.getSession();
+    const accessToken = data.session?.access_token;
+    if (error || !accessToken) {
+      setStatus("Please sign in before managing billing.");
+      setUpgradeBusy(false);
+      return;
+    }
+    const response = await fetch("/api/stripe/portal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accessToken }),
+    });
+    const result = (await response.json()) as { url?: string; error?: string };
+    if (!response.ok || !result.url) {
+      setStatus(result.error ?? "Unable to open billing portal.");
+      setUpgradeBusy(false);
+      return;
+    }
+    window.location.href = result.url;
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="w-full max-w-3xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
@@ -318,22 +345,38 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                     </div>
                   )}
                   {tier === "PAID" && (
-                    <button
-                      className="mt-3 rounded-full border border-[var(--line)] px-3 py-2 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      onClick={authUser ? onCheckout : undefined}
-                      disabled={isCurrent || upgradeBusy || !authUser}
-                      title={
-                        authUser ? "Upgrade with Stripe." : "Sign in to upgrade."
-                      }
-                    >
-                      {isCurrent
-                        ? "Current plan"
-                        : authUser
-                        ? upgradeBusy
-                          ? "Opening Stripe..."
-                          : "Upgrade"
-                        : "Sign in to upgrade"}
-                    </button>
+                    <div className="mt-3 grid gap-2">
+                      <button
+                        className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        onClick={authUser ? onCheckout : undefined}
+                        disabled={isCurrent || upgradeBusy || !authUser}
+                        title={
+                          authUser
+                            ? "Upgrade with Stripe."
+                            : "Sign in to upgrade."
+                        }
+                      >
+                        {isCurrent
+                          ? "Current plan"
+                          : authUser
+                          ? upgradeBusy
+                            ? "Opening Stripe..."
+                            : "Upgrade"
+                          : "Sign in to upgrade"}
+                      </button>
+                      <button
+                        className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        onClick={authUser ? onPortal : undefined}
+                        disabled={!authUser || upgradeBusy}
+                        title={
+                          authUser
+                            ? "Manage billing in Stripe."
+                            : "Sign in to manage billing."
+                        }
+                      >
+                        Manage billing
+                      </button>
+                    </div>
                   )}
                 </div>
               );

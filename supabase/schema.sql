@@ -39,6 +39,7 @@ using (auth.uid() = user_id);
 create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   plan text not null default 'FREE',
+  stripe_customer_id text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

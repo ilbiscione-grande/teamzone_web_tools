@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { stripe } from "@/utils/stripe";
 
-type CheckoutPayload = {
+type PortalPayload = {
   accessToken: string;
 };
 
@@ -15,15 +15,15 @@ export async function POST(request: Request) {
   }
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-  const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID ?? "";
-  if (!supabaseUrl || !supabaseAnonKey || !priceId) {
+  const stripeSecret = process.env.STRIPE_SECRET_KEY ?? "";
+  if (!supabaseUrl || !supabaseAnonKey || !stripeSecret) {
     return NextResponse.json(
       { error: "Missing Supabase or Stripe configuration." },
       { status: 500 }
     );
   }
 
-  const body = (await request.json()) as CheckoutPayload;
+  const body = (await request.json()) as PortalPayload;
   const accessToken = body?.accessToken?.trim();
   if (!accessToken) {
     return NextResponse.json({ error: "Missing access token." }, { status: 401 });
@@ -47,31 +47,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  const userId = userData.user.id;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("stripe_customer_id")
+    .eq("id", userId)
+    .single();
+
+  if (!profile?.stripe_customer_id) {
+    return NextResponse.json(
+      { error: "No Stripe customer found." },
+      { status: 404 }
+    );
+  }
+
   const origin =
     request.headers.get("origin") ??
     `https://${request.headers.get("host") ?? ""}`;
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${origin}/?checkout=success`,
-    cancel_url: `${origin}/?checkout=cancel`,
-    client_reference_id: userData.user.id,
-    customer_email: userData.user.email ?? undefined,
-    metadata: {
-      userId: userData.user.id,
-    },
+  const session = await stripe.billingPortal.sessions.create({
+    customer: profile.stripe_customer_id,
+    return_url: `${origin}/?portal=return`,
   });
-
-  if (session.customer) {
-    await supabase
-      .from("profiles")
-      .update({
-        stripe_customer_id: String(session.customer),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userData.user.id);
-  }
 
   return NextResponse.json({ url: session.url });
 }

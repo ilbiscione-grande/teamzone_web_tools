@@ -42,7 +42,13 @@ export async function POST(request: Request) {
       });
       await supabase
         .from("profiles")
-        .update({ plan: "PAID", updated_at: new Date().toISOString() })
+        .update({
+          plan: "PAID",
+          stripe_customer_id: session.customer
+            ? String(session.customer)
+            : null,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", userId);
     }
   }
