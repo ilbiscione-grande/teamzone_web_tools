@@ -75,7 +75,7 @@ export default function AdBanner({ variant = "top" }: AdBannerProps) {
 
   return (
     <div
-      className={`rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-2 ${
+      className={`relative rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-2 ${
         variant === "side" ? "w-full" : ""
       }`}
       style={{ height: 200, maxHeight: 200, overflow: "hidden" }}
@@ -90,7 +90,7 @@ export default function AdBanner({ variant = "top" }: AdBannerProps) {
         data-adtest={debugEnabled ? "on" : undefined}
       />
       {debugEnabled && (
-        <div className="mt-2 text-[9px] uppercase tracking-widest text-[var(--accent-2)]">
+        <div className="absolute bottom-2 left-2 rounded-full border border-[var(--line)] bg-[var(--panel)]/90 px-2 py-1 text-[9px] uppercase tracking-widest text-[var(--accent-2)]">
           {debugInfo ?? "adsbygoogle not pushed yet"}
         </div>
       )}
