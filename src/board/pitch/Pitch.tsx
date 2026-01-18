@@ -64,7 +64,7 @@ export default function Pitch({ view, overlay, overlayText }: PitchProps) {
 
   if (view === "GREEN_EMPTY") {
     return (
-      <Group>
+      <Group listening={false}>
         <Rect
           x={bounds.x}
           y={bounds.y}
@@ -142,7 +142,7 @@ export default function Pitch({ view, overlay, overlayText }: PitchProps) {
   };
 
   return (
-    <Group>
+    <Group listening={false}>
       <Rect
         x={bounds.x}
         y={bounds.y}
