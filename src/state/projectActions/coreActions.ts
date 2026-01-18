@@ -26,6 +26,7 @@ type CoreActionSlice = Pick<
   ProjectActions,
   | "hydrateIndex"
   | "setPlan"
+  | "setPlanFromProfile"
   | "setAuthUser"
   | "clearAuthUser"
   | "setSyncStatus"
@@ -90,6 +91,15 @@ export const createCoreActions: StateCreator<
     if (plan === "FREE") {
       persistAuthUser(null);
     }
+    persistPlan(plan);
+  },
+  setPlanFromProfile: (plan) => {
+    set((state) => {
+      state.plan = plan;
+      if (!can(plan, "project.save")) {
+        state.index = [];
+      }
+    });
     persistPlan(plan);
   },
   setSyncStatus: (status) => {

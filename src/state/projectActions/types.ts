@@ -25,6 +25,7 @@ export type ProjectStateSlice = {
 export type ProjectActions = {
   hydrateIndex: () => void;
   setPlan: (plan: Plan) => void;
+  setPlanFromProfile: (plan: Plan) => void;
   setAuthUser: (user: AuthUser) => void;
   clearAuthUser: () => void;
   setSyncStatus: (status: ProjectStateSlice["syncStatus"]) => void;

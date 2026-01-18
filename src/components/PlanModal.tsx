@@ -133,6 +133,9 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
   };
 
   const onEnablePaid = () => {
+    if (authUser) {
+      return;
+    }
     setPlan("PAID");
     onClose();
   };
@@ -298,9 +301,18 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                     <button
                       className="mt-3 rounded-full border border-[var(--line)] px-3 py-2 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                       onClick={onEnablePaid}
-                      disabled={isCurrent}
+                      disabled={isCurrent || !!authUser}
+                      title={
+                        authUser
+                          ? "Plan is managed by your account."
+                          : "Enable PAID (demo)"
+                      }
                     >
-                      {isCurrent ? "Current plan" : "Enable PAID (demo)"}
+                      {isCurrent
+                        ? "Current plan"
+                        : authUser
+                        ? "Managed by account"
+                        : "Enable PAID (demo)"}
                     </button>
                   )}
                 </div>

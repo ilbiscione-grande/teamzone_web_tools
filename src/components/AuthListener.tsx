@@ -16,6 +16,9 @@ const getDisplayName = (email: string | null, fullName?: string | null) => {
 
 export default function AuthListener() {
   const setAuthUser = useProjectStore((state) => state.setAuthUser);
+  const setPlanFromProfile = useProjectStore(
+    (state) => state.setPlanFromProfile
+  );
   const clearAuthUser = useProjectStore((state) => state.clearAuthUser);
   const hydrateIndex = useProjectStore((state) => state.hydrateIndex);
 
@@ -23,6 +26,17 @@ export default function AuthListener() {
     if (!supabase) {
       return;
     }
+
+    const syncProfilePlan = async (userId: string) => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("id", userId)
+        .single();
+      const plan =
+        data?.plan === "PAID" || data?.plan === "AUTH" ? data.plan : "FREE";
+      setPlanFromProfile(plan);
+    };
 
     supabase.auth.getSession().then(({ data }) => {
       const session = data.session;
@@ -38,7 +52,7 @@ export default function AuthListener() {
           ),
           createdAt: user.created_at ?? new Date().toISOString(),
         });
-        hydrateIndex();
+        syncProfilePlan(user.id).finally(() => hydrateIndex());
       } else {
         clearAuthUser();
       }
@@ -58,7 +72,7 @@ export default function AuthListener() {
             ),
             createdAt: user.created_at ?? new Date().toISOString(),
           });
-          hydrateIndex();
+          syncProfilePlan(user.id).finally(() => hydrateIndex());
         } else {
           clearAuthUser();
         }
