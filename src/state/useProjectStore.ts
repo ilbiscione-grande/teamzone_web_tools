@@ -25,15 +25,18 @@ const loadAuthUser = (): AuthUser | null => {
   }
 };
 
-const loadPlan = (): Plan => {
+const loadPlan = (authUser: AuthUser | null): Plan => {
   if (typeof window === "undefined") {
+    return "FREE";
+  }
+  if (!authUser) {
     return "FREE";
   }
   const stored = window.localStorage.getItem(PLAN_KEY) as Plan | null;
   if (stored) {
     return stored;
   }
-  return loadAuthUser() ? "AUTH" : "FREE";
+  return "AUTH";
 };
 
 export type ProjectState = {
@@ -50,18 +53,21 @@ export type ProjectState = {
 } & ProjectActions;
 
 export const useProjectStore = create<ProjectState>()(
-  immer((set, get, store) => ({
+  immer((set, get, store) => {
+    const authUser = loadAuthUser();
+    return {
     index: [],
     activeProjectId: null,
     project: null,
-    plan: loadPlan(),
-    authUser: loadAuthUser(),
+    plan: loadPlan(authUser),
+    authUser,
     syncStatus: {
       state: "idle",
       updatedAt: new Date().toISOString(),
     },
     ...createProjectActions(set, get, store),
-  }))
+    };
+  })
 );
 
 export const persistActiveProject = () => {

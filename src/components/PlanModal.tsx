@@ -133,14 +133,6 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
     onClose();
   };
 
-  const onEnablePaid = () => {
-    if (authUser) {
-      return;
-    }
-    setPlan("PAID");
-    onClose();
-  };
-
   const onCheckout = async () => {
     if (!supabase) {
       return;
@@ -328,12 +320,10 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                   {tier === "PAID" && (
                     <button
                       className="mt-3 rounded-full border border-[var(--line)] px-3 py-2 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      onClick={authUser ? onCheckout : onEnablePaid}
-                      disabled={isCurrent || upgradeBusy}
+                      onClick={authUser ? onCheckout : undefined}
+                      disabled={isCurrent || upgradeBusy || !authUser}
                       title={
-                        authUser
-                          ? "Upgrade with Stripe."
-                          : "Enable PAID (demo)"
+                        authUser ? "Upgrade with Stripe." : "Sign in to upgrade."
                       }
                     >
                       {isCurrent
@@ -342,7 +332,7 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                         ? upgradeBusy
                           ? "Opening Stripe..."
                           : "Upgrade"
-                        : "Enable PAID (demo)"}
+                        : "Sign in to upgrade"}
                     </button>
                   )}
                 </div>

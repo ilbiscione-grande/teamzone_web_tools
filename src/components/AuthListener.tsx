@@ -27,6 +27,33 @@ export default function AuthListener() {
       return;
     }
 
+    const maybeEnforceSingleSession = async (
+      userId: string,
+      accessToken?: string | null
+    ) => {
+      if (!accessToken) {
+        return;
+      }
+      const key = `tacticsboard:singleSession:${userId}:${accessToken.slice(0, 12)}`;
+      if (typeof window === "undefined") {
+        return;
+      }
+      if (window.localStorage.getItem(key)) {
+        return;
+      }
+      const confirmKick = window.confirm(
+        "Sign out other devices to keep only this session active?"
+      );
+      if (confirmKick) {
+        try {
+          await supabase.auth.signOut({ scope: "others" });
+        } catch {
+          // Ignore sign-out errors to avoid blocking sign-in.
+        }
+      }
+      window.localStorage.setItem(key, "1");
+    };
+
     const syncProfilePlan = async (userId: string) => {
       if (!supabase) {
         return;
@@ -56,6 +83,7 @@ export default function AuthListener() {
           createdAt: user.created_at ?? new Date().toISOString(),
         });
         syncProfilePlan(user.id).finally(() => hydrateIndex());
+        maybeEnforceSingleSession(user.id, session.access_token);
       } else {
         clearAuthUser();
       }
@@ -76,6 +104,7 @@ export default function AuthListener() {
             createdAt: user.created_at ?? new Date().toISOString(),
           });
           syncProfilePlan(user.id).finally(() => hydrateIndex());
+          maybeEnforceSingleSession(user.id, session.access_token);
         } else {
           clearAuthUser();
         }
