@@ -141,6 +141,9 @@ export const useBoardInteractions = ({
         return;
       }
     }
+    if (!isStage) {
+      return;
+    }
 
     const stage = stageRef.current;
     if (!stage) {
@@ -183,6 +186,14 @@ export const useBoardInteractions = ({
 
   const commitDraft = () => {
     if (!draft) {
+      return;
+    }
+    const dragDistance = Math.hypot(
+      draft.current.x - draft.start.x,
+      draft.current.y - draft.start.y
+    );
+    if (dragDistance < 0.5) {
+      setDraft(null);
       return;
     }
     pushHistory(clone(objects));
@@ -331,69 +342,16 @@ export const useBoardInteractions = ({
       });
     }
     if (activeTool === "circle") {
-      pushHistory(clone(objects));
-      addObject(boardId, frameIndex, {
-        id: createId(),
-        type: "circle",
-        position: world,
-        rotation: 0,
-        scale: { x: 1, y: 1 },
-        style: { ...defaultStyle },
-        zIndex: 1,
-        locked: false,
-        visible: true,
-        radius: 4,
-      });
+      return;
     }
     if (activeTool === "rect") {
-      pushHistory(clone(objects));
-      addObject(boardId, frameIndex, {
-        id: createId(),
-        type: "rect",
-        position: world,
-        rotation: 0,
-        scale: { x: 1, y: 1 },
-        style: { ...defaultStyle },
-        zIndex: 1,
-        locked: false,
-        visible: true,
-        width: 8,
-        height: 5,
-        cornerRadius: 0.4,
-      });
+      return;
     }
     if (activeTool === "triangle") {
-      pushHistory(clone(objects));
-      addObject(boardId, frameIndex, {
-        id: createId(),
-        type: "triangle",
-        position: world,
-        rotation: 0,
-        scale: { x: 1, y: 1 },
-        style: { ...defaultStyle },
-        zIndex: 1,
-        locked: false,
-        visible: true,
-        width: 8,
-        height: 6,
-      });
+      return;
     }
     if (isLineTool) {
-      pushHistory(clone(objects));
-      addObject(boardId, frameIndex, {
-        id: createId(),
-        type: "arrow",
-        position: world,
-        rotation: 0,
-        scale: { x: 1, y: 1 },
-        style: { ...defaultStyle, strokeWidth: 0.6 },
-        zIndex: 1,
-        locked: false,
-        visible: true,
-        points: [0, 0, 8, -4],
-        head: linePreset.head,
-        dashed: linePreset.dashed,
-      });
+      return;
     }
     if (activeTool === "text") {
       const text = window.prompt("Enter text") ?? "";

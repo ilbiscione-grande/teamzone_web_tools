@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
-import { Stage, Layer, Rect, Arrow, Group } from "react-konva";
+import { Stage, Layer, Rect, Arrow, Group, Circle } from "react-konva";
 import type { BallToken, Board } from "@/models";
 import Pitch, { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { useEditorStore } from "@/state/useEditorStore";
@@ -45,6 +45,13 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
 
   const frameIndex = board.activeFrameIndex;
   const objects = board.frames[frameIndex]?.objects ?? [];
+  const selectedArrows = useMemo(
+    () =>
+      objects.filter(
+        (item) => item.type === "arrow" && selection.includes(item.id)
+      ),
+    [objects, selection]
+  );
   const renderObjects = useMemo(() => {
     if (board.mode !== "DYNAMIC") {
       return objects;
@@ -436,6 +443,69 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                 }}
               />
             ))}
+            {selectedArrows.map((arrow) => {
+              const start = arrow.position;
+              const end = {
+                x: arrow.position.x + (arrow as { points: number[] }).points[2],
+                y: arrow.position.y + (arrow as { points: number[] }).points[3],
+              };
+              const locked = arrow.locked;
+              return (
+                <Group key={`${arrow.id}-handles`}>
+                  <Circle
+                    x={start.x}
+                    y={start.y}
+                    radius={0.7}
+                    fill="#ffffff"
+                    stroke="#0f1b1a"
+                    strokeWidth={0.15}
+                    draggable={!locked}
+                    onDragStart={() => pushHistory(clone(objects))}
+                    onDragEnd={(event) => {
+                      const newStart = {
+                        x: event.target.x(),
+                        y: event.target.y(),
+                      };
+                      const newPoints = [
+                        0,
+                        0,
+                        end.x - newStart.x,
+                        end.y - newStart.y,
+                      ];
+                      updateObject(board.id, frameIndex, arrow.id, {
+                        position: newStart,
+                        points: newPoints,
+                      });
+                    }}
+                  />
+                  <Circle
+                    x={end.x}
+                    y={end.y}
+                    radius={0.7}
+                    fill="#ffffff"
+                    stroke="#0f1b1a"
+                    strokeWidth={0.15}
+                    draggable={!locked}
+                    onDragStart={() => pushHistory(clone(objects))}
+                    onDragEnd={(event) => {
+                      const newEnd = {
+                        x: event.target.x(),
+                        y: event.target.y(),
+                      };
+                      const newPoints = [
+                        0,
+                        0,
+                        newEnd.x - start.x,
+                        newEnd.y - start.y,
+                      ];
+                      updateObject(board.id, frameIndex, arrow.id, {
+                        points: newPoints,
+                      });
+                    }}
+                  />
+                </Group>
+              );
+            })}
             {draft && draft.type === "arrow" && (
               <Arrow
                 points={[
