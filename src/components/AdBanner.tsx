@@ -26,6 +26,14 @@ export default function AdBanner({ variant = "top" }: AdBannerProps) {
   const slotId = useMemo(() => getSlotId(variant), [variant]);
   const isEnabled = plan === "FREE" && !!adsenseClient && !!slotId;
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const [debugEnabled, setDebugEnabled] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hasDebug = new URLSearchParams(window.location.search).has("ads");
+      setDebugEnabled(hasDebug);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isEnabled) {
@@ -42,10 +50,6 @@ export default function AdBanner({ variant = "top" }: AdBannerProps) {
       setDebugInfo("adsbygoogle push failed");
     }
   }, [isEnabled, slotId]);
-
-  const debugEnabled =
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).has("ads");
 
   if (plan !== "FREE") {
     return null;
