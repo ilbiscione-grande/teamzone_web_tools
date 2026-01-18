@@ -22,6 +22,7 @@ export default function TopBar() {
   const openProject = useProjectStore((state) => state.openProject);
   const closeProject = useProjectStore((state) => state.closeProject);
   const addBoard = useProjectStore((state) => state.addBoard);
+  const duplicateBoard = useProjectStore((state) => state.duplicateBoard);
   const createProject = useProjectStore((state) => state.createProject);
   const plan = useProjectStore((state) => state.plan);
   const index = useProjectStore((state) => state.index);
@@ -199,6 +200,46 @@ export default function TopBar() {
             >
               <path d="M12 20h9" />
               <path d="M16.5 3.5l4 4L7 21l-4 1 1-4 12.5-14.5z" />
+            </svg>
+          </button>
+          <button
+            className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            onClick={() => {
+              if (!activeBoard) {
+                return;
+              }
+              const nextName =
+                window.prompt("Duplicate board name", `${activeBoard.name} Copy`) ??
+                "";
+              if (nextName.trim()) {
+                if (boardLimitReached) {
+                  window.alert("Board limit reached for this plan.");
+                  return;
+                }
+                duplicateBoard(activeBoard.id, nextName.trim());
+              }
+            }}
+            title={
+              boardLimitReached
+                ? "Board limit reached for this plan."
+                : "Duplicate board"
+            }
+            aria-label="Duplicate board"
+            disabled={boardLimitReached}
+            data-locked={boardLimitReached}
+          >
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="8" y="8" width="12" height="12" rx="2" />
+              <path d="M4 16V6a2 2 0 0 1 2-2h10" />
             </svg>
           </button>
           <button

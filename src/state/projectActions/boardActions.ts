@@ -19,6 +19,7 @@ type BoardActionSlice = Pick<
   | "setBoardPitchView"
   | "setBoardMode"
   | "setActiveFrameIndex"
+  | "duplicateBoard"
   | "addFrame"
   | "duplicateFrame"
   | "deleteFrame"
@@ -105,6 +106,41 @@ export const createBoardActions: StateCreator<
         return;
       }
       board.activeFrameIndex = index;
+    });
+  },
+  duplicateBoard: (boardId, name) => {
+    set((state) => {
+      if (!state.project) {
+        return;
+      }
+      const source = state.project.boards.find((item) => item.id === boardId);
+      if (!source) {
+        return;
+      }
+      const limits = getPlanLimits(state.plan);
+      if (state.project.boards.length >= limits.maxBoards) {
+        window.alert("Board limit reached for this plan.");
+        return;
+      }
+      const clonedFrames = source.frames.map((frame) => ({
+        ...frame,
+        id: createId(),
+        objects: JSON.parse(JSON.stringify(frame.objects)),
+      }));
+      const clone: Board = {
+        ...source,
+        id: createId(),
+        name,
+        frames: clonedFrames,
+        layers: JSON.parse(JSON.stringify(source.layers)),
+        activeFrameIndex: Math.min(
+          source.activeFrameIndex,
+          clonedFrames.length - 1
+        ),
+      };
+      state.project.boards.push(clone);
+      state.project.activeBoardId = clone.id;
+      state.project.updatedAt = new Date().toISOString();
     });
   },
   addFrame: (boardId, name = "Frame") => {

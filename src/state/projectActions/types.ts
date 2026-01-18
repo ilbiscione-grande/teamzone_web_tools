@@ -50,6 +50,7 @@ export type ProjectActions = {
   setBoardPitchView: (boardId: string, pitchView: Board["pitchView"]) => void;
   setBoardMode: (boardId: string, mode: Board["mode"]) => void;
   setActiveFrameIndex: (boardId: string, index: number) => void;
+  duplicateBoard: (boardId: string, name: string) => void;
   addFrame: (boardId: string, name?: string) => void;
   duplicateFrame: (boardId: string, frameId: string) => void;
   deleteFrame: (boardId: string, frameId: string) => void;
