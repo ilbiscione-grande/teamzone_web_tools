@@ -37,6 +37,11 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
     (state) => state.attachBallToPlayer
   );
   const loopPlayback = useEditorStore((state) => state.loopPlayback);
+  const isLinkingPlayers = useEditorStore((state) => state.isLinkingPlayers);
+  const linkingPlayerIds = useEditorStore(
+    (state) => state.linkingPlayerIds
+  );
+  const addLinkingPlayer = useEditorStore((state) => state.addLinkingPlayer);
 
   const project = useProjectStore((state) => state.project);
   const addObject = useProjectStore((state) => state.addObject);
@@ -451,6 +456,9 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                 activeTool={activeTool}
                 isSelected={selection.includes(object.id)}
                 isHighlighted={highlightedPlayers.includes(object.id)}
+                isLinking={isLinkingPlayers}
+                isLinkCandidate={linkingPlayerIds.includes(object.id)}
+                onLinkPlayer={(id) => addLinkingPlayer(id)}
                 squadPlayers={squadPlayers}
                 kitByPlayerId={kitByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}

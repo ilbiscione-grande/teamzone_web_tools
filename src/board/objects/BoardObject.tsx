@@ -24,6 +24,9 @@ type BoardObjectProps = {
   activeTool: Tool;
   isSelected: boolean;
   isHighlighted: boolean;
+  isLinking: boolean;
+  isLinkCandidate: boolean;
+  onLinkPlayer: (id: string) => void;
   squadPlayers: SquadPlayer[];
   kitByPlayerId: Record<string, string>;
   defaultPlayerFill: string;
@@ -45,6 +48,9 @@ export default function BoardObject({
   activeTool,
   isSelected,
   isHighlighted,
+  isLinking,
+  isLinkCandidate,
+  onLinkPlayer,
   squadPlayers,
   kitByPlayerId,
   defaultPlayerFill,
@@ -73,6 +79,10 @@ export default function BoardObject({
     draggable: !object.locked,
     onClick: (event: Konva.KonvaEventObject<MouseEvent>) => {
       event.cancelBubble = true;
+      if (object.type === "player" && isLinking) {
+        onLinkPlayer(object.id);
+        return;
+      }
       onSelect(object.id, event.evt.shiftKey);
     },
     onDragStart,
@@ -161,6 +171,14 @@ export default function BoardObject({
             radius={playerTokenSize + 1.6}
             stroke="#f9bf4a"
             strokeWidth={0.35}
+          />
+        )}
+        {isLinkCandidate && (
+          <Circle
+            radius={playerTokenSize + 2.2}
+            stroke="var(--accent-1)"
+            strokeWidth={0.3}
+            dash={[0.6, 0.6]}
           />
         )}
         {isSelected && (

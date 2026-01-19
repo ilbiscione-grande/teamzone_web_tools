@@ -34,6 +34,8 @@ type EditorState = {
   playheadFrame: number;
   attachBallToPlayer: boolean;
   loopPlayback: boolean;
+  isLinkingPlayers: boolean;
+  linkingPlayerIds: string[];
   past: DrawableObject[][];
   future: DrawableObject[][];
   setTool: (tool: Tool) => void;
@@ -47,6 +49,9 @@ type EditorState = {
   setPlayheadFrame: (value: number) => void;
   setAttachBallToPlayer: (value: boolean) => void;
   setLoopPlayback: (value: boolean) => void;
+  setLinkingPlayers: (value: boolean) => void;
+  addLinkingPlayer: (id: string) => void;
+  clearLinkingPlayers: () => void;
   pushHistory: (snapshot: DrawableObject[]) => void;
   undo: (current: DrawableObject[]) => DrawableObject[] | null;
   redo: (current: DrawableObject[]) => DrawableObject[] | null;
@@ -72,6 +77,8 @@ export const useEditorStore = create<EditorState>()(
     playheadFrame: 0,
     attachBallToPlayer: false,
     loopPlayback: false,
+    isLinkingPlayers: false,
+    linkingPlayerIds: [],
     past: [],
     future: [],
     setTool: (tool) => {
@@ -127,6 +134,23 @@ export const useEditorStore = create<EditorState>()(
     setLoopPlayback: (value) => {
       set((state) => {
         state.loopPlayback = value;
+      });
+    },
+    setLinkingPlayers: (value) => {
+      set((state) => {
+        state.isLinkingPlayers = value;
+      });
+    },
+    addLinkingPlayer: (id) => {
+      set((state) => {
+        if (!state.linkingPlayerIds.includes(id)) {
+          state.linkingPlayerIds.push(id);
+        }
+      });
+    },
+    clearLinkingPlayers: () => {
+      set((state) => {
+        state.linkingPlayerIds = [];
       });
     },
     pushHistory: (snapshot) => {

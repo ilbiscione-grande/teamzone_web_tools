@@ -190,6 +190,16 @@ export default function Toolbox() {
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
   const updateBoard = useProjectStore((state) => state.updateBoard);
   const selection = useEditorStore((state) => state.selection);
+  const isLinkingPlayers = useEditorStore((state) => state.isLinkingPlayers);
+  const linkingPlayerIds = useEditorStore(
+    (state) => state.linkingPlayerIds
+  );
+  const setLinkingPlayers = useEditorStore(
+    (state) => state.setLinkingPlayers
+  );
+  const clearLinkingPlayers = useEditorStore(
+    (state) => state.clearLinkingPlayers
+  );
 
   const board = getActiveBoard(project);
   const frameIndex = board?.activeFrameIndex ?? 0;
@@ -231,15 +241,24 @@ export default function Toolbox() {
     updateBoard(board.id, { playerHighlights: next });
   };
 
-  const handleLinkPlayers = () => {
-    if (!board || selectedPlayers.length < 2) {
+  const toggleLinkMode = () => {
+    if (!board) {
       return;
     }
-    const nextLinks = [
-      ...(board.playerLinks ?? []),
-      { id: createId(), playerIds: selectedPlayers.map((player) => player.id) },
-    ];
-    updateBoard(board.id, { playerLinks: nextLinks });
+    if (isLinkingPlayers) {
+      if (linkingPlayerIds.length >= 2) {
+        const nextLinks = [
+          ...(board.playerLinks ?? []),
+          { id: createId(), playerIds: [...linkingPlayerIds] },
+        ];
+        updateBoard(board.id, { playerLinks: nextLinks });
+      }
+      setLinkingPlayers(false);
+      clearLinkingPlayers();
+      return;
+    }
+    clearLinkingPlayers();
+    setLinkingPlayers(true);
   };
 
 
@@ -305,16 +324,19 @@ export default function Toolbox() {
               </span>
             </button>
             <button
-              className="flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-              onClick={handleLinkPlayers}
-              disabled={selectedPlayers.length < 2}
+              className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition ${
+                isLinkingPlayers
+                  ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                  : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+              }`}
+              onClick={toggleLinkMode}
             >
               <span className="mt-1">
                 <LinkIcon />
               </span>
               <span className="text-xs font-semibold">Link line</span>
               <span className="text-[10px] text-[var(--ink-1)]">
-                Between selected
+                {isLinkingPlayers ? "Click players, press again" : "Start linking"}
               </span>
             </button>
           </div>
