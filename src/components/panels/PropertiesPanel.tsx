@@ -33,6 +33,7 @@ export default function PropertiesPanel() {
   const addObject = useProjectStore((state) => state.addObject);
   const pushHistory = useEditorStore((state) => state.pushHistory);
   const selection = useEditorStore((state) => state.selection);
+  const selectedLinkId = useEditorStore((state) => state.selectedLinkId);
 
   const board = getActiveBoard(project);
   const frameIndex = board?.activeFrameIndex ?? 0;
@@ -44,6 +45,9 @@ export default function PropertiesPanel() {
     [objects, selection]
   );
   const target = selected[0];
+  const selectedLink = board?.playerLinks?.find(
+    (link) => link.id === selectedLinkId
+  );
 
   if (!board) {
     return null;
@@ -80,6 +84,19 @@ export default function PropertiesPanel() {
         y: duplicate.position.y + 2,
       };
       addObject(board.id, frameIndex, duplicate);
+    });
+  };
+
+  const handleDeleteLink = () => {
+    if (!board || !selectedLinkId) {
+      return;
+    }
+    const nextLinks = (board.playerLinks ?? []).filter(
+      (link) => link.id !== selectedLinkId
+    );
+    useEditorStore.getState().setSelectedLinkId(null);
+    useProjectStore.getState().updateBoard(board.id, {
+      playerLinks: nextLinks,
     });
   };
 
@@ -143,10 +160,25 @@ export default function PropertiesPanel() {
         </div>
       </div>
 
-      {selected.length === 0 ? (
+      {selected.length === 0 && !selectedLink ? (
         <p>Select an object to edit its properties.</p>
       ) : (
         <div className="space-y-4">
+          {selected.length === 0 && selectedLink && (
+            <div className="rounded-2xl border border-[var(--line)] p-3">
+              <p className="text-[11px] uppercase text-[var(--ink-1)]">
+                Link line
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                  onClick={handleDeleteLink}
+                >
+                  Delete link
+                </button>
+              </div>
+            </div>
+          )}
           <div className="rounded-2xl border border-[var(--line)] p-3">
             <p className="text-[11px] uppercase text-[var(--ink-1)]">Style</p>
             <div className="mt-2 grid grid-cols-2 gap-2">

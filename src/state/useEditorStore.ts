@@ -36,6 +36,7 @@ type EditorState = {
   loopPlayback: boolean;
   isLinkingPlayers: boolean;
   linkingPlayerIds: string[];
+  selectedLinkId: string | null;
   past: DrawableObject[][];
   future: DrawableObject[][];
   setTool: (tool: Tool) => void;
@@ -52,6 +53,7 @@ type EditorState = {
   setLinkingPlayers: (value: boolean) => void;
   addLinkingPlayer: (id: string) => void;
   clearLinkingPlayers: () => void;
+  setSelectedLinkId: (id: string | null) => void;
   pushHistory: (snapshot: DrawableObject[]) => void;
   undo: (current: DrawableObject[]) => DrawableObject[] | null;
   redo: (current: DrawableObject[]) => DrawableObject[] | null;
@@ -79,6 +81,7 @@ export const useEditorStore = create<EditorState>()(
     loopPlayback: false,
     isLinkingPlayers: false,
     linkingPlayerIds: [],
+    selectedLinkId: null,
     past: [],
     future: [],
     setTool: (tool) => {
@@ -151,6 +154,11 @@ export const useEditorStore = create<EditorState>()(
     clearLinkingPlayers: () => {
       set((state) => {
         state.linkingPlayerIds = [];
+      });
+    },
+    setSelectedLinkId: (id) => {
+      set((state) => {
+        state.selectedLinkId = id;
       });
     },
     pushHistory: (snapshot) => {

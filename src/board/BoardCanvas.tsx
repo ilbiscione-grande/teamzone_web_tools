@@ -28,6 +28,9 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
   const playerSide = useEditorStore((state) => state.playerSide);
   const selection = useEditorStore((state) => state.selection);
   const setSelection = useEditorStore((state) => state.setSelection);
+  const setSelectedLinkId = useEditorStore(
+    (state) => state.setSelectedLinkId
+  );
   const viewport = useEditorStore((state) => state.viewport);
   const setViewport = useEditorStore((state) => state.setViewport);
   const pushHistory = useEditorStore((state) => state.pushHistory);
@@ -42,6 +45,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
     (state) => state.linkingPlayerIds
   );
   const addLinkingPlayer = useEditorStore((state) => state.addLinkingPlayer);
+  const selectedLinkId = useEditorStore((state) => state.selectedLinkId);
 
   const project = useProjectStore((state) => state.project);
   const addObject = useProjectStore((state) => state.addObject);
@@ -303,7 +307,10 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
     rotationPivot,
     stageRef,
     setViewport,
-    clearSelection: () => setSelection([]),
+    clearSelection: () => {
+      setSelection([]);
+      setSelectedLinkId(null);
+    },
     pushHistory,
     addObject,
   });
@@ -369,6 +376,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
 
 
   const handleSelect = (id: string, multi: boolean) => {
+    setSelectedLinkId(null);
     if (multi) {
       setSelection(Array.from(new Set([...selection, id])));
     } else {
@@ -437,14 +445,24 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
               if (points.length < 2) {
                 return null;
               }
+              const isSelectedLink = selectedLinkId === link.id;
               return (
                 <Line
                   key={link.id}
                   points={points.flatMap((point) => [point.x, point.y])}
-                  stroke="rgba(255,255,255,0.55)"
-                  strokeWidth={0.3}
+                  stroke={
+                    isSelectedLink
+                      ? "var(--accent-2)"
+                      : "rgba(255,255,255,0.55)"
+                  }
+                  strokeWidth={isSelectedLink ? 0.5 : 0.3}
                   lineCap="round"
                   lineJoin="round"
+                  onClick={(event) => {
+                    event.cancelBubble = true;
+                    setSelection([]);
+                    setSelectedLinkId(link.id);
+                  }}
                 />
               );
             })}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bebas_Neue, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import AuthListener from "@/components/AuthListener";
+import PwaRegister from "@/components/PwaRegister";
 
 const display = Bebas_Neue({
   variable: "--font-display",
@@ -17,6 +18,12 @@ const body = Space_Grotesk({
 export const metadata: Metadata = {
   title: "Tactics Board Web",
   description: "Digital tactics board for football.",
+  manifest: "/manifest.json",
+  themeColor: "#0f1b1a",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -39,6 +46,7 @@ export default function RootLayout({
       <body className={`${display.variable} ${body.variable} antialiased`}>
         {children}
         <AuthListener />
+        <PwaRegister />
       </body>
     </html>
   );
