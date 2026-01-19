@@ -22,6 +22,8 @@ type BoardObjectProps = {
   object: DrawableObject;
   objects: DrawableObject[];
   activeTool: Tool;
+  isSelected: boolean;
+  isHighlighted: boolean;
   squadPlayers: SquadPlayer[];
   kitByPlayerId: Record<string, string>;
   defaultPlayerFill: string;
@@ -41,6 +43,8 @@ export default function BoardObject({
   object,
   objects,
   activeTool,
+  isSelected,
+  isHighlighted,
   squadPlayers,
   kitByPlayerId,
   defaultPlayerFill,
@@ -152,6 +156,20 @@ export default function BoardObject({
           }
         }}
       >
+        {isHighlighted && (
+          <Circle
+            radius={playerTokenSize + 1.6}
+            stroke="#f9bf4a"
+            strokeWidth={0.35}
+          />
+        )}
+        {isSelected && (
+          <Circle
+            radius={playerTokenSize + 1.1}
+            stroke="var(--accent-2)"
+            strokeWidth={0.35}
+          />
+        )}
         {player.hasBall && (
           <Circle
             radius={playerTokenSize + 0.8}

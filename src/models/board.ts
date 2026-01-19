@@ -10,6 +10,11 @@ export type BoardFrame = {
   objects: DrawableObject[];
 };
 
+export type PlayerLink = {
+  id: string;
+  playerIds: string[];
+};
+
 export type Board = {
   id: string;
   name: string;
@@ -25,6 +30,8 @@ export type Board = {
     showPosition: boolean;
     showNumber: boolean;
   };
+  playerHighlights: string[];
+  playerLinks: PlayerLink[];
   layers: DrawableObject[];
   frames: BoardFrame[];
   activeFrameIndex: number;

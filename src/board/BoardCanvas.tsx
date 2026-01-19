@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
-import { Stage, Layer, Rect, Arrow, Group, Circle } from "react-konva";
+import { Stage, Layer, Rect, Arrow, Group, Circle, Line } from "react-konva";
 import type { BallToken, Board } from "@/models";
 import Pitch, { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { useEditorStore } from "@/state/useEditorStore";
@@ -251,6 +251,17 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
       ? project?.settings?.awayKit.shirt
       : project?.settings?.homeKit.shirt) ??
     "#f9bf4a";
+  const highlightedPlayers = board.playerHighlights ?? [];
+  const playerLinks = board.playerLinks ?? [];
+  const playerPositions = useMemo(() => {
+    const map = new Map<string, { x: number; y: number }>();
+    renderObjects.forEach((item) => {
+      if (item.type === "player") {
+        map.set(item.id, item.position);
+      }
+    });
+    return map;
+  }, [renderObjects]);
   const effectiveWidth = viewRotation !== 0 ? bounds.height : bounds.width;
   const effectiveHeight = viewRotation !== 0 ? bounds.width : bounds.height;
   const baseScale = Math.min(
@@ -414,12 +425,32 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
               overlay={board.pitchOverlay}
               overlayText={board.pitchOverlayText ?? false}
             />
+            {playerLinks.map((link) => {
+              const points = link.playerIds
+                .map((id) => playerPositions.get(id))
+                .filter(Boolean) as { x: number; y: number }[];
+              if (points.length < 2) {
+                return null;
+              }
+              return (
+                <Line
+                  key={link.id}
+                  points={points.flatMap((point) => [point.x, point.y])}
+                  stroke="rgba(255,255,255,0.55)"
+                  strokeWidth={0.3}
+                  lineCap="round"
+                  lineJoin="round"
+                />
+              );
+            })}
             {sortedObjects.map((object) => (
               <BoardObject
                 key={object.id}
                 object={object}
                 objects={renderObjects}
                 activeTool={activeTool}
+                isSelected={selection.includes(object.id)}
+                isHighlighted={highlightedPlayers.includes(object.id)}
                 squadPlayers={squadPlayers}
                 kitByPlayerId={kitByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}

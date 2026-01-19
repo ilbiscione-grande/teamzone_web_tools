@@ -50,6 +50,8 @@ const createBoard = (
     showPosition: true,
     showNumber: false,
   },
+  playerHighlights: [],
+  playerLinks: [],
   layers: objects,
   frames: [createFrame("Frame 1", objects)],
   activeFrameIndex: 0,

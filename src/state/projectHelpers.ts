@@ -41,6 +41,8 @@ export const createEmptyBoard = (
     showPosition: false,
     showNumber: false,
   },
+  playerHighlights: [],
+  playerLinks: [],
   layers: [],
   frames: [
     {

@@ -7,6 +7,7 @@ import { useProjectStore } from "@/state/useProjectStore";
 import { clone } from "@/utils/clone";
 import { getActiveBoard, getBoardSquads } from "@/utils/board";
 import { createPlayer } from "@/board/objects/objectFactory";
+import { createId } from "@/utils/id";
 import type { PlayerToken, Squad } from "@/models";
 
 const iconClass = "h-4 w-4";
@@ -158,6 +159,18 @@ const NotesIcon = () => (
     <path d="M9 12h6M9 16h6M9 8h3" />
   </svg>
 );
+const HighlightIcon = () => (
+  <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
+    <circle cx="12" cy="12" r="6" />
+    <path d="M12 6v12M6 12h12" />
+  </svg>
+);
+const LinkIcon = () => (
+  <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
+    <path d="M10 14l4-4" />
+    <path d="M7 17a4 4 0 0 1 0-6l3-3a4 4 0 0 1 6 6l-1 1" />
+  </svg>
+);
 
 export default function Toolbox() {
   const activeTool = useEditorStore((state) => state.activeTool);
@@ -175,10 +188,15 @@ export default function Toolbox() {
   );
   const project = useProjectStore((state) => state.project);
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
+  const updateBoard = useProjectStore((state) => state.updateBoard);
+  const selection = useEditorStore((state) => state.selection);
 
   const board = getActiveBoard(project);
   const frameIndex = board?.activeFrameIndex ?? 0;
   const objects = board?.frames[frameIndex]?.objects ?? [];
+  const selectedPlayers = objects.filter(
+    (item) => item.type === "player" && selection.includes(item.id)
+  ) as PlayerToken[];
 
   const handleUndo = () => {
     if (!board) {
@@ -198,6 +216,30 @@ export default function Toolbox() {
     if (snapshot) {
       setFrameObjects(board.id, frameIndex, snapshot);
     }
+  };
+
+  const handleToggleHighlights = () => {
+    if (!board || selectedPlayers.length === 0) {
+      return;
+    }
+    const current = board.playerHighlights ?? [];
+    const ids = selectedPlayers.map((player) => player.id);
+    const allHighlighted = ids.every((id) => current.includes(id));
+    const next = allHighlighted
+      ? current.filter((id) => !ids.includes(id))
+      : Array.from(new Set([...current, ...ids]));
+    updateBoard(board.id, { playerHighlights: next });
+  };
+
+  const handleLinkPlayers = () => {
+    if (!board || selectedPlayers.length < 2) {
+      return;
+    }
+    const nextLinks = [
+      ...(board.playerLinks ?? []),
+      { id: createId(), playerIds: selectedPlayers.map((player) => player.id) },
+    ];
+    updateBoard(board.id, { playerLinks: nextLinks });
   };
 
 
@@ -248,6 +290,34 @@ export default function Toolbox() {
 
       {activeTab === "items" && (
         <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              className="flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+              onClick={handleToggleHighlights}
+              disabled={selectedPlayers.length === 0}
+            >
+              <span className="mt-1">
+                <HighlightIcon />
+              </span>
+              <span className="text-xs font-semibold">Highlight</span>
+              <span className="text-[10px] text-[var(--ink-1)]">
+                Toggle selected
+              </span>
+            </button>
+            <button
+              className="flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+              onClick={handleLinkPlayers}
+              disabled={selectedPlayers.length < 2}
+            >
+              <span className="mt-1">
+                <LinkIcon />
+              </span>
+              <span className="text-xs font-semibold">Link line</span>
+              <span className="text-[10px] text-[var(--ink-1)]">
+                Between selected
+              </span>
+            </button>
+          </div>
           <div className="grid grid-cols-2 gap-2">
           {itemTools.map((tool) => (
             <button
