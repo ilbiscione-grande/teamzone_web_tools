@@ -133,20 +133,18 @@ export const useBoardInteractions = ({
   };
 
   const handleMouseDown = (event: Konva.KonvaEventObject<MouseEvent>) => {
-    const isStage = event.target === event.target.getStage();
+    const stage = stageRef.current;
+    if (!stage) {
+      return;
+    }
+    const isStage = event.target === stage || event.target.getParent() === stage;
     if (isStage) {
       clearSelection();
       if (!isShapeTool) {
         setIsPanning(true);
         return;
       }
-    }
-    if (!isStage) {
-      return;
-    }
-
-    const stage = stageRef.current;
-    if (!stage) {
+    } else {
       return;
     }
     const pointer = stage.getPointerPosition();

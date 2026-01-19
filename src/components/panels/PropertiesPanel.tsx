@@ -37,6 +37,8 @@ export default function PropertiesPanel() {
   const board = getActiveBoard(project);
   const frameIndex = board?.activeFrameIndex ?? 0;
   const objects = board?.frames[frameIndex]?.objects ?? [];
+  const canCopyAcrossFrames =
+    board?.mode === "DYNAMIC" && (board?.frames.length ?? 0) > 1;
   const selected = useMemo(
     () => objects.filter((item) => selection.includes(item.id)),
     [objects, selection]
@@ -79,6 +81,30 @@ export default function PropertiesPanel() {
       };
       addObject(board.id, frameIndex, duplicate);
     });
+  };
+
+  const copyPlayerPositions = (direction: "prev" | "next") => {
+    if (!board || !canCopyAcrossFrames) {
+      return;
+    }
+    const targetIndex = direction === "prev" ? frameIndex - 1 : frameIndex + 1;
+    if (targetIndex < 0 || targetIndex >= board.frames.length) {
+      return;
+    }
+    const targetObjects = board.frames[targetIndex]?.objects ?? [];
+    pushHistory(clone(targetObjects));
+    selected
+      .filter((item) => item.type === "player")
+      .forEach((player) => {
+        const existing = targetObjects.find((item) => item.id === player.id);
+        if (existing) {
+          updateObject(board.id, targetIndex, player.id, {
+            position: player.position,
+          });
+        } else {
+          addObject(board.id, targetIndex, clone(player));
+        }
+      });
   };
 
   const boardSquads = getBoardSquads(project, board);
@@ -199,6 +225,24 @@ export default function PropertiesPanel() {
                 Player
               </p>
               <div className="mt-2 grid gap-2">
+                {canCopyAcrossFrames && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={() => copyPlayerPositions("prev")}
+                      disabled={frameIndex === 0}
+                    >
+                      Copy pos to prev frame
+                    </button>
+                    <button
+                      className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={() => copyPlayerPositions("next")}
+                      disabled={frameIndex >= board.frames.length - 1}
+                    >
+                      Copy pos to next frame
+                    </button>
+                  </div>
+                )}
                 <label className="space-y-1">
                   <span className="text-[11px]">Squad Player</span>
                   <select
