@@ -43,6 +43,14 @@ export default function TopBar() {
   const [planOpen, setPlanOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const showAds = plan === "FREE";
+  const showPlanGraceWarning =
+    plan === "AUTH" &&
+    authUser &&
+    typeof window !== "undefined" &&
+    Number(window.localStorage.getItem("tacticsboard:planCheckAt") ?? 0) > 0 &&
+    Date.now() -
+      Number(window.localStorage.getItem("tacticsboard:planCheckAt") ?? 0) >
+      7 * 24 * 60 * 60 * 1000;
 
   if (!project) {
     return null;
@@ -382,6 +390,30 @@ export default function TopBar() {
                 <path d="M12 16h.01" />
               </svg>
               Offline
+            </span>
+          </div>
+        )}
+        {showPlanGraceWarning && (
+          <div
+            className="rounded-full border border-[var(--accent-1)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-1)]"
+            title="Plan check expired after 7 days offline. Reconnect to restore paid access."
+          >
+            <span className="inline-flex items-center gap-1">
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-3 w-3"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 9v4" />
+                <path d="M12 17h.01" />
+                <path d="M10.3 4.7l-7 12a2 2 0 0 0 1.7 3h14a2 2 0 0 0 1.7-3l-7-12a2 2 0 0 0-3.4 0z" />
+              </svg>
+              Plan check expired
             </span>
           </div>
         )}

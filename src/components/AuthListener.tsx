@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { supabase } from "@/utils/supabaseClient";
-import { useProjectStore } from "@/state/useProjectStore";
+import { useProjectStore, persistPlanCheck } from "@/state/useProjectStore";
 
 const getDisplayName = (email: string | null, fullName?: string | null) => {
   if (fullName && fullName.trim().length > 0) {
@@ -58,14 +58,21 @@ export default function AuthListener() {
       if (!supabase) {
         return;
       }
-      const { data } = await supabase
+      if (typeof window !== "undefined" && !window.navigator.onLine) {
+        return;
+      }
+      const { data, error } = await supabase
         .from("profiles")
         .select("plan")
         .eq("id", userId)
         .single();
+      if (error || !data) {
+        return;
+      }
       const plan =
         data?.plan === "PAID" || data?.plan === "AUTH" ? data.plan : "FREE";
       setPlanFromProfile(plan);
+      persistPlanCheck();
     };
 
     supabase.auth.getSession().then(({ data }) => {

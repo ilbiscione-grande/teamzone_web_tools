@@ -9,6 +9,8 @@ import { can } from "@/utils/plan";
 
 const PLAN_KEY = "tacticsboard:plan";
 const AUTH_USER_KEY = "tacticsboard:authUser";
+const PLAN_CHECK_KEY = "tacticsboard:planCheckAt";
+const PLAN_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
 const loadAuthUser = (): AuthUser | null => {
   if (typeof window === "undefined") {
@@ -33,7 +35,11 @@ const loadPlan = (authUser: AuthUser | null): Plan => {
     return "FREE";
   }
   const stored = window.localStorage.getItem(PLAN_KEY) as Plan | null;
+  const lastCheck = Number(window.localStorage.getItem(PLAN_CHECK_KEY) ?? 0);
   if (stored) {
+    if (stored === "PAID" && lastCheck && Date.now() - lastCheck > PLAN_GRACE_MS) {
+      return "AUTH";
+    }
     return stored;
   }
   return "AUTH";
@@ -108,6 +114,13 @@ export const persistPlan = (plan: Plan) => {
     return;
   }
   window.localStorage.setItem(PLAN_KEY, plan);
+};
+
+export const persistPlanCheck = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(PLAN_CHECK_KEY, String(Date.now()));
 };
 
 export const persistAuthUser = (user: AuthUser | null) => {
