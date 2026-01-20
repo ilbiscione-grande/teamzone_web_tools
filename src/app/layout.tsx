@@ -3,6 +3,7 @@ import { Bebas_Neue, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import AuthListener from "@/components/AuthListener";
 import PwaRegister from "@/components/PwaRegister";
+import ScreenSizeNotice from "@/components/ScreenSizeNotice";
 
 const display = Bebas_Neue({
   variable: "--font-display",
@@ -47,6 +48,7 @@ export default function RootLayout({
         {children}
         <AuthListener />
         <PwaRegister />
+        <ScreenSizeNotice />
       </body>
     </html>
   );
