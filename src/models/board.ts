@@ -23,6 +23,7 @@ export type Board = {
   pitchOverlay: PitchOverlay;
   pitchOverlayText: boolean;
   notes: string;
+  notesTemplate?: "TRAINING" | "MATCH" | "EDUCATION";
   homeSquadId?: string;
   awaySquadId?: string;
   playerLabel: {

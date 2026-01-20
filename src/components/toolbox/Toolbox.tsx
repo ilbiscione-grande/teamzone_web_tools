@@ -204,6 +204,104 @@ export default function Toolbox() {
   const board = getActiveBoard(project);
   const frameIndex = board?.activeFrameIndex ?? 0;
   const objects = board?.frames[frameIndex]?.objects ?? [];
+  const noteTemplates: Record<NonNullable<typeof board>["notesTemplate"], string> = {
+    TRAINING: `TRÄNING – Fokus & genomförande
+
+📌 Huvudfokus
+- Vad tränar vi på idag?
+  Ex: Speluppbyggnad från målvakt, rätt avstånd i första fas
+
+🎯 Delmål
+- Skapa spelbarhet centralt
+- Våga spela igenom första press
+- Rätt kroppsställning vid mottag
+
+⚙️ Organisation
+- Spelform: 7v7 / 9v9 / 11v11
+- Yta: Halvplan / zonindelad
+- Bollstart: Målvakt / mittback
+
+🧠 Nyckelbeteenden
+- Scanna innan mottag
+- Första touch bort från press
+- Spelbar direkt efter pass
+
+🔄 Vanliga korrigeringar
+- För långa avstånd mellan lagdelar
+- Spelare gömmer sig bakom motståndare
+- För få spelvändningar
+
+🗣️ Coachens instruktioner
+- ”Spela på första möjligheten”
+- ”Sätt bolltempo – inte löptempo”
+- ”Hitta nästa passningsvinkel direkt”`,
+    MATCH: `MATCH – Matchplan & riktlinjer
+
+🆚 Motstånd
+- Lag:
+- Förväntad formation:
+- Styrkor/svagheter:
+
+⚽ Vårt spel – med boll
+- Utgångsformation:
+- Hur bygger vi spel?
+- Vilka ytor vill vi attackera?
+
+🛡️ Vårt spel – utan boll
+- Försvarshöjd: Låg / Mellan / Hög
+- Pressignaler:
+- Vem sätter första press?
+
+🔁 Omställningar
+- Vid bollvinst:
+- Vid bollförlust:
+
+🎯 Nyckelroller
+- Spelare med extra ansvar:
+- Matchups att utnyttja:
+
+⏱️ Viktiga påminnelser
+- Första 10 minuterna
+- Sista 15 minuterna
+- Vid ledning / underläge
+
+🧠 Matchbudskap
+- ”Var modiga med bollen”
+- ”Vi gör jobbet tillsammans”
+- ”Nästa aktion är alltid viktigast”`,
+    EDUCATION: `UTBILDNING – Princip & förståelse
+
+📚 Tema
+- Vad handlar detta om?
+  Ex: Spelbarhet mellan lagdelar
+
+🧭 Grundprincip
+- Varför är detta viktigt i vårt spel?
+- När uppstår situationen?
+
+👀 Vad ska spelaren se?
+- Position på med-/motspelare
+- Avstånd och vinklar
+- Motståndarens rörelser
+
+🦶 Vad ska spelaren göra?
+- Placering
+- Tajming
+- Beslut (spela, driva, vända)
+
+⚠️ Vanliga misstag
+- För tidig löpning
+- Spel i samma linje
+- Bolltempo utan rörelse
+
+🔄 Koppling till match
+- När ser vi detta i match?
+- Hur påverkar det nästa aktion?
+
+🗣️ Reflektionsfrågor
+- Vad händer om vi inte gör detta?
+- Hur hjälper detta lagkamraten?`,
+  };
   const selectedPlayers = objects.filter(
     (item) => item.type === "player" && selection.includes(item.id)
   ) as PlayerToken[];
@@ -422,6 +520,55 @@ export default function Toolbox() {
       {activeTab === "notes" && (
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <p className="mb-2 text-[11px] uppercase text-[var(--ink-1)]">Notes</p>
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-[var(--ink-1)]">
+            <select
+              className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+              value={board?.notesTemplate ?? "TRAINING"}
+              onChange={(event) => {
+                if (!board) {
+                  return;
+                }
+                useProjectStore.getState().updateBoard(board.id, {
+                  notesTemplate: event.target.value as NonNullable<
+                    typeof board
+                  >["notesTemplate"],
+                });
+              }}
+            >
+              <option value="TRAINING" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                Träning
+              </option>
+              <option value="MATCH" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                Match
+              </option>
+              <option value="EDUCATION" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                Utbildning
+              </option>
+            </select>
+            <button
+              className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={() => {
+                if (!board) {
+                  return;
+                }
+                const template =
+                  noteTemplates[board.notesTemplate ?? "TRAINING"];
+                if (board.notes.trim().length > 0) {
+                  const ok = window.confirm(
+                    "Replace the current notes with the selected template?"
+                  );
+                  if (!ok) {
+                    return;
+                  }
+                }
+                useProjectStore.getState().updateBoard(board.id, {
+                  notes: template,
+                });
+              }}
+            >
+              Apply template
+            </button>
+          </div>
           <textarea
             className="h-40 w-full resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
             placeholder="Write notes for this board..."
