@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { deserializeProject } from "@/persistence/serialize";
-import { saveProject } from "@/persistence/storage";
+import { loadProject, saveProject } from "@/persistence/storage";
 import type { Project } from "@/models";
 import { can, getPlanLimits } from "@/utils/plan";
 import AdBanner from "@/components/AdBanner";
@@ -32,6 +32,7 @@ export default function ProjectList() {
   });
   const [attachBallToPlayer, setAttachBallToPlayer] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -39,6 +40,20 @@ export default function ProjectList() {
   ).size;
   const projectLimitReached =
     Number.isFinite(limits.maxProjects) && projectCount >= limits.maxProjects;
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const update = () => setIsOffline(!navigator.onLine);
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
 
   const onCreate = () => {
     if (!name.trim()) {
@@ -121,6 +136,47 @@ export default function ProjectList() {
                 {authUser.name}
               </div>
             )}
+            <div
+              className={`rounded-full border px-3 py-1 ${
+                isOffline
+                  ? "border-[var(--accent-1)] text-[var(--accent-1)]"
+                  : "border-[var(--line)] text-[var(--ink-1)]"
+              }`}
+              title={
+                isOffline
+                  ? "Offline. Only projects saved on this device are available."
+                  : "Online"
+              }
+            >
+              <span className="inline-flex items-center gap-1">
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-3 w-3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {isOffline ? (
+                    <>
+                      <path d="M2 2l20 20" />
+                      <path d="M4.5 8.5a12 12 0 0 1 15 1" />
+                      <path d="M8 12a7 7 0 0 1 8.5 1.5" />
+                      <path d="M12 16h.01" />
+                    </>
+                  ) : (
+                    <>
+                      <path d="M5 9.5a11 11 0 0 1 14 1" />
+                      <path d="M8 13a6.5 6.5 0 0 1 8 1.5" />
+                      <path d="M12 16h.01" />
+                    </>
+                  )}
+                </svg>
+                {isOffline ? "Offline" : "Online"}
+              </span>
+            </div>
             <button
               className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-widest hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
               onClick={() => setPlanOpen(true)}
@@ -339,7 +395,19 @@ export default function ProjectList() {
                     <div className="flex gap-2">
                       <button
                         className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                        onClick={() => openProject(project.id)}
+                        onClick={() => {
+                          if (typeof window !== "undefined" && !navigator.onLine) {
+                            const cached = loadProject(project.id);
+                            if (!cached) {
+                              setError(
+                                "This project is not available offline yet. Reconnect to sync."
+                              );
+                              return;
+                            }
+                          }
+                          setError(null);
+                          openProject(project.id);
+                        }}
                       >
                         Open
                       </button>
