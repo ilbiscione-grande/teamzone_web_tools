@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { serializeProject, deserializeProject } from "@/persistence/serialize";
 import { saveProject } from "@/persistence/storage";
@@ -41,11 +41,26 @@ export default function TopBar() {
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const showAds = plan === "FREE";
 
   if (!project) {
     return null;
   }
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const update = () => setIsOffline(!navigator.onLine);
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
 
   const activeBoardId = project.activeBoardId ?? project.boards[0]?.id;
   const activeBoard = project.boards.find((board) => board.id === activeBoardId);
@@ -342,6 +357,31 @@ export default function TopBar() {
                 : syncStatus.state === "offline"
                 ? "Offline"
                 : "Synced"}
+            </span>
+          </div>
+        )}
+        {isOffline && (
+          <div
+            className="rounded-full border border-[var(--accent-1)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-1)]"
+            title="Offline mode. Changes are saved locally until you reconnect."
+          >
+            <span className="inline-flex items-center gap-1">
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-3 w-3"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M2 2l20 20" />
+                <path d="M4.5 8.5a12 12 0 0 1 15 1" />
+                <path d="M8 12a7 7 0 0 1 8.5 1.5" />
+                <path d="M12 16h.01" />
+              </svg>
+              Offline
             </span>
           </div>
         )}
