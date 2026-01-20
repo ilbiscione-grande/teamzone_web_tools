@@ -53,6 +53,9 @@ export const createCoreActions: StateCreator<
     const { authUser } = get();
     if (authUser && get().plan === "PAID") {
       if (typeof window !== "undefined" && !window.navigator.onLine) {
+        set((state) => {
+          state.index = loadProjectIndex();
+        });
         get().setSyncStatus({
           state: "offline",
           message: "Offline. Will sync when online.",
@@ -239,6 +242,24 @@ export const createCoreActions: StateCreator<
   },
   openProject: (id) => {
     if (get().authUser && get().plan === "PAID") {
+      if (typeof window !== "undefined" && !window.navigator.onLine) {
+        const project = loadProject(id);
+        if (!project) {
+          return;
+        }
+        ensureBoardSquads(project);
+        set((state) => {
+          state.project = project;
+          state.activeProjectId = id;
+          if (can(state.plan, "project.save")) {
+            state.index = updateIndex(state.index, project);
+          }
+        });
+        if (can(get().plan, "project.save")) {
+          saveProjectIndex(get().index);
+        }
+        return;
+      }
       fetchProjectCloud(id).then((project) => {
         if (!project) {
           return;
