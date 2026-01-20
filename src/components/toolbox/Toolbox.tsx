@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import ReactMarkdown from "react-markdown";
 import { useEditorStore, type Tool } from "@/state/useEditorStore";
 import SquadEditor from "@/components/squad/SquadEditor";
 import { useProjectStore } from "@/state/useProjectStore";
@@ -186,6 +187,7 @@ export default function Toolbox() {
   >(
     "items"
   );
+  const [notesView, setNotesView] = useState<"edit" | "preview">("edit");
   const project = useProjectStore((state) => state.project);
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
   const updateBoard = useProjectStore((state) => state.updateBoard);
@@ -518,9 +520,33 @@ export default function Toolbox() {
       {activeTab === "squad" && <SquadEditor />}
 
       {activeTab === "notes" && (
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <p className="mb-2 text-[11px] uppercase text-[var(--ink-1)]">Notes</p>
-          <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-[var(--ink-1)]">
+        <div className="flex h-full flex-col rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] uppercase text-[var(--ink-1)]">Notes</p>
+            <div className="flex items-center gap-2">
+              <button
+                className={`rounded-full border px-3 py-1 text-[11px] ${
+                  notesView === "edit"
+                    ? "border-[var(--accent-0)] text-[var(--ink-0)]"
+                    : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                }`}
+                onClick={() => setNotesView("edit")}
+              >
+                Edit
+              </button>
+              <button
+                className={`rounded-full border px-3 py-1 text-[11px] ${
+                  notesView === "preview"
+                    ? "border-[var(--accent-0)] text-[var(--ink-0)]"
+                    : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                }`}
+                onClick={() => setNotesView("preview")}
+              >
+                Preview
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[var(--ink-1)]">
             <select
               className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
               value={board?.notesTemplate ?? "TRAINING"}
@@ -569,18 +595,26 @@ export default function Toolbox() {
               Apply template
             </button>
           </div>
-          <textarea
-            className="h-40 w-full resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
-            placeholder="Write notes for this board..."
-            value={board?.notes ?? ""}
-            onChange={(event) => {
-              if (board) {
-                useProjectStore.getState().updateBoard(board.id, {
-                  notes: event.target.value,
-                });
-              }
-            }}
-          />
+          <div className="mt-3 flex min-h-0 flex-1 flex-col">
+            {notesView === "edit" ? (
+              <textarea
+                className="min-h-0 flex-1 resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
+                placeholder="Write notes for this board..."
+                value={board?.notes ?? ""}
+                onChange={(event) => {
+                  if (board) {
+                    useProjectStore.getState().updateBoard(board.id, {
+                      notes: event.target.value,
+                    });
+                  }
+                }}
+              />
+            ) : (
+              <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]">
+                <ReactMarkdown>{board?.notes ?? ""}</ReactMarkdown>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
