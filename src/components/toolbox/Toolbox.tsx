@@ -204,7 +204,7 @@ export default function Toolbox() {
   const board = getActiveBoard(project);
   const frameIndex = board?.activeFrameIndex ?? 0;
   const objects = board?.frames[frameIndex]?.objects ?? [];
-  const noteTemplates: Record<NonNullable<typeof board>["notesTemplate"], string> = {
+  const noteTemplates: Record<"TRAINING" | "MATCH" | "EDUCATION", string> = {
     TRAINING: `TRÄNING – Fokus & genomförande
 
 📌 Huvudfokus
