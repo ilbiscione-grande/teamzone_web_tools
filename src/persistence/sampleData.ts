@@ -43,7 +43,8 @@ const createBoard = (
   pitchOverlay: "NONE",
   pitchOverlayText: false,
   notes: "Tryck pa en spelare for att redigera dess etikett.",
-  notesTemplate: "TRAINING",
+  notesTemplate: undefined,
+  notesFields: {},
   homeSquadId: squadIds?.homeSquadId,
   awaySquadId: squadIds?.awaySquadId,
   playerLabel: {

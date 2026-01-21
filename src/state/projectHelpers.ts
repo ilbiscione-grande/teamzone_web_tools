@@ -34,7 +34,8 @@ export const createEmptyBoard = (
   pitchOverlay: "NONE",
   pitchOverlayText: false,
   notes: "",
-  notesTemplate: "TRAINING",
+  notesTemplate: undefined,
+  notesFields: {},
   homeSquadId: squadIds?.homeSquadId,
   awaySquadId: squadIds?.awaySquadId,
   playerLabel: {

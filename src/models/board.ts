@@ -24,6 +24,34 @@ export type Board = {
   pitchOverlayText: boolean;
   notes: string;
   notesTemplate?: "TRAINING" | "MATCH" | "EDUCATION";
+  notesFields?: {
+    training?: {
+      mainFocus?: string;
+      partGoals?: string;
+      organisation?: string;
+      keyBehaviours?: string;
+      usualErrors?: string;
+      coachInstructions?: string;
+    };
+    match?: {
+      opposition?: string;
+      ourGameWithBall?: string;
+      ourGameWithoutBall?: string;
+      counters?: string;
+      keyRoles?: string;
+      importantReminders?: string;
+      matchMessage?: string;
+    };
+    education?: {
+      tema?: string;
+      grundprincip?: string;
+      whatToSee?: string;
+      whatToDo?: string;
+      usualErrors?: string;
+      matchConnection?: string;
+      reflections?: string;
+    };
+  };
   homeSquadId?: string;
   awaySquadId?: string;
   playerLabel: {

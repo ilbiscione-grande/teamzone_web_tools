@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
@@ -191,6 +191,11 @@ export default function Toolbox() {
   );
   const [notesView, setNotesView] = useState<"edit" | "preview">("edit");
   const [showMarkdownHelp, setShowMarkdownHelp] = useState(false);
+  const markdownHelpRef = useRef<HTMLButtonElement | null>(null);
+  const [markdownHelpPos, setMarkdownHelpPos] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const project = useProjectStore((state) => state.project);
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
   const updateBoard = useProjectStore((state) => state.updateBoard);
@@ -209,103 +214,57 @@ export default function Toolbox() {
   const board = getActiveBoard(project);
   const frameIndex = board?.activeFrameIndex ?? 0;
   const objects = board?.frames[frameIndex]?.objects ?? [];
-  const noteTemplates: Record<"TRAINING" | "MATCH" | "EDUCATION", string> = {
-    TRAINING: `TRÄNING – Fokus & genomförande
-
-📌 Huvudfokus
-- Vad tränar vi på idag?
-  Ex: Speluppbyggnad från målvakt, rätt avstånd i första fas
-
-🎯 Delmål
-- Skapa spelbarhet centralt
-- Våga spela igenom första press
-- Rätt kroppsställning vid mottag
-
-⚙️ Organisation
-- Spelform: 7v7 / 9v9 / 11v11
-- Yta: Halvplan / zonindelad
-- Bollstart: Målvakt / mittback
-
-🧠 Nyckelbeteenden
-- Scanna innan mottag
-- Första touch bort från press
-- Spelbar direkt efter pass
-
-🔄 Vanliga korrigeringar
-- För långa avstånd mellan lagdelar
-- Spelare gömmer sig bakom motståndare
-- För få spelvändningar
-
-🗣️ Coachens instruktioner
-- ”Spela på första möjligheten”
-- ”Sätt bolltempo – inte löptempo”
-- ”Hitta nästa passningsvinkel direkt”`,
-    MATCH: `MATCH – Matchplan & riktlinjer
-
-🆚 Motstånd
-- Lag:
-- Förväntad formation:
-- Styrkor/svagheter:
-
-⚽ Vårt spel – med boll
-- Utgångsformation:
-- Hur bygger vi spel?
-- Vilka ytor vill vi attackera?
-
-🛡️ Vårt spel – utan boll
-- Försvarshöjd: Låg / Mellan / Hög
-- Pressignaler:
-- Vem sätter första press?
-
-🔁 Omställningar
-- Vid bollvinst:
-- Vid bollförlust:
-
-🎯 Nyckelroller
-- Spelare med extra ansvar:
-- Matchups att utnyttja:
-
-⏱️ Viktiga påminnelser
-- Första 10 minuterna
-- Sista 15 minuterna
-- Vid ledning / underläge
-
-🧠 Matchbudskap
-- ”Var modiga med bollen”
-- ”Vi gör jobbet tillsammans”
-- ”Nästa aktion är alltid viktigast”`,
-    EDUCATION: `UTBILDNING – Princip & förståelse
-
-📚 Tema
-- Vad handlar detta om?
-  Ex: Spelbarhet mellan lagdelar
-
-🧭 Grundprincip
-- Varför är detta viktigt i vårt spel?
-- När uppstår situationen?
-
-👀 Vad ska spelaren se?
-- Position på med-/motspelare
-- Avstånd och vinklar
-- Motståndarens rörelser
-
-🦶 Vad ska spelaren göra?
-- Placering
-- Tajming
-- Beslut (spela, driva, vända)
-
-⚠️ Vanliga misstag
-- För tidig löpning
-- Spel i samma linje
-- Bolltempo utan rörelse
-
-🔄 Koppling till match
-- När ser vi detta i match?
-- Hur påverkar det nästa aktion?
-
-🗣️ Reflektionsfrågor
-- Vad händer om vi inte gör detta?
-- Hur hjälper detta lagkamraten?`,
+  const buildNotesFromFields = (
+    template: "TRAINING" | "MATCH" | "EDUCATION" | undefined,
+    fields: NonNullable<NonNullable<typeof board>["notesFields"]> | undefined
+  ) => {
+    if (!template || !fields) {
+      return "";
+    }
+    const sections: string[] = [];
+    const add = (label: string, value?: string) => {
+      const trimmed = value?.trim();
+      if (!trimmed) {
+        return;
+      }
+      sections.push(`## ${label}\n${trimmed}`);
+    };
+    if (template === "TRAINING") {
+      add("Main Focus", fields.training?.mainFocus);
+      add("Part goals", fields.training?.partGoals);
+      add("Organisation", fields.training?.organisation);
+      add("Key behaviours", fields.training?.keyBehaviours);
+      add("Usual errors", fields.training?.usualErrors);
+      add("Coach instructions", fields.training?.coachInstructions);
+    }
+    if (template === "MATCH") {
+      add("Opposition", fields.match?.opposition);
+      add("Our game – with ball", fields.match?.ourGameWithBall);
+      add("Our game – without ball", fields.match?.ourGameWithoutBall);
+      add("Counters", fields.match?.counters);
+      add("Key Roles", fields.match?.keyRoles);
+      add("Important reminders", fields.match?.importantReminders);
+      add("Match message", fields.match?.matchMessage);
+    }
+    if (template === "EDUCATION") {
+      add("Tema", fields.education?.tema);
+      add("Grundprincip", fields.education?.grundprincip);
+      add("What to see", fields.education?.whatToSee);
+      add("What to do", fields.education?.whatToDo);
+      add("Usual errors", fields.education?.usualErrors);
+      add("Match connection", fields.education?.matchConnection);
+      add("Reflections", fields.education?.reflections);
+    }
+    if (sections.length === 0) {
+      return "";
+    }
+    const title =
+      template === "TRAINING"
+        ? "TRÄNING"
+        : template === "MATCH"
+        ? "MATCH"
+        : "UTBILDNING";
+    return [`# ${title}`, ...sections].join("\n\n");
   };
   const selectedPlayers = objects.filter(
     (item) => item.type === "player" && selection.includes(item.id)
@@ -330,6 +289,30 @@ export default function Toolbox() {
       setFrameObjects(board.id, frameIndex, snapshot);
     }
   };
+
+  useEffect(() => {
+    if (!showMarkdownHelp) {
+      return;
+    }
+    const update = () => {
+      const target = markdownHelpRef.current;
+      if (!target) {
+        return;
+      }
+      const rect = target.getBoundingClientRect();
+      setMarkdownHelpPos({
+        top: rect.bottom + 8,
+        left: rect.left + rect.width / 2,
+      });
+    };
+    update();
+    window.addEventListener("resize", update);
+    document.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      document.removeEventListener("scroll", update, true);
+    };
+  }, [showMarkdownHelp]);
 
   const handleToggleHighlights = () => {
     if (!board || selectedPlayers.length === 0) {
@@ -536,37 +519,10 @@ export default function Toolbox() {
                   onMouseLeave={() => setShowMarkdownHelp(false)}
                   onFocus={() => setShowMarkdownHelp(true)}
                   onBlur={() => setShowMarkdownHelp(false)}
+                  ref={markdownHelpRef}
                 >
                   ?
                 </button>
-                <div
-                  className={`absolute left-1/2 top-full z-20 mt-2 w-64 -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-[10px] text-[var(--ink-0)] shadow-xl shadow-black/30 transition ${
-                    showMarkdownHelp ? "opacity-100" : "pointer-events-none opacity-0"
-                  }`}
-                >
-                  <p className="mb-2 text-[11px] uppercase text-[var(--ink-1)]">
-                    Markdown quick tips
-                  </p>
-                  <p className="mb-1">
-                    <span className="font-semibold">#</span> Heading,{" "}
-                    <span className="font-semibold">##</span> Subheading
-                  </p>
-                  <p className="mb-1">
-                    <span className="font-semibold">-</span> Bullet list,{" "}
-                    <span className="font-semibold">1.</span> Numbered list
-                  </p>
-                  <p className="mb-1">
-                    <span className="font-semibold">**bold**</span>,{" "}
-                    <span className="font-semibold">*italic*</span>
-                  </p>
-                  <p className="mb-1">
-                    <span className="font-semibold">`code`</span> for inline code
-                  </p>
-                  <p>
-                    New lines are respected; leave a blank line for a new
-                    paragraph.
-                  </p>
-                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -595,18 +551,21 @@ export default function Toolbox() {
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[var(--ink-1)]">
             <select
               className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-              value={board?.notesTemplate ?? "TRAINING"}
+              value={board?.notesTemplate ?? ""}
               onChange={(event) => {
                 if (!board) {
                   return;
                 }
                 useProjectStore.getState().updateBoard(board.id, {
-                  notesTemplate: event.target.value as NonNullable<
-                    typeof board
-                  >["notesTemplate"],
+                  notesTemplate:
+                    (event.target.value as "TRAINING" | "MATCH" | "EDUCATION") ||
+                    undefined,
                 });
               }}
             >
+              <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                Välj mall
+              </option>
               <option value="TRAINING" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
                 Träning
               </option>
@@ -617,30 +576,117 @@ export default function Toolbox() {
                 Utbildning
               </option>
             </select>
-            <button
-              className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-              onClick={() => {
-                if (!board) {
-                  return;
-                }
-                const template =
-                  noteTemplates[board.notesTemplate ?? "TRAINING"];
-                if (board.notes.trim().length > 0) {
-                  const ok = window.confirm(
-                    "Replace the current notes with the selected template?"
-                  );
-                  if (!ok) {
-                    return;
-                  }
-                }
-                useProjectStore.getState().updateBoard(board.id, {
-                  notes: template,
-                });
-              }}
-            >
-              Apply template
-            </button>
           </div>
+          {board?.notesTemplate === "TRAINING" && (
+            <div className="mt-3 grid gap-2 text-[11px] text-[var(--ink-1)]">
+              {[
+                ["mainFocus", "Main Focus"],
+                ["partGoals", "Part goals"],
+                ["organisation", "Organisation"],
+                ["keyBehaviours", "Key behaviours"],
+                ["usualErrors", "Usual errors"],
+                ["coachInstructions", "Coach instructions"],
+              ].map(([key, label]) => (
+                <label key={key} className="space-y-1">
+                  <span>{label}</span>
+                  <input
+                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                    value={board.notesFields?.training?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["training"]] ?? ""}
+                    onChange={(event) => {
+                      if (!board) {
+                        return;
+                      }
+                      const nextFields = {
+                        ...board.notesFields,
+                        training: {
+                          ...board.notesFields?.training,
+                          [key]: event.target.value,
+                        },
+                      };
+                      useProjectStore.getState().updateBoard(board.id, {
+                        notesFields: nextFields,
+                        notes: buildNotesFromFields("TRAINING", nextFields),
+                      });
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+          )}
+          {board?.notesTemplate === "MATCH" && (
+            <div className="mt-3 grid gap-2 text-[11px] text-[var(--ink-1)]">
+              {[
+                ["opposition", "Opposition"],
+                ["ourGameWithBall", "Our game – with ball"],
+                ["ourGameWithoutBall", "Our game – without ball"],
+                ["counters", "Counters"],
+                ["keyRoles", "Key Roles"],
+                ["importantReminders", "Important reminders"],
+                ["matchMessage", "Match message"],
+              ].map(([key, label]) => (
+                <label key={key} className="space-y-1">
+                  <span>{label}</span>
+                  <input
+                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                    value={board.notesFields?.match?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["match"]] ?? ""}
+                    onChange={(event) => {
+                      if (!board) {
+                        return;
+                      }
+                      const nextFields = {
+                        ...board.notesFields,
+                        match: {
+                          ...board.notesFields?.match,
+                          [key]: event.target.value,
+                        },
+                      };
+                      useProjectStore.getState().updateBoard(board.id, {
+                        notesFields: nextFields,
+                        notes: buildNotesFromFields("MATCH", nextFields),
+                      });
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+          )}
+          {board?.notesTemplate === "EDUCATION" && (
+            <div className="mt-3 grid gap-2 text-[11px] text-[var(--ink-1)]">
+              {[
+                ["tema", "Tema"],
+                ["grundprincip", "Grundprincip"],
+                ["whatToSee", "What to see"],
+                ["whatToDo", "What to do"],
+                ["usualErrors", "Usual errors"],
+                ["matchConnection", "Match connection"],
+                ["reflections", "Reflections"],
+              ].map(([key, label]) => (
+                <label key={key} className="space-y-1">
+                  <span>{label}</span>
+                  <input
+                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                    value={board.notesFields?.education?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["education"]] ?? ""}
+                    onChange={(event) => {
+                      if (!board) {
+                        return;
+                      }
+                      const nextFields = {
+                        ...board.notesFields,
+                        education: {
+                          ...board.notesFields?.education,
+                          [key]: event.target.value,
+                        },
+                      };
+                      useProjectStore.getState().updateBoard(board.id, {
+                        notesFields: nextFields,
+                        notes: buildNotesFromFields("EDUCATION", nextFields),
+                      });
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+          )}
           <div className="mt-3 flex min-h-0 flex-1 flex-col">
             {notesView === "edit" ? (
               <textarea
@@ -684,6 +730,34 @@ export default function Toolbox() {
               </div>
             )}
           </div>
+        </div>
+      )}
+      {showMarkdownHelp && markdownHelpPos && (
+        <div
+          className="fixed z-50 w-64 -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-[10px] text-[var(--ink-0)] shadow-xl shadow-black/30"
+          style={{ top: markdownHelpPos.top, left: markdownHelpPos.left }}
+        >
+          <p className="mb-2 text-[11px] uppercase text-[var(--ink-1)]">
+            Markdown quick tips
+          </p>
+          <p className="mb-1">
+            <span className="font-semibold">#</span> Heading,{" "}
+            <span className="font-semibold">##</span> Subheading
+          </p>
+          <p className="mb-1">
+            <span className="font-semibold">-</span> Bullet list,{" "}
+            <span className="font-semibold">1.</span> Numbered list
+          </p>
+          <p className="mb-1">
+            <span className="font-semibold">**bold**</span>,{" "}
+            <span className="font-semibold">*italic*</span>
+          </p>
+          <p className="mb-1">
+            <span className="font-semibold">`code`</span> for inline code
+          </p>
+          <p>
+            New lines are respected; leave a blank line for a new paragraph.
+          </p>
         </div>
       )}
 
