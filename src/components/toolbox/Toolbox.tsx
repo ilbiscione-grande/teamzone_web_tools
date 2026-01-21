@@ -572,6 +572,7 @@ export default function Toolbox() {
             </div>
           </div>
         </div>
+        </div>
       )}
 
       {activeTab === "lines" && (
