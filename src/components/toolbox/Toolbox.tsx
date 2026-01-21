@@ -239,8 +239,8 @@ export default function Toolbox() {
     }
     if (template === "MATCH") {
       add("Opposition", fields.match?.opposition);
-      add("Our game – with ball", fields.match?.ourGameWithBall);
-      add("Our game – without ball", fields.match?.ourGameWithoutBall);
+      add("Our game - with ball", fields.match?.ourGameWithBall);
+      add("Our game - without ball", fields.match?.ourGameWithoutBall);
       add("Counters", fields.match?.counters);
       add("Key Roles", fields.match?.keyRoles);
       add("Important reminders", fields.match?.importantReminders);
@@ -260,17 +260,17 @@ export default function Toolbox() {
     }
     const title =
       template === "TRAINING"
-        ? "TRÄNING"
+        ? "TRANING"
         : template === "MATCH"
         ? "MATCH"
         : "UTBILDNING";
     return [`# ${title}`, ...sections].join("\n\n");
   };
-  const notesPresets = {
+    const notesPresets = {
     training: {
       mainFocus: [
-        "Build up play – defensive third",
-        "Build up play – central progression",
+        "Build up play - defensive third",
+        "Build up play - central progression",
         "Press resistance",
         "Finishing in the box",
         "Transition defense",
@@ -343,39 +343,40 @@ export default function Toolbox() {
     education: {
       tema: [
         "Spelbarhet mellan lagdelar",
-        "Rättvänd mottagning",
-        "Skapa överläge centralt",
+        "Rattvand mottagning",
+        "Skapa overlaga centralt",
       ],
       grundprincip: [
         "Skapa vinkel och djup",
-        "Spela bort första pressen",
+        "Spela bort forsta pressen",
         "Locka och spela igenom",
       ],
       whatToSee: [
         "Positioner med- och motspelare",
-        "Avstånd och vinklar",
-        "Motståndarens rörelse",
+        "Avstand och vinklar",
+        "Motstandarens rorelser",
       ],
       whatToDo: [
         "Placering",
         "Tajming",
-        "Beslut (spela, driva, vända)",
+        "Beslut (spela, driva, vanda)",
       ],
       usualErrors: [
-        "För tidig löpning",
+        "For tidig lopning",
         "Spel i samma linje",
-        "Bolltempo utan rörelse",
+        "Bolltempo utan rorelse",
       ],
       matchConnection: [
-        "När ser vi detta i match?",
-        "Hur påverkar det nästa aktion?",
+        "Nar ser vi detta i match?",
+        "Hur paverkar det nasta aktion?",
       ],
       reflections: [
-        "Vad händer om vi inte gör detta?",
-        "Hur hjälper detta lagkamraten?",
+        "Vad hander om vi inte gor detta?",
+        "Hur hjalper detta lagkamraten?",
       ],
     },
   };
+
   const selectedPlayers = objects.filter(
     (item) => item.type === "player" && selection.includes(item.id)
   ) as PlayerToken[];
@@ -651,10 +652,10 @@ export default function Toolbox() {
                 }}
               >
                 <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
-                  Välj mall
+                  Valj mall
                 </option>
                 <option value="TRAINING" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
-                  Träning
+                  Traning
                 </option>
                 <option value="MATCH" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
                   Match
@@ -762,8 +763,8 @@ export default function Toolbox() {
             <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
               {[
                 ["opposition", "Opposition"],
-                ["ourGameWithBall", "Our game – with ball"],
-                ["ourGameWithoutBall", "Our game – without ball"],
+                ["ourGameWithBall", "Our game - with ball"],
+                ["ourGameWithoutBall", "Our game - without ball"],
                 ["counters", "Counters"],
                 ["keyRoles", "Key Roles"],
                 ["importantReminders", "Important reminders"],
@@ -925,3 +926,7 @@ export default function Toolbox() {
     </div>
   );
 }
+
+
+
+
