@@ -852,8 +852,8 @@ export default function Toolbox() {
             <div className="mt-3 flex min-h-0 flex-1 flex-col">
               {notesView === "edit" ? (
                 <textarea
-                  className="min-h-[8rem] resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
-                  rows={8}
+                  className="min-h-[12rem] resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
+                  rows={12}
                   placeholder="Write notes for this board..."
                   value={board?.notes ?? ""}
                   onChange={(event) => {
@@ -865,7 +865,7 @@ export default function Toolbox() {
                   }}
                 />
               ) : (
-                <div className="min-h-[8rem] overflow-y-auto rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]">
+                <div className="min-h-[12rem] overflow-y-auto rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm, remarkBreaks]}
                     components={{
