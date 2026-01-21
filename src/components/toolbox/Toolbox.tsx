@@ -190,6 +190,7 @@ export default function Toolbox() {
     "items"
   );
   const [notesView, setNotesView] = useState<"edit" | "preview">("edit");
+  const [showMarkdownHelp, setShowMarkdownHelp] = useState(false);
   const project = useProjectStore((state) => state.project);
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
   const updateBoard = useProjectStore((state) => state.updateBoard);
@@ -522,19 +523,27 @@ export default function Toolbox() {
       {activeTab === "squad" && <SquadEditor />}
 
       {activeTab === "notes" && (
-        <div className="flex h-full flex-col rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex h-full flex-col overflow-visible rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 overflow-visible">
             <div className="flex items-center gap-2">
               <p className="text-[11px] uppercase text-[var(--ink-1)]">Notes</p>
-              <div className="group relative">
+              <div className="relative">
                 <button
                   type="button"
                   className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--line)] text-[10px] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                   aria-label="Markdown help"
+                  onMouseEnter={() => setShowMarkdownHelp(true)}
+                  onMouseLeave={() => setShowMarkdownHelp(false)}
+                  onFocus={() => setShowMarkdownHelp(true)}
+                  onBlur={() => setShowMarkdownHelp(false)}
                 >
                   ?
                 </button>
-                <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-[10px] text-[var(--ink-0)] opacity-0 shadow-xl shadow-black/30 transition group-hover:opacity-100">
+                <div
+                  className={`absolute left-1/2 top-full z-20 mt-2 w-64 -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-[10px] text-[var(--ink-0)] shadow-xl shadow-black/30 transition ${
+                    showMarkdownHelp ? "opacity-100" : "pointer-events-none opacity-0"
+                  }`}
+                >
                   <p className="mb-2 text-[11px] uppercase text-[var(--ink-1)]">
                     Markdown quick tips
                   </p>
