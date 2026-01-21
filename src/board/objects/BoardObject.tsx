@@ -173,10 +173,10 @@ export default function BoardObject({
           <Circle
             radius={playerTokenSize + 1.6}
             fill="#ffffff"
-            opacity={0.25}
-            shadowBlur={16}
+            opacity={0.18}
+            shadowBlur={18}
             shadowColor="#ffffff"
-            shadowOpacity={0.6}
+            shadowOpacity={0.45}
           />
         )}
         {isHighlighted && (
@@ -283,10 +283,10 @@ export default function BoardObject({
           <Circle
             radius={1.7}
             fill="#ffffff"
-            opacity={0.35}
-            shadowBlur={14}
+            opacity={0.18}
+            shadowBlur={18}
             shadowColor="#ffffff"
-            shadowOpacity={0.6}
+            shadowOpacity={0.45}
           />
         )}
         <Circle
@@ -321,42 +321,164 @@ export default function BoardObject({
 
   if (object.type === "cone") {
     const cone = object as ConeToken;
-    const points = [0, 0, cone.width, cone.height / 2, 0, cone.height];
+    const topInset = cone.width * 0.18;
+    const peakY = cone.height * 0.18;
+    const highlightInset = cone.width * 0.32;
+    const highlightPeakY = cone.height * 0.32;
     return (
-      <Line
+      <Group
         {...commonProps}
-        points={points}
-        closed
-        stroke={cone.style.stroke}
-        strokeWidth={cone.style.strokeWidth}
-        fill={cone.style.fill}
-        dash={cone.style.dash}
         ref={(node) => {
           if (node) {
             registerNode(object.id, node);
           }
         }}
-      />
+      >
+        <Line
+          points={[
+            0,
+            cone.height,
+            cone.width,
+            cone.height,
+            cone.width - topInset,
+            peakY,
+            topInset,
+            peakY,
+          ]}
+          closed
+          stroke={cone.style.stroke}
+          strokeWidth={cone.style.strokeWidth}
+          fill={cone.style.fill}
+          dash={cone.style.dash}
+        />
+        <Line
+          points={[
+            highlightInset,
+            cone.height * 0.82,
+            cone.width - highlightInset,
+            cone.height * 0.82,
+            cone.width - highlightInset * 1.1,
+            highlightPeakY,
+            highlightInset * 1.1,
+            highlightPeakY,
+          ]}
+          closed
+          fill="#ffffff"
+          opacity={0.18}
+          strokeWidth={0}
+        />
+        <Line
+          points={[
+            cone.width * 0.2,
+            cone.height * 0.7,
+            cone.width * 0.8,
+            cone.height * 0.7,
+          ]}
+          stroke="#ffffff"
+          opacity={0.35}
+          strokeWidth={0.3}
+        />
+        <Rect
+          x={cone.width * 0.08}
+          y={cone.height * 0.88}
+          width={cone.width * 0.84}
+          height={cone.height * 0.1}
+          fill="#000000"
+          opacity={0.15}
+          cornerRadius={cone.height * 0.05}
+        />
+      </Group>
     );
   }
 
   if (object.type === "goal") {
     const goal = object as MiniGoal;
+    const depth = Math.min(goal.width, goal.height) * 0.35;
+    const frameStroke = goal.style.stroke;
+    const frameWidth = goal.style.strokeWidth;
+    const netStroke = frameStroke;
+    const netOpacity = 0.35;
     return (
-      <Rect
+      <Group
         {...commonProps}
-        width={goal.width}
-        height={goal.height}
-        stroke={goal.style.stroke}
-        strokeWidth={goal.style.strokeWidth}
-        fill={goal.style.fill}
-        dash={goal.style.dash}
         ref={(node) => {
           if (node) {
             registerNode(object.id, node);
           }
         }}
-      />
+      >
+        <Rect
+          x={0}
+          y={0}
+          width={goal.width}
+          height={goal.height}
+          stroke={frameStroke}
+          strokeWidth={frameWidth}
+          fill={goal.style.fill}
+          dash={goal.style.dash}
+          cornerRadius={goal.height * 0.12}
+        />
+        <Rect
+          x={depth}
+          y={-depth * 0.4}
+          width={goal.width}
+          height={goal.height}
+          stroke={frameStroke}
+          strokeWidth={frameWidth * 0.8}
+          fill="transparent"
+          cornerRadius={goal.height * 0.12}
+          opacity={0.7}
+        />
+        <Line
+          points={[0, 0, depth, -depth * 0.4]}
+          stroke={frameStroke}
+          strokeWidth={frameWidth * 0.8}
+        />
+        <Line
+          points={[goal.width, 0, goal.width + depth, -depth * 0.4]}
+          stroke={frameStroke}
+          strokeWidth={frameWidth * 0.8}
+        />
+        <Line
+          points={[0, goal.height, depth, goal.height - depth * 0.4]}
+          stroke={frameStroke}
+          strokeWidth={frameWidth * 0.8}
+        />
+        <Line
+          points={[
+            goal.width,
+            goal.height,
+            goal.width + depth,
+            goal.height - depth * 0.4,
+          ]}
+          stroke={frameStroke}
+          strokeWidth={frameWidth * 0.8}
+        />
+        {Array.from({ length: 4 }).map((_, idx) => {
+          const x = (goal.width / 4) * (idx + 1);
+          return (
+            <Line
+              key={`goal-net-v-${idx}`}
+              points={[x, 0, x + depth, -depth * 0.4]}
+              stroke={netStroke}
+              strokeWidth={0.3}
+              opacity={netOpacity}
+            />
+          );
+        })}
+        {Array.from({ length: 3 }).map((_, idx) => {
+          const y = (goal.height / 3) * (idx + 1);
+          return (
+            <Line
+              key={`goal-net-h-${idx}`}
+              points={[0, y, goal.width + depth, y - depth * 0.4]}
+              stroke={netStroke}
+              strokeWidth={0.3}
+              opacity={netOpacity}
+            />
+          );
+        })}
+      </Group>
     );
   }
 

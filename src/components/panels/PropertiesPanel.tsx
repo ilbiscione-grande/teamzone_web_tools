@@ -251,6 +251,22 @@ export default function PropertiesPanel() {
             )}
           </div>
 
+          {(target.type === "cone" || target.type === "goal") && (
+            <div className="rounded-2xl border border-[var(--line)] p-3">
+              <p className="text-[11px] uppercase text-[var(--ink-1)]">
+                Rotation
+              </p>
+              <div className="mt-2 grid gap-2">
+                <label className="space-y-1">
+                  <span className="text-[11px]">Degrees</span>
+                  {numberField(target.rotation, (value) =>
+                    update({ rotation: value })
+                  )}
+                </label>
+              </div>
+            </div>
+          )}
+
           {target.type === "player" && (
             <div className="rounded-2xl border border-[var(--line)] p-3">
               <p className="text-[11px] uppercase text-[var(--ink-1)]">
