@@ -460,7 +460,7 @@ export default function Toolbox() {
 
 
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
       <div className="flex items-center justify-between">
         <span className="display-font text-sm text-[var(--accent-0)]">
           Toolbox
