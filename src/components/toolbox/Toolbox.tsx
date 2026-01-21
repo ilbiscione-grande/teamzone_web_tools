@@ -617,7 +617,7 @@ export default function Toolbox() {
       {activeTab === "squad" && <SquadEditor />}
 
       {activeTab === "notes" && (
-        <div className="flex h-full flex-col overflow-visible rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
+        <div className="flex h-full flex-col overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <div className="flex flex-wrap items-center justify-between gap-2 overflow-visible">
             <div className="flex items-center gap-2">
               <p className="text-[11px] uppercase text-[var(--ink-1)]">Notes</p>
@@ -714,7 +714,7 @@ export default function Toolbox() {
               </button>
             </div>
           </div>
-          <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="mt-3 min-h-0 flex-1 pr-1">
             {board?.notesTemplate === "TRAINING" && (
               <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
                 {[
