@@ -266,7 +266,7 @@ export default function Toolbox() {
         : "UTBILDNING";
     return [`# ${title}`, ...sections].join("\n\n");
   };
-    const notesPresets = {
+  const notesPresets = {
     training: {
       mainFocus: [
         "Build up play - defensive third",
@@ -715,182 +715,183 @@ export default function Toolbox() {
             </div>
           </div>
           <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-          {board?.notesTemplate === "TRAINING" && (
-            <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
-              {[
-                ["mainFocus", "Main Focus"],
-                ["partGoals", "Part goals"],
-                ["organisation", "Organisation"],
-                ["keyBehaviours", "Key behaviours"],
-                ["usualErrors", "Usual errors"],
-                ["coachInstructions", "Coach instructions"],
-              ].map(([key, label]) => (
-                <label key={key} className="space-y-1">
-                  <span>{label}</span>
-                  <input
-                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
-                    value={board.notesFields?.training?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["training"]] ?? ""}
-                    list={`notes-training-${key}`}
-                    onChange={(event) => {
-                      if (!board) {
-                        return;
-                      }
-                      const nextFields = {
-                        ...board.notesFields,
-                        training: {
-                          ...board.notesFields?.training,
-                          [key]: event.target.value,
-                        },
-                      };
-                      useProjectStore.getState().updateBoard(board.id, {
-                        notesFields: nextFields,
-                        notes: buildNotesFromFields("TRAINING", nextFields),
-                      });
-                    }}
-                  />
-                  <datalist id={`notes-training-${key}`}>
-                    {notesPresets.training[
-                      key as keyof typeof notesPresets.training
-                    ]?.map((item) => (
-                      <option key={item} value={item} />
-                    ))}
-                  </datalist>
-                </label>
-              ))}
-            </div>
-          )}
-          {board?.notesTemplate === "MATCH" && (
-            <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
-              {[
-                ["opposition", "Opposition"],
-                ["ourGameWithBall", "Our game - with ball"],
-                ["ourGameWithoutBall", "Our game - without ball"],
-                ["counters", "Counters"],
-                ["keyRoles", "Key Roles"],
-                ["importantReminders", "Important reminders"],
-                ["matchMessage", "Match message"],
-              ].map(([key, label]) => (
-                <label key={key} className="space-y-1">
-                  <span>{label}</span>
-                  <input
-                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
-                    value={board.notesFields?.match?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["match"]] ?? ""}
-                    list={`notes-match-${key}`}
-                    onChange={(event) => {
-                      if (!board) {
-                        return;
-                      }
-                      const nextFields = {
-                        ...board.notesFields,
-                        match: {
-                          ...board.notesFields?.match,
-                          [key]: event.target.value,
-                        },
-                      };
-                      useProjectStore.getState().updateBoard(board.id, {
-                        notesFields: nextFields,
-                        notes: buildNotesFromFields("MATCH", nextFields),
-                      });
-                    }}
-                  />
-                  <datalist id={`notes-match-${key}`}>
-                    {notesPresets.match[
-                      key as keyof typeof notesPresets.match
-                    ]?.map((item) => (
-                      <option key={item} value={item} />
-                    ))}
-                  </datalist>
-                </label>
-              ))}
-            </div>
-          )}
-          {board?.notesTemplate === "EDUCATION" && (
-            <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
-              {[
-                ["tema", "Tema"],
-                ["grundprincip", "Grundprincip"],
-                ["whatToSee", "What to see"],
-                ["whatToDo", "What to do"],
-                ["usualErrors", "Usual errors"],
-                ["matchConnection", "Match connection"],
-                ["reflections", "Reflections"],
-              ].map(([key, label]) => (
-                <label key={key} className="space-y-1">
-                  <span>{label}</span>
-                  <input
-                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
-                    value={board.notesFields?.education?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["education"]] ?? ""}
-                    list={`notes-education-${key}`}
-                    onChange={(event) => {
-                      if (!board) {
-                        return;
-                      }
-                      const nextFields = {
-                        ...board.notesFields,
-                        education: {
-                          ...board.notesFields?.education,
-                          [key]: event.target.value,
-                        },
-                      };
-                      useProjectStore.getState().updateBoard(board.id, {
-                        notesFields: nextFields,
-                        notes: buildNotesFromFields("EDUCATION", nextFields),
-                      });
-                    }}
-                  />
-                  <datalist id={`notes-education-${key}`}>
-                    {notesPresets.education[
-                      key as keyof typeof notesPresets.education
-                    ]?.map((item) => (
-                      <option key={item} value={item} />
-                    ))}
-                  </datalist>
-                </label>
-              ))}
-            </div>
-          )}
-          <div className="mt-3 flex min-h-0 flex-1 flex-col">
-            {notesView === "edit" ? (
-              <textarea
-                className="min-h-0 flex-1 resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
-                placeholder="Write notes for this board..."
-                value={board?.notes ?? ""}
-                onChange={(event) => {
-                  if (board) {
-                    useProjectStore.getState().updateBoard(board.id, {
-                      notes: event.target.value,
-                    });
-                  }
-                }}
-              />
-            ) : (
-              <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm, remarkBreaks]}
-                  components={{
-                    h1: (props) => (
-                      <h1 className="mb-2 text-lg font-semibold" {...props} />
-                    ),
-                    h2: (props) => (
-                      <h2 className="mb-2 text-base font-semibold" {...props} />
-                    ),
-                    h3: (props) => (
-                      <h3 className="mb-2 text-sm font-semibold" {...props} />
-                    ),
-                    p: (props) => <p className="mb-2" {...props} />,
-                    ul: (props) => (
-                      <ul className="mb-2 list-disc pl-4" {...props} />
-                    ),
-                    ol: (props) => (
-                      <ol className="mb-2 list-decimal pl-4" {...props} />
-                    ),
-                    li: (props) => <li className="mb-1" {...props} />,
-                  }}
-                >
-                  {board?.notes ?? ""}
-                </ReactMarkdown>
+            {board?.notesTemplate === "TRAINING" && (
+              <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
+                {[
+                  ["mainFocus", "Main Focus"],
+                  ["partGoals", "Part goals"],
+                  ["organisation", "Organisation"],
+                  ["keyBehaviours", "Key behaviours"],
+                  ["usualErrors", "Usual errors"],
+                  ["coachInstructions", "Coach instructions"],
+                ].map(([key, label]) => (
+                  <label key={key} className="space-y-1">
+                    <span>{label}</span>
+                    <input
+                      className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                      value={board.notesFields?.training?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["training"]] ?? ""}
+                      list={`notes-training-${key}`}
+                      onChange={(event) => {
+                        if (!board) {
+                          return;
+                        }
+                        const nextFields = {
+                          ...board.notesFields,
+                          training: {
+                            ...board.notesFields?.training,
+                            [key]: event.target.value,
+                          },
+                        };
+                        useProjectStore.getState().updateBoard(board.id, {
+                          notesFields: nextFields,
+                          notes: buildNotesFromFields("TRAINING", nextFields),
+                        });
+                      }}
+                    />
+                    <datalist id={`notes-training-${key}`}>
+                      {notesPresets.training[
+                        key as keyof typeof notesPresets.training
+                      ]?.map((item) => (
+                        <option key={item} value={item} />
+                      ))}
+                    </datalist>
+                  </label>
+                ))}
               </div>
             )}
+            {board?.notesTemplate === "MATCH" && (
+              <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
+                {[
+                  ["opposition", "Opposition"],
+                  ["ourGameWithBall", "Our game - with ball"],
+                  ["ourGameWithoutBall", "Our game - without ball"],
+                  ["counters", "Counters"],
+                  ["keyRoles", "Key Roles"],
+                  ["importantReminders", "Important reminders"],
+                  ["matchMessage", "Match message"],
+                ].map(([key, label]) => (
+                  <label key={key} className="space-y-1">
+                    <span>{label}</span>
+                    <input
+                      className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                      value={board.notesFields?.match?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["match"]] ?? ""}
+                      list={`notes-match-${key}`}
+                      onChange={(event) => {
+                        if (!board) {
+                          return;
+                        }
+                        const nextFields = {
+                          ...board.notesFields,
+                          match: {
+                            ...board.notesFields?.match,
+                            [key]: event.target.value,
+                          },
+                        };
+                        useProjectStore.getState().updateBoard(board.id, {
+                          notesFields: nextFields,
+                          notes: buildNotesFromFields("MATCH", nextFields),
+                        });
+                      }}
+                    />
+                    <datalist id={`notes-match-${key}`}>
+                      {notesPresets.match[
+                        key as keyof typeof notesPresets.match
+                      ]?.map((item) => (
+                        <option key={item} value={item} />
+                      ))}
+                    </datalist>
+                  </label>
+                ))}
+              </div>
+            )}
+            {board?.notesTemplate === "EDUCATION" && (
+              <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
+                {[
+                  ["tema", "Tema"],
+                  ["grundprincip", "Grundprincip"],
+                  ["whatToSee", "What to see"],
+                  ["whatToDo", "What to do"],
+                  ["usualErrors", "Usual errors"],
+                  ["matchConnection", "Match connection"],
+                  ["reflections", "Reflections"],
+                ].map(([key, label]) => (
+                  <label key={key} className="space-y-1">
+                    <span>{label}</span>
+                    <input
+                      className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                      value={board.notesFields?.education?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["education"]] ?? ""}
+                      list={`notes-education-${key}`}
+                      onChange={(event) => {
+                        if (!board) {
+                          return;
+                        }
+                        const nextFields = {
+                          ...board.notesFields,
+                          education: {
+                            ...board.notesFields?.education,
+                            [key]: event.target.value,
+                          },
+                        };
+                        useProjectStore.getState().updateBoard(board.id, {
+                          notesFields: nextFields,
+                          notes: buildNotesFromFields("EDUCATION", nextFields),
+                        });
+                      }}
+                    />
+                    <datalist id={`notes-education-${key}`}>
+                      {notesPresets.education[
+                        key as keyof typeof notesPresets.education
+                      ]?.map((item) => (
+                        <option key={item} value={item} />
+                      ))}
+                    </datalist>
+                  </label>
+                ))}
+              </div>
+            )}
+            <div className="mt-3 flex min-h-0 flex-1 flex-col">
+              {notesView === "edit" ? (
+                <textarea
+                  className="min-h-0 flex-1 resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
+                  placeholder="Write notes for this board..."
+                  value={board?.notes ?? ""}
+                  onChange={(event) => {
+                    if (board) {
+                      useProjectStore.getState().updateBoard(board.id, {
+                        notes: event.target.value,
+                      });
+                    }
+                  }}
+                />
+              ) : (
+                <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm, remarkBreaks]}
+                    components={{
+                      h1: (props) => (
+                        <h1 className="mb-2 text-lg font-semibold" {...props} />
+                      ),
+                      h2: (props) => (
+                        <h2 className="mb-2 text-base font-semibold" {...props} />
+                      ),
+                      h3: (props) => (
+                        <h3 className="mb-2 text-sm font-semibold" {...props} />
+                      ),
+                      p: (props) => <p className="mb-2" {...props} />,
+                      ul: (props) => (
+                        <ul className="mb-2 list-disc pl-4" {...props} />
+                      ),
+                      ol: (props) => (
+                        <ol className="mb-2 list-decimal pl-4" {...props} />
+                      ),
+                      li: (props) => <li className="mb-1" {...props} />,
+                    }}
+                  >
+                    {board?.notes ?? ""}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -922,10 +923,13 @@ export default function Toolbox() {
           </p>
         </div>
       )}
-
     </div>
   );
 }
+
+
+
+
 
 
 
