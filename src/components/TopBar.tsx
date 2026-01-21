@@ -81,12 +81,6 @@ export default function TopBar() {
   const boardLimitReached =
     Number.isFinite(limits.maxBoards) &&
     project.boards.length >= limits.maxBoards;
-  const maxProjects = Number.isFinite(limits.maxProjects)
-    ? limits.maxProjects
-    : "inf";
-  const maxBoards = Number.isFinite(limits.maxBoards)
-    ? limits.maxBoards
-    : "inf";
 
   const onExport = () => {
     if (!can(plan, "project.export")) {
@@ -317,13 +311,9 @@ export default function TopBar() {
           </option>
         </select>
         <FormationMenu />
-        <div className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-          Projects {projectCount}/{maxProjects} · Boards {project.boards.length}/
-          {maxBoards}
-        </div>
         {authUser && (
           <div
-            className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-widest ${
+            className={`rounded-full border p-2 ${
               syncStatus.state === "error"
                 ? "border-[var(--accent-1)] text-[var(--accent-1)]"
                 : syncStatus.state === "syncing"
@@ -342,30 +332,21 @@ export default function TopBar() {
                 : "Cloud synced."
             }
           >
-            <span className="inline-flex items-center gap-1">
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-3 w-3"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M20 6v6h-6" />
-                <path d="M4 18v-6h6" />
-                <path d="M20 12a8 8 0 0 0-14-5" />
-                <path d="M4 12a8 8 0 0 0 14 5" />
-              </svg>
-              {syncStatus.state === "syncing"
-                ? "Syncing"
-                : syncStatus.state === "error"
-                ? "Sync error"
-                : syncStatus.state === "offline"
-                ? "Offline"
-                : "Synced"}
-            </span>
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 6v6h-6" />
+              <path d="M4 18v-6h6" />
+              <path d="M20 12a8 8 0 0 0-14-5" />
+              <path d="M4 12a8 8 0 0 0 14 5" />
+            </svg>
           </div>
         )}
         {isOffline && (

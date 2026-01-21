@@ -157,6 +157,9 @@ export default function BoardObject({
       playerTokenSize + 0.6 + belowTextHeight / 2,
       labelRotation
     );
+    const hasAttachedBall = objects.some(
+      (item) => item.type === "ball" && item.attachedToId === player.id
+    );
     return (
       <Group
         {...commonProps}
@@ -166,6 +169,16 @@ export default function BoardObject({
           }
         }}
       >
+        {hasAttachedBall && (
+          <Circle
+            radius={playerTokenSize + 2.4}
+            fill="#ffffff"
+            opacity={0.25}
+            shadowBlur={10}
+            shadowColor="#ffffff"
+            shadowOpacity={0.6}
+          />
+        )}
         {isHighlighted && (
           <Circle
             radius={playerTokenSize + 1.6}
@@ -250,15 +263,10 @@ export default function BoardObject({
         }
       : ball.position;
     return (
-      <Circle
+      <Group
         {...commonProps}
         x={position.x}
         y={position.y}
-        radius={1.2}
-        fill={ball.style.fill}
-        stroke={ball.style.stroke}
-        strokeWidth={ball.style.strokeWidth}
-        draggable={!ball.locked}
         ref={(node) => {
           if (node) {
             registerNode(object.id, node);
@@ -270,7 +278,25 @@ export default function BoardObject({
             onBallDragStart(ball.id, { x: event.target.x(), y: event.target.y() });
           }
         }}
-      />
+      >
+        {ball.attachedToId && (
+          <Circle
+            radius={2.3}
+            fill="#ffffff"
+            opacity={0.35}
+            shadowBlur={8}
+            shadowColor="#ffffff"
+            shadowOpacity={0.6}
+          />
+        )}
+        <Circle
+          radius={1.2}
+          fill={ball.style.fill}
+          stroke={ball.style.stroke}
+          strokeWidth={ball.style.strokeWidth}
+          draggable={!ball.locked}
+        />
+      </Group>
     );
   }
 

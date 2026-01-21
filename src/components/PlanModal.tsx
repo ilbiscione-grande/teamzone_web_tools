@@ -35,6 +35,8 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
   const authUser = useProjectStore((state) => state.authUser);
   const clearAuthUser = useProjectStore((state) => state.clearAuthUser);
   const setPlan = useProjectStore((state) => state.setPlan);
+  const index = useProjectStore((state) => state.index);
+  const project = useProjectStore((state) => state.project);
   const limits = useMemo(() => getPlanLimits(plan), [plan]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,6 +44,10 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
   const [status, setStatus] = useState<string | null>(null);
   const canSignIn = email.trim().length > 0;
   const [upgradeBusy, setUpgradeBusy] = useState(false);
+  const projectCount = new Set(
+    [...index.map((item) => item.id), project?.id].filter(Boolean)
+  ).size;
+  const boardCount = project?.boards.length ?? 0;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -340,6 +346,15 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
 
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-4 text-xs text-[var(--ink-1)]">
               <p className="mb-2 text-[11px] uppercase">Current usage</p>
+              <div className="flex items-center justify-between">
+                <span>Projects used</span>
+                <span>{projectCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Boards used</span>
+                <span>{boardCount}</span>
+              </div>
+              <div className="my-2 h-px bg-[var(--line)]" />
               <div className="flex items-center justify-between">
                 <span>Projects allowed</span>
                 <span>{formatLimit(limits.maxProjects)}</span>
