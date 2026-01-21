@@ -174,7 +174,7 @@ export default function BoardObject({
             radius={playerTokenSize + 1.6}
             fill="#ffffff"
             opacity={0.25}
-            shadowBlur={10}
+            shadowBlur={16}
             shadowColor="#ffffff"
             shadowOpacity={0.6}
           />
@@ -284,7 +284,7 @@ export default function BoardObject({
             radius={1.7}
             fill="#ffffff"
             opacity={0.35}
-            shadowBlur={8}
+            shadowBlur={14}
             shadowColor="#ffffff"
             shadowOpacity={0.6}
           />
