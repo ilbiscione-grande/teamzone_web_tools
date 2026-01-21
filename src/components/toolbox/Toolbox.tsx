@@ -617,7 +617,7 @@ export default function Toolbox() {
       {activeTab === "squad" && <SquadEditor />}
 
       {activeTab === "notes" && (
-        <div className="flex h-full flex-col overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <div className="flex flex-wrap items-center justify-between gap-2 overflow-visible">
             <div className="flex items-center gap-2">
               <p className="text-[11px] uppercase text-[var(--ink-1)]">Notes</p>
