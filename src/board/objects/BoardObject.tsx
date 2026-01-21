@@ -171,7 +171,7 @@ export default function BoardObject({
       >
         {hasAttachedBall && (
           <Circle
-            radius={playerTokenSize + 2.4}
+            radius={playerTokenSize + 1.6}
             fill="#ffffff"
             opacity={0.25}
             shadowBlur={10}
@@ -281,7 +281,7 @@ export default function BoardObject({
       >
         {ball.attachedToId && (
           <Circle
-            radius={2.3}
+            radius={1.7}
             fill="#ffffff"
             opacity={0.35}
             shadowBlur={8}
