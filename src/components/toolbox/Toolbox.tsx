@@ -266,6 +266,116 @@ export default function Toolbox() {
         : "UTBILDNING";
     return [`# ${title}`, ...sections].join("\n\n");
   };
+  const notesPresets = {
+    training: {
+      mainFocus: [
+        "Build up play – defensive third",
+        "Build up play – central progression",
+        "Press resistance",
+        "Finishing in the box",
+        "Transition defense",
+      ],
+      partGoals: [
+        "Create central options",
+        "Play through first press",
+        "Support angles quickly",
+      ],
+      organisation: [
+        "7v7",
+        "9v9",
+        "11v11",
+        "Half pitch",
+        "Zoned pitch",
+      ],
+      keyBehaviours: [
+        "Scan before receiving",
+        "First touch away from pressure",
+        "Immediate support after pass",
+      ],
+      usualErrors: [
+        "Distances too long",
+        "Hiding behind opponent",
+        "Few switches of play",
+      ],
+      coachInstructions: [
+        "Play the first option",
+        "Set ball tempo, not running tempo",
+        "Find next passing angle quickly",
+      ],
+    },
+    match: {
+      opposition: [
+        "High pressing opponent",
+        "Low block opponent",
+        "Direct play team",
+      ],
+      ourGameWithBall: [
+        "Short build up",
+        "Direct to target player",
+        "Exploit wide channels",
+      ],
+      ourGameWithoutBall: [
+        "High press",
+        "Mid block",
+        "Low block",
+      ],
+      counters: [
+        "Immediate counter-press",
+        "Secure rest defense",
+        "Fast vertical transition",
+      ],
+      keyRoles: [
+        "Pivot anchors build up",
+        "Wingers isolate fullback",
+        "Striker pins center backs",
+      ],
+      importantReminders: [
+        "First 10 minutes",
+        "Last 15 minutes",
+        "When leading/when trailing",
+      ],
+      matchMessage: [
+        "Be brave with the ball",
+        "We work together",
+        "Next action matters most",
+      ],
+    },
+    education: {
+      tema: [
+        "Spelbarhet mellan lagdelar",
+        "Rättvänd mottagning",
+        "Skapa överläge centralt",
+      ],
+      grundprincip: [
+        "Skapa vinkel och djup",
+        "Spela bort första pressen",
+        "Locka och spela igenom",
+      ],
+      whatToSee: [
+        "Positioner med- och motspelare",
+        "Avstånd och vinklar",
+        "Motståndarens rörelse",
+      ],
+      whatToDo: [
+        "Placering",
+        "Tajming",
+        "Beslut (spela, driva, vända)",
+      ],
+      usualErrors: [
+        "För tidig löpning",
+        "Spel i samma linje",
+        "Bolltempo utan rörelse",
+      ],
+      matchConnection: [
+        "När ser vi detta i match?",
+        "Hur påverkar det nästa aktion?",
+      ],
+      reflections: [
+        "Vad händer om vi inte gör detta?",
+        "Hur hjälper detta lagkamraten?",
+      ],
+    },
+  };
   const selectedPlayers = objects.filter(
     (item) => item.type === "player" && selection.includes(item.id)
   ) as PlayerToken[];
@@ -592,6 +702,7 @@ export default function Toolbox() {
                   <input
                     className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
                     value={board.notesFields?.training?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["training"]] ?? ""}
+                    list={`notes-training-${key}`}
                     onChange={(event) => {
                       if (!board) {
                         return;
@@ -609,6 +720,13 @@ export default function Toolbox() {
                       });
                     }}
                   />
+                  <datalist id={`notes-training-${key}`}>
+                    {notesPresets.training[
+                      key as keyof typeof notesPresets.training
+                    ]?.map((item) => (
+                      <option key={item} value={item} />
+                    ))}
+                  </datalist>
                 </label>
               ))}
             </div>
@@ -629,6 +747,7 @@ export default function Toolbox() {
                   <input
                     className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
                     value={board.notesFields?.match?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["match"]] ?? ""}
+                    list={`notes-match-${key}`}
                     onChange={(event) => {
                       if (!board) {
                         return;
@@ -646,6 +765,13 @@ export default function Toolbox() {
                       });
                     }}
                   />
+                  <datalist id={`notes-match-${key}`}>
+                    {notesPresets.match[
+                      key as keyof typeof notesPresets.match
+                    ]?.map((item) => (
+                      <option key={item} value={item} />
+                    ))}
+                  </datalist>
                 </label>
               ))}
             </div>
@@ -666,6 +792,7 @@ export default function Toolbox() {
                   <input
                     className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
                     value={board.notesFields?.education?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["education"]] ?? ""}
+                    list={`notes-education-${key}`}
                     onChange={(event) => {
                       if (!board) {
                         return;
@@ -683,6 +810,13 @@ export default function Toolbox() {
                       });
                     }}
                   />
+                  <datalist id={`notes-education-${key}`}>
+                    {notesPresets.education[
+                      key as keyof typeof notesPresets.education
+                    ]?.map((item) => (
+                      <option key={item} value={item} />
+                    ))}
+                  </datalist>
                 </label>
               ))}
             </div>
