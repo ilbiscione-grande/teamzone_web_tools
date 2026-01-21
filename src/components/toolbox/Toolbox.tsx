@@ -636,59 +636,86 @@ export default function Toolbox() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <select
+                className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                value={board?.notesTemplate ?? ""}
+                onChange={(event) => {
+                  if (!board) {
+                    return;
+                  }
+                  useProjectStore.getState().updateBoard(board.id, {
+                    notesTemplate:
+                      (event.target.value as "TRAINING" | "MATCH" | "EDUCATION") ||
+                      undefined,
+                  });
+                }}
+              >
+                <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                  Välj mall
+                </option>
+                <option value="TRAINING" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                  Träning
+                </option>
+                <option value="MATCH" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                  Match
+                </option>
+                <option value="EDUCATION" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                  Utbildning
+                </option>
+              </select>
               <button
-                className={`rounded-full border px-3 py-1 text-[11px] ${
+                className={`rounded-full border p-2 ${
                   notesView === "edit"
                     ? "border-[var(--accent-0)] text-[var(--ink-0)]"
                     : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
                 }`}
                 onClick={() => setNotesView("edit")}
+                aria-label="Edit notes"
+                title="Edit"
               >
-                Edit
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-3 w-3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5l4 4L7 21l-4 1 1-4 12.5-14.5z" />
+                </svg>
               </button>
               <button
-                className={`rounded-full border px-3 py-1 text-[11px] ${
+                className={`rounded-full border p-2 ${
                   notesView === "preview"
                     ? "border-[var(--accent-0)] text-[var(--ink-0)]"
                     : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
                 }`}
                 onClick={() => setNotesView("preview")}
+                aria-label="Preview notes"
+                title="Preview"
               >
-                Preview
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-3 w-3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
               </button>
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[var(--ink-1)]">
-            <select
-              className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-              value={board?.notesTemplate ?? ""}
-              onChange={(event) => {
-                if (!board) {
-                  return;
-                }
-                useProjectStore.getState().updateBoard(board.id, {
-                  notesTemplate:
-                    (event.target.value as "TRAINING" | "MATCH" | "EDUCATION") ||
-                    undefined,
-                });
-              }}
-            >
-              <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
-                Välj mall
-              </option>
-              <option value="TRAINING" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
-                Träning
-              </option>
-              <option value="MATCH" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
-                Match
-              </option>
-              <option value="EDUCATION" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
-                Utbildning
-              </option>
-            </select>
-          </div>
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
           {board?.notesTemplate === "TRAINING" && (
-            <div className="mt-3 grid gap-2 text-[11px] text-[var(--ink-1)]">
+            <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
               {[
                 ["mainFocus", "Main Focus"],
                 ["partGoals", "Part goals"],
@@ -732,7 +759,7 @@ export default function Toolbox() {
             </div>
           )}
           {board?.notesTemplate === "MATCH" && (
-            <div className="mt-3 grid gap-2 text-[11px] text-[var(--ink-1)]">
+            <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
               {[
                 ["opposition", "Opposition"],
                 ["ourGameWithBall", "Our game – with ball"],
@@ -777,7 +804,7 @@ export default function Toolbox() {
             </div>
           )}
           {board?.notesTemplate === "EDUCATION" && (
-            <div className="mt-3 grid gap-2 text-[11px] text-[var(--ink-1)]">
+            <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
               {[
                 ["tema", "Tema"],
                 ["grundprincip", "Grundprincip"],
