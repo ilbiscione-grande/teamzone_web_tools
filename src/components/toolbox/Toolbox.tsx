@@ -2,6 +2,8 @@
 
 import { useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
+import remarkGfm from "remark-gfm";
 import { useEditorStore, type Tool } from "@/state/useEditorStore";
 import SquadEditor from "@/components/squad/SquadEditor";
 import { useProjectStore } from "@/state/useProjectStore";
@@ -522,7 +524,42 @@ export default function Toolbox() {
       {activeTab === "notes" && (
         <div className="flex h-full flex-col rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] uppercase text-[var(--ink-1)]">Notes</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] uppercase text-[var(--ink-1)]">Notes</p>
+              <div className="group relative">
+                <button
+                  type="button"
+                  className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--line)] text-[10px] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  aria-label="Markdown help"
+                >
+                  ?
+                </button>
+                <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-[10px] text-[var(--ink-0)] opacity-0 shadow-xl shadow-black/30 transition group-hover:opacity-100">
+                  <p className="mb-2 text-[11px] uppercase text-[var(--ink-1)]">
+                    Markdown quick tips
+                  </p>
+                  <p className="mb-1">
+                    <span className="font-semibold">#</span> Heading,{" "}
+                    <span className="font-semibold">##</span> Subheading
+                  </p>
+                  <p className="mb-1">
+                    <span className="font-semibold">-</span> Bullet list,{" "}
+                    <span className="font-semibold">1.</span> Numbered list
+                  </p>
+                  <p className="mb-1">
+                    <span className="font-semibold">**bold**</span>,{" "}
+                    <span className="font-semibold">*italic*</span>
+                  </p>
+                  <p className="mb-1">
+                    <span className="font-semibold">`code`</span> for inline code
+                  </p>
+                  <p>
+                    New lines are respected; leave a blank line for a new
+                    paragraph.
+                  </p>
+                </div>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 className={`rounded-full border px-3 py-1 text-[11px] ${
@@ -611,7 +648,30 @@ export default function Toolbox() {
               />
             ) : (
               <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]">
-                <ReactMarkdown>{board?.notes ?? ""}</ReactMarkdown>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm, remarkBreaks]}
+                  components={{
+                    h1: (props) => (
+                      <h1 className="mb-2 text-lg font-semibold" {...props} />
+                    ),
+                    h2: (props) => (
+                      <h2 className="mb-2 text-base font-semibold" {...props} />
+                    ),
+                    h3: (props) => (
+                      <h3 className="mb-2 text-sm font-semibold" {...props} />
+                    ),
+                    p: (props) => <p className="mb-2" {...props} />,
+                    ul: (props) => (
+                      <ul className="mb-2 list-disc pl-4" {...props} />
+                    ),
+                    ol: (props) => (
+                      <ol className="mb-2 list-decimal pl-4" {...props} />
+                    ),
+                    li: (props) => <li className="mb-1" {...props} />,
+                  }}
+                >
+                  {board?.notes ?? ""}
+                </ReactMarkdown>
               </div>
             )}
           </div>
