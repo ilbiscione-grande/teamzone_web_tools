@@ -191,20 +191,6 @@ export default function Toolbox() {
   );
   const [notesView, setNotesView] = useState<"edit" | "preview">("preview");
   const notesInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const previewNotes = useMemo(() => {
-    const raw = board?.notes ?? "";
-    if (!raw) {
-      return "";
-    }
-    return raw.replace(/\n{3,}/g, (match) => {
-      const extra = match.length - 2;
-      let next = "\n\n";
-      for (let i = 0; i < extra; i += 1) {
-        next += "\u00A0\n\n";
-      }
-      return next;
-    });
-  }, [board?.notes]);
   const [showMarkdownHelp, setShowMarkdownHelp] = useState(false);
   const markdownHelpRef = useRef<HTMLButtonElement | null>(null);
   const [markdownHelpPos, setMarkdownHelpPos] = useState<{
@@ -227,6 +213,20 @@ export default function Toolbox() {
   );
 
   const board = getActiveBoard(project);
+  const previewNotes = useMemo(() => {
+    const raw = board?.notes ?? "";
+    if (!raw) {
+      return "";
+    }
+    return raw.replace(/\n{3,}/g, (match) => {
+      const extra = match.length - 2;
+      let next = "\n\n";
+      for (let i = 0; i < extra; i += 1) {
+        next += "\u00A0\n\n";
+      }
+      return next;
+    });
+  }, [board?.notes]);
   const frameIndex = board?.activeFrameIndex ?? 0;
   const objects = board?.frames[frameIndex]?.objects ?? [];
   const buildNotesFromFields = (
