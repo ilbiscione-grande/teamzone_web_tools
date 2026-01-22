@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
@@ -191,6 +191,20 @@ export default function Toolbox() {
   );
   const [notesView, setNotesView] = useState<"edit" | "preview">("preview");
   const notesInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const previewNotes = useMemo(() => {
+    const raw = board?.notes ?? "";
+    if (!raw) {
+      return "";
+    }
+    return raw.replace(/\n{3,}/g, (match) => {
+      const extra = match.length - 2;
+      let next = "\n\n";
+      for (let i = 0; i < extra; i += 1) {
+        next += "\u00A0\n\n";
+      }
+      return next;
+    });
+  }, [board?.notes]);
   const [showMarkdownHelp, setShowMarkdownHelp] = useState(false);
   const markdownHelpRef = useRef<HTMLButtonElement | null>(null);
   const [markdownHelpPos, setMarkdownHelpPos] = useState<{
@@ -877,7 +891,7 @@ export default function Toolbox() {
                       li: (props) => <li className="mb-1" {...props} />,
                     }}
                   >
-                    {board?.notes ?? ""}
+                    {previewNotes}
                   </ReactMarkdown>
                 </div>
               )}

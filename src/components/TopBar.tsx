@@ -42,6 +42,8 @@ export default function TopBar() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const [titleWidth, setTitleWidth] = useState<number | null>(null);
   const showAds = plan === "FREE";
   const showPlanGraceWarning =
     plan === "AUTH" &&
@@ -67,6 +69,22 @@ export default function TopBar() {
     return () => {
       window.removeEventListener("online", update);
       window.removeEventListener("offline", update);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!titleRef.current) {
+      return;
+    }
+    const updateWidth = () => {
+      if (titleRef.current) {
+        setTitleWidth(titleRef.current.getBoundingClientRect().width);
+      }
+    };
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      window.removeEventListener("resize", updateWidth);
     };
   }, []);
 
@@ -122,11 +140,17 @@ export default function TopBar() {
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-        <div className="inline-grid w-fit">
-          <span className="display-font w-full text-[10px] uppercase tracking-[0.4em] text-[var(--accent-0)]">
+        <div className="flex flex-col">
+          <span
+            className="display-font text-[10px] uppercase tracking-[0.4em] text-[var(--accent-0)]"
+            style={titleWidth ? { width: `${titleWidth}px` } : undefined}
+          >
             Teamzone Web Tools
           </span>
-          <h1 className="display-font w-full text-2xl text-[var(--ink-0)]">
+          <h1
+            ref={titleRef}
+            className="display-font text-2xl text-[var(--ink-0)]"
+          >
             Tactics Board
           </h1>
         </div>
