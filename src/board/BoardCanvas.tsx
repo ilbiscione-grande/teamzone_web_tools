@@ -513,10 +513,21 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                   }
                 : null;
               const controlWorld = control
-                ? {
-                    x: arrow.position.x + (2 * control.x + end.x) / 4,
-                    y: arrow.position.y + (2 * control.y + end.y) / 4,
-                  }
+                ? (() => {
+                    const cp1 = { x: (2 * control.x) / 3, y: (2 * control.y) / 3 };
+                    const cp2 = {
+                      x: (end.x + 2 * control.x) / 3,
+                      y: (end.y + 2 * control.y) / 3,
+                    };
+                    const mid = {
+                      x: (3 * cp1.x + 3 * cp2.x + end.x) / 8,
+                      y: (3 * cp1.y + 3 * cp2.y + end.y) / 8,
+                    };
+                    return {
+                      x: arrow.position.x + mid.x,
+                      y: arrow.position.y + mid.y,
+                    };
+                  })()
                 : null;
               const locked = arrow.locked;
               return (
