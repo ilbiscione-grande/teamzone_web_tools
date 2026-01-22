@@ -122,9 +122,14 @@ export default function TopBar() {
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-        <h1 className="display-font text-2xl text-[var(--ink-0)]">
-          Tactics Board
-        </h1>
+        <div className="flex flex-col">
+          <span className="display-font text-[10px] uppercase tracking-[0.4em] text-[var(--accent-0)]">
+            Teamzone Web Tools
+          </span>
+          <h1 className="display-font text-2xl text-[var(--ink-0)]">
+            Tactics Board
+          </h1>
+        </div>
         <input
           className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
           value={project.name}

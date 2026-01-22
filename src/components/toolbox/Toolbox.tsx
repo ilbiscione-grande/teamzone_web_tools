@@ -504,6 +504,7 @@ export default function Toolbox() {
         ))}
       </div>
 
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
       {activeTab === "items" && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
@@ -714,7 +715,7 @@ export default function Toolbox() {
               </button>
             </div>
           </div>
-          <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="mt-3 min-h-0 flex-1 pr-1">
             {board?.notesTemplate === "TRAINING" && (
               <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
                 {[
@@ -896,6 +897,7 @@ export default function Toolbox() {
           </div>
         </div>
       )}
+      </div>
       {showMarkdownHelp && markdownHelpPos && (
         <div
           className="fixed z-50 w-64 -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-[10px] text-[var(--ink-0)] shadow-xl shadow-black/30"
