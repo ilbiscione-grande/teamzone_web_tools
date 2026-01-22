@@ -189,7 +189,8 @@ export default function Toolbox() {
   >(
     "items"
   );
-  const [notesView, setNotesView] = useState<"edit" | "preview">("edit");
+  const [notesView, setNotesView] = useState<"edit" | "preview">("preview");
+  const notesInputRef = useRef<HTMLTextAreaElement | null>(null);
   const [showMarkdownHelp, setShowMarkdownHelp] = useState(false);
   const markdownHelpRef = useRef<HTMLButtonElement | null>(null);
   const [markdownHelpPos, setMarkdownHelpPos] = useState<{
@@ -665,54 +666,6 @@ export default function Toolbox() {
                   Utbildning
                 </option>
               </select>
-              <button
-                className={`rounded-full border p-2 ${
-                  notesView === "edit"
-                    ? "border-[var(--accent-0)] text-[var(--ink-0)]"
-                    : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-                }`}
-                onClick={() => setNotesView("edit")}
-                aria-label="Edit notes"
-                title="Edit"
-              >
-                <svg
-                  aria-hidden
-                  viewBox="0 0 24 24"
-                  className="h-3 w-3"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5l4 4L7 21l-4 1 1-4 12.5-14.5z" />
-                </svg>
-              </button>
-              <button
-                className={`rounded-full border p-2 ${
-                  notesView === "preview"
-                    ? "border-[var(--accent-0)] text-[var(--ink-0)]"
-                    : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-                }`}
-                onClick={() => setNotesView("preview")}
-                aria-label="Preview notes"
-                title="Preview"
-              >
-                <svg
-                  aria-hidden
-                  viewBox="0 0 24 24"
-                  className="h-3 w-3"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              </button>
             </div>
           </div>
           <div className="mt-3 min-h-0 flex-1 pr-1">
@@ -857,6 +810,33 @@ export default function Toolbox() {
                   rows={12}
                   placeholder="Write notes for this board..."
                   value={board?.notes ?? ""}
+                  ref={notesInputRef}
+                  onFocus={() => setNotesView("edit")}
+                  onBlur={() => setNotesView("preview")}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") {
+                      return;
+                    }
+                    if (!board) {
+                      return;
+                    }
+                    event.preventDefault();
+                    const target = event.currentTarget;
+                    const current = board.notes ?? "";
+                    const insert = event.shiftKey ? "\n" : "\n\n";
+                    const start = target.selectionStart ?? current.length;
+                    const end = target.selectionEnd ?? current.length;
+                    const next =
+                      current.slice(0, start) + insert + current.slice(end);
+                    useProjectStore.getState().updateBoard(board.id, {
+                      notes: next,
+                    });
+                    const cursor = start + insert.length;
+                    requestAnimationFrame(() => {
+                      target.selectionStart = cursor;
+                      target.selectionEnd = cursor;
+                    });
+                  }}
                   onChange={(event) => {
                     if (board) {
                       useProjectStore.getState().updateBoard(board.id, {
@@ -866,7 +846,15 @@ export default function Toolbox() {
                   }}
                 />
               ) : (
-                <div className="min-h-[12rem] overflow-y-auto rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]">
+                <div
+                  className="min-h-[12rem] overflow-y-auto rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
+                  onClick={() => {
+                    setNotesView("edit");
+                    requestAnimationFrame(() => {
+                      notesInputRef.current?.focus();
+                    });
+                  }}
+                >
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm, remarkBreaks]}
                     components={{
