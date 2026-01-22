@@ -532,7 +532,17 @@ export default function BoardObject({
     };
     const control = arrow.control ?? { x: end.x / 2, y: end.y / 2 };
     const points = arrow.curved
-      ? [0, 0, control.x, control.y, end.x, end.y]
+      ? (() => {
+          const cp1 = {
+            x: (0 + 2 * control.x) / 3,
+            y: (0 + 2 * control.y) / 3,
+          };
+          const cp2 = {
+            x: (end.x + 2 * control.x) / 3,
+            y: (end.y + 2 * control.y) / 3,
+          };
+          return [0, 0, cp1.x, cp1.y, cp2.x, cp2.y, end.x, end.y];
+        })()
       : arrow.points;
     return (
       <Arrow
