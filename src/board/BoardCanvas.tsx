@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
 import { Stage, Layer, Rect, Arrow, Group, Circle, Line } from "react-konva";
-import type { BallToken, Board } from "@/models";
+import type { ArrowLine, BallToken, Board } from "@/models";
 import Pitch, { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { useEditorStore } from "@/state/useEditorStore";
 import { useProjectStore } from "@/state/useProjectStore";
@@ -58,7 +58,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
     () =>
       objects.filter(
         (item) => item.type === "arrow" && selection.includes(item.id)
-      ),
+      ) as ArrowLine[],
     [objects, selection]
   );
   const renderObjects = useMemo(() => {
