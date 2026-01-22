@@ -506,6 +506,18 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                 x: arrow.position.x + (arrow as { points: number[] }).points[2],
                 y: arrow.position.y + (arrow as { points: number[] }).points[3],
               };
+              const control = arrow.curved
+                ? arrow.control ?? {
+                    x: (arrow as { points: number[] }).points[2] / 2,
+                    y: (arrow as { points: number[] }).points[3] / 2,
+                  }
+                : null;
+              const controlWorld = control
+                ? {
+                    x: arrow.position.x + control.x,
+                    y: arrow.position.y + control.y,
+                  }
+                : null;
               const locked = arrow.locked;
               return (
                 <Group key={`${arrow.id}-handles`}>
@@ -529,9 +541,17 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                         end.x - newStart.x,
                         end.y - newStart.y,
                       ];
+                      const nextControl =
+                        arrow.curved && arrow.control
+                          ? {
+                              x: arrow.position.x + arrow.control.x - newStart.x,
+                              y: arrow.position.y + arrow.control.y - newStart.y,
+                            }
+                          : undefined;
                       updateObject(board.id, frameIndex, arrow.id, {
                         position: newStart,
                         points: newPoints,
+                        control: nextControl,
                       });
                     }}
                   />
@@ -560,9 +580,213 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                       });
                     }}
                   />
+                  {controlWorld && (
+                    <Circle
+                      x={controlWorld.x}
+                      y={controlWorld.y}
+                      radius={0.7}
+                      fill="#ffffff"
+                      stroke="#0f1b1a"
+                      strokeWidth={0.15}
+                      draggable={!locked}
+                      onDragStart={() => pushHistory(clone(objects))}
+                      onDragMove={(event) => {
+                        const next = {
+                          x: event.target.x() - start.x,
+                          y: event.target.y() - start.y,
+                        };
+                        updateObject(board.id, frameIndex, arrow.id, {
+                          control: next,
+                          curved: true,
+                        });
+                      }}
+                    />
+                  )}
                 </Group>
               );
             })}
+            {sortedObjects
+              .filter(
+                (item) =>
+                  selection.includes(item.id) &&
+                  (item.type === "circle" ||
+                    item.type === "rect" ||
+                    item.type === "triangle")
+              )
+              .map((item) => {
+                const minSize = 1;
+                if (item.type === "circle") {
+                  const radius = item.radius;
+                  return (
+                    <Group
+                      key={`${item.id}-shape-handles`}
+                      x={item.position.x}
+                      y={item.position.y}
+                      rotation={item.rotation}
+                      scaleX={item.scale.x}
+                      scaleY={item.scale.y}
+                    >
+                      <Line
+                        points={[0, 0, 0, -radius - 2]}
+                        stroke="rgba(255,255,255,0.5)"
+                        strokeWidth={0.2}
+                        dash={[0.6, 0.6]}
+                        listening={false}
+                      />
+                      <Circle
+                        x={0}
+                        y={-radius - 2}
+                        radius={0.7}
+                        fill="#ffffff"
+                        stroke="#0f1b1a"
+                        strokeWidth={0.15}
+                        draggable={!item.locked}
+                        onMouseDown={(event) => {
+                          event.cancelBubble = true;
+                        }}
+                        onDragStart={() => pushHistory(clone(objects))}
+                        onDragMove={(event) => {
+                          const localX = event.target.x() / item.scale.x;
+                          const localY = event.target.y() / item.scale.y;
+                          const angle =
+                            (Math.atan2(localY, localX) * 180) / Math.PI - 90;
+                          updateObject(board.id, frameIndex, item.id, {
+                            rotation: angle,
+                          });
+                          event.target.position({
+                            x: 0,
+                            y: (-radius - 2) * item.scale.y,
+                          });
+                        }}
+                        onDragEnd={(event) => {
+                          event.target.position({
+                            x: 0,
+                            y: (-radius - 2) * item.scale.y,
+                          });
+                        }}
+                      />
+                      <Circle
+                        x={radius}
+                        y={0}
+                        radius={0.7}
+                        fill="#ffffff"
+                        stroke="#0f1b1a"
+                        strokeWidth={0.15}
+                        draggable={!item.locked}
+                        onMouseDown={(event) => {
+                          event.cancelBubble = true;
+                        }}
+                        onDragStart={() => pushHistory(clone(objects))}
+                        onDragMove={(event) => {
+                          const localX = event.target.x() / item.scale.x;
+                          const localY = event.target.y() / item.scale.y;
+                          const nextRadius = Math.max(
+                            minSize,
+                            Math.hypot(localX, localY)
+                          );
+                          updateObject(board.id, frameIndex, item.id, {
+                            radius: nextRadius,
+                          });
+                        }}
+                      />
+                    </Group>
+                  );
+                }
+                const width = "width" in item ? item.width : 0;
+                const height = "height" in item ? item.height : 0;
+                const scaleX = item.scale.x || 1;
+                const scaleY = item.scale.y || 1;
+                const handleOffset = Math.max(width, height) * 0.6 + 1.5;
+                const rotateHandle = { x: width / 2, y: -handleOffset };
+                const center = { x: width / 2, y: height / 2 };
+                return (
+                  <Group
+                    key={`${item.id}-shape-handles`}
+                    x={item.position.x}
+                    y={item.position.y}
+                    rotation={item.rotation}
+                    scaleX={scaleX}
+                    scaleY={scaleY}
+                  >
+                    <Line
+                      points={[
+                        center.x,
+                        center.y,
+                        rotateHandle.x,
+                        rotateHandle.y,
+                      ]}
+                      stroke="rgba(255,255,255,0.5)"
+                      strokeWidth={0.2}
+                      dash={[0.6, 0.6]}
+                      listening={false}
+                    />
+                    <Circle
+                      x={rotateHandle.x}
+                      y={rotateHandle.y}
+                      radius={0.7}
+                      fill="#ffffff"
+                      stroke="#0f1b1a"
+                      strokeWidth={0.15}
+                      draggable={!item.locked}
+                      onMouseDown={(event) => {
+                        event.cancelBubble = true;
+                      }}
+                      onDragStart={() => pushHistory(clone(objects))}
+                      onDragMove={(event) => {
+                        const localX = event.target.x() / scaleX;
+                        const localY = event.target.y() / scaleY;
+                        const angle =
+                          (Math.atan2(localY - center.y, localX - center.x) *
+                            180) /
+                            Math.PI +
+                          90;
+                        updateObject(board.id, frameIndex, item.id, {
+                          rotation: angle,
+                        });
+                        event.target.position({
+                          x: rotateHandle.x * scaleX,
+                          y: rotateHandle.y * scaleY,
+                        });
+                      }}
+                      onDragEnd={(event) => {
+                        event.target.position({
+                          x: rotateHandle.x * scaleX,
+                          y: rotateHandle.y * scaleY,
+                        });
+                      }}
+                    />
+                    <Rect
+                      x={width - 0.8}
+                      y={height - 0.8}
+                      width={1.6}
+                      height={1.6}
+                      fill="#ffffff"
+                      stroke="#0f1b1a"
+                      strokeWidth={0.15}
+                      cornerRadius={0.2}
+                      draggable={!item.locked}
+                      onMouseDown={(event) => {
+                        event.cancelBubble = true;
+                      }}
+                      onDragStart={() => pushHistory(clone(objects))}
+                      onDragMove={(event) => {
+                        const localX = Math.max(
+                          minSize,
+                          event.target.x() / scaleX
+                        );
+                        const localY = Math.max(
+                          minSize,
+                          event.target.y() / scaleY
+                        );
+                        updateObject(board.id, frameIndex, item.id, {
+                          width: localX,
+                          height: localY,
+                        });
+                      }}
+                    />
+                  </Group>
+                );
+              })}
             {sortedObjects
               .filter(
                 (item) =>

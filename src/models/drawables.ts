@@ -84,6 +84,8 @@ export type ArrowLine = BaseDrawable & {
   points: number[];
   head: boolean;
   dashed: boolean;
+  curved?: boolean;
+  control?: Point;
 };
 
 export type TextLabel = BaseDrawable & {

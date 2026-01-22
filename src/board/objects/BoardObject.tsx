@@ -526,10 +526,19 @@ export default function BoardObject({
 
   if (object.type === "arrow") {
     const arrow = object as ArrowLine;
+    const end = {
+      x: arrow.points[2],
+      y: arrow.points[3],
+    };
+    const control = arrow.control ?? { x: end.x / 2, y: end.y / 2 };
+    const points = arrow.curved
+      ? [0, 0, control.x, control.y, end.x, end.y]
+      : arrow.points;
     return (
       <Arrow
         {...commonProps}
-        points={arrow.points}
+        points={points}
+        bezier={arrow.curved ?? false}
         stroke={arrow.style.stroke}
         strokeWidth={arrow.style.strokeWidth}
         fill={arrow.style.stroke}

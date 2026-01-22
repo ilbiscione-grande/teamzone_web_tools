@@ -441,6 +441,25 @@ export default function PropertiesPanel() {
                 <label className="flex items-center gap-2 text-[11px]">
                   <input
                     type="checkbox"
+                    checked={Boolean(target.curved)}
+                    onChange={(event) => {
+                      const nextCurved = event.target.checked;
+                      if (!nextCurved) {
+                        update({ curved: false, control: undefined });
+                        return;
+                      }
+                      const end = { x: target.points[2], y: target.points[3] };
+                      update({
+                        curved: true,
+                        control: { x: end.x / 2, y: end.y / 2 },
+                      });
+                    }}
+                  />
+                  Curved
+                </label>
+                <label className="flex items-center gap-2 text-[11px]">
+                  <input
+                    type="checkbox"
                     checked={target.dashed}
                     onChange={(event) => update({ dashed: event.target.checked })}
                   />

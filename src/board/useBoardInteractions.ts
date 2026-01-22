@@ -264,6 +264,7 @@ export const useBoardInteractions = ({
         points: [0, 0, current.x - start.x, current.y - start.y],
         head: linePreset.head,
         dashed: linePreset.dashed,
+        curved: false,
       });
     }
     setDraft(null);
