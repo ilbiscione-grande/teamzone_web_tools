@@ -294,7 +294,6 @@ export default function BoardObject({
           fill={ball.style.fill}
           stroke={ball.style.stroke}
           strokeWidth={ball.style.strokeWidth}
-          draggable={!ball.locked}
         />
       </Group>
     );
