@@ -251,7 +251,11 @@ export default function PropertiesPanel() {
             )}
           </div>
 
-          {(target.type === "cone" || target.type === "goal") && (
+          {(target.type === "cone" ||
+            target.type === "goal" ||
+            target.type === "circle" ||
+            target.type === "rect" ||
+            target.type === "triangle") && (
             <div className="rounded-2xl border border-[var(--line)] p-3">
               <p className="text-[11px] uppercase text-[var(--ink-1)]">
                 Rotation

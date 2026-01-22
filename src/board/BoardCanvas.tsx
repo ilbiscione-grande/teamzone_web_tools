@@ -514,8 +514,8 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                 : null;
               const controlWorld = control
                 ? {
-                    x: arrow.position.x + control.x,
-                    y: arrow.position.y + control.y,
+                    x: arrow.position.x + (2 * control.x + end.x) / 4,
+                    y: arrow.position.y + (2 * control.y + end.y) / 4,
                   }
                 : null;
               const locked = arrow.locked;
@@ -591,9 +591,13 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                       draggable={!locked}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
-                        const next = {
+                        const localMid = {
                           x: event.target.x() - start.x,
                           y: event.target.y() - start.y,
+                        };
+                        const next = {
+                          x: 2 * localMid.x - end.x / 2,
+                          y: 2 * localMid.y - end.y / 2,
                         };
                         updateObject(board.id, frameIndex, arrow.id, {
                           control: next,
