@@ -864,7 +864,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
               )
               .map((item) => {
                 const width = "width" in item ? item.width : 0;
-                const height = "height" in item ? item.height : 0;
+                const height = "height" in item ? item.height ?? 0 : 0;
                 const scaleX = item.scale.x || 1;
                 const scaleY = item.scale.y || 1;
                 const handleOffset = Math.max(width, height) * 0.6 + 1.5;
