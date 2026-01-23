@@ -23,6 +23,7 @@ export type Board = {
   pitchOverlay: PitchOverlay;
   pitchOverlayText: boolean;
   watermarkEnabled?: boolean;
+  watermarkText?: string;
   notes: string;
   notesTemplate?: "TRAINING" | "MATCH" | "EDUCATION";
   notesFields?: {

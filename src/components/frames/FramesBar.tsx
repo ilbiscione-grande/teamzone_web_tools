@@ -164,6 +164,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       return;
     }
     const pixelRatio = window.devicePixelRatio ?? 1;
+    const pitchBounds = getPitchViewBounds(board.pitchView);
     const width = stage.width() * pixelRatio;
     const height = stage.height() * pixelRatio;
     const recordCanvas =
@@ -179,15 +180,41 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     const drawFrame = () => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, width, height);
+      const stageScale = stage.scaleX();
+      const stageOffsetX = stage.x();
+      const stageOffsetY = stage.y();
+      const srcX = (pitchBounds.x * stageScale + stageOffsetX) * pixelRatio;
+      const srcY = (pitchBounds.y * stageScale + stageOffsetY) * pixelRatio;
+      const srcW = pitchBounds.width * stageScale * pixelRatio;
+      const srcH = pitchBounds.height * stageScale * pixelRatio;
+      const scale = Math.min(width / srcW, height / srcH);
+      const drawW = srcW * scale;
+      const drawH = srcH * scale;
+      const drawX = (width - drawW) / 2;
+      const drawY = (height - drawH) / 2;
       layers.forEach((layer) => {
         const canvas = (layer.getCanvas() as any)?._canvas as
           | HTMLCanvasElement
           | undefined;
         if (canvas) {
-          ctx.drawImage(canvas, 0, 0, width, height);
+          ctx.drawImage(
+            canvas,
+            srcX,
+            srcY,
+            srcW,
+            srcH,
+            drawX,
+            drawY,
+            drawW,
+            drawH
+          );
         }
       });
       if (showWatermark) {
+        const watermarkText =
+          plan === "PAID"
+            ? board.watermarkText?.trim() || "Teamzone Web Tools"
+            : "Teamzone Web Tools";
         const padding = 12 * pixelRatio;
         ctx.save();
         ctx.font = `${Math.round(12 * pixelRatio)}px Arial`;
@@ -196,7 +223,11 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
         ctx.textBaseline = "bottom";
         ctx.shadowColor = "rgba(0,0,0,0.35)";
         ctx.shadowBlur = 6 * pixelRatio;
-        ctx.fillText("Teamzone Web Tools", width - padding, height - padding);
+        ctx.fillText(
+          watermarkText,
+          drawX + drawW - padding,
+          drawY + drawH - padding
+        );
         ctx.restore();
       }
       recordRafRef.current = requestAnimationFrame(drawFrame);

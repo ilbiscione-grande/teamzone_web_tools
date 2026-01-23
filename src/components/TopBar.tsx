@@ -710,26 +710,49 @@ export default function TopBar() {
               </div>
               <div>
                 <p className="mb-2 text-[11px] uppercase">Video watermark</p>
-                <label className="flex items-center gap-2 rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px]">
-                  <input
-                    type="checkbox"
-                    checked={
-                      plan !== "PAID" ? true : activeBoard.watermarkEnabled ?? true
-                    }
-                    onChange={(event) => {
-                      if (plan !== "PAID") {
-                        return;
+                <div className="grid gap-2">
+                  <label className="flex items-center gap-2 rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px]">
+                    <input
+                      type="checkbox"
+                      checked={
+                        plan !== "PAID"
+                          ? true
+                          : activeBoard.watermarkEnabled ?? true
                       }
-                      updateBoard(activeBoard.id, {
-                        watermarkEnabled: event.target.checked,
-                      });
-                    }}
-                    disabled={plan !== "PAID"}
-                  />
-                  {plan === "PAID"
-                    ? "Show watermark on export"
-                    : "Required on Free/Auth"}
-                </label>
+                      onChange={(event) => {
+                        if (plan !== "PAID") {
+                          return;
+                        }
+                        updateBoard(activeBoard.id, {
+                          watermarkEnabled: event.target.checked,
+                        });
+                      }}
+                      disabled={plan !== "PAID"}
+                    />
+                    {plan === "PAID"
+                      ? "Show watermark on export"
+                      : "Required on Free/Auth"}
+                  </label>
+                  <label className="space-y-1 text-[11px]">
+                    <span>Watermark text (max 25)</span>
+                    <input
+                      type="text"
+                      maxLength={25}
+                      className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                      value={activeBoard.watermarkText ?? ""}
+                      onChange={(event) => {
+                        if (plan !== "PAID") {
+                          return;
+                        }
+                        updateBoard(activeBoard.id, {
+                          watermarkText: event.target.value.slice(0, 25),
+                        });
+                      }}
+                      placeholder="Teamzone Web Tools"
+                      readOnly={plan !== "PAID"}
+                    />
+                  </label>
+                </div>
               </div>
               <div className="flex items-center justify-between rounded-2xl border border-[var(--line)] px-3 py-2">
                 <span>Attach ball to player on drop</span>
