@@ -708,6 +708,29 @@ export default function TopBar() {
                   </label>
                 </div>
               </div>
+              <div>
+                <p className="mb-2 text-[11px] uppercase">Video watermark</p>
+                <label className="flex items-center gap-2 rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px]">
+                  <input
+                    type="checkbox"
+                    checked={
+                      plan !== "PAID" ? true : activeBoard.watermarkEnabled ?? true
+                    }
+                    onChange={(event) => {
+                      if (plan !== "PAID") {
+                        return;
+                      }
+                      updateBoard(activeBoard.id, {
+                        watermarkEnabled: event.target.checked,
+                      });
+                    }}
+                    disabled={plan !== "PAID"}
+                  />
+                  {plan === "PAID"
+                    ? "Show watermark on export"
+                    : "Required on Free/Auth"}
+                </label>
+              </div>
               <div className="flex items-center justify-between rounded-2xl border border-[var(--line)] px-3 py-2">
                 <span>Attach ball to player on drop</span>
                 <input

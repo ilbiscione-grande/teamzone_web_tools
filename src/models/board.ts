@@ -22,6 +22,7 @@ export type Board = {
   pitchView: PitchView;
   pitchOverlay: PitchOverlay;
   pitchOverlayText: boolean;
+  watermarkEnabled?: boolean;
   notes: string;
   notesTemplate?: "TRAINING" | "MATCH" | "EDUCATION";
   notesFields?: {

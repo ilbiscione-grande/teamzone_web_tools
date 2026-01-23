@@ -33,6 +33,7 @@ export const createEmptyBoard = (
   pitchView: "FULL",
   pitchOverlay: "NONE",
   pitchOverlayText: false,
+  watermarkEnabled: true,
   notes: "",
   notesTemplate: undefined,
   notesFields: {},

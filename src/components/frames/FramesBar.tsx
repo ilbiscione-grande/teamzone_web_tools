@@ -50,6 +50,10 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
   const recordLoopRef = useRef<boolean>(false);
   const recordViewportRef = useRef<typeof viewport | null>(null);
   const canRecord = can(plan, "video.export");
+  const showWatermark =
+    plan !== "PAID" || board.watermarkEnabled === undefined
+      ? true
+      : board.watermarkEnabled;
 
   const timelineValue = playheadFrame;
   const ticks = useMemo(
@@ -183,6 +187,18 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
           ctx.drawImage(canvas, 0, 0, width, height);
         }
       });
+      if (showWatermark) {
+        const padding = 12 * pixelRatio;
+        ctx.save();
+        ctx.font = `${Math.round(12 * pixelRatio)}px Arial`;
+        ctx.fillStyle = "rgba(255,255,255,0.6)";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "bottom";
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
+        ctx.shadowBlur = 6 * pixelRatio;
+        ctx.fillText("Teamzone Web Tools", width - padding, height - padding);
+        ctx.restore();
+      }
       recordRafRef.current = requestAnimationFrame(drawFrame);
     };
     recordRafRef.current = requestAnimationFrame(drawFrame);
