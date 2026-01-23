@@ -51,6 +51,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
   const recordLoopRef = useRef<boolean>(false);
   const recordViewportRef = useRef<typeof viewport | null>(null);
   const recordStopTimeoutRef = useRef<number | null>(null);
+  const recordStartTimeoutRef = useRef<number | null>(null);
   const [recordStatus, setRecordStatus] = useState<{
     type: "success" | "error";
     message: string;
@@ -302,11 +303,22 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     setLoopPlayback(false);
     setActiveFrameIndex(board.id, 0);
     setPlayheadFrame(0);
-    setPlaying(true);
+    setPlaying(false);
     setRecording(true);
+    if (recordStartTimeoutRef.current) {
+      clearTimeout(recordStartTimeoutRef.current);
+    }
+    recordStartTimeoutRef.current = window.setTimeout(() => {
+      setPlaying(true);
+      recordStartTimeoutRef.current = null;
+    }, 2000);
   };
 
   const stopRecording = () => {
+    if (recordStartTimeoutRef.current) {
+      clearTimeout(recordStartTimeoutRef.current);
+      recordStartTimeoutRef.current = null;
+    }
     if (recordStopTimeoutRef.current) {
       clearTimeout(recordStopTimeoutRef.current);
       recordStopTimeoutRef.current = null;
