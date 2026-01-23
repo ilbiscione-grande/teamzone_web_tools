@@ -50,6 +50,11 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
   const recordRafRef = useRef<number | null>(null);
   const recordLoopRef = useRef<boolean>(false);
   const recordViewportRef = useRef<typeof viewport | null>(null);
+  const recordStopTimeoutRef = useRef<number | null>(null);
+  const [recordStatus, setRecordStatus] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const canRecord = can(plan, "video.export");
   const showWatermark =
     plan !== "PAID" || board.watermarkEnabled === undefined
@@ -147,7 +152,12 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     if (!recording || isPlaying) {
       return;
     }
-    stopRecording();
+    if (recordStopTimeoutRef.current) {
+      return;
+    }
+    recordStopTimeoutRef.current = window.setTimeout(() => {
+      stopRecording();
+    }, 2000);
   }, [recording, isPlaying]);
 
   const startRecording = () => {
@@ -178,6 +188,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       window.alert("Unable to record canvas.");
       return;
     }
+    setRecordStatus(null);
     const drawFrame = () => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, width, height);
@@ -218,12 +229,12 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             : "Teamzone Web Tools";
         const padding = 12 * pixelRatio;
         ctx.save();
-        ctx.font = `${Math.round(12 * pixelRatio)}px Arial`;
-        ctx.fillStyle = "rgba(255,255,255,0.6)";
+        ctx.font = `bold ${Math.round(16 * pixelRatio)}px Arial`;
+        ctx.fillStyle = "rgba(255,255,255,0.75)";
         ctx.textAlign = "right";
         ctx.textBaseline = "bottom";
         ctx.shadowColor = "rgba(0,0,0,0.35)";
-        ctx.shadowBlur = 6 * pixelRatio;
+        ctx.shadowBlur = 8 * pixelRatio;
         ctx.fillText(
           watermarkText,
           drawX + drawW - padding,
@@ -258,12 +269,29 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       const blob = new Blob(recordChunksRef.current, {
         type: recorder.mimeType || "video/webm",
       });
+      if (blob.size === 0) {
+        setRecordStatus({
+          type: "error",
+          message: "Recording failed. No data captured.",
+        });
+        return;
+      }
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `${board.name.replace(/\s+/g, "_")}.webm`;
       link.click();
       URL.revokeObjectURL(url);
+      setRecordStatus({
+        type: "success",
+        message: "Recording saved.",
+      });
+    };
+    recorder.onerror = () => {
+      setRecordStatus({
+        type: "error",
+        message: "Recording failed.",
+      });
     };
     recorder.start();
     recorderRef.current = recorder;
@@ -278,6 +306,10 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
   };
 
   const stopRecording = () => {
+    if (recordStopTimeoutRef.current) {
+      clearTimeout(recordStopTimeoutRef.current);
+      recordStopTimeoutRef.current = null;
+    }
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
       recorderRef.current.stop();
     }
@@ -530,6 +562,17 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
                 </svg>
               )}
             </button>
+            {recordStatus && (
+              <span
+                className={`text-[10px] ${
+                  recordStatus.type === "success"
+                    ? "text-[var(--accent-0)]"
+                    : "text-[var(--accent-1)]"
+                }`}
+              >
+                {recordStatus.message}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -680,6 +723,17 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               </svg>
             )}
           </button>
+          {recordStatus && (
+            <span
+              className={`text-[10px] ${
+                recordStatus.type === "success"
+                  ? "text-[var(--accent-0)]"
+                  : "text-[var(--accent-1)]"
+              }`}
+            >
+              {recordStatus.message}
+            </span>
+          )}
           <button
             className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={() =>
