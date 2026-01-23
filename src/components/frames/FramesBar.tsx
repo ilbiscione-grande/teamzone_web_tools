@@ -228,6 +228,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             ? board.watermarkText?.trim() || "Teamzone Web Tools"
             : "Teamzone Web Tools";
         const padding = 12 * pixelRatio;
+        const innerInset = 16 * pixelRatio;
         ctx.save();
         ctx.font = `bold ${Math.round(16 * pixelRatio)}px Arial`;
         ctx.fillStyle = "rgba(255,255,255,0.75)";
@@ -237,8 +238,8 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
         ctx.shadowBlur = 8 * pixelRatio;
         ctx.fillText(
           watermarkText,
-          drawX + drawW - padding,
-          drawY + drawH - padding
+          drawX + drawW - padding - innerInset,
+          drawY + drawH - padding - innerInset
         );
         ctx.restore();
       }
