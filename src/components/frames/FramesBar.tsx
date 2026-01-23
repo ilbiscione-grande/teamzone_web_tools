@@ -7,6 +7,7 @@ import type Konva from "konva";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { can } from "@/utils/plan";
+import { getPitchViewBounds } from "@/board/pitch/Pitch";
 
 // Props for the FramesBar component
 
