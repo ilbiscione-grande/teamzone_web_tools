@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
 import { Stage, Layer, Rect, Arrow, Group, Circle, Line } from "react-konva";
-import type { ArrowLine, BallToken, Board } from "@/models";
+import type { ArrowLine, BallToken, Board, TextLabel } from "@/models";
 import Pitch, { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { useEditorStore } from "@/state/useEditorStore";
 import { useProjectStore } from "@/state/useProjectStore";
@@ -807,19 +807,20 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                 (item) => selection.includes(item.id) && item.type === "text"
               )
               .map((item) => {
+                const label = item as TextLabel;
                 const minSize = 2;
-                const width = item.width;
+                const width = label.width;
                 const height =
-                  item.height ??
-                  (item.text.split("\n").length || 1) * item.fontSize * 1.4;
-                const scaleX = item.scale.x || 1;
-                const scaleY = item.scale.y || 1;
+                  label.height ??
+                  (label.text.split("\n").length || 1) * label.fontSize * 1.4;
+                const scaleX = label.scale.x || 1;
+                const scaleY = label.scale.y || 1;
                 return (
                   <Group
-                    key={`${item.id}-text-handles`}
-                    x={item.position.x}
-                    y={item.position.y}
-                    rotation={item.rotation}
+                    key={`${label.id}-text-handles`}
+                    x={label.position.x}
+                    y={label.position.y}
+                    rotation={label.rotation}
                     scaleX={scaleX}
                     scaleY={scaleY}
                   >
@@ -832,7 +833,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
                       cornerRadius={0.2}
-                      draggable={!item.locked}
+                      draggable={!label.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
                       }}
@@ -846,7 +847,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                           minSize,
                           event.target.y() / scaleY
                         );
-                        updateObject(board.id, frameIndex, item.id, {
+                        updateObject(board.id, frameIndex, label.id, {
                           width: localX,
                           height: localY,
                         });
