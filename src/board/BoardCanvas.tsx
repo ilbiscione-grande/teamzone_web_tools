@@ -825,6 +825,14 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                     scaleY={scaleY}
                   >
                     <Rect
+                      width={width}
+                      height={height}
+                      stroke="rgba(255,255,255,0.6)"
+                      strokeWidth={0.2}
+                      dash={[0.8, 0.6]}
+                      listening={false}
+                    />
+                    <Rect
                       x={width - 0.8}
                       y={height - 0.8}
                       width={1.6}
