@@ -52,6 +52,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
   const recordViewportRef = useRef<typeof viewport | null>(null);
   const recordStopTimeoutRef = useRef<number | null>(null);
   const recordStartTimeoutRef = useRef<number | null>(null);
+  const recordHasPlayedRef = useRef(false);
   const [recordStatus, setRecordStatus] = useState<{
     type: "success" | "error";
     message: string;
@@ -151,6 +152,9 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
 
   useEffect(() => {
     if (!recording || isPlaying) {
+      return;
+    }
+    if (!recordHasPlayedRef.current) {
       return;
     }
     if (recordStopTimeoutRef.current) {
@@ -305,16 +309,19 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     setPlayheadFrame(0);
     setPlaying(false);
     setRecording(true);
+    recordHasPlayedRef.current = false;
     if (recordStartTimeoutRef.current) {
       clearTimeout(recordStartTimeoutRef.current);
     }
     recordStartTimeoutRef.current = window.setTimeout(() => {
       setPlaying(true);
+      recordHasPlayedRef.current = true;
       recordStartTimeoutRef.current = null;
     }, 2000);
   };
 
   const stopRecording = () => {
+    recordHasPlayedRef.current = false;
     if (recordStartTimeoutRef.current) {
       clearTimeout(recordStartTimeoutRef.current);
       recordStartTimeoutRef.current = null;
