@@ -804,6 +804,59 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
               })}
             {sortedObjects
               .filter(
+                (item) => selection.includes(item.id) && item.type === "text"
+              )
+              .map((item) => {
+                const minSize = 2;
+                const width = item.width;
+                const height =
+                  item.height ??
+                  (item.text.split("\n").length || 1) * item.fontSize * 1.4;
+                const scaleX = item.scale.x || 1;
+                const scaleY = item.scale.y || 1;
+                return (
+                  <Group
+                    key={`${item.id}-text-handles`}
+                    x={item.position.x}
+                    y={item.position.y}
+                    rotation={item.rotation}
+                    scaleX={scaleX}
+                    scaleY={scaleY}
+                  >
+                    <Rect
+                      x={width - 0.8}
+                      y={height - 0.8}
+                      width={1.6}
+                      height={1.6}
+                      fill="#ffffff"
+                      stroke="#0f1b1a"
+                      strokeWidth={0.15}
+                      cornerRadius={0.2}
+                      draggable={!item.locked}
+                      onMouseDown={(event) => {
+                        event.cancelBubble = true;
+                      }}
+                      onDragStart={() => pushHistory(clone(objects))}
+                      onDragMove={(event) => {
+                        const localX = Math.max(
+                          minSize,
+                          event.target.x() / scaleX
+                        );
+                        const localY = Math.max(
+                          minSize,
+                          event.target.y() / scaleY
+                        );
+                        updateObject(board.id, frameIndex, item.id, {
+                          width: localX,
+                          height: localY,
+                        });
+                      }}
+                    />
+                  </Group>
+                );
+              })}
+            {sortedObjects
+              .filter(
                 (item) =>
                   selection.includes(item.id) &&
                   (item.type === "cone" || item.type === "goal")

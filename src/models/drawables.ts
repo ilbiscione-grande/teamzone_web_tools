@@ -96,6 +96,7 @@ export type TextLabel = BaseDrawable & {
   background: boolean;
   align: "left" | "center" | "right";
   width: number;
+  height?: number;
 };
 
 export type MovementPath = BaseDrawable & {

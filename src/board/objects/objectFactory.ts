@@ -60,4 +60,5 @@ export const createText = (
   background: true,
   align: "left",
   width: 12,
+  height: 6,
 });

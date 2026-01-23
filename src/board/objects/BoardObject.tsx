@@ -565,6 +565,9 @@ export default function BoardObject({
 
   if (object.type === "text") {
     const label = object as TextLabel;
+    const lineHeight = label.fontSize * 1.4;
+    const lineCount = label.text.split("\n").length;
+    const textHeight = label.height ?? lineHeight * lineCount;
     return (
       <Group
         {...commonProps}
@@ -577,7 +580,7 @@ export default function BoardObject({
         {label.background && (
           <Rect
             width={label.width}
-            height={label.fontSize * 1.4}
+            height={textHeight}
             fill="rgba(0,0,0,0.4)"
             cornerRadius={0.5}
           />
@@ -588,6 +591,7 @@ export default function BoardObject({
           fontStyle={label.bold ? "bold" : "normal"}
           fill="#f2f1e9"
           width={label.width}
+          height={textHeight}
           align={label.align}
         />
       </Group>
