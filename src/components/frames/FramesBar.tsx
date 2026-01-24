@@ -910,7 +910,11 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
                 setActiveFrameIndex(board.id, baseIndex);
                 setPlayheadFrame(value);
               }}
-              className="absolute inset-0 h-10 w-full opacity-0 cursor-pointer"
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                event.currentTarget.setPointerCapture(event.pointerId);
+              }}
+              className="absolute inset-0 h-10 w-full cursor-pointer opacity-0"
             />
             <div
               className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[var(--accent-0)]"
