@@ -611,14 +611,14 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       style={{ transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }}
       onMouseDown={handleDragStart}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--ink-1)]">
-        <div className="flex items-center gap-2">
-          <span className="display-font text-sm text-[var(--accent-0)]">
+      <div className="flex items-center gap-3 text-xs text-[var(--ink-1)]">
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="display-font text-[11px] text-[var(--accent-0)]">
             Frames
           </span>
-          <span className="text-[11px]">{board.frames.length} frames</span>
+          <span className="text-[10px]">{board.frames.length}</span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <button
             className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={() => addFrame(board.id)}
@@ -852,9 +852,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </svg>
           </button>
         </div>
-      </div>
-      <div className="mt-4 space-y-2">
-        <div className="relative h-10">
+        <div className="relative h-8 flex-1">
           <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-[var(--line)]" />
           {ticks.map((tick) => (
             <div
@@ -866,9 +864,6 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               {tick.index === board.activeFrameIndex && (
                 <div className="absolute top-1/2 mt-3 h-[6px] w-[6px] -translate-x-1/2 rounded-full bg-[var(--accent-0)]" />
               )}
-              <div className="absolute top-1/2 mt-6 -translate-x-1/2 text-[10px] text-[var(--ink-1)]">
-                {tick.index + 1}
-              </div>
             </div>
           ))}
           <input
@@ -897,7 +892,6 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             }}
           />
         </div>
-        <div className="h-2" />
       </div>
     </div>
   );
