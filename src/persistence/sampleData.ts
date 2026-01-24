@@ -29,6 +29,8 @@ const createFrame = (
   id: createId(),
   name,
   objects,
+  action: "",
+  notes: "",
 });
 
 const createBoard = (

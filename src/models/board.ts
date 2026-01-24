@@ -8,6 +8,8 @@ export type BoardFrame = {
   id: string;
   name: string;
   objects: DrawableObject[];
+  action?: string;
+  notes?: string;
 };
 
 export type PlayerLink = {

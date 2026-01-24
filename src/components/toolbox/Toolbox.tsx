@@ -229,6 +229,18 @@ export default function Toolbox() {
   }, [board?.notes]);
   const frameIndex = board?.activeFrameIndex ?? 0;
   const objects = board?.frames[frameIndex]?.objects ?? [];
+  const activeFrame = board?.frames[frameIndex];
+  const frameActions = [
+    "",
+    "Pass",
+    "Ball won",
+    "Ball lost",
+    "Through ball",
+    "Shot",
+    "Save",
+    "Cross",
+    "Dribble",
+  ];
   const buildNotesFromFields = (
     template: "TRAINING" | "MATCH" | "EDUCATION" | undefined,
     fields: NonNullable<NonNullable<typeof board>["notesFields"]> | undefined
@@ -473,6 +485,18 @@ export default function Toolbox() {
     setLinkingPlayers(true);
   };
 
+  const updateFrameMeta = (
+    payload: Partial<NonNullable<typeof activeFrame>>
+  ) => {
+    if (!board || !activeFrame) {
+      return;
+    }
+    const nextFrames = board.frames.map((frame, index) =>
+      index === frameIndex ? { ...frame, ...payload } : frame
+    );
+    updateBoard(board.id, { frames: nextFrames });
+  };
+
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
@@ -520,6 +544,55 @@ export default function Toolbox() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      {board?.mode === "DYNAMIC" && activeFrame && (
+        <div className="mb-3 rounded-2xl border border-[var(--line)] p-3 text-xs text-[var(--ink-1)]">
+          <p className="text-[11px] uppercase text-[var(--ink-1)]">
+            Frame details
+          </p>
+          <div className="mt-2 grid gap-2">
+            <label className="space-y-1">
+              <span className="text-[11px]">Title</span>
+              <input
+                className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                value={activeFrame.name}
+                onChange={(event) =>
+                  updateFrameMeta({ name: event.target.value })
+                }
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-[11px]">Action</span>
+              <select
+                className="h-8 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)]"
+                value={activeFrame.action ?? ""}
+                onChange={(event) =>
+                  updateFrameMeta({ action: event.target.value })
+                }
+              >
+                {frameActions.map((action) => (
+                  <option
+                    key={action || "none"}
+                    value={action}
+                    className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                  >
+                    {action || "Select action"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className="text-[11px]">Notes</span>
+              <textarea
+                className="min-h-[72px] w-full rounded-lg border border-[var(--line)] bg-transparent p-2 text-xs text-[var(--ink-0)]"
+                value={activeFrame.notes ?? ""}
+                onChange={(event) =>
+                  updateFrameMeta({ notes: event.target.value })
+                }
+              />
+            </label>
+          </div>
+        </div>
+      )}
       {activeTab === "items" && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">

@@ -153,6 +153,8 @@ export const createBoardActions: StateCreator<
         id: createId(),
         name: `${name} ${board.frames.length + 1}`,
         objects: board.frames[board.activeFrameIndex]?.objects ?? [],
+        action: "",
+        notes: "",
       };
       board.frames.push(JSON.parse(JSON.stringify(frame)));
       board.activeFrameIndex = board.frames.length - 1;

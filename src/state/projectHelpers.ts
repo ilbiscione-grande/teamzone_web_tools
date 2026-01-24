@@ -52,6 +52,8 @@ export const createEmptyBoard = (
       id: createId(),
       name: "Frame 1",
       objects: [],
+      action: "",
+      notes: "",
     },
   ],
   activeFrameIndex: 0,
