@@ -607,20 +607,14 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
 
   return (
     <div
-      className="absolute bottom-[-20px] left-[10%] z-10 w-[80%] cursor-grab rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2 shadow-xl shadow-black/30"
+      className="absolute bottom-[-20px] left-0 right-0 z-10 w-full cursor-grab rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2 shadow-xl shadow-black/30"
       style={{ transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }}
       onMouseDown={handleDragStart}
     >
-      <div className="flex items-center gap-3 text-xs text-[var(--ink-1)]">
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="display-font text-[11px] text-[var(--accent-0)]">
-            Frames
-          </span>
-          <span className="text-[10px]">{board.frames.length}</span>
-        </div>
+      <div className="relative flex items-center gap-3 text-xs text-[var(--ink-1)]">
         <div className="flex shrink-0 items-center gap-2">
           <button
-            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            className="rounded-full border border-[var(--line)] p-2 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={() => addFrame(board.id)}
             title="Add frame"
             aria-label="Add frame"
@@ -638,7 +632,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </svg>
           </button>
           <button
-            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+            className="rounded-full border border-[var(--line)] p-2 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
             onClick={() =>
               deleteFrame(board.id, board.frames[board.activeFrameIndex].id)
             }
@@ -662,7 +656,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </svg>
           </button>
           <button
-            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            className="rounded-full border border-[var(--line)] p-2 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={() =>
               duplicateFrame(board.id, board.frames[board.activeFrameIndex].id)
             }
@@ -684,7 +678,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </svg>
           </button>
           <button
-            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            className="rounded-full border border-[var(--line)] p-2 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={() => setPlaying(!isPlaying)}
             disabled={board.mode !== "DYNAMIC"}
             title={isPlaying ? "Pause" : "Play"}
@@ -718,7 +712,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             )}
           </button>
           <button
-            className={`rounded-full border px-3 py-1 text-[11px] ${
+            className={`rounded-full border p-2 text-[11px] ${
               recording
                 ? "border-[var(--accent-1)] text-[var(--accent-1)]"
                 : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
@@ -761,7 +755,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </span>
           )}
           <button
-            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            className="rounded-full border border-[var(--line)] p-2 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={() =>
               setActiveFrameIndex(
                 board.id,
@@ -786,7 +780,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </svg>
           </button>
           <button
-            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            className="rounded-full border border-[var(--line)] p-2 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={() =>
               setActiveFrameIndex(
                 board.id,
@@ -812,17 +806,17 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
           </button>
           <div className="flex items-center gap-2">
             <select
-              className="h-8 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+              className="h-8 rounded-full border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
               value={frameDurationMs}
               onChange={(event) =>
                 setFrameDurationMs(Number(event.target.value))
               }
             >
-              <option value={1500}>Very slow (1.5s)</option>
-              <option value={1000}>Slow (1.0s)</option>
-              <option value={700}>Standard (0.7s)</option>
-              <option value={500}>Fast (0.5s)</option>
-              <option value={300}>Very fast (0.3s)</option>
+              <option value={1500}>1.5</option>
+              <option value={1000}>1.0</option>
+              <option value={700}>0.7</option>
+              <option value={500}>0.5</option>
+              <option value={300}>0.3</option>
             </select>
             <label className="flex items-center gap-2 text-[10px] text-[var(--ink-1)]">
               <input
@@ -833,25 +827,25 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               Loop
             </label>
           </div>
-          <button
-            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={() => setMinimized(true)}
-            title="Minimize"
-            aria-label="Minimize"
-          >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            >
-              <path d="M5 12h14" />
-            </svg>
-          </button>
         </div>
+        <button
+          className="absolute right-2 top-2 rounded-full border border-[var(--line)] p-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+          onClick={() => setMinimized(true)}
+          title="Minimize"
+          aria-label="Minimize"
+        >
+          <svg
+            aria-hidden
+            viewBox="0 0 24 24"
+            className="h-3 w-3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <path d="M5 12h14" />
+          </svg>
+        </button>
         <div className="relative h-8 flex-1">
           <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-[var(--line)]" />
           {ticks.map((tick) => (
