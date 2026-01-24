@@ -905,6 +905,9 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               setPlayheadFrame(value);
             }}
             className="absolute inset-0 h-10 w-full opacity-0"
+            onMouseDown={(event) => {
+              event.stopPropagation();
+            }}
           />
           <div
             className="absolute top-1/2 h-5 w-5 rounded-full bg-[var(--accent-0)]"
@@ -914,6 +917,9 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
                   ? `${(timelineValue / (board.frames.length - 1)) * 100}%`
                   : "0%",
               transform: "translate(-50%, -50%)",
+            }}
+            onMouseDown={(event) => {
+              event.stopPropagation();
             }}
           />
         </div>
