@@ -607,7 +607,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
 
   return (
     <div
-      className="absolute bottom-[-20px] left-0 right-0 z-10 w-full cursor-grab rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2 shadow-xl shadow-black/30"
+      className="mt-2 w-full cursor-grab rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2 shadow-xl shadow-black/30"
       style={{ transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }}
       onMouseDown={handleDragStart}
     >
