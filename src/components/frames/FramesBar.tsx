@@ -950,13 +950,12 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </div>
           ))}
           <div
-            className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[var(--accent-0)]"
+            className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--accent-0)]"
             style={{
               left:
                 board.frames.length > 1
                   ? `${(timelineValue / (board.frames.length - 1)) * 100}%`
                   : "0%",
-              transform: "translate(-50%, -50%)",
             }}
             data-scrub
           />
