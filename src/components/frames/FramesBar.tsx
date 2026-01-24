@@ -861,11 +861,11 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
           {ticks.map((tick) => (
             <div
               key={tick.id}
-              className="absolute"
+              className="absolute top-1/2 -translate-y-1/2"
               style={{ left: `${tick.left}%` }}
             >
               <div
-                className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border ${
+                className={`absolute h-3 w-3 -translate-x-1/2 rounded-full border ${
                   tick.index === board.activeFrameIndex
                     ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
                     : "border-[var(--accent-0)] bg-transparent"
