@@ -365,6 +365,12 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     };
     const handleUp = () => {
       dragStartRef.current = null;
+      setDragOffset((prev) => {
+        if (Math.abs(prev.x) < 24 && Math.abs(prev.y) < 24) {
+          return { x: 0, y: 0 };
+        }
+        return prev;
+      });
     };
     window.addEventListener("mousemove", handleMove);
     window.addEventListener("mouseup", handleUp);
@@ -601,7 +607,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
 
   return (
     <div
-      className="absolute bottom-4 left-[10%] z-10 w-[80%] cursor-grab rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 shadow-xl shadow-black/30"
+      className="absolute bottom-[-20px] left-[10%] z-10 w-[80%] cursor-grab rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2 shadow-xl shadow-black/30"
       style={{ transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }}
       onMouseDown={handleDragStart}
     >

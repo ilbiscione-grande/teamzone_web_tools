@@ -39,8 +39,10 @@ export default function EditorLayout() {
         <TopBar />
       </div>
       <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_320px] gap-4 px-6 pb-6">
-        <div className="relative overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] shadow-xl shadow-black/30">
-          <BoardCanvas board={board} onStageReady={setStage} />
+        <div className="relative overflow-visible">
+          <div className="relative overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] shadow-xl shadow-black/30">
+            <BoardCanvas board={board} onStageReady={setStage} />
+          </div>
           <FramesBar board={board} stage={stage} />
         </div>
         <div className="flex min-h-0 flex-col gap-3 overflow-hidden pr-1">
