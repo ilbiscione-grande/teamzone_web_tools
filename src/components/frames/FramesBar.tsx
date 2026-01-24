@@ -806,17 +806,27 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
           </button>
           <div className="flex items-center gap-2">
             <select
-              className="h-8 rounded-full border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+              className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)]"
               value={frameDurationMs}
               onChange={(event) =>
                 setFrameDurationMs(Number(event.target.value))
               }
             >
-              <option value={1500}>1.5</option>
-              <option value={1000}>1.0</option>
-              <option value={700}>0.7</option>
-              <option value={500}>0.5</option>
-              <option value={300}>0.3</option>
+              <option value={1500} className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                1.5
+              </option>
+              <option value={1000} className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                1.0
+              </option>
+              <option value={700} className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                0.7
+              </option>
+              <option value={500} className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                0.5
+              </option>
+              <option value={300} className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                0.3
+              </option>
             </select>
             <label className="flex items-center gap-2 text-[10px] text-[var(--ink-1)]">
               <input
@@ -846,7 +856,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             <path d="M5 12h14" />
           </svg>
         </button>
-        <div className="relative h-8 flex-1">
+        <div className="relative ml-4 h-8 flex-1">
           <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-[var(--line)]" />
           {ticks.map((tick) => (
             <div
@@ -854,10 +864,13 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               className="absolute"
               style={{ left: `${tick.left}%` }}
             >
-              <div className="absolute top-1/2 h-3 w-[2px] -translate-y-1/2 rounded-full bg-[var(--accent-0)]" />
-              {tick.index === board.activeFrameIndex && (
-                <div className="absolute top-1/2 mt-3 h-[6px] w-[6px] -translate-x-1/2 rounded-full bg-[var(--accent-0)]" />
-              )}
+              <div
+                className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border ${
+                  tick.index === board.activeFrameIndex
+                    ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
+                    : "border-[var(--accent-0)] bg-transparent"
+                }`}
+              />
             </div>
           ))}
           <input
