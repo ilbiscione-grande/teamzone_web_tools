@@ -891,37 +891,38 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               />
             </div>
           ))}
-          <input
-            type="range"
-            min={0}
-            max={Math.max(0, board.frames.length - 1)}
-            step={0.01}
-            value={timelineValue}
-            onChange={(event) => {
-              const value = Number(event.target.value);
-              const baseIndex = Math.floor(value);
-              setPlaying(false);
-              setActiveFrameIndex(board.id, baseIndex);
-              setPlayheadFrame(value);
-            }}
-            className="absolute inset-0 h-10 w-full opacity-0"
-            onMouseDown={(event) => {
-              event.stopPropagation();
-            }}
-          />
           <div
-            className="absolute top-1/2 h-5 w-5 rounded-full bg-[var(--accent-0)]"
-            style={{
-              left:
-                board.frames.length > 1
-                  ? `${(timelineValue / (board.frames.length - 1)) * 100}%`
-                  : "0%",
-              transform: "translate(-50%, -50%)",
-            }}
+            className="absolute inset-0"
             onMouseDown={(event) => {
               event.stopPropagation();
             }}
-          />
+          >
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, board.frames.length - 1)}
+              step={0.01}
+              value={timelineValue}
+              onChange={(event) => {
+                const value = Number(event.target.value);
+                const baseIndex = Math.floor(value);
+                setPlaying(false);
+                setActiveFrameIndex(board.id, baseIndex);
+                setPlayheadFrame(value);
+              }}
+              className="absolute inset-0 h-10 w-full opacity-0 cursor-pointer"
+            />
+            <div
+              className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[var(--accent-0)]"
+              style={{
+                left:
+                  board.frames.length > 1
+                    ? `${(timelineValue / (board.frames.length - 1)) * 100}%`
+                    : "0%",
+                transform: "translate(-50%, -50%)",
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>
