@@ -53,6 +53,8 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
   const recordStopTimeoutRef = useRef<number | null>(null);
   const recordStartTimeoutRef = useRef<number | null>(null);
   const recordHasPlayedRef = useRef(false);
+  const scrubRef = useRef<HTMLDivElement | null>(null);
+  const scrubbingRef = useRef(false);
   const [recordStatus, setRecordStatus] = useState<{
     type: "success" | "error";
     message: string;
@@ -380,8 +382,55 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     };
   }, []);
 
+  const handleScrubAt = (clientX: number) => {
+    const track = scrubRef.current;
+    if (!track) {
+      return;
+    }
+    const rect = track.getBoundingClientRect();
+    if (rect.width <= 0) {
+      return;
+    }
+    const ratio = Math.min(
+      1,
+      Math.max(0, (clientX - rect.left) / rect.width)
+    );
+    const value =
+      board.frames.length > 1
+        ? ratio * (board.frames.length - 1)
+        : 0;
+    const baseIndex = Math.floor(value);
+    setPlaying(false);
+    setActiveFrameIndex(board.id, baseIndex);
+    setPlayheadFrame(value);
+  };
+
+  useEffect(() => {
+    const handleMove = (event: PointerEvent) => {
+      if (!scrubbingRef.current) {
+        return;
+      }
+      handleScrubAt(event.clientX);
+    };
+    const handleUp = () => {
+      if (!scrubbingRef.current) {
+        return;
+      }
+      scrubbingRef.current = false;
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [board.frames.length]);
+
   const handleDragStart = (event: ReactMouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
+    if (target.closest("[data-scrub]")) {
+      return;
+    }
     if (target.closest("button, input, select, label")) {
       return;
     }
@@ -874,7 +923,16 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </button>
           </div>
         </div>
-        <div className="relative ml-4 h-8 flex-1">
+        <div
+          className="relative ml-4 h-8 flex-1"
+          ref={scrubRef}
+          data-scrub
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            scrubbingRef.current = true;
+            handleScrubAt(event.clientX);
+          }}
+        >
           <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-[var(--line)]" />
           {ticks.map((tick) => (
             <div
@@ -892,41 +950,16 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </div>
           ))}
           <div
-            className="absolute inset-0"
-            onMouseDown={(event) => {
-              event.stopPropagation();
+            className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[var(--accent-0)]"
+            style={{
+              left:
+                board.frames.length > 1
+                  ? `${(timelineValue / (board.frames.length - 1)) * 100}%`
+                  : "0%",
+              transform: "translate(-50%, -50%)",
             }}
-          >
-            <input
-              type="range"
-              min={0}
-              max={Math.max(0, board.frames.length - 1)}
-              step={0.01}
-              value={timelineValue}
-              onChange={(event) => {
-                const value = Number(event.target.value);
-                const baseIndex = Math.floor(value);
-                setPlaying(false);
-                setActiveFrameIndex(board.id, baseIndex);
-                setPlayheadFrame(value);
-              }}
-              onPointerDown={(event) => {
-                event.stopPropagation();
-                event.currentTarget.setPointerCapture(event.pointerId);
-              }}
-              className="absolute inset-0 h-10 w-full cursor-pointer opacity-0"
-            />
-            <div
-              className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[var(--accent-0)]"
-              style={{
-                left:
-                  board.frames.length > 1
-                    ? `${(timelineValue / (board.frames.length - 1)) * 100}%`
-                    : "0%",
-                transform: "translate(-50%, -50%)",
-              }}
-            />
-          </div>
+            data-scrub
+          />
         </div>
       </div>
     </div>
