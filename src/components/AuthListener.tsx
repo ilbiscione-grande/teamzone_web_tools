@@ -79,6 +79,7 @@ export default function AuthListener() {
       if (session?.user) {
         const user = session.user;
         setAuthUser({
+          id: user.id,
           email: user.email ?? "",
           name: getDisplayName(
             user.email ?? null,
@@ -100,6 +101,7 @@ export default function AuthListener() {
         if (session?.user) {
           const user = session.user;
           setAuthUser({
+            id: user.id,
             email: user.email ?? "",
             name: getDisplayName(
               user.email ?? null,
