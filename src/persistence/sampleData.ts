@@ -144,6 +144,7 @@ export const createSampleProject = (): Project => {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     schemaVersion: SCHEMA_VERSION,
+    isSample: true,
     settings: {
       homeKit: { ...homeSquad.kit },
       awayKit: { ...awaySquad.kit },

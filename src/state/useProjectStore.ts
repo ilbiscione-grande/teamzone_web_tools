@@ -81,6 +81,9 @@ export const persistActiveProject = () => {
   if (!project) {
     return;
   }
+  if (project.isSample) {
+    return;
+  }
   if (!can(plan, "project.save")) {
     return;
   }

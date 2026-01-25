@@ -385,26 +385,10 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                     </button>
                     <button
                       className="w-full rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      onClick={onSignUp}
-                      disabled={
-                        !canSignIn || !password.trim() || !supabase || !!authBusy
-                      }
-                    >
-                      {authBusy === "signup" ? "Creating..." : "Create account"}
-                    </button>
-                    <button
-                      className="w-full rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                       onClick={onMagicLink}
                       disabled={!canSignIn || !supabase || !!authBusy}
                     >
                       {authBusy === "magic" ? "Sending..." : "Send magic link"}
-                    </button>
-                    <button
-                      className="w-full rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      onClick={onGoogle}
-                      disabled={!supabase}
-                    >
-                      Continue with Google
                     </button>
                   </div>
                   {status ? (

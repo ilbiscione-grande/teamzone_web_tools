@@ -7,6 +7,7 @@ export type Project = {
   createdAt: string;
   updatedAt: string;
   schemaVersion: number;
+  isSample?: boolean;
   settings: {
     homeKit: {
       shirt: string;

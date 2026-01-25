@@ -223,22 +223,10 @@ export const createCoreActions: StateCreator<
       return;
     }
     const project = ensureBoardSquads(createSampleProject());
-    if (can(get().plan, "project.save")) {
-      saveProject(project);
-      if (get().authUser && get().plan === "PAID") {
-        saveProjectCloud(project);
-      }
-    }
     set((state) => {
       state.project = project;
       state.activeProjectId = project.id;
-      if (can(state.plan, "project.save")) {
-        state.index = updateIndex(state.index, project);
-      }
     });
-    if (can(get().plan, "project.save")) {
-      saveProjectIndex(get().index);
-    }
   },
   openProject: (id) => {
     if (get().authUser && get().plan === "PAID") {
