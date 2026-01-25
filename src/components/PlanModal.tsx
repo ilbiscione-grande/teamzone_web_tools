@@ -225,7 +225,8 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
               Account & Plans
             </h2>
             <p className="text-xs text-[var(--ink-1)]">
-              Mock sign-in for AUTH, demo upgrade for PAID.
+              Manage your plan and billing. Sign in to save and sync across
+              devices.
             </p>
           </div>
           <button
