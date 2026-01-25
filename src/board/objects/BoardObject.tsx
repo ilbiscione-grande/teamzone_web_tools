@@ -320,16 +320,14 @@ export default function BoardObject({
 
   if (object.type === "cone") {
     const cone = object as ConeToken;
-    const topRadiusX = cone.width * 0.16;
-    const topRadiusY = cone.height * 0.06;
-    const baseRadiusX = cone.width * 0.62;
-    const baseRadiusY = cone.height * 0.14;
+    const topWidth = cone.width * 0.22;
+    const topRadiusX = topWidth * 0.5;
+    const topRadiusY = cone.height * 0.07;
     const topCenterX = cone.width * 0.5;
-    const topCenterY = cone.height * 0.2;
-    const baseCenterX = cone.width * 0.5;
-    const baseCenterY = cone.height * 0.86;
-    const leftBaseX = baseCenterX - baseRadiusX;
-    const rightBaseX = baseCenterX + baseRadiusX;
+    const topCenterY = cone.height * 0.55;
+    const baseY = cone.height * 0.82;
+    const leftBaseX = 0;
+    const rightBaseX = cone.width;
     const leftTopX = topCenterX - topRadiusX;
     const rightTopX = topCenterX + topRadiusX;
     return (
@@ -344,9 +342,9 @@ export default function BoardObject({
         <Line
           points={[
             leftBaseX,
-            baseCenterY,
+            baseY,
             rightBaseX,
-            baseCenterY,
+            baseY,
             rightTopX,
             topCenterY,
             leftTopX,
@@ -356,44 +354,16 @@ export default function BoardObject({
           stroke={cone.style.stroke}
           strokeWidth={cone.style.strokeWidth}
           fill={cone.style.fill}
-        />
-        <Ellipse
-          x={baseCenterX}
-          y={baseCenterY}
-          radiusX={baseRadiusX}
-          radiusY={baseRadiusY}
-          fill={cone.style.fill}
-          stroke={cone.style.stroke}
-          strokeWidth={cone.style.strokeWidth}
-        />
-        <Ellipse
-          x={baseCenterX}
-          y={baseCenterY}
-          radiusX={baseRadiusX * 0.82}
-          radiusY={baseRadiusY * 0.65}
-          fill="transparent"
-          stroke={cone.style.stroke}
-          strokeWidth={Math.max(0.1, cone.style.strokeWidth * 0.6)}
-          opacity={0.6}
+          lineJoin="bevel"
         />
         <Ellipse
           x={topCenterX}
           y={topCenterY}
           radiusX={topRadiusX}
           radiusY={topRadiusY}
-          fill="transparent"
+          fill="#501616"
           stroke={cone.style.stroke}
           strokeWidth={cone.style.strokeWidth}
-        />
-        <Ellipse
-          x={topCenterX}
-          y={topCenterY}
-          radiusX={topRadiusX * 0.7}
-          radiusY={topRadiusY * 0.55}
-          fill="transparent"
-          stroke={cone.style.stroke}
-          strokeWidth={Math.max(0.1, cone.style.strokeWidth * 0.6)}
-          opacity={0.6}
         />
       </Group>
     );
@@ -403,11 +373,10 @@ export default function BoardObject({
     const goal = object as MiniGoal;
     const frameStroke = goal.style.stroke;
     const frameWidth = goal.style.strokeWidth;
-    const depthX = goal.width * 0.38;
-    const depthY = goal.height * 0.24;
+    const depthX = goal.width * 0.28;
+    const depthY = goal.height * 0.18;
     const netStroke = frameStroke;
     const netOpacity = 0.28;
-    const frontRadius = Math.min(goal.width, goal.height) * 0.12;
     return (
       <Group
         {...commonProps}
@@ -423,24 +392,27 @@ export default function BoardObject({
           width={goal.width}
           height={goal.height}
           stroke={frameStroke}
-          strokeWidth={frameWidth}
-          fill="rgba(255,255,255,0.04)"
-          cornerRadius={frontRadius}
+          strokeWidth={frameWidth * 1.2}
+          fill="transparent"
+          lineJoin="bevel"
         />
         <Line
           points={[0, 0, depthX, -depthY]}
           stroke={frameStroke}
           strokeWidth={frameWidth}
+          lineJoin="bevel"
         />
         <Line
           points={[goal.width, 0, goal.width + depthX, -depthY]}
           stroke={frameStroke}
           strokeWidth={frameWidth}
+          lineJoin="bevel"
         />
         <Line
           points={[0, goal.height, depthX, goal.height - depthY]}
           stroke={frameStroke}
           strokeWidth={frameWidth}
+          lineJoin="bevel"
         />
         <Line
           points={[
@@ -451,6 +423,7 @@ export default function BoardObject({
           ]}
           stroke={frameStroke}
           strokeWidth={frameWidth}
+          lineJoin="bevel"
         />
         <Line
           points={[
@@ -466,11 +439,24 @@ export default function BoardObject({
             -depthY,
           ]}
           stroke={frameStroke}
-          strokeWidth={Math.max(0.1, frameWidth * 0.6)}
-          opacity={0.8}
+          strokeWidth={Math.max(0.1, frameWidth * 0.8)}
+          opacity={0.85}
+          lineJoin="bevel"
         />
-        {Array.from({ length: 5 }).map((_, idx) => {
-          const x = (goal.width / 6) * (idx + 1);
+        <Line
+          points={[0, 0, 0, goal.height]}
+          stroke={frameStroke}
+          strokeWidth={frameWidth * 1.4}
+          lineJoin="bevel"
+        />
+        <Line
+          points={[goal.width, 0, goal.width, goal.height]}
+          stroke={frameStroke}
+          strokeWidth={frameWidth * 1.4}
+          lineJoin="bevel"
+        />
+        {Array.from({ length: 6 }).map((_, idx) => {
+          const x = (goal.width / 7) * (idx + 1);
           return (
             <Line
               key={`goal-net-front-v-${idx}`}
@@ -481,8 +467,8 @@ export default function BoardObject({
             />
           );
         })}
-        {Array.from({ length: 4 }).map((_, idx) => {
-          const y = (goal.height / 5) * (idx + 1);
+        {Array.from({ length: 8 }).map((_, idx) => {
+          const y = (goal.height / 9) * (idx + 1);
           return (
             <Line
               key={`goal-net-front-h-${idx}`}
