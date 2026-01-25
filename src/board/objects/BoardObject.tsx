@@ -231,10 +231,10 @@ export default function BoardObject({
         />
         {vestColor && (
           <Rect
-            x={-playerTokenSize * 0.18}
-            y={-playerTokenSize * 0.9}
-            width={playerTokenSize * 0.36}
-            height={playerTokenSize * 1.8}
+            x={-playerTokenSize * 0.9}
+            y={-playerTokenSize * 0.18}
+            width={playerTokenSize * 1.8}
+            height={playerTokenSize * 0.36}
             fill={vestColor}
             opacity={0.9}
             cornerRadius={playerTokenSize * 0.08}
