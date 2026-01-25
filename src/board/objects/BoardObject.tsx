@@ -110,9 +110,9 @@ export default function BoardObject({
       : player.style.fill === "#f9bf4a"
         ? defaultPlayerFill
         : player.style.fill;
-    const vestColor = player.squadPlayerId
-      ? vestByPlayerId[player.squadPlayerId]
-      : undefined;
+    const vestColor =
+      player.vestColor ??
+      (player.squadPlayerId ? vestByPlayerId[player.squadPlayerId] : undefined);
     const squadPlayer = player.squadPlayerId
       ? squadPlayers.find((item) => item.id === player.squadPlayerId)
       : undefined;

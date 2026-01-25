@@ -393,9 +393,23 @@ export default function PropertiesPanel() {
                       </button>
                     </div>
                   ) : (
-                    <p className="text-[11px] text-[var(--ink-1)]">
-                      Link a squad player to set a vest color.
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        className="h-8 w-10 rounded-lg border border-[var(--line)] bg-transparent"
+                        value={target.vestColor ?? "#000000"}
+                        onChange={(event) =>
+                          update({ vestColor: event.target.value })
+                        }
+                        title="Vest color"
+                      />
+                      <button
+                        className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                        onClick={() => update({ vestColor: undefined })}
+                      >
+                        Clear
+                      </button>
+                    </div>
                   )}
                 </label>
                 <label className="flex items-center gap-2 text-[11px]">
