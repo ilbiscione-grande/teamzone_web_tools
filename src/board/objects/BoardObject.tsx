@@ -230,13 +230,14 @@ export default function BoardObject({
           strokeWidth={player.style.strokeWidth}
         />
         {vestColor && (
-          <Arc
-            innerRadius={playerTokenSize * 0.45}
-            outerRadius={playerTokenSize * 0.98}
-            angle={200}
-            rotation={160}
+          <Rect
+            x={-playerTokenSize * 0.18}
+            y={-playerTokenSize * 0.9}
+            width={playerTokenSize * 0.36}
+            height={playerTokenSize * 1.8}
             fill={vestColor}
             opacity={0.9}
+            cornerRadius={playerTokenSize * 0.08}
           />
         )}
         <Group rotation={labelRotation}>
