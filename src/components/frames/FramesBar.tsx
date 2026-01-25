@@ -183,8 +183,17 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     }
     const pixelRatio = window.devicePixelRatio ?? 1;
     const pitchBounds = getPitchViewBounds(board.pitchView);
-    const width = stage.width() * pixelRatio;
-    const height = stage.height() * pixelRatio;
+    const viewRotation =
+      board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF" ? -90 : 0;
+    const effectiveBounds =
+      viewRotation === 0
+        ? pitchBounds
+        : {
+            x: pitchBounds.x + pitchBounds.width / 2 - pitchBounds.height / 2,
+            y: pitchBounds.y + pitchBounds.height / 2 - pitchBounds.width / 2,
+            width: pitchBounds.height,
+            height: pitchBounds.width,
+          };
     const recordCanvas =
       recordCanvasRef.current ?? document.createElement("canvas");
     recordCanvasRef.current = recordCanvas;
@@ -197,28 +206,38 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     setRecordStatus(null);
     const drawFrame = () => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, width, height);
       const stageScale = stage.scaleX();
       const stageOffsetX = stage.x();
       const stageOffsetY = stage.y();
-      const srcX = (pitchBounds.x * stageScale + stageOffsetX) * pixelRatio;
-      const srcY = (pitchBounds.y * stageScale + stageOffsetY) * pixelRatio;
-      const srcW = pitchBounds.width * stageScale * pixelRatio;
-      const srcH = pitchBounds.height * stageScale * pixelRatio;
+      const srcX = (effectiveBounds.x * stageScale + stageOffsetX) * pixelRatio;
+      const srcY = (effectiveBounds.y * stageScale + stageOffsetY) * pixelRatio;
+      const srcW = effectiveBounds.width * stageScale * pixelRatio;
+      const srcH = effectiveBounds.height * stageScale * pixelRatio;
       const targetW = Math.max(1, Math.round(srcW));
       const targetH = Math.max(1, Math.round(srcH));
       if (recordCanvas.width !== targetW || recordCanvas.height !== targetH) {
         recordCanvas.width = targetW;
         recordCanvas.height = targetH;
       }
-      const drawW = recordCanvas.width;
-      const drawH = recordCanvas.height;
+      ctx.clearRect(0, 0, recordCanvas.width, recordCanvas.height);
+      ctx.fillStyle = "#1f5f3f";
+      ctx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
       layers.forEach((layer) => {
         const canvas = (layer.getCanvas() as any)?._canvas as
           | HTMLCanvasElement
           | undefined;
         if (canvas) {
-            ctx.drawImage(canvas, srcX, srcY, srcW, srcH, 0, 0, drawW, drawH);
+            ctx.drawImage(
+              canvas,
+              srcX,
+              srcY,
+              srcW,
+              srcH,
+              0,
+              0,
+              recordCanvas.width,
+              recordCanvas.height
+            );
           }
         });
         if (showWatermark) {
@@ -238,8 +257,8 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
         ctx.shadowBlur = 8 * pixelRatio;
           ctx.fillText(
             watermarkText,
-            drawW - padding - innerInset,
-            drawH - padding - innerInset
+            recordCanvas.width - padding - innerInset,
+            recordCanvas.height - padding - innerInset
           );
           ctx.restore();
         }
