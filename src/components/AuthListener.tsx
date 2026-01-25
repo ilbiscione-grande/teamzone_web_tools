@@ -69,8 +69,7 @@ export default function AuthListener() {
       if (error || !data) {
         return;
       }
-      const plan =
-        data?.plan === "PAID" || data?.plan === "AUTH" ? data.plan : "FREE";
+      const plan = data?.plan === "PAID" ? "PAID" : "AUTH";
       setPlanFromProfile(plan);
       persistPlanCheck();
     };
