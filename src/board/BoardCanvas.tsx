@@ -873,8 +873,8 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                           .copy()
                           .invert()
                           .point(pointer);
-                        const localX = localPoint.x / scaleX;
-                        const localY = localPoint.y / scaleY;
+                        const localX = localPoint.x;
+                        const localY = localPoint.y;
                         const angle =
                           (Math.atan2(localY - center.y, localX - center.x) *
                             180) /
