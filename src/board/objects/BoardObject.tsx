@@ -1,6 +1,6 @@
 "use client";
 
-import { Arrow, Circle, Ellipse, Group, Line, Rect, Text } from "react-konva";
+import { Arrow, Circle, Ellipse, Group, Line, Path, Rect, Text } from "react-konva";
 import type Konva from "konva";
 import type {
   ArrowLine,
@@ -320,16 +320,22 @@ export default function BoardObject({
 
   if (object.type === "cone") {
     const cone = object as ConeToken;
-    const topWidth = cone.width * 0.22;
-    const topRadiusX = topWidth * 0.5;
-    const topRadiusY = cone.height * 0.07;
-    const topCenterX = cone.width * 0.5;
-    const topCenterY = cone.height * 0.55;
-    const baseY = cone.height * 0.82;
-    const leftBaseX = 0;
-    const rightBaseX = cone.width;
-    const leftTopX = topCenterX - topRadiusX;
-    const rightTopX = topCenterX + topRadiusX;
+    const coneSvg = {
+      minX: 98.789669,
+      minY: 119.02408,
+      width: 92.668551,
+      height: 28.69632,
+      translateX: -39.86834,
+      translateY: 17.022282,
+      topX: 145.20242,
+      topY: 119.21153,
+      topRx: 10.01506,
+      topRy: 1.3770708,
+      bodyPath:
+        "m 98.789669,138.10972 36.436181,-19.08564 c 0.008,2.05813 19.56615,1.87074 20.02546,0.0724 l 36.20691,19.04769 c -0.0397,9.57623 -92.698888,8.42303 -92.668551,-0.033 z",
+    };
+    const coneScaleX = cone.width / coneSvg.width;
+    const coneScaleY = cone.height / coneSvg.height;
     return (
       <Group
         {...commonProps}
@@ -339,32 +345,38 @@ export default function BoardObject({
           }
         }}
       >
-        <Line
-          points={[
-            leftBaseX,
-            baseY,
-            rightBaseX,
-            baseY,
-            rightTopX,
-            topCenterY,
-            leftTopX,
-            topCenterY,
-          ]}
-          closed
-          stroke={cone.style.stroke}
-          strokeWidth={cone.style.strokeWidth}
-          fill={cone.style.fill}
-          lineJoin="bevel"
-        />
-        <Ellipse
-          x={topCenterX}
-          y={topCenterY}
-          radiusX={topRadiusX}
-          radiusY={topRadiusY}
-          fill="#501616"
-          stroke={cone.style.stroke}
-          strokeWidth={cone.style.strokeWidth}
-        />
+        <Group
+          x={-coneSvg.minX + coneSvg.translateX}
+          y={-coneSvg.minY + coneSvg.translateY}
+          scaleX={coneScaleX}
+          scaleY={coneScaleY}
+        >
+          <Path
+            data={coneSvg.bodyPath}
+            fill={cone.style.fill}
+            stroke={cone.style.stroke}
+            strokeWidth={cone.style.strokeWidth}
+            lineJoin="bevel"
+          />
+          <Ellipse
+            x={coneSvg.topX}
+            y={coneSvg.topY}
+            radiusX={coneSvg.topRx}
+            radiusY={coneSvg.topRy}
+            fill="rgba(0,0,0,0.35)"
+            stroke={cone.style.stroke}
+            strokeWidth={cone.style.strokeWidth}
+          />
+          <Ellipse
+            x={coneSvg.topX}
+            y={coneSvg.topY}
+            radiusX={coneSvg.topRx}
+            radiusY={coneSvg.topRy}
+            fill="transparent"
+            stroke={cone.style.stroke}
+            strokeWidth={cone.style.strokeWidth}
+          />
+        </Group>
       </Group>
     );
   }
@@ -372,11 +384,65 @@ export default function BoardObject({
   if (object.type === "goal") {
     const goal = object as MiniGoal;
     const frameStroke = goal.style.stroke;
-    const frameWidth = goal.style.strokeWidth;
-    const depthX = goal.width * 0.28;
-    const depthY = goal.height * 0.18;
-    const netStroke = frameStroke;
-    const netOpacity = 0.28;
+    const goalSvg = {
+      minX: 46.661878,
+      minY: 76.016933,
+      width: 81.046302,
+      height: 155.870747,
+    };
+    const goalScaleX = goal.width / goalSvg.width;
+    const goalScaleY = goal.height / goalSvg.height;
+    const framePaths = [
+      "m 54.774931,83.788776 a 1.1790085,1.1790085 0 0 0 -1.178585,1.179561 v 1.178585 h 2.358145 16.366638 54.035541 V 230.62156 h -64.683749 -5.71843 -2.358145 v 1.17859 a 1.1790085,1.1790085 0 0 0 1.178585,1.17957 h 72.760329 a 1.1790085,1.1790085 0 0 0 1.17956,-1.17957 V 84.968337 a 1.1790085,1.1790085 0 0 0 -1.17956,-1.179561 z",
+      "M 54.750447,85.28309 47.787245,76.324867",
+      "m 55.163501,231.88768 -7.439669,-8.39435",
+      "m 83.852293,222.76405 43.436207,8.6033",
+      "M 83.747373,76.402903 127.2885,85.006209",
+      "M 47.685747,76.373283 V 224.55863",
+      "M 84.632414,76.137712 V 224.32309",
+      "M 84.003169,76.016933 46.661878,76.174242",
+      "m 84.003169,223.25846 -37.341291,0.15731",
+    ];
+    const netPaths = [
+      "M 52.458925,75.649232 V 223.13597",
+      "M 57.450118,75.649232 V 223.13597",
+      "M 62.441317,75.649232 V 223.13597",
+      "M 67.432511,75.649232 V 223.13597",
+      "M 72.42371,75.649232 V 223.13597",
+      "M 77.414903,75.649232 V 223.13597",
+      "M 91.390254,76.647472 V 224.13422",
+      "M 96.381448,77.645712 V 225.13247",
+      "M 101.37265,78.643952 V 226.13071",
+      "M 106.36384,79.642191 V 227.12896",
+      "M 111.35504,80.640431 V 228.1272",
+      "M 116.34623,81.638671 V 229.12545",
+      "M 121.33743,82.636911 V 230.12369",
+      "m 47.865289,80.494721 h 36.406679 l 43.436212,8.708223",
+      "m 47.865289,85.485914 h 36.406679 l 43.436212,8.708224",
+      "m 47.865289,91.475347 h 36.406679 l 43.436212,8.708223",
+      "M 47.865289,97.464781 H 84.271968 L 127.70818,106.173",
+      "m 47.865289,103.45422 h 36.406679 l 43.436212,8.70823",
+      "m 47.865289,108.44542 h 36.406679 l 43.436212,8.70822",
+      "m 47.865289,114.43485 h 36.406679 l 43.436212,8.70822",
+      "m 47.865289,120.42428 h 36.406679 l 43.436212,8.70824",
+      "m 47.865289,126.41369 h 36.406679 l 43.436212,8.70823",
+      "m 47.865289,131.40488 h 36.406679 l 43.436212,8.70823",
+      "m 47.865289,137.39432 h 36.406679 l 43.436212,8.70822",
+      "m 47.865289,143.38375 h 36.406679 l 43.436212,8.70824",
+      "m 47.865289,149.37317 h 36.406679 l 43.436212,8.70822",
+      "m 47.865289,154.36436 h 36.406679 l 43.436212,8.70822",
+      "m 47.865289,160.35379 h 36.406679 l 43.436212,8.70823",
+      "m 47.865289,166.34323 h 36.406679 l 43.436212,8.70824",
+      "m 47.865289,172.33264 h 36.406679 l 43.436212,8.70823",
+      "m 47.865289,177.32383 h 36.406679 l 43.436212,8.70823",
+      "m 47.865289,183.31327 h 36.406679 l 43.436212,8.70822",
+      "m 47.865289,189.3027 h 36.406679 l 43.436212,8.70825",
+      "m 47.865289,195.29212 h 36.406679 l 43.436212,8.70822",
+      "m 47.865289,200.28331 h 36.406679 l 43.436212,8.70822",
+      "m 47.865289,206.27274 h 36.406679 l 43.436212,8.70823",
+      "m 47.865289,212.26218 h 36.406679 l 43.436212,8.70824",
+      "m 47.865289,217.25339 h 36.406679 l 43.436212,8.70822",
+    ];
     return (
       <Group
         {...commonProps}
@@ -386,99 +452,33 @@ export default function BoardObject({
           }
         }}
       >
-        <Rect
-          x={0}
-          y={0}
-          width={goal.width}
-          height={goal.height}
-          stroke={frameStroke}
-          strokeWidth={frameWidth * 1.2}
-          fill="transparent"
-          lineJoin="bevel"
-        />
-        <Line
-          points={[0, 0, depthX, -depthY]}
-          stroke={frameStroke}
-          strokeWidth={frameWidth}
-          lineJoin="bevel"
-        />
-        <Line
-          points={[goal.width, 0, goal.width + depthX, -depthY]}
-          stroke={frameStroke}
-          strokeWidth={frameWidth}
-          lineJoin="bevel"
-        />
-        <Line
-          points={[0, goal.height, depthX, goal.height - depthY]}
-          stroke={frameStroke}
-          strokeWidth={frameWidth}
-          lineJoin="bevel"
-        />
-        <Line
-          points={[
-            goal.width,
-            goal.height,
-            goal.width + depthX,
-            goal.height - depthY,
-          ]}
-          stroke={frameStroke}
-          strokeWidth={frameWidth}
-          lineJoin="bevel"
-        />
-        <Line
-          points={[
-            depthX,
-            -depthY,
-            goal.width + depthX,
-            -depthY,
-            goal.width + depthX,
-            goal.height - depthY,
-            depthX,
-            goal.height - depthY,
-            depthX,
-            -depthY,
-          ]}
-          stroke={frameStroke}
-          strokeWidth={Math.max(0.1, frameWidth * 0.8)}
-          opacity={0.85}
-          lineJoin="bevel"
-        />
-        <Line
-          points={[0, 0, 0, goal.height]}
-          stroke={frameStroke}
-          strokeWidth={frameWidth * 1.4}
-          lineJoin="bevel"
-        />
-        <Line
-          points={[goal.width, 0, goal.width, goal.height]}
-          stroke={frameStroke}
-          strokeWidth={frameWidth * 1.4}
-          lineJoin="bevel"
-        />
-        {Array.from({ length: 6 }).map((_, idx) => {
-          const x = (goal.width / 7) * (idx + 1);
-          return (
-            <Line
-              key={`goal-net-front-v-${idx}`}
-              points={[x, 0, x + depthX, -depthY]}
-              stroke={netStroke}
-              strokeWidth={0.2}
-              opacity={netOpacity}
+        <Group
+          x={-goalSvg.minX}
+          y={-goalSvg.minY}
+          scaleX={goalScaleX}
+          scaleY={goalScaleY}
+        >
+          {framePaths.map((data, idx) => (
+            <Path
+              key={`goal-frame-${idx}`}
+              data={data}
+              fill={idx === 0 ? frameStroke : "transparent"}
+              stroke={frameStroke}
+              strokeWidth={idx === 0 ? 0 : 2.82965}
+              lineJoin="bevel"
             />
-          );
-        })}
-        {Array.from({ length: 8 }).map((_, idx) => {
-          const y = (goal.height / 9) * (idx + 1);
-          return (
-            <Line
-              key={`goal-net-front-h-${idx}`}
-              points={[0, y, goal.width + depthX, y - depthY]}
-              stroke={netStroke}
-              strokeWidth={0.2}
-              opacity={netOpacity}
+          ))}
+          {netPaths.map((data, idx) => (
+            <Path
+              key={`goal-net-${idx}`}
+              data={data}
+              fill="transparent"
+              stroke={frameStroke}
+              strokeWidth={0.188644}
+              lineJoin="bevel"
             />
-          );
-        })}
+          ))}
+        </Group>
       </Group>
     );
   }
