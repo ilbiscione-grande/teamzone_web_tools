@@ -356,13 +356,15 @@ export default function PropertiesPanel() {
                         }
                         onChange={(event) =>
                           (() => {
-                            const squadId = squadIdByPlayerId.get(
-                              target.squadPlayerId
-                            );
+                            const squadPlayerId = target.squadPlayerId;
+                            if (!squadPlayerId) {
+                              return;
+                            }
+                            const squadId = squadIdByPlayerId.get(squadPlayerId);
                             if (!squadId) {
                               return;
                             }
-                            updateSquadPlayer(squadId, target.squadPlayerId, {
+                            updateSquadPlayer(squadId, squadPlayerId, {
                               vestColor: event.target.value,
                             });
                           })()
@@ -373,13 +375,15 @@ export default function PropertiesPanel() {
                         className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
                         onClick={() =>
                           (() => {
-                            const squadId = squadIdByPlayerId.get(
-                              target.squadPlayerId
-                            );
+                            const squadPlayerId = target.squadPlayerId;
+                            if (!squadPlayerId) {
+                              return;
+                            }
+                            const squadId = squadIdByPlayerId.get(squadPlayerId);
                             if (!squadId) {
                               return;
                             }
-                            updateSquadPlayer(squadId, target.squadPlayerId, {
+                            updateSquadPlayer(squadId, squadPlayerId, {
                               vestColor: undefined,
                             });
                           })()
