@@ -1,6 +1,6 @@
 "use client";
 
-import { Arrow, Circle, Group, Line, Rect, Text } from "react-konva";
+import { Arrow, Circle, Ellipse, Group, Line, Rect, Text } from "react-konva";
 import type Konva from "konva";
 import type {
   ArrowLine,
@@ -320,9 +320,18 @@ export default function BoardObject({
 
   if (object.type === "cone") {
     const cone = object as ConeToken;
-    const topInset = cone.width * 0.25;
-    const peakY = cone.height * 0.12;
-    const bandY = cone.height * 0.58;
+    const topRadiusX = cone.width * 0.18;
+    const topRadiusY = cone.height * 0.08;
+    const baseRadiusX = cone.width * 0.55;
+    const baseRadiusY = cone.height * 0.16;
+    const topCenterX = cone.width * 0.5;
+    const topCenterY = cone.height * 0.18;
+    const baseCenterX = cone.width * 0.5;
+    const baseCenterY = cone.height * 0.82;
+    const leftBaseX = baseCenterX - baseRadiusX;
+    const rightBaseX = baseCenterX + baseRadiusX;
+    const leftTopX = topCenterX - topRadiusX;
+    const rightTopX = topCenterX + topRadiusX;
     return (
       <Group
         {...commonProps}
@@ -334,35 +343,37 @@ export default function BoardObject({
       >
         <Line
           points={[
-            0,
-            cone.height,
-            cone.width,
-            cone.height,
-            cone.width - topInset,
-            peakY,
-            topInset,
-            peakY,
+            leftBaseX,
+            baseCenterY,
+            rightBaseX,
+            baseCenterY,
+            rightTopX,
+            topCenterY,
+            leftTopX,
+            topCenterY,
           ]}
           closed
           stroke={cone.style.stroke}
           strokeWidth={cone.style.strokeWidth}
           fill={cone.style.fill}
-          dash={cone.style.dash}
         />
-        <Line
-          points={[cone.width * 0.15, bandY, cone.width * 0.85, bandY]}
-          stroke="#ffffff"
-          opacity={0.35}
-          strokeWidth={0.35}
+        <Ellipse
+          x={baseCenterX}
+          y={baseCenterY}
+          radiusX={baseRadiusX}
+          radiusY={baseRadiusY}
+          fill={cone.style.fill}
+          stroke={cone.style.stroke}
+          strokeWidth={cone.style.strokeWidth}
         />
-        <Rect
-          x={cone.width * 0.08}
-          y={cone.height * 0.88}
-          width={cone.width * 0.84}
-          height={cone.height * 0.1}
-          fill="#000000"
-          opacity={0.18}
-          cornerRadius={cone.height * 0.05}
+        <Ellipse
+          x={topCenterX}
+          y={topCenterY}
+          radiusX={topRadiusX}
+          radiusY={topRadiusY}
+          fill="rgba(0,0,0,0.12)"
+          stroke={cone.style.stroke}
+          strokeWidth={cone.style.strokeWidth}
         />
       </Group>
     );
@@ -372,8 +383,10 @@ export default function BoardObject({
     const goal = object as MiniGoal;
     const frameStroke = goal.style.stroke;
     const frameWidth = goal.style.strokeWidth;
+    const depthX = goal.width * 0.35;
+    const depthY = goal.height * 0.22;
     const netStroke = frameStroke;
-    const netOpacity = 0.25;
+    const netOpacity = 0.35;
     return (
       <Group
         {...commonProps}
@@ -390,38 +403,69 @@ export default function BoardObject({
           height={goal.height}
           stroke={frameStroke}
           strokeWidth={frameWidth}
-          fill="transparent"
+          fill="rgba(255,255,255,0.04)"
           cornerRadius={goal.height * 0.12}
         />
-        <Rect
-          x={frameWidth * 0.5}
-          y={frameWidth * 0.5}
-          width={goal.width - frameWidth}
-          height={goal.height - frameWidth}
+        <Line
+          points={[0, 0, depthX, -depthY]}
           stroke={frameStroke}
-          strokeWidth={frameWidth * 0.6}
-          fill="transparent"
-          cornerRadius={goal.height * 0.1}
-          opacity={0.6}
+          strokeWidth={frameWidth}
         />
-        {Array.from({ length: 3 }).map((_, idx) => {
-          const x = (goal.width / 4) * (idx + 1);
+        <Line
+          points={[goal.width, 0, goal.width + depthX, -depthY]}
+          stroke={frameStroke}
+          strokeWidth={frameWidth}
+        />
+        <Line
+          points={[0, goal.height, depthX, goal.height - depthY]}
+          stroke={frameStroke}
+          strokeWidth={frameWidth}
+        />
+        <Line
+          points={[
+            goal.width,
+            goal.height,
+            goal.width + depthX,
+            goal.height - depthY,
+          ]}
+          stroke={frameStroke}
+          strokeWidth={frameWidth}
+        />
+        <Line
+          points={[
+            depthX,
+            -depthY,
+            goal.width + depthX,
+            -depthY,
+            goal.width + depthX,
+            goal.height - depthY,
+            depthX,
+            goal.height - depthY,
+            depthX,
+            -depthY,
+          ]}
+          stroke={frameStroke}
+          strokeWidth={frameWidth * 0.7}
+          opacity={0.75}
+        />
+        {Array.from({ length: 5 }).map((_, idx) => {
+          const x = (goal.width / 6) * (idx + 1);
           return (
             <Line
-              key={`goal-net-v-${idx}`}
-              points={[x, frameWidth * 0.4, x, goal.height - frameWidth * 0.4]}
+              key={`goal-net-front-v-${idx}`}
+              points={[x, 0, x + depthX, -depthY]}
               stroke={netStroke}
               strokeWidth={0.25}
               opacity={netOpacity}
             />
           );
         })}
-        {Array.from({ length: 2 }).map((_, idx) => {
-          const y = (goal.height / 3) * (idx + 1);
+        {Array.from({ length: 4 }).map((_, idx) => {
+          const y = (goal.height / 5) * (idx + 1);
           return (
             <Line
-              key={`goal-net-h-${idx}`}
-              points={[frameWidth * 0.4, y, goal.width - frameWidth * 0.4, y]}
+              key={`goal-net-front-h-${idx}`}
+              points={[0, y, goal.width + depthX, y - depthY]}
               stroke={netStroke}
               strokeWidth={0.25}
               opacity={netOpacity}
