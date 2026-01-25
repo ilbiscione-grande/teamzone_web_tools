@@ -862,8 +862,19 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                       }}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
-                        const localX = event.target.x() / scaleX;
-                        const localY = event.target.y() / scaleY;
+                        const stage = event.target.getStage();
+                        const parent = event.target.getParent();
+                        const pointer = stage?.getPointerPosition();
+                        if (!pointer || !parent) {
+                          return;
+                        }
+                        const localPoint = parent
+                          .getAbsoluteTransform()
+                          .copy()
+                          .invert()
+                          .point(pointer);
+                        const localX = localPoint.x / scaleX;
+                        const localY = localPoint.y / scaleY;
                         const angle =
                           (Math.atan2(localY - center.y, localX - center.x) *
                             180) /
