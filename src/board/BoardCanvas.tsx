@@ -825,6 +825,9 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                   (label.text.split("\n").length || 1) * label.fontSize * 1.4;
                 const scaleX = label.scale.x || 1;
                 const scaleY = label.scale.y || 1;
+                const handleOffset = Math.max(width, height) * 0.6 + 1.5;
+                const rotateHandle = { x: width / 2, y: -handleOffset };
+                const center = { x: width / 2, y: height / 2 };
                 return (
                   <Group
                     key={`${label.id}-text-handles`}
@@ -834,6 +837,53 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                     scaleX={scaleX}
                     scaleY={scaleY}
                   >
+                    <Line
+                      points={[
+                        center.x,
+                        center.y,
+                        rotateHandle.x,
+                        rotateHandle.y,
+                      ]}
+                      stroke="rgba(255,255,255,0.5)"
+                      strokeWidth={0.2}
+                      dash={[0.6, 0.6]}
+                      listening={false}
+                    />
+                    <Circle
+                      x={rotateHandle.x}
+                      y={rotateHandle.y}
+                      radius={0.7}
+                      fill="#ffffff"
+                      stroke="#0f1b1a"
+                      strokeWidth={0.15}
+                      draggable={!label.locked}
+                      onMouseDown={(event) => {
+                        event.cancelBubble = true;
+                      }}
+                      onDragStart={() => pushHistory(clone(objects))}
+                      onDragMove={(event) => {
+                        const localX = event.target.x() / scaleX;
+                        const localY = event.target.y() / scaleY;
+                        const angle =
+                          (Math.atan2(localY - center.y, localX - center.x) *
+                            180) /
+                            Math.PI +
+                          90;
+                        updateObject(board.id, frameIndex, label.id, {
+                          rotation: angle,
+                        });
+                        event.target.position({
+                          x: rotateHandle.x * scaleX,
+                          y: rotateHandle.y * scaleY,
+                        });
+                      }}
+                      onDragEnd={(event) => {
+                        event.target.position({
+                          x: rotateHandle.x * scaleX,
+                          y: rotateHandle.y * scaleY,
+                        });
+                      }}
+                    />
                     <Rect
                       width={width}
                       height={height}
