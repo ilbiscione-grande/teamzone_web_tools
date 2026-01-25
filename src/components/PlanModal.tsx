@@ -44,10 +44,59 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
   const [status, setStatus] = useState<string | null>(null);
   const canSignIn = email.trim().length > 0;
   const [upgradeBusy, setUpgradeBusy] = useState(false);
+  const [priceInfo, setPriceInfo] = useState<{
+    unit_amount: number | null;
+    currency: string;
+    recurring: string | null;
+  } | null>(null);
+  const [priceLocale, setPriceLocale] = useState("sv-SE");
   const projectCount = new Set(
     [...index.map((item) => item.id), project?.id].filter(Boolean)
   ).size;
   const boardCount = project?.boards.length ?? 0;
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    setPriceLocale(window.navigator.language || "sv-SE");
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/stripe/price")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data?.currency) {
+          setPriceInfo(data);
+        }
+      })
+      .catch(() => {
+        setPriceInfo(null);
+      });
+  }, []);
+
+  const formattedPrice = useMemo(() => {
+    if (!priceInfo || priceInfo.unit_amount === null) {
+      return null;
+    }
+    try {
+      return new Intl.NumberFormat(priceLocale, {
+        style: "currency",
+        currency: priceInfo.currency.toUpperCase(),
+      }).format(priceInfo.unit_amount / 100);
+    } catch {
+      return `${priceInfo.unit_amount / 100} ${priceInfo.currency.toUpperCase()}`;
+    }
+  }, [priceInfo, priceLocale]);
+
+  const intervalLabel =
+    priceInfo?.recurring === "year"
+      ? "year"
+      : priceInfo?.recurring === "week"
+      ? "week"
+      : priceInfo?.recurring === "day"
+      ? "day"
+      : "month";
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -255,6 +304,35 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                     Free mode - no save
                   </div>
                 )}
+              </div>
+              <div className="mt-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/70 px-3 py-2 text-[11px]">
+                <p className="text-[11px] uppercase text-[var(--ink-1)]">
+                  Paid price
+                </p>
+                <p className="mt-1 text-[var(--ink-0)]">
+                  {formattedPrice
+                    ? `${formattedPrice}/${intervalLabel}`
+                    : "Loading price..."}
+                </p>
+                {priceInfo && (
+                  <p className="mt-1 text-[10px] text-[var(--ink-1)]">
+                    Charged in {priceInfo.currency.toUpperCase()}.
+                  </p>
+                )}
+                <label className="mt-2 block text-[10px] text-[var(--ink-1)]">
+                  Display locale
+                  <select
+                    className="mt-1 h-7 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-2 text-[10px] text-[var(--ink-0)]"
+                    value={priceLocale}
+                    onChange={(event) => setPriceLocale(event.target.value)}
+                  >
+                    <option value="sv-SE">sv-SE</option>
+                    <option value="en-US">en-US</option>
+                    <option value="en-GB">en-GB</option>
+                    <option value="de-DE">de-DE</option>
+                    <option value="fr-FR">fr-FR</option>
+                  </select>
+                </label>
               </div>
             </div>
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-4">
