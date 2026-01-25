@@ -44,6 +44,9 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
   const [status, setStatus] = useState<string | null>(null);
   const canSignIn = email.trim().length > 0;
   const [upgradeBusy, setUpgradeBusy] = useState(false);
+  const [authBusy, setAuthBusy] = useState<null | "signin" | "signup" | "magic">(
+    null
+  );
   const [priceInfo, setPriceInfo] = useState<{
     unit_amount: number | null;
     currency: string;
@@ -131,18 +134,25 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
       return;
     }
     setStatus(null);
+    setAuthBusy("signin");
     supabase.auth
       .signInWithPassword({ email: trimmedEmail, password: password.trim() })
       .then(({ error }) => {
         if (error) {
           setStatus(error.message);
+          setAuthBusy(null);
           return;
         }
         setEmail("");
         setPassword("");
         setName("");
         setStatus("Signed in.");
+        setAuthBusy(null);
         onClose();
+      })
+      .catch(() => {
+        setStatus("Unable to sign in.");
+        setAuthBusy(null);
       });
   };
 
@@ -152,6 +162,7 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
       return;
     }
     setStatus(null);
+    setAuthBusy("signup");
     supabase.auth
       .signUp({
         email: trimmedEmail,
@@ -165,9 +176,15 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
       .then(({ error }) => {
         if (error) {
           setStatus(error.message);
+          setAuthBusy(null);
           return;
         }
-        setStatus("Check your email to confirm your account.");
+        setStatus("Account created. Check your email to confirm.");
+        setAuthBusy(null);
+      })
+      .catch(() => {
+        setStatus("Unable to create account.");
+        setAuthBusy(null);
       });
   };
 
@@ -177,6 +194,7 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
       return;
     }
     setStatus(null);
+    setAuthBusy("magic");
     supabase.auth
       .signInWithOtp({
         email: trimmedEmail,
@@ -187,9 +205,15 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
       .then(({ error }) => {
         if (error) {
           setStatus(error.message);
+          setAuthBusy(null);
           return;
         }
         setStatus("Magic link sent. Check your email.");
+        setAuthBusy(null);
+      })
+      .catch(() => {
+        setStatus("Unable to send magic link.");
+        setAuthBusy(null);
       });
   };
 
@@ -305,35 +329,6 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                   </div>
                 )}
               </div>
-              <div className="mt-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/70 px-3 py-2 text-[11px]">
-                <p className="text-[11px] uppercase text-[var(--ink-1)]">
-                  Paid price
-                </p>
-                <p className="mt-1 text-[var(--ink-0)]">
-                  {formattedPrice
-                    ? `${formattedPrice}/${intervalLabel}`
-                    : "Loading price..."}
-                </p>
-                {priceInfo && (
-                  <p className="mt-1 text-[10px] text-[var(--ink-1)]">
-                    Charged in {priceInfo.currency.toUpperCase()}.
-                  </p>
-                )}
-                <label className="mt-2 block text-[10px] text-[var(--ink-1)]">
-                  Display locale
-                  <select
-                    className="mt-1 h-7 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-2 text-[10px] text-[var(--ink-0)]"
-                    value={priceLocale}
-                    onChange={(event) => setPriceLocale(event.target.value)}
-                  >
-                    <option value="sv-SE">sv-SE</option>
-                    <option value="en-US">en-US</option>
-                    <option value="en-GB">en-GB</option>
-                    <option value="de-DE">de-DE</option>
-                    <option value="fr-FR">fr-FR</option>
-                  </select>
-                </label>
-              </div>
             </div>
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-4">
               <p className="mb-3 text-[11px] uppercase">Account</p>
@@ -382,23 +377,27 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                     <button
                       className="w-full rounded-full bg-[var(--accent-0)] px-4 py-2 text-xs font-semibold text-black transition hover:brightness-110"
                       onClick={onSignIn}
-                      disabled={!canSignIn || !password.trim() || !supabase}
+                      disabled={
+                        !canSignIn || !password.trim() || !supabase || !!authBusy
+                      }
                     >
-                      Sign in
+                      {authBusy === "signin" ? "Signing in..." : "Sign in"}
                     </button>
                     <button
                       className="w-full rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                       onClick={onSignUp}
-                      disabled={!canSignIn || !password.trim() || !supabase}
+                      disabled={
+                        !canSignIn || !password.trim() || !supabase || !!authBusy
+                      }
                     >
-                      Create account
+                      {authBusy === "signup" ? "Creating..." : "Create account"}
                     </button>
                     <button
                       className="w-full rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                       onClick={onMagicLink}
-                      disabled={!canSignIn || !supabase}
+                      disabled={!canSignIn || !supabase || !!authBusy}
                     >
-                      Send magic link
+                      {authBusy === "magic" ? "Sending..." : "Send magic link"}
                     </button>
                     <button
                       className="w-full rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
@@ -460,6 +459,23 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                   <p className="display-font text-lg text-[var(--ink-0)]">
                     {tier}
                   </p>
+                  {tier === "PAID" && (
+                    <div className="mt-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/70 px-3 py-2 text-[11px]">
+                      <p className="text-[11px] uppercase text-[var(--ink-1)]">
+                        Price
+                      </p>
+                      <p className="mt-1 text-[var(--ink-0)]">
+                        {formattedPrice
+                          ? `${formattedPrice}/${intervalLabel}`
+                          : "Loading price..."}
+                      </p>
+                      {priceInfo && (
+                        <p className="mt-1 text-[10px] text-[var(--ink-1)]">
+                          Charged in {priceInfo.currency.toUpperCase()}.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <ul className="mt-2 flex-1 space-y-2 text-[var(--ink-1)]">
                     {planDescriptions[tier].map((item) => (
                       <li key={item}>- {item}</li>
