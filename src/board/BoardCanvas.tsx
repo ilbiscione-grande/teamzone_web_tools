@@ -868,15 +868,14 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                         if (!pointer || !parent) {
                           return;
                         }
-                        const localPoint = parent
+                        const centerPoint = parent
                           .getAbsoluteTransform()
-                          .copy()
-                          .invert()
-                          .point(pointer);
-                        const localX = localPoint.x;
-                        const localY = localPoint.y;
+                          .point(center);
                         const angle =
-                          (Math.atan2(localY - center.y, localX - center.x) *
+                          (Math.atan2(
+                            pointer.y - centerPoint.y,
+                            pointer.x - centerPoint.x
+                          ) *
                             180) /
                             Math.PI +
                           90;
