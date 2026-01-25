@@ -474,6 +474,12 @@ export default function PropertiesPanel() {
                   onChange={(event) => update({ text: event.target.value })}
                 />
                 <label className="space-y-1">
+                  <span className="text-[11px]">Rotation</span>
+                  {numberField(target.rotation, (value) =>
+                    update({ rotation: value })
+                  )}
+                </label>
+                <label className="space-y-1">
                   <span className="text-[11px]">Font size</span>
                   {numberField(target.fontSize, (value) =>
                     update({ fontSize: value })
