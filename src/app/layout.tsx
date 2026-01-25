@@ -4,6 +4,7 @@ import "./globals.css";
 import AuthListener from "@/components/AuthListener";
 import PwaRegister from "@/components/PwaRegister";
 import ScreenSizeNotice from "@/components/ScreenSizeNotice";
+import { Analytics } from "@vercel/analytics/react";
 
 const display = Bebas_Neue({
   variable: "--font-display",
@@ -46,6 +47,7 @@ export default function RootLayout({
       </head>
       <body className={`${display.variable} ${body.variable} antialiased`}>
         {children}
+        <Analytics />
         <AuthListener />
         <PwaRegister />
         <ScreenSizeNotice />
