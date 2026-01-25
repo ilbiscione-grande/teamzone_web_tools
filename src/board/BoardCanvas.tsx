@@ -254,6 +254,15 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
     });
     return map;
   }, [boardSquads]);
+  const vestByPlayerId = useMemo(() => {
+    const map: Record<string, string | undefined> = {};
+    boardSquads.all.forEach((squad) => {
+      squad.players.forEach((player) => {
+        map[player.id] = player.vestColor || undefined;
+      });
+    });
+    return map;
+  }, [boardSquads]);
   const defaultPlayerFill =
     (playerSide === "away" ? boardSquads.away : boardSquads.home)?.kit.shirt ??
     (playerSide === "away"
@@ -479,6 +488,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                 onLinkPlayer={(id) => addLinkingPlayer(id)}
                 squadPlayers={squadPlayers}
                 kitByPlayerId={kitByPlayerId}
+                vestByPlayerId={vestByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}
                 playerTokenSize={playerTokenSize}
                 showPlayerName={board.playerLabel?.showName ?? true}

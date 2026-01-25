@@ -1,6 +1,16 @@
 "use client";
 
-import { Arrow, Circle, Ellipse, Group, Line, Path, Rect, Text } from "react-konva";
+import {
+  Arc,
+  Arrow,
+  Circle,
+  Ellipse,
+  Group,
+  Line,
+  Path,
+  Rect,
+  Text,
+} from "react-konva";
 import type Konva from "konva";
 import type {
   ArrowLine,
@@ -29,6 +39,7 @@ type BoardObjectProps = {
   onLinkPlayer: (id: string) => void;
   squadPlayers: SquadPlayer[];
   kitByPlayerId: Record<string, string>;
+  vestByPlayerId: Record<string, string | undefined>;
   defaultPlayerFill: string;
   playerTokenSize: number;
   showPlayerName: boolean;
@@ -53,6 +64,7 @@ export default function BoardObject({
   onLinkPlayer,
   squadPlayers,
   kitByPlayerId,
+  vestByPlayerId,
   defaultPlayerFill,
   playerTokenSize,
   showPlayerName,
@@ -98,6 +110,9 @@ export default function BoardObject({
       : player.style.fill === "#f9bf4a"
         ? defaultPlayerFill
         : player.style.fill;
+    const vestColor = player.squadPlayerId
+      ? vestByPlayerId[player.squadPlayerId]
+      : undefined;
     const squadPlayer = player.squadPlayerId
       ? squadPlayers.find((item) => item.id === player.squadPlayerId)
       : undefined;
@@ -214,6 +229,16 @@ export default function BoardObject({
           stroke={player.style.stroke}
           strokeWidth={player.style.strokeWidth}
         />
+        {vestColor && (
+          <Arc
+            innerRadius={playerTokenSize * 0.45}
+            outerRadius={playerTokenSize * 0.98}
+            angle={200}
+            rotation={160}
+            fill={vestColor}
+            opacity={0.9}
+          />
+        )}
         <Group rotation={labelRotation}>
           <Text
             text={circleText}

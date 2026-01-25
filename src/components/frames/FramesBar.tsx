@@ -230,10 +230,11 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
         }
       });
       if (showWatermark) {
-        const watermarkText =
-          plan === "PAID"
-            ? board.watermarkText?.trim() || "Teamzone Web Tools"
-            : "Teamzone Web Tools";
+          const watermarkText =
+            plan === "PAID"
+              ? board.watermarkText?.trim() ||
+                "Created with Teamzone Web Tools - https://teamzone-web-tools.vercel.app/"
+              : "Created with Teamzone Web Tools - https://teamzone-web-tools.vercel.app/";
         const padding = 12 * pixelRatio;
         const innerInset = 16 * pixelRatio;
         ctx.save();

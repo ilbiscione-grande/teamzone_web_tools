@@ -3,12 +3,14 @@ export type SquadPlayer = {
   name: string;
   positionLabel: string;
   number?: number;
+  vestColor?: string;
 };
 
 export type SquadKit = {
   shirt: string;
   shorts: string;
   socks: string;
+  vest?: string;
 };
 
 export type Squad = {

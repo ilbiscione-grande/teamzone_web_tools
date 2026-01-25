@@ -6,12 +6,14 @@ export const defaultHomeKit = () => ({
   shirt: "#e24a3b",
   shorts: "#0f1b1a",
   socks: "#f06d4f",
+  vest: "",
 });
 
 export const defaultAwayKit = () => ({
   shirt: "#2f6cf6",
   shorts: "#0f1b1a",
   socks: "#f2f1e9",
+  vest: "",
 });
 
 const createTeamSquad = (name: string, overrides?: Partial<Squad>): Squad => ({

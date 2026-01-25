@@ -24,11 +24,13 @@ export default function ProjectList() {
     shirt: "#e24a3b",
     shorts: "#0f1b1a",
     socks: "#f06d4f",
+    vest: "",
   });
   const [awayKit, setAwayKit] = useState({
     shirt: "#2f6cf6",
     shorts: "#0f1b1a",
     socks: "#f2f1e9",
+    vest: "",
   });
   const [attachBallToPlayer, setAttachBallToPlayer] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,11 +80,13 @@ export default function ProjectList() {
       shirt: "#e24a3b",
       shorts: "#0f1b1a",
       socks: "#f06d4f",
+      vest: "",
     });
     setAwayKit({
       shirt: "#2f6cf6",
       shorts: "#0f1b1a",
       socks: "#f2f1e9",
+      vest: "",
     });
     setAttachBallToPlayer(false);
   };

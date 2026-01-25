@@ -13,11 +13,13 @@ export type Project = {
       shirt: string;
       shorts: string;
       socks: string;
+      vest?: string;
     };
     awayKit: {
       shirt: string;
       shorts: string;
       socks: string;
+      vest?: string;
     };
     attachBallToPlayer: boolean;
   };

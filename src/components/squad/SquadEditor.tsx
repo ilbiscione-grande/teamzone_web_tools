@@ -39,6 +39,7 @@ export default function SquadEditor() {
       name: "New Player",
       positionLabel: "POS",
       number: undefined,
+      vestColor: undefined,
     });
   };
 
@@ -331,17 +332,18 @@ export default function SquadEditor() {
                 Add player
               </button>
             </div>
-            <div className="grid grid-cols-[28px_minmax(0,1fr)_50px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+            <div className="grid grid-cols-[28px_minmax(0,1fr)_50px_26px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
               <span>#</span>
               <span>Name</span>
               <span>Pos</span>
+              <span>V</span>
               <span />
             </div>
             <div className="max-h-48 space-y-2 overflow-auto pr-1">
               {activeSquad.players.map((player) => (
                 <div
                   key={player.id}
-                  className="grid grid-cols-[28px_minmax(0,1fr)_50px_20px] items-center gap-2"
+                  className="grid grid-cols-[28px_minmax(0,1fr)_50px_26px_20px] items-center gap-2"
                 >
                   <input
                     className="h-7 rounded-md border border-[var(--line)] bg-transparent px-1 text-center text-[11px] text-[var(--ink-0)]"
@@ -406,6 +408,17 @@ export default function SquadEditor() {
                       </option>
                     ))}
                   </select>
+                  <input
+                    type="color"
+                    className="h-6 w-6 rounded-md border border-[var(--line)] bg-transparent"
+                    value={player.vestColor ?? "#000000"}
+                    onChange={(event) =>
+                      updateSquadPlayer(activeSquad.id, player.id, {
+                        vestColor: event.target.value,
+                      })
+                    }
+                    title="Vest color"
+                  />
                   <button
                     className="rounded-full border border-[var(--line)] p-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
                     onClick={() => removeSquadPlayer(activeSquad.id, player.id)}
