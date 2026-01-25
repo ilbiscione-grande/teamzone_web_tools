@@ -217,8 +217,8 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="w-full max-w-3xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+      <div className="w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="display-font text-2xl text-[var(--accent-0)]">
