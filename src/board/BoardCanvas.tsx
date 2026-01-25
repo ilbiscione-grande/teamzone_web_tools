@@ -872,10 +872,6 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                         updateObject(board.id, frameIndex, label.id, {
                           rotation: angle,
                         });
-                        event.target.position({
-                          x: rotateHandle.x * scaleX,
-                          y: rotateHandle.y * scaleY,
-                        });
                       }}
                       onDragEnd={(event) => {
                         event.target.position({
