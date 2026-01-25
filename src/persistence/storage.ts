@@ -4,11 +4,16 @@ import { serializeProject } from "./serialize";
 const INDEX_KEY = "tacticsboard:projects";
 const PROJECT_PREFIX = "tacticsboard:project:";
 
-export const loadProjectIndex = (): ProjectSummary[] => {
+const getIndexKey = (userId?: string | null) =>
+  userId ? `${INDEX_KEY}:${userId}` : INDEX_KEY;
+const getProjectKey = (id: string, userId?: string | null) =>
+  userId ? `${PROJECT_PREFIX}${userId}:${id}` : `${PROJECT_PREFIX}${id}`;
+
+export const loadProjectIndex = (userId?: string | null): ProjectSummary[] => {
   if (typeof window === "undefined") {
     return [];
   }
-  const raw = window.localStorage.getItem(INDEX_KEY);
+  const raw = window.localStorage.getItem(getIndexKey(userId));
   if (!raw) {
     return [];
   }
@@ -20,18 +25,21 @@ export const loadProjectIndex = (): ProjectSummary[] => {
   }
 };
 
-export const saveProjectIndex = (index: ProjectSummary[]) => {
+export const saveProjectIndex = (
+  index: ProjectSummary[],
+  userId?: string | null
+) => {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.setItem(INDEX_KEY, JSON.stringify(index));
+  window.localStorage.setItem(getIndexKey(userId), JSON.stringify(index));
 };
 
-export const loadProject = (id: string): Project | null => {
+export const loadProject = (id: string, userId?: string | null): Project | null => {
   if (typeof window === "undefined") {
     return null;
   }
-  const raw = window.localStorage.getItem(`${PROJECT_PREFIX}${id}`);
+  const raw = window.localStorage.getItem(getProjectKey(id, userId));
   if (!raw) {
     return null;
   }
@@ -42,19 +50,19 @@ export const loadProject = (id: string): Project | null => {
   }
 };
 
-export const saveProject = (project: Project) => {
+export const saveProject = (project: Project, userId?: string | null) => {
   if (typeof window === "undefined") {
     return;
   }
   window.localStorage.setItem(
-    `${PROJECT_PREFIX}${project.id}`,
+    getProjectKey(project.id, userId),
     serializeProject(project)
   );
 };
 
-export const deleteProject = (id: string) => {
+export const deleteProject = (id: string, userId?: string | null) => {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.removeItem(`${PROJECT_PREFIX}${id}`);
+  window.localStorage.removeItem(getProjectKey(id, userId));
 };

@@ -87,8 +87,9 @@ export const persistActiveProject = () => {
   if (!can(plan, "project.save")) {
     return;
   }
-  saveProject(project);
-  saveProjectIndex(updateIndex(index, project));
+  const userId = authUser?.id ?? null;
+  saveProject(project, userId);
+  saveProjectIndex(updateIndex(index, project), userId);
   if (authUser && plan === "PAID") {
     if (typeof window !== "undefined" && !window.navigator.onLine) {
       useProjectStore.getState().setSyncStatus({

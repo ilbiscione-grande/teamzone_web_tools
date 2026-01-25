@@ -128,7 +128,7 @@ export default function TopBar() {
       window.alert(result.error);
       return;
     }
-    saveProject(result.project);
+    saveProject(result.project, authUser?.id ?? null);
     openProject(result.project.id);
   };
 

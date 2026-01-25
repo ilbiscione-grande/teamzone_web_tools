@@ -116,7 +116,7 @@ export const syncProjects = async (): Promise<ProjectSummary[]> => {
     return loadProjectIndex();
   }
 
-  const localIndex = loadProjectIndex();
+  const localIndex = loadProjectIndex(userId);
   const cloudIndex = await fetchProjectIndexCloud();
   const cloudMap = new Map(cloudIndex.map((item) => [item.id, item]));
   const localMap = new Map(localIndex.map((item) => [item.id, item]));
@@ -124,7 +124,7 @@ export const syncProjects = async (): Promise<ProjectSummary[]> => {
   for (const local of localIndex) {
     const cloud = cloudMap.get(local.id);
     if (!cloud || compareUpdatedAt(local.updatedAt, cloud.updatedAt) > 0) {
-      const project = loadProject(local.id);
+      const project = loadProject(local.id, userId);
       if (project) {
         await saveProjectCloud(project);
       }
@@ -136,7 +136,7 @@ export const syncProjects = async (): Promise<ProjectSummary[]> => {
     if (!local || compareUpdatedAt(cloud.updatedAt, local.updatedAt) > 0) {
       const project = await fetchProjectCloud(cloud.id);
       if (project) {
-        saveProject(project);
+        saveProject(project, userId);
       }
     }
   }
@@ -155,6 +155,6 @@ export const syncProjects = async (): Promise<ProjectSummary[]> => {
   const mergedIndex = Array.from(merged.values()).sort((a, b) =>
     b.updatedAt.localeCompare(a.updatedAt)
   );
-  saveProjectIndex(mergedIndex);
+  saveProjectIndex(mergedIndex, userId);
   return mergedIndex;
 };

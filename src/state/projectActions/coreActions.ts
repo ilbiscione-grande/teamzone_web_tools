@@ -48,13 +48,14 @@ export const createCoreActions: StateCreator<
   hydrateIndex: () => {
     set((state) => {
       const plan = state.plan;
-      state.index = can(plan, "project.save") ? loadProjectIndex() : [];
+      const userId = state.authUser?.id ?? null;
+      state.index = can(plan, "project.save") ? loadProjectIndex(userId) : [];
     });
     const { authUser } = get();
     if (authUser && get().plan === "PAID") {
       if (typeof window !== "undefined" && !window.navigator.onLine) {
         set((state) => {
-          state.index = loadProjectIndex();
+          state.index = loadProjectIndex(authUser.id);
         });
         get().setSyncStatus({
           state: "offline",
@@ -156,9 +157,15 @@ export const createCoreActions: StateCreator<
   },
   setAuthUser: (user) => {
     set((state) => {
+      const prevEmail = state.authUser?.email;
       state.authUser = user;
       const nextPlan = state.plan === "PAID" ? "PAID" : "AUTH";
       state.plan = nextPlan;
+      if (prevEmail !== user.email) {
+        state.index = [];
+        state.project = null;
+        state.activeProjectId = null;
+      }
       if (!can(nextPlan, "project.save")) {
         state.index = [];
       }
@@ -195,7 +202,7 @@ export const createCoreActions: StateCreator<
     }
     const project = ensureBoardSquads(createDefaultProject(name, options));
     if (can(get().plan, "project.save")) {
-      saveProject(project);
+      saveProject(project, get().authUser?.id ?? null);
       if (get().authUser && get().plan === "PAID") {
         saveProjectCloud(project);
       }
@@ -208,7 +215,7 @@ export const createCoreActions: StateCreator<
       }
     });
     if (can(get().plan, "project.save")) {
-      saveProjectIndex(get().index);
+      saveProjectIndex(get().index, get().authUser?.id ?? null);
     }
   },
   loadSample: () => {
@@ -231,7 +238,7 @@ export const createCoreActions: StateCreator<
   openProject: (id) => {
     if (get().authUser && get().plan === "PAID") {
       if (typeof window !== "undefined" && !window.navigator.onLine) {
-        const project = loadProject(id);
+        const project = loadProject(id, get().authUser?.id ?? null);
         if (!project) {
           return;
         }
@@ -244,7 +251,7 @@ export const createCoreActions: StateCreator<
           }
         });
         if (can(get().plan, "project.save")) {
-          saveProjectIndex(get().index);
+          saveProjectIndex(get().index, get().authUser?.id ?? null);
         }
         return;
       }
@@ -261,12 +268,12 @@ export const createCoreActions: StateCreator<
           }
         });
         if (can(get().plan, "project.save")) {
-          saveProjectIndex(get().index);
+          saveProjectIndex(get().index, get().authUser?.id ?? null);
         }
       });
       return;
     }
-    const project = loadProject(id);
+    const project = loadProject(id, get().authUser?.id ?? null);
     if (!project) {
       return;
     }
@@ -279,7 +286,7 @@ export const createCoreActions: StateCreator<
       }
     });
     if (can(get().plan, "project.save")) {
-      saveProjectIndex(get().index);
+      saveProjectIndex(get().index, get().authUser?.id ?? null);
     }
   },
   closeProject: () => {
@@ -290,7 +297,7 @@ export const createCoreActions: StateCreator<
   },
   deleteProject: (id) => {
     if (can(get().plan, "project.save")) {
-      deleteStoredProject(id);
+      deleteStoredProject(id, get().authUser?.id ?? null);
       if (get().authUser && get().plan === "PAID") {
         deleteProjectCloud(id);
       }
@@ -305,7 +312,7 @@ export const createCoreActions: StateCreator<
       }
     });
     if (can(get().plan, "project.save")) {
-      saveProjectIndex(get().index);
+      saveProjectIndex(get().index, get().authUser?.id ?? null);
     }
   },
   updateProjectMeta: (payload) => {

@@ -100,7 +100,7 @@ export default function ProjectList() {
     }
     const project = result.project as Project;
     if (can(plan, "project.save")) {
-      saveProject(project);
+      saveProject(project, authUser?.id ?? null);
     }
     openProject(project.id);
     setError(null);
@@ -397,7 +397,7 @@ export default function ProjectList() {
                         className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                         onClick={() => {
                           if (typeof window !== "undefined" && !navigator.onLine) {
-                            const cached = loadProject(project.id);
+                            const cached = loadProject(project.id, authUser?.id ?? null);
                             if (!cached) {
                               setError(
                                 "This project is not available offline yet. Reconnect to sync."
