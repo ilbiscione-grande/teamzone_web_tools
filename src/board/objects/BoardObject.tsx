@@ -393,6 +393,12 @@ export default function BoardObject({
     };
     const goalScaleX = goal.width / goalSvg.width;
     const goalScaleY = goal.height / goalSvg.height;
+    const stretchY = 1.15;
+    const scaledWidth = goalSvg.width * goalScaleX;
+    const scaledHeight = goalSvg.height * goalScaleY * stretchY;
+    const offsetX = (goal.width - scaledWidth) / 2;
+    const offsetY = (goal.height - scaledHeight) / 2;
+    const postWidth = Math.max(0.2, goal.width * 0.08);
     return (
       <Group
         {...commonProps}
@@ -403,10 +409,10 @@ export default function BoardObject({
         }}
       >
         <Group
-          x={-goalSvg.minX}
-          y={-goalSvg.minY}
+          x={-goalSvg.minX * goalScaleX + offsetX}
+          y={-goalSvg.minY * goalScaleY + offsetY}
           scaleX={goalScaleX}
-          scaleY={goalScaleY}
+          scaleY={goalScaleY * stretchY}
         >
           <Path
             data={goalSvg.path}
@@ -416,6 +422,22 @@ export default function BoardObject({
             lineJoin="bevel"
           />
         </Group>
+        <Rect
+          x={0}
+          y={0}
+          width={postWidth}
+          height={goal.height}
+          fill="#ffffff"
+          strokeWidth={0}
+        />
+        <Rect
+          x={goal.width - postWidth}
+          y={0}
+          width={postWidth}
+          height={goal.height}
+          fill="#ffffff"
+          strokeWidth={0}
+        />
       </Group>
     );
   }
