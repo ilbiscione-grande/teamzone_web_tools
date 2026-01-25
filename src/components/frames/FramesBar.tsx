@@ -187,8 +187,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     const height = stage.height() * pixelRatio;
     const recordCanvas =
       recordCanvasRef.current ?? document.createElement("canvas");
-    recordCanvas.width = width;
-    recordCanvas.height = height;
+    recordCanvasRef.current = recordCanvas;
     recordCanvasRef.current = recordCanvas;
     const ctx = recordCanvas.getContext("2d");
     if (!ctx) {
@@ -206,30 +205,23 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       const srcY = (pitchBounds.y * stageScale + stageOffsetY) * pixelRatio;
       const srcW = pitchBounds.width * stageScale * pixelRatio;
       const srcH = pitchBounds.height * stageScale * pixelRatio;
-      const scale = Math.min(width / srcW, height / srcH);
-      const drawW = srcW * scale;
-      const drawH = srcH * scale;
-      const drawX = (width - drawW) / 2;
-      const drawY = (height - drawH) / 2;
+      const targetW = Math.max(1, Math.round(srcW));
+      const targetH = Math.max(1, Math.round(srcH));
+      if (recordCanvas.width !== targetW || recordCanvas.height !== targetH) {
+        recordCanvas.width = targetW;
+        recordCanvas.height = targetH;
+      }
+      const drawW = recordCanvas.width;
+      const drawH = recordCanvas.height;
       layers.forEach((layer) => {
         const canvas = (layer.getCanvas() as any)?._canvas as
           | HTMLCanvasElement
           | undefined;
         if (canvas) {
-          ctx.drawImage(
-            canvas,
-            srcX,
-            srcY,
-            srcW,
-            srcH,
-            drawX,
-            drawY,
-            drawW,
-            drawH
-          );
-        }
-      });
-      if (showWatermark) {
+            ctx.drawImage(canvas, srcX, srcY, srcW, srcH, 0, 0, drawW, drawH);
+          }
+        });
+        if (showWatermark) {
           const watermarkText =
             plan === "PAID"
               ? board.watermarkText?.trim() ||
@@ -244,13 +236,13 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
         ctx.textBaseline = "bottom";
         ctx.shadowColor = "rgba(0,0,0,0.35)";
         ctx.shadowBlur = 8 * pixelRatio;
-        ctx.fillText(
-          watermarkText,
-          drawX + drawW - padding - innerInset,
-          drawY + drawH - padding - innerInset
-        );
-        ctx.restore();
-      }
+          ctx.fillText(
+            watermarkText,
+            drawW - padding - innerInset,
+            drawH - padding - innerInset
+          );
+          ctx.restore();
+        }
       recordRafRef.current = requestAnimationFrame(drawFrame);
     };
     recordRafRef.current = requestAnimationFrame(drawFrame);
