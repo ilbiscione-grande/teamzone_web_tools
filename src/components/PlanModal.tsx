@@ -310,7 +310,7 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
           </button>
         </div>
 
-        <div className="mt-6 grid gap-6 md:grid-cols-[1fr_1.2fr]">
+        <div className="mt-6 grid gap-6 md:grid-cols-[1fr_1.4fr]">
           <div className="space-y-4">
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-4 text-xs text-[var(--ink-1)]">
               <p className="mb-2 text-[11px] uppercase">Plan</p>
@@ -428,7 +428,7 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1.15fr)_minmax(0,1.15fr)]">
             {(["FREE", "AUTH", "PAID"] as const).map((tier) => {
               const isCurrent = plan === tier;
               return (
