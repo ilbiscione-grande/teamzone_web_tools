@@ -31,6 +31,7 @@ export default function PropertiesPanel() {
   const updateObject = useProjectStore((state) => state.updateObject);
   const removeObject = useProjectStore((state) => state.removeObject);
   const addObject = useProjectStore((state) => state.addObject);
+  const updateSquadPlayer = useProjectStore((state) => state.updateSquadPlayer);
   const pushHistory = useEditorStore((state) => state.pushHistory);
   const selection = useEditorStore((state) => state.selection);
   const selectedLinkId = useEditorStore((state) => state.selectedLinkId);
@@ -125,6 +126,27 @@ export default function PropertiesPanel() {
   };
 
   const boardSquads = getBoardSquads(project, board);
+  const squadPlayerById = useMemo(() => {
+    const map = new Map<
+      string,
+      typeof boardSquads.all[number]["players"][number]
+    >();
+    boardSquads.all.forEach((squad) => {
+      squad.players.forEach((player) => {
+        map.set(player.id, player);
+      });
+    });
+    return map;
+  }, [boardSquads]);
+  const squadIdByPlayerId = useMemo(() => {
+    const map = new Map<string, string>();
+    boardSquads.all.forEach((squad) => {
+      squad.players.forEach((player) => {
+        map.set(player.id, squad.id);
+      });
+    });
+    return map;
+  }, [boardSquads]);
   const playerOptions = [
     ...(boardSquads.home?.players.map((player) => ({
       id: player.id,
@@ -320,6 +342,57 @@ export default function PropertiesPanel() {
                       </option>
                     ))}
                   </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[11px]">Vest color</span>
+                  {target.squadPlayerId ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        className="h-8 w-10 rounded-lg border border-[var(--line)] bg-transparent"
+                        value={
+                          squadPlayerById.get(target.squadPlayerId)?.vestColor ??
+                          "#000000"
+                        }
+                        onChange={(event) =>
+                          (() => {
+                            const squadId = squadIdByPlayerId.get(
+                              target.squadPlayerId
+                            );
+                            if (!squadId) {
+                              return;
+                            }
+                            updateSquadPlayer(squadId, target.squadPlayerId, {
+                              vestColor: event.target.value,
+                            });
+                          })()
+                        }
+                        title="Vest color"
+                      />
+                      <button
+                        className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                        onClick={() =>
+                          (() => {
+                            const squadId = squadIdByPlayerId.get(
+                              target.squadPlayerId
+                            );
+                            if (!squadId) {
+                              return;
+                            }
+                            updateSquadPlayer(squadId, target.squadPlayerId, {
+                              vestColor: undefined,
+                            });
+                          })()
+                        }
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-[var(--ink-1)]">
+                      Link a squad player to set a vest color.
+                    </p>
+                  )}
                 </label>
                 <label className="flex items-center gap-2 text-[11px]">
                   <input
