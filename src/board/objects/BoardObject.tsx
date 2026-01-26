@@ -318,7 +318,7 @@ export default function BoardObject({
       >
         {ball.attachedToId && (
           <Circle
-            radius={Math.max(1.1, playerTokenSize * 0.55)}
+            radius={Math.max(0.8, playerTokenSize * 0.55)}
             fill="#ffffff"
             opacity={0.18}
             shadowBlur={18}
@@ -327,7 +327,7 @@ export default function BoardObject({
           />
         )}
         <Circle
-          radius={Math.max(0.8, playerTokenSize * 0.4)}
+          radius={Math.max(0.6, playerTokenSize * 0.4)}
           fill={ball.style.fill}
           stroke={ball.style.stroke}
           strokeWidth={ball.style.strokeWidth}
