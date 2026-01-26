@@ -39,6 +39,10 @@ export default function TopBar() {
   const setAttachBallToPlayer = useEditorStore(
     (state) => state.setAttachBallToPlayer
   );
+  const playerTokenSize = useEditorStore((state) => state.playerTokenSize);
+  const setPlayerTokenSize = useEditorStore(
+    (state) => state.setPlayerTokenSize
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
@@ -53,6 +57,18 @@ export default function TopBar() {
     Date.now() -
       Number(window.localStorage.getItem("tacticsboard:planCheckAt") ?? 0) >
       7 * 24 * 60 * 60 * 1000;
+  const playerSizeOptions = [
+    1.0,
+    1.2,
+    1.4,
+    1.5,
+    1.6,
+    1.8,
+    2.0,
+    2.2,
+    2.4,
+    2.6,
+  ];
 
   if (!project) {
     return null;
@@ -770,6 +786,26 @@ export default function TopBar() {
                     });
                   }}
                 />
+              </div>
+              <div>
+                <p className="mb-2 text-[11px] uppercase">Player size</p>
+                <select
+                  className="h-9 w-full rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                  value={playerTokenSize}
+                  onChange={(event) =>
+                    setPlayerTokenSize(Number(event.target.value))
+                  }
+                >
+                  {playerSizeOptions.map((size) => (
+                    <option
+                      key={size}
+                      value={size}
+                      className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                    >
+                      {size.toFixed(1)}x
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

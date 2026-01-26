@@ -72,7 +72,7 @@ export const useEditorStore = create<EditorState>()(
       offsetY: 0,
     },
     isPlaying: false,
-    playerTokenSize: 2.0,
+    playerTokenSize: 1.5,
     playerSide: "home",
     frameDurationMs: 700,
     playheadProgress: 0,

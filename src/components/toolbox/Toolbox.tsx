@@ -180,10 +180,6 @@ export default function Toolbox() {
   const setTool = useEditorStore((state) => state.setTool);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
-  const playerTokenSize = useEditorStore((state) => state.playerTokenSize);
-  const setPlayerTokenSize = useEditorStore(
-    (state) => state.setPlayerTokenSize
-  );
   const [activeTab, setActiveTab] = useState<
     "items" | "lines" | "forms" | "squad" | "notes"
   >(
@@ -593,23 +589,6 @@ export default function Toolbox() {
               <span className="text-[10px] text-[var(--ink-1)]">{tool.hint}</span>
             </button>
           ))}
-          </div>
-          <div className="rounded-2xl border border-[var(--line)] p-3 text-xs text-[var(--ink-1)]">
-            <p className="mb-2 text-[11px] uppercase text-[var(--ink-1)]">
-              Player size
-            </p>
-            <input
-              type="range"
-              min={1.4}
-              max={4}
-              step={0.1}
-              value={playerTokenSize}
-              onChange={(event) => setPlayerTokenSize(Number(event.target.value))}
-              className="w-full"
-            />
-            <div className="mt-1 text-[11px] text-[var(--ink-1)]">
-              {playerTokenSize.toFixed(1)}x
-            </div>
           </div>
         </div>
       )}
