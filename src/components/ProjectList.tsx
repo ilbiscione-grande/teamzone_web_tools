@@ -572,6 +572,12 @@ export default function ProjectList() {
                         {share.permission} access
                       </p>
                     </div>
+                    <button
+                      className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={() => openSharedBoard(share)}
+                    >
+                      Open
+                    </button>
                   </div>
                 ))
               )}
