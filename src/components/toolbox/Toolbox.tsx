@@ -226,7 +226,12 @@ export default function Toolbox() {
   const board = getActiveBoard(project);
   const [comments, setComments] = useState<BoardComment[]>([]);
   const [ownerShares, setOwnerShares] = useState<
-    { id: string; recipientEmail: string; permission: "view" | "comment" }[]
+    {
+      id: string;
+      recipientEmail: string;
+      permission: "view" | "comment";
+      createdAt: string;
+    }[]
   >([]);
   const [activeShareId, setActiveShareId] = useState<string | null>(null);
   const [commentBody, setCommentBody] = useState("");
@@ -532,6 +537,7 @@ export default function Toolbox() {
         id: share.id,
         recipientEmail: share.recipientEmail,
         permission: share.permission,
+        createdAt: share.createdAt,
       }));
       setOwnerShares(next);
       if (next.length > 0 && !activeShareId && !project?.sharedMeta) {
