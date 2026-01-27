@@ -63,7 +63,7 @@ export default function ProjectList() {
   }, []);
 
   useEffect(() => {
-    if (!authUser || plan !== "PAID") {
+    if (!authUser || !can(plan, "board.share")) {
       setSharedBoards([]);
       return;
     }
