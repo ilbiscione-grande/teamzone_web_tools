@@ -170,8 +170,11 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     }
     playStartRef.current = performance.now();
     playOriginRef.current = board.activeFrameIndex;
-    setPlayheadFrame(board.activeFrameIndex);
-  }, [board.activeFrameIndex, isPlaying, setPlayheadFrame]);
+    const currentIndex = Math.floor(playheadFrame);
+    if (currentIndex !== board.activeFrameIndex) {
+      setPlayheadFrame(board.activeFrameIndex);
+    }
+  }, [board.activeFrameIndex, isPlaying, playheadFrame, setPlayheadFrame]);
 
   useEffect(() => {
     if (!recording || isPlaying) {
