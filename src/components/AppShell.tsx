@@ -14,6 +14,7 @@ export default function AppShell() {
   const [pullReady, setPullReady] = useState(false);
   const [pullActive, setPullActive] = useState(false);
   const touchStartRef = useRef<number | null>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
     hydrateIndex();
@@ -90,6 +91,29 @@ export default function AppShell() {
     };
   }, [pullActive, pullReady]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const media = window.matchMedia("(display-mode: standalone)");
+    const update = () =>
+      setIsStandalone(
+        media.matches ||
+          (window.navigator as { standalone?: boolean }).standalone === true
+      );
+    update();
+    if ("addEventListener" in media) {
+      media.addEventListener("change", update);
+      return () => media.removeEventListener("change", update);
+    }
+    const legacyMedia = media as MediaQueryList & {
+      addListener?: (listener: () => void) => void;
+      removeListener?: (listener: () => void) => void;
+    };
+    legacyMedia.addListener?.(update);
+    return () => legacyMedia.removeListener?.(update);
+  }, []);
+
   return (
     <div className="min-h-screen text-foreground">
       <div className="pointer-events-none fixed left-1/2 top-0 z-50 -translate-x-1/2">
@@ -103,6 +127,32 @@ export default function AppShell() {
           {pullReady ? "Release to refresh" : "Pull to refresh"}
         </div>
       </div>
+      {isStandalone && (
+        <button
+          className="fixed right-4 top-4 z-50 rounded-full border border-white/20 bg-black/40 p-2 text-[var(--ink-0)] shadow-lg shadow-black/30 backdrop-blur"
+          onClick={() => {
+            if (!window.confirm("Close the app?")) {
+              return;
+            }
+            window.close();
+          }}
+          title="Close app"
+          aria-label="Close app"
+        >
+          <svg
+            aria-hidden
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <path d="M6 6l12 12" />
+            <path d="M18 6l-12 12" />
+          </svg>
+        </button>
+      )}
       {project ? <EditorLayout /> : <ProjectList />}
     </div>
   );

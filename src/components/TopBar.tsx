@@ -50,7 +50,6 @@ export default function TopBar() {
   const [shareOpen, setShareOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
   const showAds = plan === "FREE";
@@ -91,28 +90,6 @@ export default function TopBar() {
       window.removeEventListener("online", update);
       window.removeEventListener("offline", update);
     };
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const media = window.matchMedia("(display-mode: standalone)");
-    const update = () =>
-      setIsStandalone(
-        media.matches || (window.navigator as { standalone?: boolean }).standalone === true
-      );
-    update();
-    if ("addEventListener" in media) {
-      media.addEventListener("change", update);
-      return () => media.removeEventListener("change", update);
-    }
-    const legacyMedia = media as MediaQueryList & {
-      addListener?: (listener: () => void) => void;
-      removeListener?: (listener: () => void) => void;
-    };
-    legacyMedia.addListener?.(update);
-    return () => legacyMedia.removeListener?.(update);
   }, []);
 
   useEffect(() => {
@@ -396,11 +373,6 @@ export default function TopBar() {
             </option>
           </select>
           <FormationMenu />
-          {isSharedView && project.sharedMeta && (
-            <div className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-0)]">
-              Shared · {project.sharedMeta.permission}
-            </div>
-          )}
           {authUser && (
             <div
               className={`rounded-full border p-2 ${
@@ -654,32 +626,6 @@ export default function TopBar() {
               <path d="M9 13l3 3 3-3" />
             </svg>
           </button>
-          {isStandalone && (
-            <button
-              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-              onClick={() => {
-                if (!window.confirm("Close the app?")) {
-                  return;
-                }
-                window.close();
-              }}
-              title="Close app"
-              aria-label="Close app"
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M6 6l12 12" />
-                <path d="M18 6l-12 12" />
-              </svg>
-            </button>
-          )}
           <input
             ref={fileRef}
             type="file"

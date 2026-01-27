@@ -12,7 +12,11 @@ import { getActiveBoard, getBoardSquads } from "@/utils/board";
 import { createPlayer } from "@/board/objects/objectFactory";
 import { createId } from "@/utils/id";
 import type { BoardComment, PlayerToken, Squad } from "@/models";
-import { addBoardComment, fetchBoardComments } from "@/persistence/shares";
+import {
+  addBoardComment,
+  fetchBoardComments,
+  fetchBoardSharesForOwner,
+} from "@/persistence/shares";
 import { can } from "@/utils/plan";
 
 const iconClass = "h-4 w-4";
@@ -217,6 +221,10 @@ export default function Toolbox() {
 
   const board = getActiveBoard(project);
   const [comments, setComments] = useState<BoardComment[]>([]);
+  const [ownerShares, setOwnerShares] = useState<
+    { id: string; recipientEmail: string; permission: "view" | "comment" }[]
+  >([]);
+  const [activeShareId, setActiveShareId] = useState<string | null>(null);
   const [commentBody, setCommentBody] = useState("");
   const [commentStatus, setCommentStatus] = useState<string | null>(null);
   const [commentLoading, setCommentLoading] = useState(false);
@@ -506,12 +514,39 @@ export default function Toolbox() {
   };
 
   useEffect(() => {
-    if (activeTab !== "shared" || !project?.sharedMeta) {
+    if (!board || !authUser || !can(plan, "board.share")) {
+      setOwnerShares([]);
+      return;
+    }
+    fetchBoardSharesForOwner(board.id).then((result) => {
+      if (!result.ok) {
+        setOwnerShares([]);
+        return;
+      }
+      const next = result.shares.map((share) => ({
+        id: share.id,
+        recipientEmail: share.recipientEmail,
+        permission: share.permission,
+      }));
+      setOwnerShares(next);
+      if (next.length > 0 && !activeShareId && !project?.sharedMeta) {
+        setActiveShareId(next[0].id);
+      }
+    });
+  }, [authUser, board?.id, plan, project?.sharedMeta, activeShareId]);
+
+  useEffect(() => {
+    if (activeTab !== "shared") {
+      return;
+    }
+    const shareId = project?.sharedMeta?.shareId ?? activeShareId;
+    if (!shareId) {
+      setComments([]);
       return;
     }
     setCommentsBusy(true);
     setCommentStatus(null);
-    fetchBoardComments(project.sharedMeta.shareId)
+    fetchBoardComments(shareId)
       .then((result) => {
         if (!result.ok) {
           setCommentStatus(result.error);
@@ -521,18 +556,20 @@ export default function Toolbox() {
         setComments(result.comments);
       })
       .finally(() => setCommentsBusy(false));
-  }, [activeTab, project?.sharedMeta?.shareId, project?.sharedMeta]);
+  }, [activeTab, project?.sharedMeta?.shareId, activeShareId]);
 
   const handleAddComment = async () => {
-    if (!project?.sharedMeta || !commentBody.trim()) {
+    const shareId = project?.sharedMeta?.shareId ?? activeShareId;
+    if (!shareId || !commentBody.trim()) {
       return;
     }
     const isOwner =
+      (!project?.sharedMeta && ownerShares.length > 0 && !!authUser) ||
       authUser?.email?.toLowerCase() ===
-      project.sharedMeta.ownerEmail.toLowerCase();
+        project?.sharedMeta?.ownerEmail.toLowerCase();
     const canComment =
       can(plan, "board.comment") &&
-      (project.sharedMeta.permission === "comment" || isOwner);
+      ((project?.sharedMeta?.permission ?? "view") === "comment" || isOwner);
     if (!canComment) {
       setCommentStatus("Commenting is disabled for this board.");
       return;
@@ -540,8 +577,8 @@ export default function Toolbox() {
     setCommentLoading(true);
     setCommentStatus(null);
     const result = await addBoardComment({
-      shareId: project.sharedMeta.shareId,
-      boardId: project.sharedMeta.boardId,
+      shareId,
+      boardId: board?.id ?? project?.sharedMeta?.boardId ?? "",
       body: commentBody.trim(),
     });
     if (!result.ok) {
@@ -583,20 +620,29 @@ export default function Toolbox() {
           { id: "squad", label: "Squad", icon: <SquadIcon /> },
           { id: "notes", label: "Notes", icon: <NotesIcon /> },
           { id: "shared", label: "Shared", icon: <CommentsIcon /> },
-        ].map((tab) => (
+        ].map((tab) => {
+          const hasShared =
+            tab.id !== "shared"
+              ? true
+              : !!project?.sharedMeta || ownerShares.length > 0;
+          return (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
             className={`flex h-20 flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-2 text-[11px] uppercase tracking-wide ${
               activeTab === tab.id
                 ? "border-[var(--accent-0)] text-[var(--ink-0)]"
-                : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                : hasShared
+                ? "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                : "border-[var(--line)] text-[var(--ink-1)] opacity-40"
             }`}
+            disabled={!hasShared}
           >
             {tab.icon}
             <span>{tab.label}</span>
           </button>
-        ))}
+        );
+        })}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto pr-1" data-scrollable>
@@ -963,9 +1009,9 @@ export default function Toolbox() {
       )}
       {activeTab === "shared" && (
         <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          {!project?.sharedMeta ? (
+          {!project?.sharedMeta && ownerShares.length === 0 ? (
             <p className="text-sm text-[var(--ink-1)]">
-              Comments are available on shared boards.
+              Share this board to enable comments.
             </p>
           ) : (
             <>
@@ -974,15 +1020,40 @@ export default function Toolbox() {
                   <p className="text-[11px] uppercase text-[var(--ink-1)]">
                     Comments
                   </p>
-                  <p className="text-[10px] text-[var(--ink-1)]">
-                    Shared by {project.sharedMeta.ownerEmail} ·{" "}
-                    {project.sharedMeta.permission}
-                  </p>
+                  {project?.sharedMeta ? (
+                    <p className="text-[10px] text-[var(--ink-1)]">
+                      Shared by {project.sharedMeta.ownerEmail} ·{" "}
+                      {project.sharedMeta.permission}
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-[var(--ink-1)]">
+                      Shared by you · {ownerShares.length} shares
+                    </p>
+                  )}
                 </div>
                 <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                   {comments.length === 1 ? "1 comment" : `${comments.length} comments`}
                 </span>
               </div>
+              {!project?.sharedMeta && ownerShares.length > 0 && (
+                <div className="mt-2">
+                  <select
+                    className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-[11px] text-[var(--ink-0)]"
+                    value={activeShareId ?? ownerShares[0]?.id}
+                    onChange={(event) => setActiveShareId(event.target.value)}
+                  >
+                    {ownerShares.map((share) => (
+                      <option
+                        key={share.id}
+                        value={share.id}
+                        className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                      >
+                        {share.recipientEmail} · {share.permission}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                 {commentsBusy ? (
                   <p className="text-xs text-[var(--ink-1)]">
@@ -1013,9 +1084,10 @@ export default function Toolbox() {
                 <textarea
                   className="min-h-[72px] w-full rounded-2xl border border-[var(--line)] bg-transparent p-2 text-xs text-[var(--ink-0)]"
                   placeholder={
-                    (project.sharedMeta.permission === "comment" ||
+                    ((project?.sharedMeta?.permission ?? "view") === "comment" ||
+                      (!project?.sharedMeta && ownerShares.length > 0) ||
                       authUser?.email?.toLowerCase() ===
-                        project.sharedMeta.ownerEmail.toLowerCase()) &&
+                        project?.sharedMeta?.ownerEmail.toLowerCase()) &&
                     can(plan, "board.comment")
                       ? "Write a comment..."
                       : "Commenting is disabled."
@@ -1024,9 +1096,10 @@ export default function Toolbox() {
                   onChange={(event) => setCommentBody(event.target.value)}
                   disabled={
                     (!can(plan, "board.comment") ||
-                      (project.sharedMeta.permission !== "comment" &&
+                      ((project?.sharedMeta?.permission ?? "view") !== "comment" &&
+                        !(ownerShares.length > 0 && !project?.sharedMeta) &&
                         authUser?.email?.toLowerCase() !==
-                          project.sharedMeta.ownerEmail.toLowerCase()))
+                          project?.sharedMeta?.ownerEmail.toLowerCase()))
                   }
                 />
                 <div className="flex items-center justify-between">
@@ -1043,9 +1116,10 @@ export default function Toolbox() {
                     disabled={
                       commentLoading ||
                       !can(plan, "board.comment") ||
-                      (project.sharedMeta.permission !== "comment" &&
+                      ((project?.sharedMeta?.permission ?? "view") !== "comment" &&
+                        !(ownerShares.length > 0 && !project?.sharedMeta) &&
                         authUser?.email?.toLowerCase() !==
-                          project.sharedMeta.ownerEmail.toLowerCase())
+                          project?.sharedMeta?.ownerEmail.toLowerCase())
                     }
                   >
                     {commentLoading ? "Saving..." : "Add comment"}
