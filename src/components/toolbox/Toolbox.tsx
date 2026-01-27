@@ -524,6 +524,12 @@ export default function Toolbox() {
   };
 
   useEffect(() => {
+    setOwnerShares([]);
+    setActiveShareId(null);
+    setComments([]);
+  }, [board?.id]);
+
+  useEffect(() => {
     if (!board || !authUser || !can(plan, "board.share")) {
       setOwnerShares([]);
       return;
@@ -540,11 +546,11 @@ export default function Toolbox() {
         createdAt: share.createdAt,
       }));
       setOwnerShares(next);
-      if (next.length > 0 && !activeShareId && !project?.sharedMeta) {
-        setActiveShareId(next[0].id);
+      if (!project?.sharedMeta) {
+        setActiveShareId(next[0]?.id ?? null);
       }
     });
-  }, [authUser, board?.id, plan, project?.sharedMeta, activeShareId]);
+  }, [authUser, board?.id, plan, project?.sharedMeta]);
 
   useEffect(() => {
     if (activeTab !== "shared") {
@@ -628,6 +634,21 @@ export default function Toolbox() {
       window.clearInterval(interval);
     };
   }, [commentsSeenKey, ownerShares, project?.sharedMeta?.shareId, authUser]);
+
+  useEffect(() => {
+    if (
+      activeTab !== "shared" ||
+      !authUser ||
+      ownerShares.length === 0 ||
+      project?.sharedMeta
+    ) {
+      return;
+    }
+    const sharedSeenKey = `tacticsboard:sharedSeenAt:${authUser.id}`;
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(sharedSeenKey, String(Date.now()));
+    }
+  }, [activeTab, authUser, ownerShares.length, project?.sharedMeta]);
 
   const handleAddComment = async () => {
     const shareId = project?.sharedMeta?.shareId ?? activeShareId;
