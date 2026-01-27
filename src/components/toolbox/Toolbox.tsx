@@ -11,7 +11,9 @@ import { clone } from "@/utils/clone";
 import { getActiveBoard, getBoardSquads } from "@/utils/board";
 import { createPlayer } from "@/board/objects/objectFactory";
 import { createId } from "@/utils/id";
-import type { PlayerToken, Squad } from "@/models";
+import type { BoardComment, PlayerToken, Squad } from "@/models";
+import { addBoardComment, fetchBoardComments } from "@/persistence/shares";
+import { can } from "@/utils/plan";
 
 const iconClass = "h-4 w-4";
 const iconStroke = "2";
@@ -162,6 +164,11 @@ const NotesIcon = () => (
     <path d="M9 12h6M9 16h6M9 8h3" />
   </svg>
 );
+const CommentsIcon = () => (
+  <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
+    <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+  </svg>
+);
 const HighlightIcon = () => (
   <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
     <circle cx="12" cy="12" r="6" />
@@ -181,7 +188,7 @@ export default function Toolbox() {
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
   const [activeTab, setActiveTab] = useState<
-    "items" | "lines" | "forms" | "squad" | "notes"
+    "items" | "draw" | "squad" | "notes" | "comments"
   >(
     "items"
   );
@@ -194,6 +201,7 @@ export default function Toolbox() {
     left: number;
   } | null>(null);
   const project = useProjectStore((state) => state.project);
+  const plan = useProjectStore((state) => state.plan);
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
   const updateBoard = useProjectStore((state) => state.updateBoard);
   const selection = useEditorStore((state) => state.selection);
@@ -209,6 +217,11 @@ export default function Toolbox() {
   );
 
   const board = getActiveBoard(project);
+  const [comments, setComments] = useState<BoardComment[]>([]);
+  const [commentBody, setCommentBody] = useState("");
+  const [commentStatus, setCommentStatus] = useState<string | null>(null);
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [commentsBusy, setCommentsBusy] = useState(false);
   const previewNotes = useMemo(() => {
     const raw = board?.notes ?? "";
     if (!raw) {
@@ -493,6 +506,50 @@ export default function Toolbox() {
     updateBoard(board.id, { frames: nextFrames });
   };
 
+  useEffect(() => {
+    if (activeTab !== "comments" || !project?.sharedMeta) {
+      return;
+    }
+    setCommentsBusy(true);
+    setCommentStatus(null);
+    fetchBoardComments(project.sharedMeta.shareId)
+      .then((result) => {
+        if (!result.ok) {
+          setCommentStatus(result.error);
+          setComments([]);
+          return;
+        }
+        setComments(result.comments);
+      })
+      .finally(() => setCommentsBusy(false));
+  }, [activeTab, project?.sharedMeta?.shareId, project?.sharedMeta]);
+
+  const handleAddComment = async () => {
+    if (!project?.sharedMeta || !commentBody.trim()) {
+      return;
+    }
+    const canComment =
+      project.sharedMeta.permission === "comment" && can(plan, "board.comment");
+    if (!canComment) {
+      setCommentStatus("Commenting is disabled for this board.");
+      return;
+    }
+    setCommentLoading(true);
+    setCommentStatus(null);
+    const result = await addBoardComment({
+      shareId: project.sharedMeta.shareId,
+      boardId: project.sharedMeta.boardId,
+      body: commentBody.trim(),
+    });
+    if (!result.ok) {
+      setCommentStatus(result.error);
+      setCommentLoading(false);
+      return;
+    }
+    setComments((prev) => [...prev, result.comment]);
+    setCommentBody("");
+    setCommentLoading(false);
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
@@ -519,10 +576,10 @@ export default function Toolbox() {
       <div className="grid grid-cols-5 gap-2">
         {[
           { id: "items", label: "Items", icon: <PlayerIcon /> },
-          { id: "lines", label: "Lines", icon: <LineIcon /> },
-          { id: "forms", label: "Forms", icon: <CircleIcon /> },
+          { id: "draw", label: "Lines + Forms", icon: <LineIcon /> },
           { id: "squad", label: "Squad", icon: <SquadIcon /> },
           { id: "notes", label: "Notes", icon: <NotesIcon /> },
+          { id: "comments", label: "Comments", icon: <CommentsIcon /> },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -593,43 +650,42 @@ export default function Toolbox() {
         </div>
       )}
 
-      {activeTab === "lines" && (
-        <div className="grid grid-cols-2 gap-2">
-          {lineTools.map((tool) => (
-            <button
-              key={tool.id}
-              onClick={() => setTool(tool.id)}
-              className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition ${
-                activeTool === tool.id
-                  ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
-                  : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-              }`}
-            >
-              <span className="mt-1">{tool.icon}</span>
-              <span className="text-xs font-semibold">{tool.label}</span>
-              <span className="text-[10px] text-[var(--ink-1)]">{tool.hint}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {activeTab === "forms" && (
-        <div className="grid grid-cols-2 gap-2">
-          {formTools.map((tool) => (
-            <button
-              key={tool.id}
-              onClick={() => setTool(tool.id)}
-              className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition ${
-                activeTool === tool.id
-                  ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
-                  : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-              }`}
-            >
-              <span className="mt-1">{tool.icon}</span>
-              <span className="text-xs font-semibold">{tool.label}</span>
-              <span className="text-[10px] text-[var(--ink-1)]">{tool.hint}</span>
-            </button>
-          ))}
+      {activeTab === "draw" && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            {lineTools.map((tool) => (
+              <button
+                key={tool.id}
+                onClick={() => setTool(tool.id)}
+                className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition ${
+                  activeTool === tool.id
+                    ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                    : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                }`}
+              >
+                <span className="mt-1">{tool.icon}</span>
+                <span className="text-xs font-semibold">{tool.label}</span>
+                <span className="text-[10px] text-[var(--ink-1)]">{tool.hint}</span>
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {formTools.map((tool) => (
+              <button
+                key={tool.id}
+                onClick={() => setTool(tool.id)}
+                className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition ${
+                  activeTool === tool.id
+                    ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                    : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                }`}
+              >
+                <span className="mt-1">{tool.icon}</span>
+                <span className="text-xs font-semibold">{tool.label}</span>
+                <span className="text-[10px] text-[var(--ink-1)]">{tool.hint}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -900,6 +956,95 @@ export default function Toolbox() {
               )}
             </div>
           </div>
+        </div>
+      )}
+      {activeTab === "comments" && (
+        <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          {!project?.sharedMeta ? (
+            <p className="text-sm text-[var(--ink-1)]">
+              Comments are available on shared boards.
+            </p>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] uppercase text-[var(--ink-1)]">
+                    Comments
+                  </p>
+                  <p className="text-[10px] text-[var(--ink-1)]">
+                    Shared by {project.sharedMeta.ownerEmail} ·{" "}
+                    {project.sharedMeta.permission}
+                  </p>
+                </div>
+                <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                  {comments.length === 1 ? "1 comment" : `${comments.length} comments`}
+                </span>
+              </div>
+              <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                {commentsBusy ? (
+                  <p className="text-xs text-[var(--ink-1)]">
+                    Loading comments...
+                  </p>
+                ) : comments.length === 0 ? (
+                  <p className="text-xs text-[var(--ink-1)]">
+                    No comments yet.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {comments.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"
+                      >
+                        <p className="text-[var(--ink-0)]">{comment.body}</p>
+                        <p className="mt-2 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                          {comment.authorEmail} ·{" "}
+                          {new Date(comment.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 space-y-2">
+                <textarea
+                  className="min-h-[72px] w-full rounded-2xl border border-[var(--line)] bg-transparent p-2 text-xs text-[var(--ink-0)]"
+                  placeholder={
+                    project.sharedMeta.permission === "comment" &&
+                    can(plan, "board.comment")
+                      ? "Write a comment..."
+                      : "Commenting is disabled."
+                  }
+                  value={commentBody}
+                  onChange={(event) => setCommentBody(event.target.value)}
+                  disabled={
+                    project.sharedMeta.permission !== "comment" ||
+                    !can(plan, "board.comment")
+                  }
+                />
+                <div className="flex items-center justify-between">
+                  {commentStatus ? (
+                    <p className="text-xs text-[var(--accent-1)]">
+                      {commentStatus}
+                    </p>
+                  ) : (
+                    <span />
+                  )}
+                  <button
+                    className="rounded-full bg-[var(--accent-0)] px-4 py-2 text-xs font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={handleAddComment}
+                    disabled={
+                      commentLoading ||
+                      project.sharedMeta.permission !== "comment" ||
+                      !can(plan, "board.comment")
+                    }
+                  >
+                    {commentLoading ? "Saving..." : "Add comment"}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
       {board?.mode === "DYNAMIC" && activeFrame && (
