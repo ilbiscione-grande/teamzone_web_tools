@@ -220,12 +220,12 @@ export default function AppShell() {
       if (event.key !== "Delete" && event.key !== "Backspace") {
         return;
       }
-      const selection = useEditorStore.getState().selection;
-      if (selection.length === 0 && !selectedLinkId) {
+      const deleteSelection = useEditorStore.getState().selection;
+      if (deleteSelection.length === 0 && !selectedLinkId) {
         return;
       }
       useEditorStore.getState().pushHistory(clone(objects));
-      selection.forEach((id) => {
+      deleteSelection.forEach((id) => {
         useProjectStore.getState().removeObject(board.id, frameIndex, id);
       });
       if (selectedLinkId) {
