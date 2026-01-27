@@ -141,6 +141,19 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
   ]);
 
   useEffect(() => {
+    const handleRecord = () => {
+      if (recording) {
+        return;
+      }
+      setActiveFrameIndex(board.id, 0);
+      setPlayheadFrame(0);
+      startRecording();
+    };
+    window.addEventListener("tacticsboard:record", handleRecord);
+    return () => window.removeEventListener("tacticsboard:record", handleRecord);
+  }, [recording, board.id, setActiveFrameIndex, setPlayheadFrame]);
+
+  useEffect(() => {
     if (isPlaying) {
       if (tickingRef.current) {
         tickingRef.current = false;

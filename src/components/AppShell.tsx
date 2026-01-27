@@ -6,6 +6,10 @@ import { useAutosave } from "@/persistence/useAutosave";
 import { useOnlineSync } from "@/persistence/useOnlineSync";
 import ProjectList from "@/components/ProjectList";
 import EditorLayout from "@/components/EditorLayout";
+import { getActiveBoard } from "@/utils/board";
+import { useEditorStore } from "@/state/useEditorStore";
+import { clone } from "@/utils/clone";
+import { createId } from "@/utils/id";
 
 export default function AppShell() {
   const project = useProjectStore((state) => state.project);
@@ -15,6 +19,7 @@ export default function AppShell() {
   const [pullActive, setPullActive] = useState(false);
   const touchStartRef = useRef<number | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
+  const clipboardRef = useRef<ReturnType<typeof clone>[]>([]);
 
   useEffect(() => {
     hydrateIndex();
@@ -112,6 +117,132 @@ export default function AppShell() {
     };
     legacyMedia.addListener?.(update);
     return () => legacyMedia.removeListener?.(update);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          (target as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+      const project = useProjectStore.getState().project;
+      if (!project) {
+        return;
+      }
+      const board = getActiveBoard(project);
+      if (!board) {
+        return;
+      }
+      if (project.isShared) {
+        return;
+      }
+      const selection = useEditorStore.getState().selection;
+      const selectedLinkId = useEditorStore.getState().selectedLinkId;
+      const frameIndex = board.activeFrameIndex ?? 0;
+      const objects = board.frames[frameIndex]?.objects ?? [];
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "c") {
+        if (selection.length === 0) {
+          return;
+        }
+        clipboardRef.current = selection
+          .map((id) => objects.find((item) => item.id === id))
+          .filter(Boolean)
+          .map((item) => clone(item)) as ReturnType<typeof clone>;
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "v") {
+        if (!clipboardRef.current || clipboardRef.current.length === 0) {
+          return;
+        }
+        useEditorStore.getState().pushHistory(clone(objects));
+        clipboardRef.current.forEach((item) => {
+          const duplicated = clone(item);
+          duplicated.id = createId();
+          useProjectStore
+            .getState()
+            .addObject(board.id, frameIndex, duplicated);
+        });
+        return;
+      }
+
+      if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+        if (board.mode !== "DYNAMIC") {
+          return;
+        }
+        event.preventDefault();
+        const nextIndex =
+          event.key === "ArrowRight"
+            ? Math.min(board.frames.length - 1, frameIndex + 1)
+            : Math.max(0, frameIndex - 1);
+        useProjectStore.getState().setActiveFrameIndex(board.id, nextIndex);
+        useEditorStore.getState().setPlayheadFrame(nextIndex);
+        return;
+      }
+
+      if (event.key === " " || event.code === "Space") {
+        if (board.mode !== "DYNAMIC") {
+          return;
+        }
+        event.preventDefault();
+        const editorState = useEditorStore.getState();
+        if (event.metaKey || event.ctrlKey) {
+          useProjectStore.getState().setActiveFrameIndex(board.id, 0);
+          editorState.setPlayheadFrame(0);
+          window.dispatchEvent(new CustomEvent("tacticsboard:record"));
+          return;
+        }
+        if (editorState.isPlaying) {
+          editorState.setPlaying(false);
+          return;
+        }
+        const lastIndex = Math.max(0, board.frames.length - 1);
+        const currentFrame = editorState.playheadFrame;
+        const atEnd = Math.floor(currentFrame) >= lastIndex;
+        if (atEnd) {
+          useProjectStore.getState().setActiveFrameIndex(board.id, 0);
+          editorState.setPlayheadFrame(0);
+        } else {
+          useProjectStore
+            .getState()
+            .setActiveFrameIndex(board.id, Math.floor(currentFrame));
+        }
+        editorState.setPlaying(true);
+        return;
+      }
+
+      if (event.key !== "Delete" && event.key !== "Backspace") {
+        return;
+      }
+      const selection = useEditorStore.getState().selection;
+      if (selection.length === 0 && !selectedLinkId) {
+        return;
+      }
+      useEditorStore.getState().pushHistory(clone(objects));
+      selection.forEach((id) => {
+        useProjectStore.getState().removeObject(board.id, frameIndex, id);
+      });
+      if (selectedLinkId) {
+        const nextLinks = (board.playerLinks ?? []).filter(
+          (link) => link.id !== selectedLinkId
+        );
+        useProjectStore.getState().updateBoard(board.id, {
+          playerLinks: nextLinks,
+        });
+        useEditorStore.getState().setSelectedLinkId(null);
+      }
+      useEditorStore.getState().setSelection([]);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   return (

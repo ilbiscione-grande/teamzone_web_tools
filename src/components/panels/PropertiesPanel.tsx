@@ -125,6 +125,27 @@ export default function PropertiesPanel() {
       });
   };
 
+  const copySelectionToFrame = (direction: "prev" | "next") => {
+    if (!board || !canCopyAcrossFrames || selected.length === 0) {
+      return;
+    }
+    const targetIndex = direction === "prev" ? frameIndex - 1 : frameIndex + 1;
+    if (targetIndex < 0 || targetIndex >= board.frames.length) {
+      return;
+    }
+    const targetObjects = board.frames[targetIndex]?.objects ?? [];
+    pushHistory(clone(targetObjects));
+    selected.forEach((item) => {
+      const existing = targetObjects.find((entry) => entry.id === item.id);
+      const { id, ...payload } = clone(item);
+      if (existing) {
+        updateObject(board.id, targetIndex, item.id, payload);
+      } else {
+        addObject(board.id, targetIndex, clone(item));
+      }
+    });
+  };
+
   const boardSquads = getBoardSquads(project, board);
   const squadPlayerById = useMemo(() => {
     const map = new Map<
@@ -272,6 +293,30 @@ export default function PropertiesPanel() {
               </p>
             )}
           </div>
+
+          {canCopyAcrossFrames && selected.length > 0 && (
+            <div className="rounded-2xl border border-[var(--line)] p-3">
+              <p className="text-[11px] uppercase text-[var(--ink-1)]">
+                Copy to frame
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={() => copySelectionToFrame("prev")}
+                  disabled={frameIndex === 0}
+                >
+                  Copy to prev frame
+                </button>
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={() => copySelectionToFrame("next")}
+                  disabled={frameIndex >= board.frames.length - 1}
+                >
+                  Copy to next frame
+                </button>
+              </div>
+            </div>
+          )}
 
           {(target.type === "cone" ||
             target.type === "goal" ||
