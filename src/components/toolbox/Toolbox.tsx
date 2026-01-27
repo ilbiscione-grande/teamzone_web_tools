@@ -539,7 +539,7 @@ export default function Toolbox() {
         ))}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1" data-scrollable>
       {activeTab === "items" && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">

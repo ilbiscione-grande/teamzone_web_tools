@@ -111,7 +111,7 @@ export default function ProjectList() {
   };
 
   return (
-    <div className="h-screen overflow-y-auto px-8 py-12">
+    <div className="h-screen overflow-y-auto px-8 py-12" data-scrollable>
       <div className="mx-auto max-w-5xl space-y-8">
         <header className="flex flex-col gap-2">
           <span className="display-font text-xs uppercase tracking-[0.4em] text-[var(--accent-2)]">

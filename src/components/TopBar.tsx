@@ -46,6 +46,7 @@ export default function TopBar() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
   const showAds = plan === "FREE";
@@ -86,6 +87,24 @@ export default function TopBar() {
       window.removeEventListener("online", update);
       window.removeEventListener("offline", update);
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const media = window.matchMedia("(display-mode: standalone)");
+    const update = () =>
+      setIsStandalone(
+        media.matches || (window.navigator as { standalone?: boolean }).standalone === true
+      );
+    update();
+    if ("addEventListener" in media) {
+      media.addEventListener("change", update);
+      return () => media.removeEventListener("change", update);
+    }
+    media.addListener(update);
+    return () => media.removeListener(update);
   }, []);
 
   useEffect(() => {
@@ -569,6 +588,32 @@ export default function TopBar() {
               <path d="M9 13l3 3 3-3" />
             </svg>
           </button>
+          {isStandalone && (
+            <button
+              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+              onClick={() => {
+                if (!window.confirm("Close the app?")) {
+                  return;
+                }
+                window.close();
+              }}
+              title="Close app"
+              aria-label="Close app"
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M6 6l12 12" />
+                <path d="M18 6l-12 12" />
+              </svg>
+            </button>
+          )}
           <input
             ref={fileRef}
             type="file"

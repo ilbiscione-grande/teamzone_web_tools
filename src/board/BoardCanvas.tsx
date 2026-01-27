@@ -400,7 +400,11 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
 
 
   return (
-    <div ref={containerRef} className="relative h-full w-full">
+    <div
+      ref={containerRef}
+      className="relative h-full w-full"
+      data-disable-pull
+    >
       <button
         className="absolute right-4 top-4 z-10 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-xs text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
         onClick={handleResetView}

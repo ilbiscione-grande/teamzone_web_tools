@@ -409,7 +409,10 @@ export default function FormationMenu() {
                 </svg>
               </button>
               {listOpen && (
-                <div className="mt-2 max-h-56 space-y-2 overflow-auto rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2">
+                <div
+                  className="mt-2 max-h-56 space-y-2 overflow-auto rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2"
+                  data-scrollable
+                >
                   <div>
                     <p className="mb-2 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                       Presets

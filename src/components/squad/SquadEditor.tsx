@@ -338,7 +338,7 @@ export default function SquadEditor() {
               <span>Pos</span>
               <span />
             </div>
-            <div className="max-h-48 space-y-2 overflow-auto pr-1">
+            <div className="max-h-48 space-y-2 overflow-auto pr-1" data-scrollable>
               {activeSquad.players.map((player) => (
                 <div
                   key={player.id}
