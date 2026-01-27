@@ -188,10 +188,8 @@ export default function Toolbox() {
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
   const [activeTab, setActiveTab] = useState<
-    "items" | "draw" | "squad" | "notes" | "comments"
-  >(
-    "items"
-  );
+    "items" | "draw" | "squad" | "notes" | "shared"
+  >("items");
   const [notesView, setNotesView] = useState<"edit" | "preview">("preview");
   const notesInputRef = useRef<HTMLTextAreaElement | null>(null);
   const [showMarkdownHelp, setShowMarkdownHelp] = useState(false);
@@ -202,6 +200,7 @@ export default function Toolbox() {
   } | null>(null);
   const project = useProjectStore((state) => state.project);
   const plan = useProjectStore((state) => state.plan);
+  const authUser = useProjectStore((state) => state.authUser);
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
   const updateBoard = useProjectStore((state) => state.updateBoard);
   const selection = useEditorStore((state) => state.selection);
@@ -507,7 +506,7 @@ export default function Toolbox() {
   };
 
   useEffect(() => {
-    if (activeTab !== "comments" || !project?.sharedMeta) {
+    if (activeTab !== "shared" || !project?.sharedMeta) {
       return;
     }
     setCommentsBusy(true);
@@ -528,8 +527,12 @@ export default function Toolbox() {
     if (!project?.sharedMeta || !commentBody.trim()) {
       return;
     }
+    const isOwner =
+      authUser?.email?.toLowerCase() ===
+      project.sharedMeta.ownerEmail.toLowerCase();
     const canComment =
-      project.sharedMeta.permission === "comment" && can(plan, "board.comment");
+      can(plan, "board.comment") &&
+      (project.sharedMeta.permission === "comment" || isOwner);
     if (!canComment) {
       setCommentStatus("Commenting is disabled for this board.");
       return;
@@ -576,10 +579,10 @@ export default function Toolbox() {
       <div className="grid grid-cols-5 gap-2">
         {[
           { id: "items", label: "Items", icon: <PlayerIcon /> },
-          { id: "draw", label: "Lines + Forms", icon: <LineIcon /> },
+          { id: "draw", label: "Forms", icon: <LineIcon /> },
           { id: "squad", label: "Squad", icon: <SquadIcon /> },
           { id: "notes", label: "Notes", icon: <NotesIcon /> },
-          { id: "comments", label: "Comments", icon: <CommentsIcon /> },
+          { id: "shared", label: "Shared", icon: <CommentsIcon /> },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -958,7 +961,7 @@ export default function Toolbox() {
           </div>
         </div>
       )}
-      {activeTab === "comments" && (
+      {activeTab === "shared" && (
         <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
           {!project?.sharedMeta ? (
             <p className="text-sm text-[var(--ink-1)]">
@@ -1010,7 +1013,9 @@ export default function Toolbox() {
                 <textarea
                   className="min-h-[72px] w-full rounded-2xl border border-[var(--line)] bg-transparent p-2 text-xs text-[var(--ink-0)]"
                   placeholder={
-                    project.sharedMeta.permission === "comment" &&
+                    (project.sharedMeta.permission === "comment" ||
+                      authUser?.email?.toLowerCase() ===
+                        project.sharedMeta.ownerEmail.toLowerCase()) &&
                     can(plan, "board.comment")
                       ? "Write a comment..."
                       : "Commenting is disabled."
@@ -1018,8 +1023,10 @@ export default function Toolbox() {
                   value={commentBody}
                   onChange={(event) => setCommentBody(event.target.value)}
                   disabled={
-                    project.sharedMeta.permission !== "comment" ||
-                    !can(plan, "board.comment")
+                    (!can(plan, "board.comment") ||
+                      (project.sharedMeta.permission !== "comment" &&
+                        authUser?.email?.toLowerCase() !==
+                          project.sharedMeta.ownerEmail.toLowerCase()))
                   }
                 />
                 <div className="flex items-center justify-between">
@@ -1035,8 +1042,10 @@ export default function Toolbox() {
                     onClick={handleAddComment}
                     disabled={
                       commentLoading ||
-                      project.sharedMeta.permission !== "comment" ||
-                      !can(plan, "board.comment")
+                      !can(plan, "board.comment") ||
+                      (project.sharedMeta.permission !== "comment" &&
+                        authUser?.email?.toLowerCase() !==
+                          project.sharedMeta.ownerEmail.toLowerCase())
                     }
                   >
                     {commentLoading ? "Saving..." : "Add comment"}

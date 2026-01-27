@@ -93,6 +93,25 @@ export const fetchBoardSharesForOwner = async (boardId: string) => {
   return { ok: true, shares: (data ?? []).map(mapShare) } as const;
 };
 
+export const fetchSharesByOwner = async () => {
+  if (!supabase) {
+    return { ok: false, error: "Supabase not configured." } as const;
+  }
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) {
+    return { ok: false, error: "Please sign in to view shares." } as const;
+  }
+  const { data, error } = await supabase
+    .from(SHARE_TABLE)
+    .select("*")
+    .eq("owner_id", userData.user.id)
+    .order("created_at", { ascending: false });
+  if (error) {
+    return { ok: false, error: error.message } as const;
+  }
+  return { ok: true, shares: (data ?? []).map(mapShare) } as const;
+};
+
 export const revokeBoardShare = async (shareId: string) => {
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;

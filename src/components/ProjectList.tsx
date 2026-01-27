@@ -8,7 +8,7 @@ import type { BoardShare, Project } from "@/models";
 import { can, getPlanLimits } from "@/utils/plan";
 import AdBanner from "@/components/AdBanner";
 import PlanModal from "@/components/PlanModal";
-import { fetchSharedBoards } from "@/persistence/shares";
+import { fetchSharedBoards, fetchSharesByOwner } from "@/persistence/shares";
 
 export default function ProjectList() {
   const index = useProjectStore((state) => state.index);
@@ -40,6 +40,9 @@ export default function ProjectList() {
   const [sharedBoards, setSharedBoards] = useState<BoardShare[]>([]);
   const [sharedLoading, setSharedLoading] = useState(false);
   const [sharedError, setSharedError] = useState<string | null>(null);
+  const [sharedByMe, setSharedByMe] = useState<BoardShare[]>([]);
+  const [sharedByMeLoading, setSharedByMeLoading] = useState(false);
+  const [sharedByMeError, setSharedByMeError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -83,6 +86,29 @@ export default function ProjectList() {
         setSharedBoards(result.shares);
       })
       .finally(() => setSharedLoading(false));
+  }, [authUser, plan]);
+
+  useEffect(() => {
+    if (!authUser || !can(plan, "board.share")) {
+      setSharedByMe([]);
+      return;
+    }
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      setSharedByMeError("Offline. Shared boards are unavailable.");
+      return;
+    }
+    setSharedByMeLoading(true);
+    setSharedByMeError(null);
+    fetchSharesByOwner()
+      .then((result) => {
+        if (!result.ok) {
+          setSharedByMeError(result.error);
+          setSharedByMe([]);
+          return;
+        }
+        setSharedByMe(result.shares);
+      })
+      .finally(() => setSharedByMeLoading(false));
   }, [authUser, plan]);
 
   const onCreate = () => {
@@ -505,6 +531,47 @@ export default function ProjectList() {
                     >
                       Open
                     </button>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="mt-6 space-y-2">
+              <h3 className="display-font text-lg text-[var(--accent-0)]">
+                Shared by me
+              </h3>
+              {!authUser || !can(plan, "board.share") ? (
+                <p className="text-sm text-[var(--ink-1)]">
+                  Sign in with sharing enabled to view your shared boards.
+                </p>
+              ) : sharedByMeLoading ? (
+                <p className="text-sm text-[var(--ink-1)]">
+                  Loading shared boards...
+                </p>
+              ) : sharedByMeError ? (
+                <p className="text-sm text-[var(--accent-1)]">
+                  {sharedByMeError}
+                </p>
+              ) : sharedByMe.length === 0 ? (
+                <p className="text-sm text-[var(--ink-1)]">
+                  You have not shared any boards yet.
+                </p>
+              ) : (
+                sharedByMe.map((share) => (
+                  <div
+                    key={share.id}
+                    className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--ink-0)]">
+                        {share.boardName}
+                      </p>
+                      <p className="text-xs text-[var(--ink-1)]">
+                        {share.projectName} · Shared with {share.recipientEmail}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                        {share.permission} access
+                      </p>
+                    </div>
                   </div>
                 ))
               )}
