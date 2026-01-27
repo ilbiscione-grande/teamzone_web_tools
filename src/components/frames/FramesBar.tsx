@@ -65,7 +65,8 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       ? true
       : board.watermarkEnabled;
 
-  const timelineValue = playheadFrame;
+  const lastFrameIndex = Math.max(0, board.frames.length - 1);
+  const timelineValue = Math.min(lastFrameIndex, Math.max(0, playheadFrame));
   const ticks = useMemo(
     () =>
       board.frames.map((frame, index) => ({
@@ -161,20 +162,49 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     return () => window.removeEventListener("tacticsboard:record", handleRecord);
   }, [recording, board.id, setActiveFrameIndex, setPlayheadFrame]);
 
+  const prevPlayingRef = useRef(isPlaying);
+
   useEffect(() => {
     if (isPlaying) {
       if (tickingRef.current) {
         tickingRef.current = false;
       }
+      prevPlayingRef.current = true;
       return;
     }
+    const wasPlaying = prevPlayingRef.current;
+    prevPlayingRef.current = false;
     playStartRef.current = performance.now();
     playOriginRef.current = board.activeFrameIndex;
-    const currentIndex = Math.floor(playheadFrame);
-    if (currentIndex !== board.activeFrameIndex) {
+
+    if (wasPlaying) {
+      const safeValue = Math.min(
+        lastFrameIndex,
+        Math.max(0, playheadFrame)
+      );
+      const snapIndex = Math.min(
+        lastFrameIndex,
+        Math.max(0, Math.floor(safeValue + 0.0001))
+      );
+      if (board.activeFrameIndex !== snapIndex) {
+        setActiveFrameIndex(board.id, snapIndex);
+      }
+      setPlayheadFrame(snapIndex);
+      return;
+    }
+
+    if (!scrubbingRef.current && playheadFrame !== board.activeFrameIndex) {
       setPlayheadFrame(board.activeFrameIndex);
     }
-  }, [board.activeFrameIndex, isPlaying, playheadFrame, setPlayheadFrame]);
+  }, [
+    board.activeFrameIndex,
+    board.id,
+    isPlaying,
+    lastFrameIndex,
+    playheadFrame,
+    setActiveFrameIndex,
+    setPlayheadFrame,
+  ]);
 
   useEffect(() => {
     if (!recording || isPlaying) {
