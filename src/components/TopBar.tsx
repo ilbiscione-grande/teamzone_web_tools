@@ -103,8 +103,12 @@ export default function TopBar() {
       media.addEventListener("change", update);
       return () => media.removeEventListener("change", update);
     }
-    media.addListener(update);
-    return () => media.removeListener(update);
+    const legacyMedia = media as MediaQueryList & {
+      addListener?: (listener: () => void) => void;
+      removeListener?: (listener: () => void) => void;
+    };
+    legacyMedia.addListener?.(update);
+    return () => legacyMedia.removeListener?.(update);
   }, []);
 
   useEffect(() => {
