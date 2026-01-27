@@ -424,7 +424,23 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       }
       handleScrubAt(event.clientX);
     };
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!scrubbingRef.current) {
+        return;
+      }
+      const touch = event.touches[0];
+      if (!touch) {
+        return;
+      }
+      handleScrubAt(touch.clientX);
+    };
     const handleUp = () => {
+      if (!scrubbingRef.current) {
+        return;
+      }
+      scrubbingRef.current = false;
+    };
+    const handleTouchEnd = () => {
       if (!scrubbingRef.current) {
         return;
       }
@@ -432,9 +448,13 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     };
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("pointerup", handleUp);
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd);
     return () => {
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
     };
   }, [board.frames.length]);
 
@@ -944,6 +964,15 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             scrubbingRef.current = true;
             handleScrubAt(event.clientX);
           }}
+          onTouchStart={(event) => {
+            event.stopPropagation();
+            const touch = event.touches[0];
+            if (!touch) {
+              return;
+            }
+            scrubbingRef.current = true;
+            handleScrubAt(touch.clientX);
+          }}
         >
           <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-[var(--line)]" />
           {ticks.map((tick) => (
@@ -970,6 +999,15 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
                   : "0%",
             }}
             data-scrub
+            onTouchStart={(event) => {
+              event.stopPropagation();
+              const touch = event.touches[0];
+              if (!touch) {
+                return;
+              }
+              scrubbingRef.current = true;
+              handleScrubAt(touch.clientX);
+            }}
           />
         </div>
       </div>
