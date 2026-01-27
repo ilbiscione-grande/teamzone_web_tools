@@ -61,6 +61,16 @@ type EditorState = {
 };
 
 const MAX_HISTORY = 50;
+const PLAYER_SIZE_KEY = "tacticsboard:playerTokenSize";
+
+const loadPlayerTokenSize = () => {
+  if (typeof window === "undefined") {
+    return 1.5;
+  }
+  const raw = window.localStorage.getItem(PLAYER_SIZE_KEY);
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isFinite(parsed) ? parsed : 1.5;
+};
 
 export const useEditorStore = create<EditorState>()(
   immer((set, get) => ({
@@ -72,7 +82,7 @@ export const useEditorStore = create<EditorState>()(
       offsetY: 0,
     },
     isPlaying: false,
-    playerTokenSize: 1.5,
+    playerTokenSize: loadPlayerTokenSize(),
     playerSide: "home",
     frameDurationMs: 700,
     playheadProgress: 0,
@@ -108,6 +118,9 @@ export const useEditorStore = create<EditorState>()(
       set((state) => {
         state.playerTokenSize = size;
       });
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(PLAYER_SIZE_KEY, String(size));
+      }
     },
     setPlayerSide: (side) => {
       set((state) => {

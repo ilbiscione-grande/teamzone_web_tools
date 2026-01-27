@@ -362,6 +362,17 @@ export const useBoardInteractions = ({
     }
   };
 
+  const handleTap = (event: Konva.KonvaEventObject<TouchEvent>) => {
+    const stage = stageRef.current;
+    if (!stage) {
+      return;
+    }
+    const isStage = event.target === stage || event.target.getParent() === stage;
+    if (isStage) {
+      clearSelection();
+    }
+  };
+
   const handleClick = () => {};
 
   return {
@@ -372,6 +383,7 @@ export const useBoardInteractions = ({
     handleMouseMove,
     handleMouseUp,
     handleDoubleClick,
+    handleTap,
     handleClick,
   };
 };

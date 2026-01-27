@@ -97,6 +97,14 @@ export default function BoardObject({
       }
       onSelect(object.id, event.evt.shiftKey);
     },
+    onTap: (event: Konva.KonvaEventObject<TouchEvent>) => {
+      event.cancelBubble = true;
+      if (object.type === "player" && isLinking) {
+        onLinkPlayer(object.id);
+        return;
+      }
+      onSelect(object.id, false);
+    },
     onDragStart,
     onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => {
       onDragEnd(object.id, { x: event.target.x(), y: event.target.y() });
