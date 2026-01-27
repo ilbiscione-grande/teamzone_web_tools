@@ -89,8 +89,16 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
 
     const frameDuration = frameDurationMs;
     playStartRef.current = performance.now();
-    playOriginRef.current = board.activeFrameIndex;
-    setPlayheadFrame(board.activeFrameIndex);
+    const lastIndex = Math.max(0, board.frames.length - 1);
+    const startIndex = Math.min(
+      lastIndex,
+      Math.max(0, Math.floor(playheadFrame))
+    );
+    playOriginRef.current = startIndex;
+    if (board.activeFrameIndex !== startIndex) {
+      setActiveFrameIndex(board.id, startIndex);
+    }
+    setPlayheadFrame(startIndex);
     const tick = (now: number) => {
       if (!playStartRef.current) {
         playStartRef.current = now;
