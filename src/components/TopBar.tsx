@@ -11,6 +11,8 @@ import { can, getPlanLimits } from "@/utils/plan";
 import AdBanner from "@/components/AdBanner";
 import { usePlanGate } from "@/hooks/usePlanGate";
 import PlanModal from "@/components/PlanModal";
+import ShareBoardModal from "@/components/ShareBoardModal";
+import CommentsModal from "@/components/CommentsModal";
 
 export default function TopBar() {
   const project = useProjectStore((state) => state.project);
@@ -45,6 +47,8 @@ export default function TopBar() {
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
@@ -131,6 +135,7 @@ export default function TopBar() {
   const activeBoard = project.boards.find(
     (board) => board.id === activeBoardId
   );
+  const isSharedView = project.isShared ?? false;
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
     [...index.map((item) => item.id), project.id].filter(Boolean)
@@ -391,6 +396,11 @@ export default function TopBar() {
             </option>
           </select>
           <FormationMenu />
+          {isSharedView && project.sharedMeta && (
+            <div className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-0)]">
+              Shared · {project.sharedMeta.permission}
+            </div>
+          )}
           {authUser && (
             <div
               className={`rounded-full border p-2 ${
@@ -498,6 +508,58 @@ export default function TopBar() {
               <circle cx="12" cy="7" r="4" />
             </svg>
           </button>
+          {activeBoard && authUser && !isSharedView && (
+            <button
+              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={() => setShareOpen(true)}
+              title={
+                can(plan, "board.share")
+                  ? "Share board"
+                  : "Sharing is available on paid plans."
+              }
+              aria-label="Share board"
+              disabled={!can(plan, "board.share")}
+              data-locked={!can(plan, "board.share")}
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <path d="M8.6 10.7l6.8-3.9" />
+                <path d="M8.6 13.3l6.8 3.9" />
+              </svg>
+            </button>
+          )}
+          {isSharedView && project.sharedMeta && (
+            <button
+              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={() => setCommentsOpen(true)}
+              title="Comments"
+              aria-label="Comments"
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+              </svg>
+            </button>
+          )}
           {process.env.NODE_ENV !== "production" && (
             <select
               className="h-7 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-2 text-[10px] uppercase text-[var(--ink-0)]"
@@ -640,6 +702,21 @@ export default function TopBar() {
       )}
 
       <PlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
+      {shareOpen && activeBoard && (
+        <ShareBoardModal
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          project={project}
+          board={activeBoard}
+        />
+      )}
+      {commentsOpen && (
+        <CommentsModal
+          open={commentsOpen}
+          onClose={() => setCommentsOpen(false)}
+          project={project}
+        />
+      )}
 
       {settingsOpen && activeBoard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">

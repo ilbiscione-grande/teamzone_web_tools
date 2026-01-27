@@ -24,6 +24,9 @@ export const createSquadActions: StateCreator<
       if (!state.project) {
         return;
       }
+      if (state.project.isShared) {
+        return;
+      }
       state.project.squads.push({
         id: createId(),
         name,
@@ -43,12 +46,18 @@ export const createSquadActions: StateCreator<
       if (!state.project) {
         return;
       }
+      if (state.project.isShared) {
+        return;
+      }
       state.project.squads.push(squad);
       state.project.updatedAt = new Date().toISOString();
     });
   },
   updateSquad: (squadId, payload: Partial<Squad>) => {
     set((state) => {
+      if (state.project?.isShared) {
+        return;
+      }
       const squad = state.project?.squads.find((item) => item.id === squadId);
       if (!squad) {
         return;
@@ -61,6 +70,9 @@ export const createSquadActions: StateCreator<
   },
   addSquadPlayer: (squadId, player: SquadPlayer) => {
     set((state) => {
+      if (state.project?.isShared) {
+        return;
+      }
       const squad = state.project?.squads.find((item) => item.id === squadId);
       if (!squad) {
         return;
@@ -73,6 +85,9 @@ export const createSquadActions: StateCreator<
   },
   updateSquadPlayer: (squadId, playerId, payload) => {
     set((state) => {
+      if (state.project?.isShared) {
+        return;
+      }
       const squad = state.project?.squads.find((item) => item.id === squadId);
       const player = squad?.players.find((item) => item.id === playerId);
       if (!player) {
@@ -86,6 +101,9 @@ export const createSquadActions: StateCreator<
   },
   removeSquadPlayer: (squadId, playerId) => {
     set((state) => {
+      if (state.project?.isShared) {
+        return;
+      }
       const squad = state.project?.squads.find((item) => item.id === squadId);
       if (!squad) {
         return;

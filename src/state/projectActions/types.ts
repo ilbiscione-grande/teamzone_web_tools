@@ -7,6 +7,7 @@ import type {
   Squad,
   SquadPlayer,
   AuthUser,
+  BoardShare,
 } from "@/models";
 
 export type ProjectStateSlice = {
@@ -39,6 +40,7 @@ export type ProjectActions = {
     }
   ) => void;
   openProject: (id: string) => void;
+  openSharedBoard: (share: BoardShare) => void;
   closeProject: () => void;
   deleteProject: (id: string) => void;
   loadSample: () => void;

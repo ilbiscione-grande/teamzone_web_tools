@@ -8,6 +8,14 @@ export type Project = {
   updatedAt: string;
   schemaVersion: number;
   isSample?: boolean;
+  isShared?: boolean;
+  sharedMeta?: {
+    shareId: string;
+    ownerEmail: string;
+    permission: "view" | "comment";
+    projectName: string;
+    boardId: string;
+  };
   settings: {
     homeKit: {
       shirt: string;

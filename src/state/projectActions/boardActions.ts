@@ -49,6 +49,9 @@ export const createBoardActions: StateCreator<
       if (!state.project) {
         return;
       }
+      if (state.project.isShared) {
+        return;
+      }
       const limits = getPlanLimits(state.plan);
       if (state.project.boards.length >= limits.maxBoards) {
         window.alert("Board limit reached for this plan.");
@@ -80,6 +83,9 @@ export const createBoardActions: StateCreator<
   },
   updateBoard: (boardId, payload) => {
     set((state) => {
+      if (state.project?.isShared) {
+        return;
+      }
       const board = state.project?.boards.find((item) => item.id === boardId);
       if (!board) {
         return;
@@ -111,6 +117,9 @@ export const createBoardActions: StateCreator<
   duplicateBoard: (boardId, name) => {
     set((state) => {
       if (!state.project) {
+        return;
+      }
+      if (state.project.isShared) {
         return;
       }
       const source = state.project.boards.find((item) => item.id === boardId);
@@ -149,6 +158,9 @@ export const createBoardActions: StateCreator<
       if (!board) {
         return;
       }
+      if (state.project?.isShared) {
+        return;
+      }
       const frame: BoardFrame = {
         id: createId(),
         name: `${name} ${board.frames.length + 1}`,
@@ -169,6 +181,9 @@ export const createBoardActions: StateCreator<
       if (!board) {
         return;
       }
+      if (state.project?.isShared) {
+        return;
+      }
       const frame = board.frames.find((item) => item.id === frameId);
       if (!frame) {
         return;
@@ -184,6 +199,9 @@ export const createBoardActions: StateCreator<
     set((state) => {
       const board = state.project?.boards.find((item) => item.id === boardId);
       if (!board || board.frames.length <= 1) {
+        return;
+      }
+      if (state.project?.isShared) {
         return;
       }
       board.frames = board.frames.filter((item) => item.id !== frameId);

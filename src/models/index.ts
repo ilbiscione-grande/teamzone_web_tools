@@ -5,3 +5,4 @@ export * from "./squad";
 export * from "./project";
 export * from "./plan";
 export * from "./user";
+export * from "./share";

@@ -1,4 +1,11 @@
-import type { Board, BoardFrame, Project, ProjectSummary, Squad } from "@/models";
+import type {
+  Board,
+  BoardFrame,
+  Project,
+  ProjectSummary,
+  Squad,
+  SharedBoardSnapshot,
+} from "@/models";
 import { SCHEMA_VERSION } from "@/models";
 import { createId } from "@/utils/id";
 
@@ -142,6 +149,38 @@ export const ensureBoardSquads = (project: Project): Project => {
 
   project.squads = squads;
   return project;
+};
+
+export const createSharedProject = (
+  snapshot: SharedBoardSnapshot,
+  meta: {
+    shareId: string;
+    ownerEmail: string;
+    permission: "view" | "comment";
+    projectName: string;
+    boardId: string;
+  }
+): Project => {
+  const now = new Date().toISOString();
+  const settings = snapshot.settings ?? {
+    homeKit: defaultHomeKit(),
+    awayKit: defaultAwayKit(),
+    attachBallToPlayer: false,
+  };
+  const project: Project = {
+    id: `shared-${meta.shareId}`,
+    name: meta.projectName,
+    createdAt: now,
+    updatedAt: now,
+    schemaVersion: snapshot.schemaVersion ?? SCHEMA_VERSION,
+    isShared: true,
+    sharedMeta: meta,
+    settings,
+    boards: [snapshot.board],
+    squads: snapshot.squads ?? [],
+    activeBoardId: snapshot.board.id,
+  };
+  return ensureBoardSquads(project);
 };
 
 export const updateIndex = (

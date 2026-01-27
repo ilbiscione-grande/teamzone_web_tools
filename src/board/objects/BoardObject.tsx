@@ -46,6 +46,7 @@ type BoardObjectProps = {
   showPlayerPosition: boolean;
   showPlayerNumber: boolean;
   labelRotation: number;
+  readOnly?: boolean;
   onSelect: (id: string, multi: boolean) => void;
   onDragStart: () => void;
   onDragEnd: (id: string, position: { x: number; y: number }) => void;
@@ -71,6 +72,7 @@ export default function BoardObject({
   showPlayerPosition,
   showPlayerNumber,
   labelRotation,
+  readOnly,
   onSelect,
   onDragStart,
   onDragEnd,
@@ -88,7 +90,7 @@ export default function BoardObject({
     scaleX: object.scale.x,
     scaleY: object.scale.y,
     opacity: object.style.opacity,
-    draggable: !object.locked,
+    draggable: !object.locked && !readOnly,
     onClick: (event: Konva.KonvaEventObject<MouseEvent>) => {
       event.cancelBubble = true;
       if (object.type === "player" && isLinking) {

@@ -4,14 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { deserializeProject } from "@/persistence/serialize";
 import { loadProject, saveProject } from "@/persistence/storage";
-import type { Project } from "@/models";
+import type { BoardShare, Project } from "@/models";
 import { can, getPlanLimits } from "@/utils/plan";
 import AdBanner from "@/components/AdBanner";
 import PlanModal from "@/components/PlanModal";
+import { fetchSharedBoards } from "@/persistence/shares";
 
 export default function ProjectList() {
   const index = useProjectStore((state) => state.index);
   const openProject = useProjectStore((state) => state.openProject);
+  const openSharedBoard = useProjectStore((state) => state.openSharedBoard);
   const createProject = useProjectStore((state) => state.createProject);
   const deleteProject = useProjectStore((state) => state.deleteProject);
   const loadSample = useProjectStore((state) => state.loadSample);
@@ -35,6 +37,9 @@ export default function ProjectList() {
   const [attachBallToPlayer, setAttachBallToPlayer] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
+  const [sharedBoards, setSharedBoards] = useState<BoardShare[]>([]);
+  const [sharedLoading, setSharedLoading] = useState(false);
+  const [sharedError, setSharedError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -56,6 +61,29 @@ export default function ProjectList() {
       window.removeEventListener("offline", update);
     };
   }, []);
+
+  useEffect(() => {
+    if (!authUser || plan !== "PAID") {
+      setSharedBoards([]);
+      return;
+    }
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      setSharedError("Offline. Shared boards are unavailable.");
+      return;
+    }
+    setSharedLoading(true);
+    setSharedError(null);
+    fetchSharedBoards()
+      .then((result) => {
+        if (!result.ok) {
+          setSharedError(result.error);
+          setSharedBoards([]);
+          return;
+        }
+        setSharedBoards(result.shares);
+      })
+      .finally(() => setSharedLoading(false));
+  }, [authUser, plan]);
 
   const onCreate = () => {
     if (!name.trim()) {
@@ -430,6 +458,53 @@ export default function ProjectList() {
                         Delete
                       </button>
                     </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="mt-6 space-y-2">
+              <h3 className="display-font text-lg text-[var(--accent-0)]">
+                Shared with me
+              </h3>
+              {!authUser || plan !== "PAID" ? (
+                <p className="text-sm text-[var(--ink-1)]">
+                  Sign in with a paid plan to access shared boards.
+                </p>
+              ) : sharedLoading ? (
+                <p className="text-sm text-[var(--ink-1)]">
+                  Loading shared boards...
+                </p>
+              ) : sharedError ? (
+                <p className="text-sm text-[var(--accent-1)]">
+                  {sharedError}
+                </p>
+              ) : sharedBoards.length === 0 ? (
+                <p className="text-sm text-[var(--ink-1)]">
+                  No shared boards yet.
+                </p>
+              ) : (
+                sharedBoards.map((share) => (
+                  <div
+                    key={share.id}
+                    className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--ink-0)]">
+                        {share.boardName}
+                      </p>
+                      <p className="text-xs text-[var(--ink-1)]">
+                        {share.projectName} · {share.ownerEmail}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                        {share.permission} access
+                      </p>
+                    </div>
+                    <button
+                      className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={() => openSharedBoard(share)}
+                    >
+                      Open
+                    </button>
                   </div>
                 ))
               )}

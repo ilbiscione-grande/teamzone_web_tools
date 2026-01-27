@@ -15,6 +15,9 @@ export const createObjectActions: StateCreator<
 > = (set, _get, _store) => ({
   setFrameObjects: (boardId, frameIndex, objects) => {
     set((state) => {
+      if (state.project?.isShared) {
+        return;
+      }
       const board = state.project?.boards.find((item) => item.id === boardId);
       if (!board || !board.frames[frameIndex]) {
         return;
@@ -30,6 +33,9 @@ export const createObjectActions: StateCreator<
   },
   addObject: (boardId, frameIndex, object: DrawableObject) => {
     set((state) => {
+      if (state.project?.isShared) {
+        return;
+      }
       const board = state.project?.boards.find((item) => item.id === boardId);
       if (!board || !board.frames[frameIndex]) {
         return;
@@ -45,6 +51,9 @@ export const createObjectActions: StateCreator<
   },
   updateObject: (boardId, frameIndex, objectId, payload) => {
     set((state) => {
+      if (state.project?.isShared) {
+        return;
+      }
       const board = state.project?.boards.find((item) => item.id === boardId);
       const frame = board?.frames[frameIndex];
       if (!frame) {
@@ -78,6 +87,9 @@ export const createObjectActions: StateCreator<
   },
   removeObject: (boardId, frameIndex, objectId) => {
     set((state) => {
+      if (state.project?.isShared) {
+        return;
+      }
       const board = state.project?.boards.find((item) => item.id === boardId);
       const frame = board?.frames[frameIndex];
       if (!frame) {

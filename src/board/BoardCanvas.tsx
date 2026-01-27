@@ -48,6 +48,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
   const selectedLinkId = useEditorStore((state) => state.selectedLinkId);
 
   const project = useProjectStore((state) => state.project);
+  const isSharedReadOnly = project?.isShared ?? false;
   const addObject = useProjectStore((state) => state.addObject);
   const updateObject = useProjectStore((state) => state.updateObject);
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
@@ -309,6 +310,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
     activeTool,
     playerTokenSize,
     playerFill: defaultPlayerFill,
+    readOnly: isSharedReadOnly,
     baseOffsetX,
     baseOffsetY,
     baseScale,
@@ -501,6 +503,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
                 labelRotation={labelRotation}
+                readOnly={isSharedReadOnly}
                 onSelect={handleSelect}
                 onDragStart={() => pushHistory(clone(objects))}
                 onDragEnd={updatePosition}

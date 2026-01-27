@@ -81,7 +81,7 @@ export const persistActiveProject = () => {
   if (!project) {
     return;
   }
-  if (project.isSample) {
+  if (project.isSample || project.isShared) {
     return;
   }
   if (!can(plan, "project.save")) {

@@ -28,6 +28,7 @@ type UseBoardInteractionsProps = {
   activeTool: Tool;
   playerTokenSize: number;
   playerFill: string;
+  readOnly: boolean;
   baseOffsetX: number;
   baseOffsetY: number;
   baseScale: number;
@@ -52,6 +53,7 @@ export const useBoardInteractions = ({
   activeTool,
   playerTokenSize,
   playerFill,
+  readOnly,
   baseOffsetX,
   baseOffsetY,
   baseScale,
@@ -140,6 +142,10 @@ export const useBoardInteractions = ({
     const isStage = event.target === stage || event.target.getParent() === stage;
     if (isStage) {
       clearSelection();
+      if (readOnly) {
+        setIsPanning(true);
+        return;
+      }
       if (!isShapeTool) {
         setIsPanning(true);
         return;
@@ -287,6 +293,9 @@ export const useBoardInteractions = ({
   };
 
   const handleDoubleClick = () => {
+    if (readOnly) {
+      return;
+    }
     const stage = stageRef.current;
     if (!stage) {
       return;

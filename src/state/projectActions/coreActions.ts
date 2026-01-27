@@ -11,6 +11,7 @@ import { createSampleProject } from "@/persistence/sampleData";
 import {
   createDefaultProject,
   ensureBoardSquads,
+  createSharedProject,
   updateIndex,
 } from "@/state/projectHelpers";
 import { can, getPlanLimits } from "@/utils/plan";
@@ -33,6 +34,7 @@ type CoreActionSlice = Pick<
   | "syncNow"
   | "createProject"
   | "openProject"
+  | "openSharedBoard"
   | "closeProject"
   | "deleteProject"
   | "loadSample"
@@ -289,6 +291,19 @@ export const createCoreActions: StateCreator<
       saveProjectIndex(get().index, get().authUser?.id ?? null);
     }
   },
+  openSharedBoard: (share) => {
+    const project = createSharedProject(share.boardData, {
+      shareId: share.id,
+      ownerEmail: share.ownerEmail,
+      permission: share.permission,
+      projectName: share.projectName,
+      boardId: share.boardId,
+    });
+    set((state) => {
+      state.project = project;
+      state.activeProjectId = project.id;
+    });
+  },
   closeProject: () => {
     set((state) => {
       state.project = null;
@@ -318,6 +333,9 @@ export const createCoreActions: StateCreator<
   updateProjectMeta: (payload) => {
     const project = get().project;
     if (!project) {
+      return;
+    }
+    if (project.isShared) {
       return;
     }
     set((state) => {

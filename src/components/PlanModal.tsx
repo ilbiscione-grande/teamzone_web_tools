@@ -27,6 +27,7 @@ const planDescriptions = {
     "Unlimited projects & boards",
     "Export, import & video",
     "Custom formations + squads",
+    "Board sharing + comments",
   ],
 } as const;
 
