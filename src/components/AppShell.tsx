@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { DrawableObject } from "@/models";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useAutosave } from "@/persistence/useAutosave";
 import { useOnlineSync } from "@/persistence/useOnlineSync";
@@ -19,7 +20,7 @@ export default function AppShell() {
   const [pullActive, setPullActive] = useState(false);
   const touchStartRef = useRef<number | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
-  const clipboardRef = useRef<ReturnType<typeof clone>[]>([]);
+  const clipboardRef = useRef<DrawableObject[]>([]);
 
   useEffect(() => {
     hydrateIndex();
@@ -150,10 +151,11 @@ export default function AppShell() {
         if (selection.length === 0) {
           return;
         }
-        clipboardRef.current = selection
+        const copied = selection
           .map((id) => objects.find((item) => item.id === id))
-          .filter(Boolean)
-          .map((item) => clone(item)) as ReturnType<typeof clone>;
+          .filter((item): item is DrawableObject => Boolean(item))
+          .map((item) => clone(item));
+        clipboardRef.current = copied;
         return;
       }
 
