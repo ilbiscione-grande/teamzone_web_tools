@@ -16,6 +16,7 @@ import {
   addBoardComment,
   fetchBoardComments,
   fetchBoardSharesForOwner,
+  fetchLatestCommentsForShares,
 } from "@/persistence/shares";
 import { can } from "@/utils/plan";
 
@@ -205,6 +206,9 @@ export default function Toolbox() {
   const project = useProjectStore((state) => state.project);
   const plan = useProjectStore((state) => state.plan);
   const authUser = useProjectStore((state) => state.authUser);
+  const commentsSeenKey = authUser
+    ? `tacticsboard:commentsSeen:${authUser.id}`
+    : null;
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
   const updateBoard = useProjectStore((state) => state.updateBoard);
   const selection = useEditorStore((state) => state.selection);
@@ -229,6 +233,7 @@ export default function Toolbox() {
   const [commentStatus, setCommentStatus] = useState<string | null>(null);
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentsBusy, setCommentsBusy] = useState(false);
+  const [sharedUnreadCount, setSharedUnreadCount] = useState(0);
   const previewNotes = useMemo(() => {
     const raw = board?.notes ?? "";
     if (!raw) {
@@ -544,6 +549,19 @@ export default function Toolbox() {
       setComments([]);
       return;
     }
+    if (commentsSeenKey && typeof window !== "undefined") {
+      const raw = window.localStorage.getItem(commentsSeenKey);
+      let nextMap: Record<string, number> = {};
+      if (raw) {
+        try {
+          nextMap = JSON.parse(raw) as Record<string, number>;
+        } catch {
+          nextMap = {};
+        }
+      }
+      nextMap[shareId] = Date.now();
+      window.localStorage.setItem(commentsSeenKey, JSON.stringify(nextMap));
+    }
     setCommentsBusy(true);
     setCommentStatus(null);
     fetchBoardComments(shareId)
@@ -557,6 +575,53 @@ export default function Toolbox() {
       })
       .finally(() => setCommentsBusy(false));
   }, [activeTab, project?.sharedMeta?.shareId, activeShareId]);
+
+  useEffect(() => {
+    const shareIds = project?.sharedMeta?.shareId
+      ? [project.sharedMeta.shareId]
+      : ownerShares.map((share) => share.id);
+    if (shareIds.length === 0 || !commentsSeenKey || !authUser) {
+      setSharedUnreadCount(0);
+      return;
+    }
+    const sharedSeenKey = `tacticsboard:sharedSeenAt:${authUser.id}`;
+    let cancelled = false;
+    const checkUnread = async () => {
+      const result = await fetchLatestCommentsForShares(shareIds);
+      if (!result.ok || cancelled) {
+        return;
+      }
+      let seenMap: Record<string, number> = {};
+      let sharedSeenAt = 0;
+      if (typeof window !== "undefined") {
+        const raw = window.localStorage.getItem(commentsSeenKey);
+        if (raw) {
+          try {
+            seenMap = JSON.parse(raw) as Record<string, number>;
+          } catch {
+            seenMap = {};
+          }
+        }
+        sharedSeenAt = Number(window.localStorage.getItem(sharedSeenKey) ?? 0);
+      }
+      const unreadComments = Object.entries(result.latest).filter(
+        ([shareId, createdAt]) =>
+          new Date(createdAt).getTime() > (seenMap[shareId] ?? 0)
+      ).length;
+      const unreadShares = ownerShares.filter(
+        (share) => new Date(share.createdAt).getTime() > sharedSeenAt
+      ).length;
+      if (!cancelled) {
+        setSharedUnreadCount(unreadComments + unreadShares);
+      }
+    };
+    checkUnread();
+    const interval = window.setInterval(checkUnread, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [commentsSeenKey, ownerShares, project?.sharedMeta?.shareId, authUser]);
 
   const handleAddComment = async () => {
     const shareId = project?.sharedMeta?.shareId ?? activeShareId;
@@ -625,11 +690,13 @@ export default function Toolbox() {
             tab.id !== "shared"
               ? true
               : !!project?.sharedMeta || ownerShares.length > 0;
+          const showBadge =
+            tab.id === "shared" && sharedUnreadCount > 0 && hasShared;
           return (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
-            className={`flex h-20 flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-2 text-[11px] uppercase tracking-wide ${
+            className={`relative flex h-20 flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-2 text-[11px] uppercase tracking-wide ${
               activeTab === tab.id
                 ? "border-[var(--accent-0)] text-[var(--ink-0)]"
                 : hasShared
@@ -638,6 +705,9 @@ export default function Toolbox() {
             }`}
             disabled={!hasShared}
           >
+            {showBadge && (
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[var(--accent-1)]" />
+            )}
             {tab.icon}
             <span>{tab.label}</span>
           </button>

@@ -158,6 +158,30 @@ export const fetchBoardComments = async (shareId: string) => {
   return { ok: true, comments: (data ?? []).map(mapComment) } as const;
 };
 
+export const fetchLatestCommentsForShares = async (shareIds: string[]) => {
+  if (!supabase) {
+    return { ok: false, error: "Supabase not configured." } as const;
+  }
+  if (shareIds.length === 0) {
+    return { ok: true, latest: {} as Record<string, string> } as const;
+  }
+  const { data, error } = await supabase
+    .from(COMMENT_TABLE)
+    .select("share_id, created_at")
+    .in("share_id", shareIds)
+    .order("created_at", { ascending: false });
+  if (error) {
+    return { ok: false, error: error.message } as const;
+  }
+  const latest: Record<string, string> = {};
+  (data ?? []).forEach((row) => {
+    if (!latest[row.share_id]) {
+      latest[row.share_id] = row.created_at;
+    }
+  });
+  return { ok: true, latest } as const;
+};
+
 export const addBoardComment = async (payload: {
   shareId: string;
   boardId: string;

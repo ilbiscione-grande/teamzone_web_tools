@@ -8,7 +8,11 @@ import type { BoardShare, Project } from "@/models";
 import { can, getPlanLimits } from "@/utils/plan";
 import AdBanner from "@/components/AdBanner";
 import PlanModal from "@/components/PlanModal";
-import { fetchSharedBoards, fetchSharesByOwner } from "@/persistence/shares";
+import {
+  fetchLatestCommentsForShares,
+  fetchSharedBoards,
+  fetchSharesByOwner,
+} from "@/persistence/shares";
 
 export default function ProjectList() {
   const index = useProjectStore((state) => state.index);
@@ -40,6 +44,8 @@ export default function ProjectList() {
   const [sharedBoards, setSharedBoards] = useState<BoardShare[]>([]);
   const [sharedLoading, setSharedLoading] = useState(false);
   const [sharedError, setSharedError] = useState<string | null>(null);
+  const [sharedUnread, setSharedUnread] = useState(0);
+  const [commentUnread, setCommentUnread] = useState(0);
   const [sharedByMe, setSharedByMe] = useState<BoardShare[]>([]);
   const [sharedByMeLoading, setSharedByMeLoading] = useState(false);
   const [sharedByMeError, setSharedByMeError] = useState<string | null>(null);
@@ -65,9 +71,39 @@ export default function ProjectList() {
     };
   }, []);
 
-  useEffect(() => {
+  const sharedSeenKey = authUser
+    ? `tacticsboard:sharedSeenAt:${authUser.id}`
+    : null;
+  const commentsSeenKey = authUser
+    ? `tacticsboard:commentsSeen:${authUser.id}`
+    : null;
+
+  const loadCommentsSeen = () => {
+    if (!commentsSeenKey || typeof window === "undefined") {
+      return {} as Record<string, number>;
+    }
+    const raw = window.localStorage.getItem(commentsSeenKey);
+    if (!raw) {
+      return {};
+    }
+    try {
+      return JSON.parse(raw) as Record<string, number>;
+    } catch {
+      return {};
+    }
+  };
+
+  const persistCommentsSeen = (next: Record<string, number>) => {
+    if (!commentsSeenKey || typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(commentsSeenKey, JSON.stringify(next));
+  };
+
+  const refreshShared = async () => {
     if (!authUser || !can(plan, "board.share")) {
       setSharedBoards([]);
+      setSharedUnread(0);
       return;
     }
     if (typeof window !== "undefined" && !navigator.onLine) {
@@ -76,16 +112,28 @@ export default function ProjectList() {
     }
     setSharedLoading(true);
     setSharedError(null);
-    fetchSharedBoards()
-      .then((result) => {
-        if (!result.ok) {
-          setSharedError(result.error);
-          setSharedBoards([]);
-          return;
-        }
-        setSharedBoards(result.shares);
-      })
-      .finally(() => setSharedLoading(false));
+    const result = await fetchSharedBoards();
+    if (!result.ok) {
+      setSharedError(result.error);
+      setSharedBoards([]);
+      setSharedLoading(false);
+      return;
+    }
+    setSharedBoards(result.shares);
+    const seenAt = sharedSeenKey
+      ? Number(window.localStorage.getItem(sharedSeenKey) ?? 0)
+      : 0;
+    const newShares = result.shares.filter(
+      (share) => new Date(share.createdAt).getTime() > seenAt
+    );
+    setSharedUnread(newShares.length);
+    setSharedLoading(false);
+  };
+
+  useEffect(() => {
+    refreshShared();
+    const interval = window.setInterval(refreshShared, 30000);
+    return () => window.clearInterval(interval);
   }, [authUser, plan]);
 
   useEffect(() => {
@@ -110,6 +158,29 @@ export default function ProjectList() {
       })
       .finally(() => setSharedByMeLoading(false));
   }, [authUser, plan]);
+
+  useEffect(() => {
+    if (!authUser || !can(plan, "board.share")) {
+      setCommentUnread(0);
+      return;
+    }
+    const shareIds = [
+      ...sharedBoards.map((share) => share.id),
+      ...sharedByMe.map((share) => share.id),
+    ];
+    fetchLatestCommentsForShares(shareIds).then((result) => {
+      if (!result.ok) {
+        setCommentUnread(0);
+        return;
+      }
+      const seenMap = loadCommentsSeen();
+      const unread = Object.entries(result.latest).filter(
+        ([shareId, createdAt]) =>
+          new Date(createdAt).getTime() > (seenMap[shareId] ?? 0)
+      ).length;
+      setCommentUnread(unread);
+    });
+  }, [authUser, plan, sharedBoards, sharedByMe]);
 
   const onCreate = () => {
     if (!name.trim()) {
@@ -489,9 +560,20 @@ export default function ProjectList() {
               )}
             </div>
             <div className="mt-6 space-y-2">
-              <h3 className="display-font text-lg text-[var(--accent-0)]">
-                Shared with me
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="display-font text-lg text-[var(--accent-0)]">
+                  Shared with me
+                </h3>
+                {(sharedUnread > 0 || commentUnread > 0) && (
+                  <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-0)]">
+                    {sharedUnread > 0
+                      ? `${sharedUnread} new`
+                      : ""}
+                    {sharedUnread > 0 && commentUnread > 0 ? " · " : ""}
+                    {commentUnread > 0 ? `${commentUnread} comments` : ""}
+                  </span>
+                )}
+              </div>
               {!authUser || !can(plan, "board.share") ? (
                 <p className="text-sm text-[var(--ink-1)]">
                   Sign in with sharing enabled to access shared boards.
@@ -527,7 +609,18 @@ export default function ProjectList() {
                     </div>
                     <button
                       className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      onClick={() => openSharedBoard(share)}
+                      onClick={() => {
+                        if (sharedSeenKey && typeof window !== "undefined") {
+                          window.localStorage.setItem(
+                            sharedSeenKey,
+                            String(Date.now())
+                          );
+                          const nextSeen = loadCommentsSeen();
+                          nextSeen[share.id] = Date.now();
+                          persistCommentsSeen(nextSeen);
+                        }
+                        openSharedBoard(share);
+                      }}
                     >
                       Open
                     </button>
@@ -574,7 +667,14 @@ export default function ProjectList() {
                     </div>
                     <button
                       className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      onClick={() => openSharedBoard(share)}
+                      onClick={() => {
+                        if (commentsSeenKey && typeof window !== "undefined") {
+                          const nextSeen = loadCommentsSeen();
+                          nextSeen[share.id] = Date.now();
+                          persistCommentsSeen(nextSeen);
+                        }
+                        openSharedBoard(share);
+                      }}
                     >
                       Open
                     </button>
