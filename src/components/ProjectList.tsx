@@ -466,9 +466,9 @@ export default function ProjectList() {
               <h3 className="display-font text-lg text-[var(--accent-0)]">
                 Shared with me
               </h3>
-              {!authUser || plan !== "PAID" ? (
+              {!authUser || !can(plan, "board.share") ? (
                 <p className="text-sm text-[var(--ink-1)]">
-                  Sign in with a paid plan to access shared boards.
+                  Sign in with sharing enabled to access shared boards.
                 </p>
               ) : sharedLoading ? (
                 <p className="text-sm text-[var(--ink-1)]">
