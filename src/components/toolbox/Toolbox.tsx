@@ -553,6 +553,38 @@ export default function Toolbox() {
   }, [authUser, board?.id, plan, project?.sharedMeta]);
 
   useEffect(() => {
+    if (!board || !authUser || !can(plan, "board.share") || project?.sharedMeta) {
+      return;
+    }
+    let cancelled = false;
+    const refreshShares = async () => {
+      const result = await fetchBoardSharesForOwner(board.id);
+      if (!result.ok || cancelled) {
+        return;
+      }
+      const next = result.shares.map((share) => ({
+        id: share.id,
+        recipientEmail: share.recipientEmail,
+        permission: share.permission,
+        createdAt: share.createdAt,
+      }));
+      setOwnerShares(next);
+      setActiveShareId((current) => {
+        if (current && next.some((share) => share.id === current)) {
+          return current;
+        }
+        return next[0]?.id ?? null;
+      });
+    };
+    refreshShares();
+    const interval = window.setInterval(refreshShares, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [authUser, board?.id, plan, project?.sharedMeta]);
+
+  useEffect(() => {
     if (activeTab !== "shared") {
       return;
     }
