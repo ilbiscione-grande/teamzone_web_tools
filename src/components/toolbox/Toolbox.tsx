@@ -668,6 +668,35 @@ export default function Toolbox() {
   }, [commentsSeenKey, ownerShares, project?.sharedMeta?.shareId, authUser]);
 
   useEffect(() => {
+    if (!project?.sharedMeta || !authUser) {
+      return;
+    }
+    const sharedSeenKey = `tacticsboard:sharedSeenAt:${authUser.id}`;
+    let cancelled = false;
+    const checkShareActive = async () => {
+      const result = await fetchLatestCommentsForShares([
+        project.sharedMeta.shareId,
+      ]);
+      if (!result.ok || cancelled) {
+        return;
+      }
+      const createdAt = result.latest[project.sharedMeta.shareId];
+      if (!createdAt) {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(sharedSeenKey, String(Date.now()));
+        }
+        setSharedUnreadCount(0);
+      }
+    };
+    checkShareActive();
+    const interval = window.setInterval(checkShareActive, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [project?.sharedMeta, authUser]);
+
+  useEffect(() => {
     if (
       activeTab !== "shared" ||
       !authUser ||

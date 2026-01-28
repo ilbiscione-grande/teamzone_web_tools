@@ -8,6 +8,7 @@ import type { BoardShare, Project } from "@/models";
 import { can, getPlanLimits } from "@/utils/plan";
 import AdBanner from "@/components/AdBanner";
 import PlanModal from "@/components/PlanModal";
+import BetaNoticeModal from "@/components/BetaNoticeModal";
 import {
   fetchLatestCommentsForShares,
   fetchSharedBoards,
@@ -25,6 +26,7 @@ export default function ProjectList() {
   const project = useProjectStore((state) => state.project);
   const authUser = useProjectStore((state) => state.authUser);
   const [planOpen, setPlanOpen] = useState(false);
+  const [betaOpen, setBetaOpen] = useState(false);
   const [name, setName] = useState("");
   const [homeKit, setHomeKit] = useState({
     shirt: "#e24a3b",
@@ -317,6 +319,25 @@ export default function ProjectList() {
             Create a new tactics project, resume from local storage, or import a
             JSON file.
           </p>
+          <div className="mt-4 rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-4 shadow-xl shadow-black/30">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.4em] text-[var(--accent-2)]">
+                  Beta notice
+                </p>
+                <p className="text-sm text-[var(--ink-0)]">
+                  This app is in beta and may contain bugs or incomplete
+                  features. Please report issues so we can improve it quickly.
+                </p>
+              </div>
+              <button
+                className="rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => setBetaOpen(true)}
+              >
+                Report a bug
+              </button>
+            </div>
+          </div>
         </header>
 
         <section className="grid gap-6 rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40 md:grid-cols-[1.2fr_1fr]">
@@ -686,6 +707,11 @@ export default function ProjectList() {
         </section>
       </div>
       <PlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
+      <BetaNoticeModal
+        open={betaOpen}
+        onClose={() => setBetaOpen(false)}
+        context="console"
+      />
     </div>
   );
 }

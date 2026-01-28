@@ -11,6 +11,7 @@ import { can, getPlanLimits } from "@/utils/plan";
 import AdBanner from "@/components/AdBanner";
 import { usePlanGate } from "@/hooks/usePlanGate";
 import PlanModal from "@/components/PlanModal";
+import BetaNoticeModal from "@/components/BetaNoticeModal";
 import ShareBoardModal from "@/components/ShareBoardModal";
 import CommentsModal from "@/components/CommentsModal";
 
@@ -49,6 +50,7 @@ export default function TopBar() {
   const [planOpen, setPlanOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [betaOpen, setBetaOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
@@ -161,6 +163,13 @@ export default function TopBar() {
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
+          <button
+            className="rounded-full border border-[var(--accent-1)] bg-[var(--panel-2)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-[var(--accent-1)] hover:border-[var(--accent-0)] hover:text-[var(--accent-0)]"
+            onClick={() => setBetaOpen(true)}
+            title="Beta notice"
+          >
+            Beta
+          </button>
           <div className="flex flex-col">
             <span
               className="display-font text-[12px] uppercase tracking-[0.4em] text-[var(--accent-0)]"
@@ -648,6 +657,11 @@ export default function TopBar() {
       )}
 
       <PlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
+      <BetaNoticeModal
+        open={betaOpen}
+        onClose={() => setBetaOpen(false)}
+        context="board"
+      />
       {shareOpen && activeBoard && (
         <ShareBoardModal
           open={shareOpen}

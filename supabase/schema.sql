@@ -76,6 +76,28 @@ insert into public.profiles (id, plan)
 select id, 'FREE' from auth.users
 on conflict (id) do nothing;
 
+create table if not exists bug_reports (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  context text not null,
+  plan text not null,
+  user_email text,
+  project_name text,
+  board_name text,
+  url text,
+  user_agent text,
+  body text not null
+);
+
+alter table bug_reports enable row level security;
+
+drop policy if exists "Anyone can submit bug reports" on bug_reports;
+
+create policy "Anyone can submit bug reports"
+on bug_reports
+for insert
+with check (true);
+
 create table if not exists board_shares (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
