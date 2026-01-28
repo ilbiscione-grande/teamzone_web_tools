@@ -30,7 +30,6 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
   const shapeRefs = useRef<Record<string, Konva.Node>>({});
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 800, height: 500 });
-  const circleSnapRef = useRef<Record<string, boolean>>({});
 
   const activeTool = useEditorStore((state) => state.activeTool);
   const playerTokenSize = useEditorStore((state) => state.playerTokenSize);
@@ -770,19 +769,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                           let localX = Math.abs(localPoint.x);
                           let localY = Math.abs(localPoint.y);
                           const constrained = event.evt?.shiftKey;
-                          const initialSize = Math.max(localX, localY);
-                          const ratio =
-                            initialSize > 0
-                              ? Math.abs(localX - localY) / initialSize
-                              : 0;
-                          const snapState = circleSnapRef.current[item.id] ?? false;
-                          const shouldSnap = constrained
-                            ? true
-                            : snapState
-                              ? ratio <= 0.12
-                              : ratio <= 0.05;
-                          circleSnapRef.current[item.id] = shouldSnap;
-                          if (shouldSnap) {
+                          if (constrained) {
                             const snapSize = Math.max(localX, localY);
                             localX = snapSize;
                             localY = snapSize;
@@ -790,7 +777,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                           const nextSize = Math.max(localX, localY);
                           const nextRadius = Math.max(minSize, nextSize);
                           const minScale = 0.2;
-                          const nextScale = shouldSnap
+                          const nextScale = constrained
                             ? { x: 1, y: 1 }
                             : {
                                 x: Math.max(minScale, localX / nextRadius),
@@ -800,6 +787,33 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                             radius: nextRadius,
                             scale: nextScale,
                           });
+                          event.target.position({ x: localX, y: localY });
+                        }}
+                        onDragEnd={(event) => {
+                          const stage = event.target.getStage();
+                          const parent = event.target.getParent();
+                          const pointer = stage?.getPointerPosition();
+                          if (!pointer || !parent) {
+                            return;
+                          }
+                          const localPoint = parent
+                            .getAbsoluteTransform()
+                            .copy()
+                            .invert()
+                            .point(pointer);
+                          const localX = Math.abs(localPoint.x);
+                          const localY = Math.abs(localPoint.y);
+                          const size = Math.max(localX, localY);
+                          const ratio = size > 0 ? Math.abs(localX - localY) / size : 0;
+                          if (ratio <= 0.08) {
+                            const snapSize = Math.max(minSize, size);
+                            updateObject(board.id, frameIndex, item.id, {
+                              radius: snapSize,
+                              scale: { x: 1, y: 1 },
+                            });
+                            event.target.position({ x: snapSize, y: snapSize });
+                            return;
+                          }
                           event.target.position({ x: localX, y: localY });
                         }}
                       />
