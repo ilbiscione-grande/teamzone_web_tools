@@ -3,7 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
 import { Stage, Layer, Rect, Arrow, Group, Circle, Line } from "react-konva";
-import type { ArrowLine, BallToken, Board, TextLabel } from "@/models";
+import type {
+  ArrowLine,
+  BallToken,
+  Board,
+  ShapeCircle,
+  ShapeRect,
+  ShapeTriangle,
+  TextLabel,
+} from "@/models";
 import Pitch, { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { useEditorStore } from "@/state/useEditorStore";
 import { useProjectStore } from "@/state/useProjectStore";
@@ -99,31 +107,35 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
           },
         };
         if (item.type === "circle" && next.type === "circle") {
-          blended.radius = item.radius + (next.radius - item.radius) * t;
+          const circleBlend = blended as ShapeCircle;
+          circleBlend.radius = item.radius + (next.radius - item.radius) * t;
         }
         if (item.type === "rect" && next.type === "rect") {
-          blended.width = item.width + (next.width - item.width) * t;
-          blended.height = item.height + (next.height - item.height) * t;
-          blended.cornerRadius =
+          const rectBlend = blended as ShapeRect;
+          rectBlend.width = item.width + (next.width - item.width) * t;
+          rectBlend.height = item.height + (next.height - item.height) * t;
+          rectBlend.cornerRadius =
             item.cornerRadius + (next.cornerRadius - item.cornerRadius) * t;
         }
         if (item.type === "triangle" && next.type === "triangle") {
-          blended.width = item.width + (next.width - item.width) * t;
-          blended.height = item.height + (next.height - item.height) * t;
+          const triBlend = blended as ShapeTriangle;
+          triBlend.width = item.width + (next.width - item.width) * t;
+          triBlend.height = item.height + (next.height - item.height) * t;
         }
         if (item.type === "arrow" && next.type === "arrow") {
+          const arrowBlend = blended as ArrowLine;
           if (item.points.length === next.points.length) {
-            blended.points = item.points.map(
+            arrowBlend.points = item.points.map(
               (value, index) => value + (next.points[index] - value) * t
             );
           }
           if (item.control && next.control) {
-            blended.control = {
+            arrowBlend.control = {
               x: item.control.x + (next.control.x - item.control.x) * t,
               y: item.control.y + (next.control.y - item.control.y) * t,
             };
           }
-          blended.curved = item.curved || next.curved;
+          arrowBlend.curved = item.curved || next.curved;
         }
         if (item.type === "ball") {
           const blendedBall = blended as BallToken;
