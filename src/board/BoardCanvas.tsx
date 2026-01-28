@@ -93,7 +93,38 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
             y: item.position.y + (next.position.y - item.position.y) * t,
           },
           rotation: item.rotation + (next.rotation - item.rotation) * t,
+          scale: {
+            x: item.scale.x + (next.scale.x - item.scale.x) * t,
+            y: item.scale.y + (next.scale.y - item.scale.y) * t,
+          },
         };
+        if (item.type === "circle" && next.type === "circle") {
+          blended.radius = item.radius + (next.radius - item.radius) * t;
+        }
+        if (item.type === "rect" && next.type === "rect") {
+          blended.width = item.width + (next.width - item.width) * t;
+          blended.height = item.height + (next.height - item.height) * t;
+          blended.cornerRadius =
+            item.cornerRadius + (next.cornerRadius - item.cornerRadius) * t;
+        }
+        if (item.type === "triangle" && next.type === "triangle") {
+          blended.width = item.width + (next.width - item.width) * t;
+          blended.height = item.height + (next.height - item.height) * t;
+        }
+        if (item.type === "arrow" && next.type === "arrow") {
+          if (item.points.length === next.points.length) {
+            blended.points = item.points.map(
+              (value, index) => value + (next.points[index] - value) * t
+            );
+          }
+          if (item.control && next.control) {
+            blended.control = {
+              x: item.control.x + (next.control.x - item.control.x) * t,
+              y: item.control.y + (next.control.y - item.control.y) * t,
+            };
+          }
+          blended.curved = item.curved || next.curved;
+        }
         if (item.type === "ball") {
           const blendedBall = blended as BallToken;
           const baseAttach = item.attachedToId;
@@ -712,13 +743,32 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                         }}
                         onDragStart={() => pushHistory(clone(objects))}
                         onDragMove={(event) => {
-                          const localX = Math.abs(event.target.x());
-                          const localY = Math.abs(event.target.y());
+                          const stage = event.target.getStage();
+                          const parent = event.target.getParent();
+                          const pointer = stage?.getPointerPosition();
+                          if (!pointer || !parent) {
+                            return;
+                          }
+                          const localPoint = parent
+                            .getAbsoluteTransform()
+                            .copy()
+                            .invert()
+                            .point(pointer);
+                          let localX = Math.abs(localPoint.x);
+                          let localY = Math.abs(localPoint.y);
+                          const constrained = event.evt?.shiftKey;
+                          const size = Math.max(localX, localY);
+                          const ratio = size > 0 ? Math.abs(localX - localY) / size : 0;
+                          const shouldSnap = constrained || ratio <= 0.08;
+                          if (shouldSnap) {
+                            const snapSize = Math.max(localX, localY);
+                            localX = snapSize;
+                            localY = snapSize;
+                          }
                           const size = Math.max(localX, localY);
                           const nextRadius = Math.max(minSize, size);
                           const minScale = 0.2;
-                          const constrained = event.evt?.shiftKey;
-                          const nextScale = constrained
+                          const nextScale = shouldSnap
                             ? { x: 1, y: 1 }
                             : {
                                 x: Math.max(minScale, localX / nextRadius),
@@ -728,6 +778,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                             radius: nextRadius,
                             scale: nextScale,
                           });
+                          event.target.position({ x: localX, y: localY });
                         }}
                       />
                     </Group>

@@ -69,6 +69,7 @@ export const useBoardInteractions = ({
 }: UseBoardInteractionsProps) => {
   const [draft, setDraft] = useState<DraftShape | null>(null);
   const [isPanning, setIsPanning] = useState(false);
+  const circleSnapTolerance = 0.08;
 
   const rotatePoint = (
     point: { x: number; y: number },
@@ -232,14 +233,15 @@ export const useBoardInteractions = ({
       const dy = Math.abs(current.y - start.y);
       const size = Math.max(dx, dy);
       const radius = Math.max(1, size);
+      const ratio = size > 0 ? Math.abs(dx - dy) / size : 0;
+      const shouldSnap = draft.constrain || ratio <= circleSnapTolerance;
       const minScale = 0.2;
-      const scale =
-        draft.constrain
-          ? { x: 1, y: 1 }
-          : {
-              x: Math.max(minScale, dx / radius),
-              y: Math.max(minScale, dy / radius),
-            };
+      const scale = shouldSnap
+        ? { x: 1, y: 1 }
+        : {
+            x: Math.max(minScale, dx / radius),
+            y: Math.max(minScale, dy / radius),
+          };
       addObject(boardId, frameIndex, {
         id: createId(),
         type: "circle",
