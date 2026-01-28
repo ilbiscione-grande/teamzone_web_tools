@@ -182,14 +182,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
         lastFrameIndex,
         Math.max(0, playheadFrame)
       );
-      const snapIndex = Math.min(
-        lastFrameIndex,
-        Math.max(0, Math.floor(safeValue + 0.0001))
-      );
-      if (board.activeFrameIndex !== snapIndex) {
-        setActiveFrameIndex(board.id, snapIndex);
-      }
-      setPlayheadFrame(snapIndex);
+      setPlayheadFrame(safeValue);
       return;
     }
 
