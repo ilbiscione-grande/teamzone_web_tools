@@ -757,16 +757,19 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                           let localX = Math.abs(localPoint.x);
                           let localY = Math.abs(localPoint.y);
                           const constrained = event.evt?.shiftKey;
-                          const size = Math.max(localX, localY);
-                          const ratio = size > 0 ? Math.abs(localX - localY) / size : 0;
+                          const initialSize = Math.max(localX, localY);
+                          const ratio =
+                            initialSize > 0
+                              ? Math.abs(localX - localY) / initialSize
+                              : 0;
                           const shouldSnap = constrained || ratio <= 0.08;
                           if (shouldSnap) {
                             const snapSize = Math.max(localX, localY);
                             localX = snapSize;
                             localY = snapSize;
                           }
-                          const size = Math.max(localX, localY);
-                          const nextRadius = Math.max(minSize, size);
+                          const nextSize = Math.max(localX, localY);
+                          const nextRadius = Math.max(minSize, nextSize);
                           const minScale = 0.2;
                           const nextScale = shouldSnap
                             ? { x: 1, y: 1 }
