@@ -188,8 +188,11 @@ export const createBoardActions: StateCreator<
       if (!frame) {
         return;
       }
-      board.frames.push(cloneFrame(frame));
-      board.activeFrameIndex = board.frames.length - 1;
+      const sourceIndex = board.frames.findIndex((item) => item.id === frameId);
+      const insertIndex =
+        sourceIndex >= 0 ? sourceIndex + 1 : board.frames.length;
+      board.frames.splice(insertIndex, 0, cloneFrame(frame));
+      board.activeFrameIndex = insertIndex;
       if (state.project) {
         state.project.updatedAt = new Date().toISOString();
       }
