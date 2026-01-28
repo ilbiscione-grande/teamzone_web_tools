@@ -668,19 +668,20 @@ export default function Toolbox() {
   }, [commentsSeenKey, ownerShares, project?.sharedMeta?.shareId, authUser]);
 
   useEffect(() => {
-    if (!project?.sharedMeta || !authUser) {
+    const sharedMeta = project?.sharedMeta;
+    if (!sharedMeta || !authUser) {
       return;
     }
     const sharedSeenKey = `tacticsboard:sharedSeenAt:${authUser.id}`;
     let cancelled = false;
     const checkShareActive = async () => {
       const result = await fetchLatestCommentsForShares([
-        project.sharedMeta.shareId,
+        sharedMeta.shareId,
       ]);
       if (!result.ok || cancelled) {
         return;
       }
-      const createdAt = result.latest[project.sharedMeta.shareId];
+      const createdAt = result.latest[sharedMeta.shareId];
       if (!createdAt) {
         if (typeof window !== "undefined") {
           window.localStorage.setItem(sharedSeenKey, String(Date.now()));
