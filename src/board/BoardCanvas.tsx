@@ -712,10 +712,8 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                         }}
                         onDragStart={() => pushHistory(clone(objects))}
                         onDragMove={(event) => {
-                          const scaleX = item.scale.x || 1;
-                          const scaleY = item.scale.y || 1;
-                          const localX = Math.abs(event.target.x() / scaleX);
-                          const localY = Math.abs(event.target.y() / scaleY);
+                          const localX = Math.abs(event.target.x());
+                          const localY = Math.abs(event.target.y());
                           const size = Math.max(localX, localY);
                           const nextRadius = Math.max(minSize, size);
                           const minScale = 0.2;
