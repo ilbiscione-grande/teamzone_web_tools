@@ -19,6 +19,7 @@ type DraftShape = {
   type: "circle" | "rect" | "triangle" | "arrow";
   start: { x: number; y: number };
   current: { x: number; y: number };
+  constrain?: boolean;
 };
 
 type UseBoardInteractionsProps = {
@@ -160,20 +161,40 @@ export const useBoardInteractions = ({
     const world = stageToWorld(pointer);
 
     if (activeTool === "circle") {
-      setDraft({ type: "circle", start: world, current: world });
+      setDraft({
+        type: "circle",
+        start: world,
+        current: world,
+        constrain: event.evt.shiftKey,
+      });
     }
     if (activeTool === "rect") {
-      setDraft({ type: "rect", start: world, current: world });
+      setDraft({
+        type: "rect",
+        start: world,
+        current: world,
+        constrain: event.evt.shiftKey,
+      });
     }
     if (activeTool === "triangle") {
-      setDraft({ type: "triangle", start: world, current: world });
+      setDraft({
+        type: "triangle",
+        start: world,
+        current: world,
+        constrain: event.evt.shiftKey,
+      });
     }
     if (isLineTool) {
-      setDraft({ type: "arrow", start: world, current: world });
+      setDraft({
+        type: "arrow",
+        start: world,
+        current: world,
+        constrain: event.evt.shiftKey,
+      });
     }
   };
 
-  const handleMouseMove = () => {
+  const handleMouseMove = (event: Konva.KonvaEventObject<MouseEvent>) => {
     if (!draft) {
       return;
     }
@@ -185,7 +206,11 @@ export const useBoardInteractions = ({
     if (!pointer) {
       return;
     }
-    setDraft({ ...draft, current: stageToWorld(pointer) });
+    setDraft({
+      ...draft,
+      current: stageToWorld(pointer),
+      constrain: event.evt.shiftKey,
+    });
   };
 
   const commitDraft = () => {
@@ -203,13 +228,24 @@ export const useBoardInteractions = ({
     pushHistory(clone(objects));
     const { start, current } = draft;
     if (draft.type === "circle") {
-      const radius = Math.max(1, Math.hypot(current.x - start.x, current.y - start.y));
+      const dx = Math.abs(current.x - start.x);
+      const dy = Math.abs(current.y - start.y);
+      const size = Math.max(dx, dy);
+      const radius = Math.max(1, size);
+      const minScale = 0.2;
+      const scale =
+        draft.constrain
+          ? { x: 1, y: 1 }
+          : {
+              x: Math.max(minScale, dx / radius),
+              y: Math.max(minScale, dy / radius),
+            };
       addObject(boardId, frameIndex, {
         id: createId(),
         type: "circle",
         position: start,
         rotation: 0,
-        scale: { x: 1, y: 1 },
+        scale,
         style: { ...defaultStyle },
         zIndex: 1,
         locked: false,

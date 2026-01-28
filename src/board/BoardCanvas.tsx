@@ -701,7 +701,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                       />
                       <Circle
                         x={radius}
-                        y={0}
+                        y={radius}
                         radius={0.7}
                         fill="#ffffff"
                         stroke="#0f1b1a"
@@ -712,14 +712,23 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                         }}
                         onDragStart={() => pushHistory(clone(objects))}
                         onDragMove={(event) => {
-                          const localX = event.target.x() / item.scale.x;
-                          const localY = event.target.y() / item.scale.y;
-                          const nextRadius = Math.max(
-                            minSize,
-                            Math.hypot(localX, localY)
-                          );
+                          const scaleX = item.scale.x || 1;
+                          const scaleY = item.scale.y || 1;
+                          const localX = Math.abs(event.target.x() / scaleX);
+                          const localY = Math.abs(event.target.y() / scaleY);
+                          const size = Math.max(localX, localY);
+                          const nextRadius = Math.max(minSize, size);
+                          const minScale = 0.2;
+                          const constrained = event.evt?.shiftKey;
+                          const nextScale = constrained
+                            ? { x: 1, y: 1 }
+                            : {
+                                x: Math.max(minScale, localX / nextRadius),
+                                y: Math.max(minScale, localY / nextRadius),
+                              };
                           updateObject(board.id, frameIndex, item.id, {
                             radius: nextRadius,
+                            scale: nextScale,
                           });
                         }}
                       />
