@@ -258,8 +258,13 @@ export const useBoardInteractions = ({
     if (draft.type === "rect") {
       const x = Math.min(start.x, current.x);
       const y = Math.min(start.y, current.y);
-      const width = Math.abs(current.x - start.x);
-      const height = Math.abs(current.y - start.y);
+      let width = Math.abs(current.x - start.x);
+      let height = Math.abs(current.y - start.y);
+      if (draft.constrain) {
+        const size = Math.max(width, height);
+        width = size;
+        height = size;
+      }
       addObject(boardId, frameIndex, {
         id: createId(),
         type: "rect",

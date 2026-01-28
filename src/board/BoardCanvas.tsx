@@ -906,10 +906,18 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                           minSize,
                           event.target.y() / scaleY
                         );
+                        const constrained = event.evt?.shiftKey;
+                        const size = Math.max(localX, localY);
                         updateObject(board.id, frameIndex, item.id, {
-                          width: localX,
-                          height: localY,
+                          width: constrained ? size : localX,
+                          height: constrained ? size : localY,
                         });
+                        if (constrained) {
+                          event.target.position({
+                            x: size * scaleX,
+                            y: size * scaleY,
+                          });
+                        }
                       }}
                     />
                   </Group>
