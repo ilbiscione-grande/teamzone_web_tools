@@ -30,6 +30,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
   const shapeRefs = useRef<Record<string, Konva.Node>>({});
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 800, height: 500 });
+  const circleSnapRef = useRef<Record<string, boolean>>({});
 
   const activeTool = useEditorStore((state) => state.activeTool);
   const playerTokenSize = useEditorStore((state) => state.playerTokenSize);
@@ -774,7 +775,13 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                             initialSize > 0
                               ? Math.abs(localX - localY) / initialSize
                               : 0;
-                          const shouldSnap = constrained || ratio <= 0.08;
+                          const snapState = circleSnapRef.current[item.id] ?? false;
+                          const shouldSnap = constrained
+                            ? true
+                            : snapState
+                              ? ratio <= 0.12
+                              : ratio <= 0.05;
+                          circleSnapRef.current[item.id] = shouldSnap;
                           if (shouldSnap) {
                             const snapSize = Math.max(localX, localY);
                             localX = snapSize;
