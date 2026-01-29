@@ -26,6 +26,7 @@ export default function TopBar() {
   const closeProject = useProjectStore((state) => state.closeProject);
   const addBoard = useProjectStore((state) => state.addBoard);
   const duplicateBoard = useProjectStore((state) => state.duplicateBoard);
+  const deleteBoard = useProjectStore((state) => state.deleteBoard);
   const createProject = useProjectStore((state) => state.createProject);
   const plan = useProjectStore((state) => state.plan);
   const index = useProjectStore((state) => state.index);
@@ -279,6 +280,38 @@ export default function TopBar() {
               >
                 <path d="M12 20h9" />
                 <path d="M16.5 3.5l4 4L7 21l-4 1 1-4 12.5-14.5z" />
+              </svg>
+            </button>
+            <button
+              className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+              onClick={() => {
+                if (!activeBoard) {
+                  return;
+                }
+                if (!window.confirm("Delete this board?")) {
+                  return;
+                }
+                deleteBoard(activeBoard.id);
+              }}
+              title="Delete board"
+              aria-label="Delete board"
+              disabled={project.boards.length <= 1}
+              data-locked={project.boards.length <= 1}
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 7h16" />
+                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
+                <path d="M10 11v6M14 11v6" />
               </svg>
             </button>
             <button

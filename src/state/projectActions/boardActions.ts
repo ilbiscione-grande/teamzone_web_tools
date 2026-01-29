@@ -20,6 +20,7 @@ type BoardActionSlice = Pick<
   | "setBoardMode"
   | "setActiveFrameIndex"
   | "duplicateBoard"
+  | "deleteBoard"
   | "addFrame"
   | "duplicateFrame"
   | "deleteFrame"
@@ -149,6 +150,33 @@ export const createBoardActions: StateCreator<
       };
       state.project.boards.push(clone);
       state.project.activeBoardId = clone.id;
+      state.project.updatedAt = new Date().toISOString();
+    });
+  },
+  deleteBoard: (boardId) => {
+    set((state) => {
+      if (!state.project) {
+        return;
+      }
+      if (state.project.isShared) {
+        return;
+      }
+      if (state.project.boards.length <= 1) {
+        window.alert("You must keep at least one board.");
+        return;
+      }
+      const nextBoards = state.project.boards.filter(
+        (item) => item.id !== boardId
+      );
+      if (nextBoards.length === state.project.boards.length) {
+        return;
+      }
+      state.project.boards = nextBoards;
+      const nextActive =
+        state.project.activeBoardId === boardId
+          ? nextBoards[0]?.id ?? null
+          : state.project.activeBoardId;
+      state.project.activeBoardId = nextActive;
       state.project.updatedAt = new Date().toISOString();
     });
   },
