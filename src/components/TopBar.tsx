@@ -163,7 +163,7 @@ export default function TopBar() {
       }`}
     >
       <button
-        className="absolute left-[-90px] top-[-18px] z-30 h-8 w-64 -rotate-45 bg-[var(--accent-0)] text-[10px] font-semibold uppercase tracking-[0.4em] text-black shadow-lg shadow-black/30"
+        className="absolute left-[-90px] top-[-18px] z-30 flex h-8 w-64 -rotate-45 items-center justify-center bg-[var(--accent-0)] text-[10px] font-semibold uppercase tracking-[0.4em] text-black shadow-lg shadow-black/30"
         onClick={() => setBetaOpen(true)}
         title="Beta notice"
         aria-label="Beta notice"
@@ -311,9 +311,6 @@ export default function TopBar() {
                     <path d="M16.5 3.5l4 4L7 21l-4 1 1-4 12.5-14.5z" />
                   </svg>
                 </button>
-                <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Edit
-                </span>
               </div>
               <div className="flex flex-col items-center gap-1">
                 <button
@@ -348,9 +345,6 @@ export default function TopBar() {
                     <path d="M10 11v6M14 11v6" />
                   </svg>
                 </button>
-                <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Delete
-                </span>
               </div>
               <div className="flex flex-col items-center gap-1">
                 <button
@@ -395,9 +389,6 @@ export default function TopBar() {
                     <path d="M4 16V6a2 2 0 0 1 2-2h10" />
                   </svg>
                 </button>
-                <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Copy
-                </span>
               </div>
               <div className="flex flex-col items-center gap-1">
                 <button
@@ -436,9 +427,6 @@ export default function TopBar() {
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 </button>
-                <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Add
-                </span>
               </div>
             </div>
           </div>

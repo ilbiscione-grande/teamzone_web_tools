@@ -449,7 +449,7 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                   }`}
                 >
                   {tier === "PAID" && (
-                    <div className="absolute right-[-46px] top-4 z-10 w-40 -rotate-45 bg-[var(--accent-0)] py-1 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-black shadow-lg shadow-black/30">
+                    <div className="absolute right-[-52px] top-[-4px] z-10 w-44 rotate-45 bg-[var(--accent-0)] py-1 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-black shadow-lg shadow-black/30">
                       50% Off
                     </div>
                   )}
