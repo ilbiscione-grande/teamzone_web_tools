@@ -61,6 +61,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
   const isSharedReadOnly = project?.isShared ?? false;
   const addObject = useProjectStore((state) => state.addObject);
   const updateObject = useProjectStore((state) => state.updateObject);
+  const updateBoard = useProjectStore((state) => state.updateBoard);
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
 
   const frameIndex = board.activeFrameIndex;
