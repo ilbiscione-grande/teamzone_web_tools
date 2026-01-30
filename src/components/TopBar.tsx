@@ -163,12 +163,12 @@ export default function TopBar() {
       }`}
     >
       <button
-        className="absolute left-[-90px] top-[-18px] z-30 flex h-8 w-64 -rotate-45 items-center justify-center bg-[var(--accent-0)] text-[10px] font-semibold uppercase tracking-[0.4em] text-black shadow-lg shadow-black/30"
+        className="absolute left-[-90px] top-[-18px] z-30 flex h-8 w-64 -rotate-45 items-center justify-center bg-[var(--accent-0)] text-[10px] font-semibold uppercase leading-none tracking-[0.4em] text-black shadow-lg shadow-black/30"
         onClick={() => setBetaOpen(true)}
         title="Beta notice"
         aria-label="Beta notice"
       >
-        Beta
+        <span className="block w-full text-center">Beta</span>
       </button>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
