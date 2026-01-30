@@ -161,6 +161,16 @@ export const useEditorStore = create<EditorState>()(
       set((state) => {
         if (!state.linkingPlayerIds.includes(id)) {
           state.linkingPlayerIds.push(id);
+          return;
+        }
+        const first = state.linkingPlayerIds[0];
+        const last = state.linkingPlayerIds[state.linkingPlayerIds.length - 1];
+        if (
+          state.linkingPlayerIds.length >= 2 &&
+          id === first &&
+          last !== id
+        ) {
+          state.linkingPlayerIds.push(id);
         }
       });
     },

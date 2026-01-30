@@ -9,6 +9,8 @@ export type Style = {
   strokeWidth: number;
   dash: number[];
   opacity: number;
+  outlineStroke?: string;
+  outlineWidth?: number;
 };
 
 export type BaseDrawable = {

@@ -261,6 +261,34 @@ export default function PropertiesPanel() {
                       })
                     )}
                   </label>
+                  {target.type === "arrow" && (
+                    <>
+                      <label className="space-y-1">
+                        <span className="text-[11px]">Outline</span>
+                        <input
+                          type="color"
+                          className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                          value={target.style.outlineStroke ?? "#111111"}
+                          onChange={(event) =>
+                            update({
+                              style: {
+                                ...target.style,
+                                outlineStroke: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="space-y-1">
+                        <span className="text-[11px]">Outline Width</span>
+                        {numberField(target.style.outlineWidth ?? 0, (value) =>
+                          update({
+                            style: { ...target.style, outlineWidth: value },
+                          })
+                        )}
+                      </label>
+                    </>
+                  )}
                 </>
               )}
               <label className="space-y-1">

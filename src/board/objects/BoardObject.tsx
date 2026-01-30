@@ -551,23 +551,41 @@ export default function BoardObject({
           return [0, 0, cp1.x, cp1.y, cp2.x, cp2.y, end.x, end.y];
         })()
       : arrow.points;
+    const outlineStroke = arrow.style.outlineStroke;
+    const outlineWidth = arrow.style.outlineWidth ?? 0;
     return (
-      <Arrow
-        {...commonProps}
-        points={points}
-        bezier={arrow.curved ?? false}
-        stroke={arrow.style.stroke}
-        strokeWidth={arrow.style.strokeWidth}
-        fill={arrow.style.stroke}
-        pointerLength={arrow.head ? 2.5 : 0}
-        pointerWidth={arrow.head ? 2 : 0}
-        dash={arrow.dashed ? [1, 1] : []}
-        ref={(node) => {
-          if (node) {
-            registerNode(object.id, node);
-          }
-        }}
-      />
+      <Group>
+        {outlineStroke && outlineWidth > 0 && (
+          <Arrow
+            {...commonProps}
+            points={points}
+            bezier={arrow.curved ?? false}
+            stroke={outlineStroke}
+            strokeWidth={arrow.style.strokeWidth + outlineWidth * 2}
+            fill={outlineStroke}
+            pointerLength={arrow.head ? 2.5 + outlineWidth : 0}
+            pointerWidth={arrow.head ? 2 + outlineWidth : 0}
+            dash={arrow.dashed ? [1, 1] : []}
+            listening={false}
+          />
+        )}
+        <Arrow
+          {...commonProps}
+          points={points}
+          bezier={arrow.curved ?? false}
+          stroke={arrow.style.stroke}
+          strokeWidth={arrow.style.strokeWidth}
+          fill={arrow.style.stroke}
+          pointerLength={arrow.head ? 2.5 : 0}
+          pointerWidth={arrow.head ? 2 : 0}
+          dash={arrow.dashed ? [1, 1] : []}
+          ref={(node) => {
+            if (node) {
+              registerNode(object.id, node);
+            }
+          }}
+        />
+      </Group>
     );
   }
 
