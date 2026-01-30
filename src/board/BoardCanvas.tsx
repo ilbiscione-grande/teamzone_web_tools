@@ -7,6 +7,7 @@ import type {
   ArrowLine,
   BallToken,
   Board,
+  PlayerToken,
   ShapeCircle,
   ShapeRect,
   ShapeTriangle,
@@ -70,6 +71,13 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
       ) as ArrowLine[],
     [objects, selection]
   );
+  const selectedPlayers = useMemo(
+    () =>
+      objects.filter(
+        (item) => item.type === "player" && selection.includes(item.id)
+      ) as PlayerToken[],
+    [objects, selection]
+  );
   const renderObjects = useMemo(() => {
     if (board.mode !== "DYNAMIC") {
       return objects;
@@ -106,6 +114,23 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
             y: item.scale.y + (next.scale.y - item.scale.y) * t,
           },
         };
+        if (item.type === "player" && next.type === "player") {
+          const playerBlend = blended as PlayerToken;
+          if (item.moveControl) {
+            const control = item.moveControl;
+            const inv = 1 - t;
+            playerBlend.position = {
+              x:
+                inv * inv * item.position.x +
+                2 * inv * t * control.x +
+                t * t * next.position.x,
+              y:
+                inv * inv * item.position.y +
+                2 * inv * t * control.y +
+                t * t * next.position.y,
+            };
+          }
+        }
         if (item.type === "circle" && next.type === "circle") {
           const circleBlend = blended as ShapeCircle;
           circleBlend.radius = item.radius + (next.radius - item.radius) * t;
@@ -688,6 +713,69 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                 </Group>
               );
             })}
+            {board.mode === "DYNAMIC" &&
+              !isPlaying &&
+              frameIndex < board.frames.length - 1 &&
+              selectedPlayers.map((player) => {
+                const nextFrame = board.frames[frameIndex + 1];
+                const nextPlayer = nextFrame?.objects.find(
+                  (item) => item.id === player.id && item.type === "player"
+                ) as PlayerToken | undefined;
+                if (!nextPlayer) {
+                  return null;
+                }
+                const start = player.position;
+                const end = nextPlayer.position;
+                const hasMovement =
+                  Math.hypot(end.x - start.x, end.y - start.y) > 0.01;
+                const control = player.moveControl ?? {
+                  x: (start.x + end.x) / 2,
+                  y: (start.y + end.y) / 2,
+                };
+                if (!hasMovement && !player.moveControl) {
+                  return null;
+                }
+                return (
+                  <Group key={`${player.id}-move-control`}>
+                    <Line
+                      points={[start.x, start.y, control.x, control.y, end.x, end.y]}
+                      stroke="rgba(255,255,255,0.25)"
+                      strokeWidth={0.2}
+                      dash={[0.6, 0.6]}
+                      listening={false}
+                    />
+                    <Circle
+                      x={control.x}
+                      y={control.y}
+                      radius={0.7}
+                      fill="#ffffff"
+                      stroke="#0f1b1a"
+                      strokeWidth={0.15}
+                      draggable={!player.locked}
+                      onMouseDown={(event) => {
+                        event.cancelBubble = true;
+                      }}
+                      onDragStart={() => pushHistory(clone(objects))}
+                      onDragMove={(event) => {
+                        updateObject(board.id, frameIndex, player.id, {
+                          moveControl: {
+                            x: event.target.x(),
+                            y: event.target.y(),
+                          },
+                        });
+                      }}
+                      onDragEnd={(event) => {
+                        updateObject(board.id, frameIndex, player.id, {
+                          moveControl: {
+                            x: event.target.x(),
+                            y: event.target.y(),
+                          },
+                        });
+                      }}
+                    />
+                  </Group>
+                );
+              })}
             {sortedObjects
               .filter(
                 (item) =>

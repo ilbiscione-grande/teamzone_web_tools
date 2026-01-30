@@ -178,7 +178,7 @@ export default function TopBar() {
           title="Beta notice"
           aria-label="Beta notice"
         >
-          <span className="block w-full -translate-x-1 text-center">Beta</span>
+          <span className="block w-full -translate-x-2 text-center">Beta</span>
         </button>
       )}
       <div className="flex flex-wrap items-center justify-between gap-4">

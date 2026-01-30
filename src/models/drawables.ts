@@ -42,6 +42,7 @@ export type PlayerToken = BaseDrawable & {
   showNumber: boolean;
   tokenSize: number;
   vestColor?: string;
+  moveControl?: Point;
 };
 
 export type BallToken = BaseDrawable & {
