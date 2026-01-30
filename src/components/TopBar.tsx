@@ -193,50 +193,73 @@ export default function TopBar() {
               updateProjectMeta({ name: event.target.value })
             }
           />
-          <button
-            className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={() => {
-              const name = window.prompt("New project name") ?? "";
-              if (name.trim()) {
-                createProject(name.trim(), {
-                  homeKit: project.settings?.homeKit,
-                  awayKit: project.settings?.awayKit,
-                  attachBallToPlayer:
-                    project.settings?.attachBallToPlayer ?? false,
-                });
+          <div className="flex flex-col items-center gap-1">
+            <button
+              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={() => {
+                const name = window.prompt("New project name") ?? "";
+                if (name.trim()) {
+                  createProject(name.trim(), {
+                    homeKit: project.settings?.homeKit,
+                    awayKit: project.settings?.awayKit,
+                    attachBallToPlayer:
+                      project.settings?.attachBallToPlayer ?? false,
+                  });
+                }
+              }}
+              aria-label="New project"
+              disabled={projectLimitReached}
+              data-locked={projectLimitReached}
+              title={
+                projectLimitReached
+                  ? "Project limit reached for this plan."
+                  : "New project"
               }
-            }}
-            aria-label="New project"
-            disabled={projectLimitReached}
-            data-locked={projectLimitReached}
-            title={
-              projectLimitReached
-                ? "Project limit reached for this plan."
-                : "New project"
-            }
-          >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
             >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          </button>
-          <button
-            className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-            onClick={closeProject}
-          >
-            Back to list
-          </button>
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+            <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+              New
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <button
+              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+              onClick={closeProject}
+              title="Back to list"
+              aria-label="Back to list"
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+              Back
+            </span>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--ink-1)]">
-          <div className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-transparent px-2 py-1">
+          <div className="flex items-center gap-3 rounded-full border border-[var(--line)] bg-transparent px-2 py-1">
             <select
               className="h-7 rounded-full bg-[var(--panel-2)] px-2 text-sm text-[var(--ink-0)] focus:outline-none"
               value={activeBoardId}
@@ -255,144 +278,169 @@ export default function TopBar() {
                 </option>
               ))}
             </select>
-            <button
-              className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-              onClick={() => {
-                if (!activeBoard) {
-                  return;
-                }
-                const nextName = window.prompt("Board name", activeBoard.name);
-                if (nextName && nextName.trim()) {
-                  updateBoard(activeBoard.id, { name: nextName.trim() });
-                }
-              }}
-              title="Rename board"
-              aria-label="Rename board"
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5l4 4L7 21l-4 1 1-4 12.5-14.5z" />
-              </svg>
-            </button>
-            <button
-              className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-              onClick={() => {
-                if (!activeBoard) {
-                  return;
-                }
-                if (!window.confirm("Delete this board?")) {
-                  return;
-                }
-                deleteBoard(activeBoard.id);
-              }}
-              title="Delete board"
-              aria-label="Delete board"
-              disabled={project.boards.length <= 1}
-              data-locked={project.boards.length <= 1}
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 7h16" />
-                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
-                <path d="M10 11v6M14 11v6" />
-              </svg>
-            </button>
-            <button
-              className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-              onClick={() => {
-                if (!activeBoard) {
-                  return;
-                }
-                const nextName =
-                  window.prompt(
-                    "Duplicate board name",
-                    `${activeBoard.name} Copy`
-                  ) ?? "";
-                if (nextName.trim()) {
-                  if (boardLimitReached) {
-                    window.alert("Board limit reached for this plan.");
-                    return;
+            <div className="flex items-start gap-2">
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={() => {
+                    if (!activeBoard) {
+                      return;
+                    }
+                    const nextName = window.prompt(
+                      "Board name",
+                      activeBoard.name
+                    );
+                    if (nextName && nextName.trim()) {
+                      updateBoard(activeBoard.id, { name: nextName.trim() });
+                    }
+                  }}
+                  title="Rename board"
+                  aria-label="Rename board"
+                >
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5l4 4L7 21l-4 1 1-4 12.5-14.5z" />
+                  </svg>
+                </button>
+                <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+                  Edit
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                  onClick={() => {
+                    if (!activeBoard) {
+                      return;
+                    }
+                    if (!window.confirm("Delete this board?")) {
+                      return;
+                    }
+                    deleteBoard(activeBoard.id);
+                  }}
+                  title="Delete board"
+                  aria-label="Delete board"
+                  disabled={project.boards.length <= 1}
+                  data-locked={project.boards.length <= 1}
+                >
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M4 7h16" />
+                    <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                    <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
+                    <path d="M10 11v6M14 11v6" />
+                  </svg>
+                </button>
+                <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+                  Delete
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={() => {
+                    if (!activeBoard) {
+                      return;
+                    }
+                    const nextName =
+                      window.prompt(
+                        "Duplicate board name",
+                        `${activeBoard.name} Copy`
+                      ) ?? "";
+                    if (nextName.trim()) {
+                      if (boardLimitReached) {
+                        window.alert("Board limit reached for this plan.");
+                        return;
+                      }
+                      duplicateBoard(activeBoard.id, nextName.trim());
+                    }
+                  }}
+                  title={
+                    boardLimitReached
+                      ? "Board limit reached for this plan."
+                      : "Duplicate board"
                   }
-                  duplicateBoard(activeBoard.id, nextName.trim());
-                }
-              }}
-              title={
-                boardLimitReached
-                  ? "Board limit reached for this plan."
-                  : "Duplicate board"
-              }
-              aria-label="Duplicate board"
-              disabled={boardLimitReached}
-              data-locked={boardLimitReached}
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="8" y="8" width="12" height="12" rx="2" />
-                <path d="M4 16V6a2 2 0 0 1 2-2h10" />
-              </svg>
-            </button>
-            <button
-              className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-              onClick={() => {
-                const name = window.prompt("Board name") ?? "";
-                if (name.trim()) {
-                  if (
-                    getPlanLimits(plan).maxBoards <=
-                    (project.boards?.length ?? 0)
-                  ) {
-                    window.alert("Board limit reached for this plan.");
-                    return;
+                  aria-label="Duplicate board"
+                  disabled={boardLimitReached}
+                  data-locked={boardLimitReached}
+                >
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="8" y="8" width="12" height="12" rx="2" />
+                    <path d="M4 16V6a2 2 0 0 1 2-2h10" />
+                  </svg>
+                </button>
+                <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+                  Copy
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={() => {
+                    const name = window.prompt("Board name") ?? "";
+                    if (name.trim()) {
+                      if (
+                        getPlanLimits(plan).maxBoards <=
+                        (project.boards?.length ?? 0)
+                      ) {
+                        window.alert("Board limit reached for this plan.");
+                        return;
+                      }
+                      addBoard(name.trim());
+                    }
+                  }}
+                  title={
+                    boardLimitReached
+                      ? "Board limit reached for this plan."
+                      : "Add board"
                   }
-                  addBoard(name.trim());
-                }
-              }}
-              title={
-                boardLimitReached
-                  ? "Board limit reached for this plan."
-                  : "Add board"
-              }
-              aria-label="Add board"
-              disabled={boardLimitReached}
-              data-locked={boardLimitReached}
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-            </button>
+                  aria-label="Add board"
+                  disabled={boardLimitReached}
+                  data-locked={boardLimitReached}
+                >
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  >
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </button>
+                <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+                  Add
+                </span>
+              </div>
+            </div>
           </div>
           <select
             className="h-9 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-sm text-[var(--ink-0)]"
@@ -417,41 +465,46 @@ export default function TopBar() {
           </select>
           <FormationMenu />
           {authUser && (
-            <div
-              className={`rounded-full border p-2 ${
-                syncStatus.state === "error"
-                  ? "border-[var(--accent-1)] text-[var(--accent-1)]"
-                  : syncStatus.state === "syncing"
-                  ? "border-[var(--accent-2)] text-[var(--accent-2)]"
-                  : syncStatus.state === "offline"
-                  ? "border-[var(--accent-1)] text-[var(--accent-1)]"
-                  : "border-[var(--line)] text-[var(--ink-1)]"
-              }`}
-              title={
-                syncStatus.state === "error"
-                  ? syncStatus.message ?? "Cloud sync error."
-                  : syncStatus.state === "syncing"
-                  ? "Syncing to cloud..."
-                  : syncStatus.state === "offline"
-                  ? syncStatus.message ?? "Offline."
-                  : "Cloud synced."
-              }
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className={`rounded-full border p-2 ${
+                  syncStatus.state === "error"
+                    ? "border-[var(--accent-1)] text-[var(--accent-1)]"
+                    : syncStatus.state === "syncing"
+                    ? "border-[var(--accent-2)] text-[var(--accent-2)]"
+                    : syncStatus.state === "offline"
+                    ? "border-[var(--accent-1)] text-[var(--accent-1)]"
+                    : "border-[var(--line)] text-[var(--ink-1)]"
+                }`}
+                title={
+                  syncStatus.state === "error"
+                    ? syncStatus.message ?? "Cloud sync error."
+                    : syncStatus.state === "syncing"
+                    ? "Syncing to cloud..."
+                    : syncStatus.state === "offline"
+                    ? syncStatus.message ?? "Offline."
+                    : "Cloud synced."
+                }
               >
-                <path d="M20 6v6h-6" />
-                <path d="M4 18v-6h6" />
-                <path d="M20 12a8 8 0 0 0-14-5" />
-                <path d="M4 12a8 8 0 0 0 14 5" />
-              </svg>
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20 6v6h-6" />
+                  <path d="M4 18v-6h6" />
+                  <path d="M20 12a8 8 0 0 0-14-5" />
+                  <path d="M4 12a8 8 0 0 0 14 5" />
+                </svg>
+              </div>
+              <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+                Sync
+              </span>
             </div>
           )}
           {isOffline && (
@@ -503,38 +556,12 @@ export default function TopBar() {
               </span>
             </div>
           )}
-          <button
-            className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={() => setPlanOpen(true)}
-            title="Account"
-            aria-label="Account"
-          >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20 21a8 8 0 0 0-16 0" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-          </button>
-          {activeBoard && authUser && !isSharedView && (
+          <div className="flex flex-col items-center gap-1">
             <button
               className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-              onClick={() => setShareOpen(true)}
-              title={
-                can(plan, "board.share")
-                  ? "Share board"
-                  : "Sharing is available on paid plans."
-              }
-              aria-label="Share board"
-              disabled={!can(plan, "board.share")}
-              data-locked={!can(plan, "board.share")}
+              onClick={() => setPlanOpen(true)}
+              title="Account"
+              aria-label="Account"
             >
               <svg
                 aria-hidden
@@ -546,34 +573,75 @@ export default function TopBar() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <circle cx="18" cy="5" r="3" />
-                <circle cx="6" cy="12" r="3" />
-                <circle cx="18" cy="19" r="3" />
-                <path d="M8.6 10.7l6.8-3.9" />
-                <path d="M8.6 13.3l6.8 3.9" />
+                <path d="M20 21a8 8 0 0 0-16 0" />
+                <circle cx="12" cy="7" r="4" />
               </svg>
             </button>
+            <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+              Account
+            </span>
+          </div>
+          {activeBoard && authUser && !isSharedView && (
+            <div className="flex flex-col items-center gap-1">
+              <button
+                className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => setShareOpen(true)}
+                title={
+                  can(plan, "board.share")
+                    ? "Share board"
+                    : "Sharing is available on paid plans."
+                }
+                aria-label="Share board"
+                disabled={!can(plan, "board.share")}
+                data-locked={!can(plan, "board.share")}
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="18" cy="5" r="3" />
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="19" r="3" />
+                  <path d="M8.6 10.7l6.8-3.9" />
+                  <path d="M8.6 13.3l6.8 3.9" />
+                </svg>
+              </button>
+              <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+                Share
+              </span>
+            </div>
           )}
           {isSharedView && project.sharedMeta && (
-            <button
-              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-              onClick={() => setCommentsOpen(true)}
-              title="Comments"
-              aria-label="Comments"
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            <div className="flex flex-col items-center gap-1">
+              <button
+                className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => setCommentsOpen(true)}
+                title="Comments"
+                aria-label="Comments"
               >
-                <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
-              </svg>
-            </button>
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+                </svg>
+              </button>
+              <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+                Shared
+              </span>
+            </div>
           )}
           {process.env.NODE_ENV !== "production" && (
             <select
@@ -603,72 +671,87 @@ export default function TopBar() {
               </option>
             </select>
           )}
-          <button
-            className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={() => setSettingsOpen(true)}
-            title="Settings"
-            aria-label="Settings"
-          >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div className="flex flex-col items-center gap-1">
+            <button
+              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={() => setSettingsOpen(true)}
+              title="Settings"
+              aria-label="Settings"
             >
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
-            </svg>
-          </button>
-          <button
-            className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={onExport}
-            title={exportGate.allowed ? "Save" : exportGate.message}
-            aria-label="Save"
-            disabled={!can(plan, "project.export")}
-            data-locked={!can(plan, "project.export")}
-          >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+              </svg>
+            </button>
+            <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+              Settings
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <button
+              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={onExport}
+              title={exportGate.allowed ? "Save" : exportGate.message}
+              aria-label="Save"
+              disabled={!can(plan, "project.export")}
+              data-locked={!can(plan, "project.export")}
             >
-              <path d="M5 5h11l3 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
-              <path d="M7 5v6h8V5" />
-              <path d="M7 19v-6h10v6" />
-            </svg>
-          </button>
-          <button
-            className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={() => fileRef.current?.click()}
-            title={importGate.allowed ? "Load" : importGate.message}
-            aria-label="Load"
-            disabled={!can(plan, "project.import")}
-            data-locked={!can(plan, "project.import")}
-          >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M5 5h11l3 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
+                <path d="M7 5v6h8V5" />
+                <path d="M7 19v-6h10v6" />
+              </svg>
+            </button>
+            <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+              Save
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <button
+              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={() => fileRef.current?.click()}
+              title={importGate.allowed ? "Load" : importGate.message}
+              aria-label="Load"
+              disabled={!can(plan, "project.import")}
+              data-locked={!can(plan, "project.import")}
             >
-              <path d="M4 19V7a2 2 0 0 1 2-2h9l3 3v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
-              <path d="M12 10v6" />
-              <path d="M9 13l3 3 3-3" />
-            </svg>
-          </button>
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 19V7a2 2 0 0 1 2-2h9l3 3v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+                <path d="M12 10v6" />
+                <path d="M9 13l3 3 3-3" />
+              </svg>
+            </button>
+            <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+              Load
+            </span>
+          </div>
           <input
             ref={fileRef}
             type="file"

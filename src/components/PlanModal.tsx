@@ -305,6 +305,10 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
               Manage your plan and billing. Sign in to save and sync across
               devices.
             </p>
+            <p className="mt-2 text-[11px] text-[var(--ink-1)]">
+              Beta notice: this app is still in active development and may
+              contain bugs or missing features.
+            </p>
           </div>
           <button
             className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
@@ -438,12 +442,17 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
               return (
                 <div
                   key={tier}
-                  className={`flex h-full flex-col rounded-2xl border p-4 text-xs ${
+                  className={`relative flex h-full flex-col rounded-2xl border p-4 text-xs ${
                     isCurrent
                       ? "border-[var(--accent-0)] bg-[var(--panel-2)]"
                       : "border-[var(--line)] bg-[var(--panel)]/70"
                   }`}
                 >
+                  {tier === "PAID" && (
+                    <div className="absolute right-[-46px] top-4 z-10 w-40 -rotate-45 bg-[var(--accent-0)] py-1 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-black shadow-lg shadow-black/30">
+                      50% Off
+                    </div>
+                  )}
                   <p className="display-font text-lg text-[var(--ink-0)]">
                     {tier}
                   </p>
@@ -462,6 +471,9 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                           Charged in {priceInfo.currency.toUpperCase()}.
                         </p>
                       )}
+                      <p className="mt-2 text-[10px] text-[var(--ink-1)]">
+                        Early-bird beta price. Doubles once beta ends.
+                      </p>
                     </div>
                   )}
                   <ul className="mt-2 flex-1 space-y-2 text-[var(--ink-1)]">
