@@ -205,11 +205,20 @@ export default function BoardObject({
           />
         )}
         {isHighlighted && (
-          <Circle
-            radius={playerTokenSize + 1.6}
-            stroke="#f9bf4a"
-            strokeWidth={0.35}
-          />
+          <>
+            <Circle
+              radius={playerTokenSize + 1.6}
+              stroke="#111111"
+              strokeWidth={0.85}
+              dash={[1, 1]}
+            />
+            <Circle
+              radius={playerTokenSize + 1.6}
+              stroke="#ffffff"
+              strokeWidth={0.5}
+              dash={[1, 1]}
+            />
+          </>
         )}
         {isLinkCandidate && (
           <Circle

@@ -35,6 +35,7 @@ type EditorState = {
   attachBallToPlayer: boolean;
   loopPlayback: boolean;
   isLinkingPlayers: boolean;
+  isHighlighting: boolean;
   linkingPlayerIds: string[];
   selectedLinkId: string | null;
   past: DrawableObject[][];
@@ -51,6 +52,7 @@ type EditorState = {
   setAttachBallToPlayer: (value: boolean) => void;
   setLoopPlayback: (value: boolean) => void;
   setLinkingPlayers: (value: boolean) => void;
+  setHighlighting: (value: boolean) => void;
   addLinkingPlayer: (id: string) => void;
   clearLinkingPlayers: () => void;
   setSelectedLinkId: (id: string | null) => void;
@@ -90,6 +92,7 @@ export const useEditorStore = create<EditorState>()(
     attachBallToPlayer: false,
     loopPlayback: false,
     isLinkingPlayers: false,
+    isHighlighting: false,
     linkingPlayerIds: [],
     selectedLinkId: null,
     past: [],
@@ -155,6 +158,11 @@ export const useEditorStore = create<EditorState>()(
     setLinkingPlayers: (value) => {
       set((state) => {
         state.isLinkingPlayers = value;
+      });
+    },
+    setHighlighting: (value) => {
+      set((state) => {
+        state.isHighlighting = value;
       });
     },
     addLinkingPlayer: (id) => {

@@ -40,6 +40,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
   const setSelectedLinkId = useEditorStore(
     (state) => state.setSelectedLinkId
   );
+  const isHighlighting = useEditorStore((state) => state.isHighlighting);
   const viewport = useEditorStore((state) => state.viewport);
   const setViewport = useEditorStore((state) => state.setViewport);
   const pushHistory = useEditorStore((state) => state.pushHistory);
@@ -460,6 +461,14 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
 
   const handleSelect = (id: string, multi: boolean) => {
     setSelectedLinkId(null);
+    const target = objects.find((item) => item.id === id);
+    if (isHighlighting && target?.type === "player") {
+      const current = board.playerHighlights ?? [];
+      const next = current.includes(id)
+        ? current.filter((entry) => entry !== id)
+        : [...current, id];
+      updateBoard(board.id, { playerHighlights: next });
+    }
     if (multi) {
       setSelection(Array.from(new Set([...selection, id])));
     } else {

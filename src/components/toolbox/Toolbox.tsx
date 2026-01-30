@@ -216,6 +216,8 @@ export default function Toolbox() {
   const linkingPlayerIds = useEditorStore(
     (state) => state.linkingPlayerIds
   );
+  const isHighlighting = useEditorStore((state) => state.isHighlighting);
+  const setHighlighting = useEditorStore((state) => state.setHighlighting);
   const setLinkingPlayers = useEditorStore(
     (state) => state.setLinkingPlayers
   );
@@ -479,16 +481,7 @@ export default function Toolbox() {
   }, [showMarkdownHelp]);
 
   const handleToggleHighlights = () => {
-    if (!board || selectedPlayers.length === 0) {
-      return;
-    }
-    const current = board.playerHighlights ?? [];
-    const ids = selectedPlayers.map((player) => player.id);
-    const allHighlighted = ids.every((id) => current.includes(id));
-    const next = allHighlighted
-      ? current.filter((id) => !ids.includes(id))
-      : Array.from(new Set([...current, ...ids]));
-    updateBoard(board.id, { playerHighlights: next });
+    setHighlighting(!isHighlighting);
   };
 
   const toggleLinkMode = () => {
@@ -821,16 +814,19 @@ export default function Toolbox() {
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <button
-              className="flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+              className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition ${
+                isHighlighting
+                  ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                  : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+              }`}
               onClick={handleToggleHighlights}
-              disabled={selectedPlayers.length === 0}
             >
               <span className="mt-1">
                 <HighlightIcon />
               </span>
               <span className="text-xs font-semibold">Highlight</span>
               <span className="text-[10px] text-[var(--ink-1)]">
-                Toggle selected
+                {isHighlighting ? "Click players to toggle" : "Enable highlight"}
               </span>
             </button>
             <button
