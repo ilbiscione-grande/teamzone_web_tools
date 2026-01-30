@@ -344,6 +344,9 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
     handleMouseMove,
     handleMouseUp,
     handleDoubleClick,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
     handleTap,
     handleClick,
   } = useBoardInteractions({
@@ -482,6 +485,9 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onDblClick={handleDoubleClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         onTap={handleTap}
         onClick={handleClick}
       >

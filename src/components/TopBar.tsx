@@ -158,19 +158,20 @@ export default function TopBar() {
 
   return (
     <div
-      className={`grid items-center gap-4 rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-5 py-4 shadow-2xl shadow-black/40 ${
+      className={`relative grid items-center gap-4 rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-5 py-4 shadow-2xl shadow-black/40 ${
         showAds ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" : "grid-cols-1"
       }`}
     >
+      <button
+        className="absolute left-[-42px] top-2 z-30 h-6 w-44 -rotate-45 bg-[var(--accent-0)] text-[10px] font-semibold uppercase tracking-[0.4em] text-black shadow-lg shadow-black/30"
+        onClick={() => setBetaOpen(true)}
+        title="Beta notice"
+        aria-label="Beta notice"
+      >
+        Beta
+      </button>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <button
-            className="rounded-full border border-[var(--accent-1)] bg-[var(--panel-2)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-[var(--accent-1)] hover:border-[var(--accent-0)] hover:text-[var(--accent-0)]"
-            onClick={() => setBetaOpen(true)}
-            title="Beta notice"
-          >
-            Beta
-          </button>
           <div className="flex flex-col">
             <span
               className="display-font text-[12px] uppercase tracking-[0.4em] text-[var(--accent-0)]"

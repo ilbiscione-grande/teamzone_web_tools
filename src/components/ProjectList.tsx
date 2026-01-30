@@ -319,19 +319,19 @@ export default function ProjectList() {
             Create a new tactics project, resume from local storage, or import a
             JSON file.
           </p>
-          <div className="mt-4 rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-4 shadow-xl shadow-black/30">
+          <div className="mt-4 rounded-3xl border border-[var(--accent-0)]/60 bg-[var(--accent-0)]/90 p-4 text-black shadow-xl shadow-black/30">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.4em] text-[var(--accent-2)]">
+                <p className="text-[11px] uppercase tracking-[0.4em] text-black/70">
                   Beta notice
                 </p>
-                <p className="text-sm text-[var(--ink-0)]">
+                <p className="text-sm text-black">
                   This app is in beta and may contain bugs or incomplete
                   features. Please report issues so we can improve it quickly.
                 </p>
               </div>
               <button
-                className="rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                className="rounded-full border border-black/40 px-4 py-2 text-xs font-semibold text-black hover:border-black/70"
                 onClick={() => setBetaOpen(true)}
               >
                 Report a bug

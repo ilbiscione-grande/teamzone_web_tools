@@ -335,6 +335,80 @@ export const useBoardInteractions = ({
     }
   };
 
+  const handleTouchStart = (event: Konva.KonvaEventObject<TouchEvent>) => {
+    const stage = stageRef.current;
+    if (!stage) {
+      return;
+    }
+    const isStage = event.target === stage || event.target.getParent() === stage;
+    if (isStage) {
+      clearSelection();
+      if (readOnly) {
+        setIsPanning(true);
+        return;
+      }
+      if (!isShapeTool) {
+        setIsPanning(true);
+        return;
+      }
+    } else {
+      return;
+    }
+    const pointer = stage.getPointerPosition();
+    if (!pointer) {
+      return;
+    }
+    const world = stageToWorld(pointer);
+    event.evt.preventDefault();
+    if (activeTool === "circle") {
+      setDraft({ type: "circle", start: world, current: world, constrain: false });
+    }
+    if (activeTool === "rect") {
+      setDraft({ type: "rect", start: world, current: world, constrain: false });
+    }
+    if (activeTool === "triangle") {
+      setDraft({ type: "triangle", start: world, current: world, constrain: false });
+    }
+    if (isLineTool) {
+      setDraft({ type: "arrow", start: world, current: world, constrain: false });
+    }
+  };
+
+  const handleTouchMove = (event: Konva.KonvaEventObject<TouchEvent>) => {
+    if (!draft && !isPanning) {
+      return;
+    }
+    const stage = stageRef.current;
+    if (!stage) {
+      return;
+    }
+    const pointer = stage.getPointerPosition();
+    if (!pointer) {
+      return;
+    }
+    event.evt.preventDefault();
+    if (draft) {
+      setDraft({ ...draft, current: stageToWorld(pointer), constrain: false });
+      return;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (draft) {
+      commitDraft();
+    }
+    if (isPanning) {
+      const stage = stageRef.current;
+      if (stage) {
+        setViewport({
+          offsetX: stage.x() - baseOffsetX,
+          offsetY: stage.y() - baseOffsetY,
+        });
+      }
+      setIsPanning(false);
+    }
+  };
+
   const handleDoubleClick = () => {
     if (readOnly) {
       return;
@@ -435,6 +509,9 @@ export const useBoardInteractions = ({
     handleMouseMove,
     handleMouseUp,
     handleDoubleClick,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
     handleTap,
     handleClick,
   };
