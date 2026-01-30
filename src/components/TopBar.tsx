@@ -163,7 +163,7 @@ export default function TopBar() {
       }`}
     >
       <button
-        className="absolute left-[-42px] top-2 z-30 h-6 w-44 -rotate-45 bg-[var(--accent-0)] text-[10px] font-semibold uppercase tracking-[0.4em] text-black shadow-lg shadow-black/30"
+        className="absolute left-[-90px] top-[-18px] z-30 h-8 w-64 -rotate-45 bg-[var(--accent-0)] text-[10px] font-semibold uppercase tracking-[0.4em] text-black shadow-lg shadow-black/30"
         onClick={() => setBetaOpen(true)}
         title="Beta notice"
         aria-label="Beta notice"
