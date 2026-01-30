@@ -199,7 +199,13 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       return;
     }
 
-    if (!scrubbingRef.current && playheadFrame !== board.activeFrameIndex) {
+    const isWholeFrame =
+      Math.abs(playheadFrame - Math.round(playheadFrame)) < 0.001;
+    if (
+      !scrubbingRef.current &&
+      isWholeFrame &&
+      playheadFrame !== board.activeFrameIndex
+    ) {
       setPlayheadFrame(board.activeFrameIndex);
     }
   }, [

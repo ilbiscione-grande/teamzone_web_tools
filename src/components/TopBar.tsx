@@ -1016,6 +1016,14 @@ export default function TopBar() {
                   checked={hideBetaBanner}
                   onChange={(event) => {
                     const next = event.target.checked;
+                    if (next) {
+                      const confirmed = window.confirm(
+                        "I understand and accept that this app is in beta and may contain bugs, even if the banner is hidden."
+                      );
+                      if (!confirmed) {
+                        return;
+                      }
+                    }
                     setHideBetaBanner(next);
                     if (typeof window !== "undefined") {
                       window.localStorage.setItem(
