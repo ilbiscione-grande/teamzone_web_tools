@@ -52,6 +52,7 @@ export default function TopBar() {
   const [shareOpen, setShareOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [betaOpen, setBetaOpen] = useState(false);
+  const [hideBetaBanner, setHideBetaBanner] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
@@ -111,6 +112,14 @@ export default function TopBar() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const stored = window.localStorage.getItem("tacticsboard:hideBetaBanner");
+    setHideBetaBanner(stored === "true");
+  }, []);
+
   const activeBoardId = project.activeBoardId ?? project.boards[0]?.id;
   const activeBoard = project.boards.find(
     (board) => board.id === activeBoardId
@@ -162,14 +171,16 @@ export default function TopBar() {
         showAds ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" : "grid-cols-1"
       }`}
     >
-      <button
-        className="absolute left-[-90px] top-[-18px] z-30 flex h-8 w-64 -rotate-45 items-center justify-center bg-[var(--accent-0)] text-[10px] font-semibold uppercase leading-none tracking-[0.4em] text-black shadow-lg shadow-black/30"
-        onClick={() => setBetaOpen(true)}
-        title="Beta notice"
-        aria-label="Beta notice"
-      >
-        <span className="block w-full text-center">Beta</span>
-      </button>
+      {!hideBetaBanner && (
+        <button
+          className="absolute left-[-90px] top-[-18px] z-30 flex h-8 w-64 -rotate-45 items-center justify-center bg-[var(--accent-0)] text-[10px] font-semibold uppercase leading-none tracking-[0.4em] text-black shadow-lg shadow-black/30"
+          onClick={() => setBetaOpen(true)}
+          title="Beta notice"
+          aria-label="Beta notice"
+        >
+          <span className="block w-full -translate-x-1 text-center">Beta</span>
+        </button>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex flex-col">
@@ -997,6 +1008,23 @@ export default function TopBar() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="flex items-center justify-between rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px]">
+                <span>Hide beta banner</span>
+                <input
+                  type="checkbox"
+                  checked={hideBetaBanner}
+                  onChange={(event) => {
+                    const next = event.target.checked;
+                    setHideBetaBanner(next);
+                    if (typeof window !== "undefined") {
+                      window.localStorage.setItem(
+                        "tacticsboard:hideBetaBanner",
+                        next ? "true" : "false"
+                      );
+                    }
+                  }}
+                />
               </div>
             </div>
           </div>

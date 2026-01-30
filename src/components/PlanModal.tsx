@@ -446,10 +446,10 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                     isCurrent
                       ? "border-[var(--accent-0)] bg-[var(--panel-2)]"
                       : "border-[var(--line)] bg-[var(--panel)]/70"
-                  }`}
+                  } ${tier === "PAID" ? "overflow-hidden" : ""}`}
                 >
                   {tier === "PAID" && (
-                    <div className="absolute right-[-10px] top-[18px] z-10 w-40 rotate-45 bg-[var(--accent-0)] py-1 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-black shadow-lg shadow-black/30">
+                    <div className="absolute right-[-48px] top-[10px] z-10 w-48 rotate-45 bg-[var(--accent-0)] py-1 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-black shadow-lg shadow-black/30">
                       50% Off
                     </div>
                   )}
