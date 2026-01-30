@@ -88,7 +88,6 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       return;
     }
 
-    playStartRef.current = performance.now();
     const lastIndex = Math.max(0, board.frames.length - 1);
     const startIndex = Math.min(
       lastIndex,
@@ -98,10 +97,13 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     if (board.activeFrameIndex !== startIndex) {
       setActiveFrameIndex(board.id, startIndex);
     }
-    setPlayheadFrame(startIndex);
     const durations = board.frames.map((frame) =>
       frame.durationMs && frame.durationMs > 0 ? frame.durationMs : frameDurationMs
     );
+    const startFraction = Math.max(0, Math.min(1, playheadFrame - startIndex));
+    playStartRef.current =
+      performance.now() -
+      Math.max(0, durations[startIndex] * startFraction);
     const totalDuration = durations
       .slice(startIndex, lastIndex + 1)
       .reduce((sum, value) => sum + value, 0);
