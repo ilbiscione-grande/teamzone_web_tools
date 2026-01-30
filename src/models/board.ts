@@ -1,4 +1,4 @@
-import type { DrawableObject } from "./drawables";
+import type { DrawableObject, Style } from "./drawables";
 
 export type BoardMode = "STATIC" | "DYNAMIC";
 export type PitchView = "FULL" | "DEF_HALF" | "OFF_HALF" | "GREEN_EMPTY";
@@ -16,6 +16,7 @@ export type BoardFrame = {
 export type PlayerLink = {
   id: string;
   playerIds: string[];
+  style?: Style;
 };
 
 export type Board = {

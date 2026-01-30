@@ -32,6 +32,7 @@ export default function PropertiesPanel() {
   const removeObject = useProjectStore((state) => state.removeObject);
   const addObject = useProjectStore((state) => state.addObject);
   const updateSquadPlayer = useProjectStore((state) => state.updateSquadPlayer);
+  const updateBoard = useProjectStore((state) => state.updateBoard);
   const pushHistory = useEditorStore((state) => state.pushHistory);
   const selection = useEditorStore((state) => state.selection);
   const selectedLinkId = useEditorStore((state) => state.selectedLinkId);
@@ -49,6 +50,15 @@ export default function PropertiesPanel() {
   const selectedLink = board?.playerLinks?.find(
     (link) => link.id === selectedLinkId
   );
+  const selectedLinkStyle = selectedLink?.style ?? {
+    stroke: "#f9bf4a",
+    strokeWidth: 0.5,
+    fill: "transparent",
+    dash: [],
+    opacity: 1,
+    outlineStroke: "#111111",
+    outlineWidth: 0.35,
+  };
 
   if (!board) {
     return null;
@@ -96,9 +106,18 @@ export default function PropertiesPanel() {
       (link) => link.id !== selectedLinkId
     );
     useEditorStore.getState().setSelectedLinkId(null);
-    useProjectStore.getState().updateBoard(board.id, {
-      playerLinks: nextLinks,
-    });
+    updateBoard(board.id, { playerLinks: nextLinks });
+  };
+  const updateLinkStyle = (payload: Partial<typeof selectedLinkStyle>) => {
+    if (!board || !selectedLink) {
+      return;
+    }
+    const nextLinks = (board.playerLinks ?? []).map((link) =>
+      link.id === selectedLink.id
+        ? { ...link, style: { ...selectedLinkStyle, ...payload } }
+        : link
+    );
+    updateBoard(board.id, { playerLinks: nextLinks });
   };
 
   const copyPlayerPositions = (direction: "prev" | "next") => {
@@ -212,7 +231,43 @@ export default function PropertiesPanel() {
               <p className="text-[11px] uppercase text-[var(--ink-1)]">
                 Link line
               </p>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="space-y-1">
+                  <span className="text-[11px]">Stroke</span>
+                  <input
+                    type="color"
+                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                    value={selectedLinkStyle.stroke}
+                    onChange={(event) =>
+                      updateLinkStyle({ stroke: event.target.value })
+                    }
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[11px]">Outline</span>
+                  <input
+                    type="color"
+                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                    value={selectedLinkStyle.outlineStroke ?? "#111111"}
+                    onChange={(event) =>
+                      updateLinkStyle({ outlineStroke: event.target.value })
+                    }
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[11px]">Stroke Width</span>
+                  {numberField(selectedLinkStyle.strokeWidth, (value) =>
+                    updateLinkStyle({ strokeWidth: value })
+                  )}
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[11px]">Outline Width</span>
+                  {numberField(selectedLinkStyle.outlineWidth ?? 0, (value) =>
+                    updateLinkStyle({ outlineWidth: value })
+                  )}
+                </label>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
                   onClick={handleDeleteLink}

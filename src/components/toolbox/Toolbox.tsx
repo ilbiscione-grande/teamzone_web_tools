@@ -499,7 +499,19 @@ export default function Toolbox() {
       if (linkingPlayerIds.length >= 2) {
         const nextLinks = [
           ...(board.playerLinks ?? []),
-          { id: createId(), playerIds: [...linkingPlayerIds] },
+          {
+            id: createId(),
+            playerIds: [...linkingPlayerIds],
+            style: {
+              stroke: "#f9bf4a",
+              strokeWidth: 0.5,
+              fill: "transparent",
+              dash: [],
+              opacity: 1,
+              outlineStroke: "#111111",
+              outlineWidth: 0.35,
+            },
+          },
         ];
         updateBoard(board.id, { playerLinks: nextLinks });
       }

@@ -537,24 +537,49 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                 return null;
               }
               const isSelectedLink = selectedLinkId === link.id;
+              const style = link.style ?? {
+                stroke: "#f9bf4a",
+                strokeWidth: 0.5,
+                fill: "transparent",
+                dash: [],
+                opacity: 1,
+                outlineStroke: "#111111",
+                outlineWidth: 0.35,
+              };
+              const strokeWidth = style.strokeWidth + (isSelectedLink ? 0.1 : 0);
+              const outlineWidth = style.outlineWidth ?? 0;
+              const outlineStroke = style.outlineStroke;
               return (
-                <Line
-                  key={link.id}
-                  points={points.flatMap((point) => [point.x, point.y])}
-                  stroke={
-                    isSelectedLink
-                      ? "var(--accent-2)"
-                      : "rgba(255,255,255,0.55)"
-                  }
-                  strokeWidth={isSelectedLink ? 0.5 : 0.3}
-                  lineCap="round"
-                  lineJoin="round"
-                  onClick={(event) => {
-                    event.cancelBubble = true;
-                    setSelection([]);
-                    setSelectedLinkId(link.id);
-                  }}
-                />
+                <Group key={link.id}>
+                  {outlineStroke && outlineWidth > 0 && (
+                    <Line
+                      points={points.flatMap((point) => [point.x, point.y])}
+                      stroke={outlineStroke}
+                      strokeWidth={strokeWidth + outlineWidth * 2}
+                      lineCap="round"
+                      lineJoin="round"
+                      listening={false}
+                    />
+                  )}
+                  <Line
+                    points={points.flatMap((point) => [point.x, point.y])}
+                    stroke={style.stroke}
+                    strokeWidth={strokeWidth}
+                    opacity={style.opacity}
+                    lineCap="round"
+                    lineJoin="round"
+                    onClick={(event) => {
+                      event.cancelBubble = true;
+                      setSelection([]);
+                      setSelectedLinkId(link.id);
+                    }}
+                    onTap={(event) => {
+                      event.cancelBubble = true;
+                      setSelection([]);
+                      setSelectedLinkId(link.id);
+                    }}
+                  />
+                </Group>
               );
             })}
             {sortedObjects.map((object) => (
