@@ -63,6 +63,7 @@ export const createEmptyBoard = (
       objects: [],
       action: "",
       notes: "",
+      durationMs: 0,
     },
   ],
   activeFrameIndex: 0,

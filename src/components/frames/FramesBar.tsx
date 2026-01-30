@@ -88,7 +88,6 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       return;
     }
 
-    const frameDuration = frameDurationMs;
     playStartRef.current = performance.now();
     const lastIndex = Math.max(0, board.frames.length - 1);
     const startIndex = Math.min(
@@ -100,31 +99,43 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       setActiveFrameIndex(board.id, startIndex);
     }
     setPlayheadFrame(startIndex);
+    const durations = board.frames.map((frame) =>
+      frame.durationMs && frame.durationMs > 0 ? frame.durationMs : frameDurationMs
+    );
+    const totalDuration = durations
+      .slice(startIndex, lastIndex + 1)
+      .reduce((sum, value) => sum + value, 0);
+    const resolvePlayhead = (elapsedMs: number) => {
+      let acc = 0;
+      for (let index = startIndex; index <= lastIndex; index += 1) {
+        const segment = durations[index];
+        if (elapsedMs <= acc + segment || index === lastIndex) {
+          const t = segment > 0 ? (elapsedMs - acc) / segment : 0;
+          return {
+            playhead: index + Math.max(0, Math.min(1, t)),
+            index,
+          };
+        }
+        acc += segment;
+      }
+      return { playhead: lastIndex, index: lastIndex };
+    };
     const tick = (now: number) => {
       if (!playStartRef.current) {
         playStartRef.current = now;
       }
       const elapsed = now - playStartRef.current;
-      const framesElapsed = elapsed / frameDuration;
-      const lastIndex = board.frames.length - 1;
-      const startIndex = playOriginRef.current;
-      const totalFrames = lastIndex - startIndex + 1;
-
-      if (!loopPlayback && framesElapsed >= totalFrames) {
+      const total = Math.max(totalDuration, 1);
+      if (!loopPlayback && elapsed >= total) {
         setPlaying(false);
         setActiveFrameIndex(board.id, lastIndex);
         setPlayheadFrame(lastIndex);
         return;
       }
-
-      let nextPlayhead = startIndex + framesElapsed;
-      if (loopPlayback) {
-        nextPlayhead = nextPlayhead % board.frames.length;
-      } else {
-        nextPlayhead = Math.min(nextPlayhead, lastIndex);
-      }
-      setPlayheadFrame(nextPlayhead);
-      const nextIndex = Math.floor(nextPlayhead);
+      const elapsedCycle = loopPlayback ? elapsed % total : Math.min(elapsed, total);
+      const { playhead, index } = resolvePlayhead(elapsedCycle);
+      setPlayheadFrame(playhead);
+      const nextIndex = index;
       if (nextIndex !== board.activeFrameIndex) {
         tickingRef.current = true;
         setActiveFrameIndex(board.id, nextIndex);
@@ -142,7 +153,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     isPlaying,
     frameDurationMs,
     loopPlayback,
-    board.frames.length,
+    board.frames,
     board.id,
     setActiveFrameIndex,
     setPlayheadFrame,

@@ -10,6 +10,7 @@ export type BoardFrame = {
   objects: DrawableObject[];
   action?: string;
   notes?: string;
+  durationMs?: number;
 };
 
 export type PlayerLink = {

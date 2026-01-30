@@ -31,6 +31,7 @@ const createFrame = (
   objects,
   action: "",
   notes: "",
+  durationMs: 0,
 });
 
 const createBoard = (

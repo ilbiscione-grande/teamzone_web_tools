@@ -1335,6 +1335,32 @@ export default function Toolbox() {
                 }
               />
             </label>
+            <label className="space-y-1">
+              <span className="text-[11px]">Duration (sec)</span>
+              <input
+                type="number"
+                min={0}
+                step={0.1}
+                className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                value={
+                  activeFrame.durationMs
+                    ? String(activeFrame.durationMs / 1000)
+                    : "0"
+                }
+                onChange={(event) => {
+                  const nextSeconds = Number(event.target.value);
+                  if (Number.isNaN(nextSeconds)) {
+                    return;
+                  }
+                  updateFrameMeta({
+                    durationMs: Math.max(0, nextSeconds) * 1000,
+                  });
+                }}
+              />
+              <span className="text-[10px] text-[var(--ink-1)]">
+                Use 0 to keep the default playback speed.
+              </span>
+            </label>
           </div>
         </div>
       )}
