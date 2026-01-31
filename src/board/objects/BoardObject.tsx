@@ -138,22 +138,29 @@ export default function BoardObject({
     const positionLabel = squadPlayer?.positionLabel
       ? squadPlayer.positionLabel.slice(0, 3).toUpperCase()
       : "";
-    const circleText =
-      showPlayerNumber && squadPlayer?.number
+    const hasLabel = showPlayerName || showPlayerPosition || showPlayerNumber;
+    const circleText = !hasLabel
+      ? ""
+      : showPlayerNumber && squadPlayer?.number
         ? String(squadPlayer.number)
         : showPlayerPosition && positionLabel
           ? positionLabel
           : initials;
     const circleFontSize = playerTokenSize * 0.9;
-    const belowText = showPlayerNumber
-      ? [showPlayerPosition ? positionLabel : "", showPlayerName ? squadPlayer?.name : ""]
-          .filter(Boolean)
-          .join(" • ")
-      : showPlayerPosition
-        ? showPlayerName && squadPlayer?.name
-          ? squadPlayer.name
-          : ""
-        : "";
+    const belowText = !hasLabel
+      ? ""
+      : showPlayerNumber
+        ? [
+            showPlayerPosition ? positionLabel : "",
+            showPlayerName ? squadPlayer?.name : "",
+          ]
+            .filter(Boolean)
+            .join(" • ")
+        : showPlayerPosition
+          ? showPlayerName && squadPlayer?.name
+            ? squadPlayer.name
+            : ""
+          : "";
     const textColor = (() => {
       const hex = fillColor.startsWith("#") ? fillColor.slice(1) : "";
       if (hex.length === 6) {
@@ -270,20 +277,22 @@ export default function BoardObject({
             />
           </Group>
         )}
-        <Group rotation={labelRotation}>
-          <Text
-            text={circleText}
-            width={circleTextSize}
-            height={circleTextSize}
-            x={-circleTextSize / 2}
-            y={-circleTextSize / 2}
-            align="center"
-            verticalAlign="middle"
-            fontSize={circleFontSize}
-            fill={textColor}
-            fontStyle="bold"
-          />
-        </Group>
+        {hasLabel && (
+          <Group rotation={labelRotation}>
+            <Text
+              text={circleText}
+              width={circleTextSize}
+              height={circleTextSize}
+              x={-circleTextSize / 2}
+              y={-circleTextSize / 2}
+              align="center"
+              verticalAlign="middle"
+              fontSize={circleFontSize}
+              fill={textColor}
+              fontStyle="bold"
+            />
+          </Group>
+        )}
         {belowText && (
           <Group
             rotation={labelRotation}
