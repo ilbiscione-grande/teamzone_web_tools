@@ -89,6 +89,7 @@ export default function ProjectList() {
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [shareSending, setShareSending] = useState(false);
   const [shareBoardIds, setShareBoardIds] = useState<string[]>([]);
+  const [publicProjectBoardIds, setPublicProjectBoardIds] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -255,6 +256,10 @@ export default function ProjectList() {
       setPublicProjectStatus("Enter a title.");
       return;
     }
+    if (publicProjectBoardIds.length === 0) {
+      setPublicProjectStatus("Select at least one board to publish.");
+      return;
+    }
     let projectToPublish = loadProject(publicProjectId, authUser.id);
     if (!projectToPublish && navigator.onLine) {
       projectToPublish = await fetchProjectCloud(publicProjectId);
@@ -263,13 +268,24 @@ export default function ProjectList() {
       setPublicProjectStatus("Project not available.");
       return;
     }
+    const boardsToPublish = projectToPublish.boards.filter((board) =>
+      publicProjectBoardIds.includes(board.id)
+    );
+    if (boardsToPublish.length === 0) {
+      setPublicProjectStatus("No selected boards available.");
+      return;
+    }
+    const payloadProject = clone(projectToPublish);
+    payloadProject.boards = boardsToPublish;
+    payloadProject.activeBoardId =
+      boardsToPublish[0]?.id ?? payloadProject.activeBoardId;
     setPublicProjectLoading(true);
     const tags = publicProjectTags
       .split(",")
       .map((tag) => tag.trim())
       .filter(Boolean);
     const result = await publishPublicProject({
-      project: projectToPublish,
+      project: payloadProject,
       title: publicProjectTitle.trim(),
       description: publicProjectDescription.trim(),
       tags,
@@ -392,6 +408,9 @@ export default function ProjectList() {
     setShareProjectMode("user");
     const fallbackProject = loadProject(projectId, authUser?.id ?? null);
     setShareBoardIds(fallbackProject?.boards.map((board) => board.id) ?? []);
+    setPublicProjectBoardIds(
+      fallbackProject?.boards.map((board) => board.id) ?? []
+    );
     setShareProjectOpen(true);
     void openPublicProject(projectId);
   };
@@ -1142,6 +1161,43 @@ export default function ProjectList() {
                 </>
               ) : (
                 <>
+                  <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                    <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Boards to publish</p>
+                    {(() => {
+                      const projectToPublish = shareProjectId
+                        ? loadProject(shareProjectId, authUser?.id ?? null) ??
+                          (project?.id === shareProjectId ? project : null)
+                        : null;
+                      const boards = projectToPublish?.boards ?? [];
+                      if (boards.length === 0) {
+                        return (
+                          <p className="text-xs text-[var(--ink-1)]">No boards available.</p>
+                        );
+                      }
+                      return boards.map((board) => {
+                        const checked = publicProjectBoardIds.includes(board.id);
+                        return (
+                          <label
+                            key={board.id}
+                            className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"
+                          >
+                            <span className="text-[var(--ink-0)]">{board.name}</span>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(event) => {
+                                setPublicProjectBoardIds((prev) =>
+                                  event.target.checked
+                                    ? [...prev, board.id]
+                                    : prev.filter((id) => id !== board.id)
+                                );
+                              }}
+                            />
+                          </label>
+                        );
+                      });
+                    })()}
+                  </div>
                   <input
                     className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                     placeholder="Title"
