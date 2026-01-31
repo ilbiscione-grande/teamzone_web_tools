@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { deserializeProject } from "@/persistence/serialize";
 import { loadProject, saveProject } from "@/persistence/storage";
-import type { BoardShare, BoardSharePermission, Project } from "@/models";
+import type {
+  BoardShare,
+  BoardSharePermission,
+  Project,
+  PublicProject,
+} from "@/models";
 import { can, getPlanLimits } from "@/utils/plan";
 import { createId } from "@/utils/id";
 import { clone } from "@/utils/clone";
