@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { DrawableObject } from "@/models";
-import type Konva from "konva";
 
 export type Tool =
   | "player"
@@ -28,7 +27,6 @@ type EditorState = {
   selection: string[];
   viewport: Viewport;
   isPlaying: boolean;
-  stage: Konva.Stage | null;
   playerTokenSize: number;
   playerSide: "home" | "away";
   frameDurationMs: number;
@@ -46,7 +44,6 @@ type EditorState = {
   setSelection: (ids: string[]) => void;
   setViewport: (viewport: Partial<Viewport>) => void;
   setPlaying: (playing: boolean) => void;
-  setStage: (stage: Konva.Stage | null) => void;
   setPlayerTokenSize: (size: number) => void;
   setPlayerSide: (side: "home" | "away") => void;
   setFrameDurationMs: (value: number) => void;
@@ -87,7 +84,6 @@ export const useEditorStore = create<EditorState>()(
       offsetY: 0,
     },
     isPlaying: false,
-    stage: null,
     playerTokenSize: loadPlayerTokenSize(),
     playerSide: "home",
     frameDurationMs: 700,
@@ -119,11 +115,6 @@ export const useEditorStore = create<EditorState>()(
     setPlaying: (playing) => {
       set((state) => {
         state.isPlaying = playing;
-      });
-    },
-    setStage: (stage) => {
-      set((state) => {
-        state.stage = stage;
       });
     },
     setPlayerTokenSize: (size) => {

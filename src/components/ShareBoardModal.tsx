@@ -23,6 +23,7 @@ import {
 } from "@/persistence/publicLibrary";
 import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { useEditorStore } from "@/state/useEditorStore";
+import { getStageRef } from "@/utils/stageRef";
 
 type ShareBoardModalProps = {
   open: boolean;
@@ -39,7 +40,6 @@ export default function ShareBoardModal({
 }: ShareBoardModalProps) {
   const plan = useProjectStore((state) => state.plan);
   const authUser = useProjectStore((state) => state.authUser);
-  const stage = useEditorStore((state) => state.stage);
   const [recipientEmail, setRecipientEmail] = useState("");
   const [permission, setPermission] = useState<BoardSharePermission>("comment");
   const [status, setStatus] = useState<string | null>(null);
@@ -67,6 +67,7 @@ export default function ShareBoardModal({
   );
 
   const captureThumbnail = async () => {
+    const stage = getStageRef();
     if (!stage) {
       return null;
     }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type Konva from "konva";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
+import { setStageRef } from "@/utils/stageRef";
 import BoardCanvas from "@/board/BoardCanvas";
 import Toolbox from "@/components/toolbox/Toolbox";
 import PropertiesPanel from "@/components/panels/PropertiesPanel";
@@ -22,7 +23,6 @@ export default function EditorLayout() {
   const setAttachBallToPlayer = useEditorStore(
     (state) => state.setAttachBallToPlayer
   );
-  const setStageStore = useEditorStore((state) => state.setStage);
   const [stage, setStage] = useState<Konva.Stage | null>(null);
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export default function EditorLayout() {
               board={board}
               onStageReady={(nextStage) => {
                 setStage(nextStage);
-                setStageStore(nextStage);
+                setStageRef(nextStage);
               }}
             />
           </div>
