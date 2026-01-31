@@ -1,6 +1,6 @@
 import type { StateCreator } from "zustand";
 import type { ProjectActions, ProjectStore } from "./types";
-import type { Board, BoardFrame } from "@/models";
+import type { Board, BoardFrame, SharedBoardSnapshot } from "@/models";
 import { createId } from "@/utils/id";
 import {
   createEmptyBoard,
@@ -14,6 +14,7 @@ type BoardActionSlice = Pick<
   ProjectActions,
   | "setActiveBoard"
   | "addBoard"
+  | "addBoardFromSnapshot"
   | "updateBoard"
   | "setBoardNotes"
   | "setBoardPitchView"
@@ -79,6 +80,67 @@ export const createBoardActions: StateCreator<
       const board = createEmptyBoard(name, { homeSquadId, awaySquadId });
       state.project.boards.push(board);
       state.project.activeBoardId = board.id;
+      state.project.updatedAt = new Date().toISOString();
+    });
+  },
+  addBoardFromSnapshot: (snapshot, nameOverride) => {
+    set((state) => {
+      if (!state.project) {
+        return;
+      }
+      if (state.project.isShared) {
+        return;
+      }
+      const limits = getPlanLimits(state.plan);
+      if (state.project.boards.length >= limits.maxBoards) {
+        window.alert("Board limit reached for this plan.");
+        return;
+      }
+      const squadIdMap = new Map<string, string>();
+      const playerIdMap = new Map<string, string>();
+      const clonedSquads = (snapshot.squads ?? []).map((squad) => {
+        const nextSquadId = createId();
+        squadIdMap.set(squad.id, nextSquadId);
+        const players = squad.players.map((player) => {
+          const nextPlayerId = createId();
+          playerIdMap.set(player.id, nextPlayerId);
+          return { ...player, id: nextPlayerId };
+        });
+        return { ...squad, id: nextSquadId, players };
+      });
+      const clonedBoard = JSON.parse(
+        JSON.stringify(snapshot.board)
+      ) as Board;
+      clonedBoard.id = createId();
+      clonedBoard.name = nameOverride ?? snapshot.board.name;
+      clonedBoard.homeSquadId = snapshot.board.homeSquadId
+        ? squadIdMap.get(snapshot.board.homeSquadId)
+        : undefined;
+      clonedBoard.awaySquadId = snapshot.board.awaySquadId
+        ? squadIdMap.get(snapshot.board.awaySquadId)
+        : undefined;
+      clonedBoard.frames = clonedBoard.frames.map((frame) => ({
+        ...frame,
+        id: createId(),
+        objects: frame.objects.map((item) => {
+          if (item.type === "player" && item.squadPlayerId) {
+            return {
+              ...item,
+              squadPlayerId: playerIdMap.get(item.squadPlayerId),
+            };
+          }
+          return item;
+        }),
+      }));
+      clonedBoard.activeFrameIndex = Math.min(
+        clonedBoard.activeFrameIndex ?? 0,
+        clonedBoard.frames.length - 1
+      );
+      clonedBoard.layers =
+        clonedBoard.frames[clonedBoard.activeFrameIndex]?.objects ?? [];
+      state.project.squads.push(...clonedSquads);
+      state.project.boards.push(clonedBoard);
+      state.project.activeBoardId = clonedBoard.id;
       state.project.updatedAt = new Date().toISOString();
     });
   },

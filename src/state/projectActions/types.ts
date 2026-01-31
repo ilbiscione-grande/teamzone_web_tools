@@ -8,6 +8,7 @@ import type {
   SquadPlayer,
   AuthUser,
   BoardShare,
+  SharedBoardSnapshot,
 } from "@/models";
 
 export type ProjectStateSlice = {
@@ -47,6 +48,10 @@ export type ProjectActions = {
   updateProjectMeta: (payload: Partial<Project>) => void;
   setActiveBoard: (boardId: string) => void;
   addBoard: (name: string) => void;
+  addBoardFromSnapshot: (
+    snapshot: SharedBoardSnapshot,
+    nameOverride?: string
+  ) => void;
   updateBoard: (boardId: string, payload: Partial<Board>) => void;
   setBoardNotes: (boardId: string, notes: string) => void;
   setBoardPitchView: (boardId: string, pitchView: Board["pitchView"]) => void;

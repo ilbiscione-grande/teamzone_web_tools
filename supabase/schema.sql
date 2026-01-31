@@ -76,6 +76,75 @@ insert into public.profiles (id, plan)
 select id, 'FREE' from auth.users
 on conflict (id) do nothing;
 
+create table if not exists public_boards (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  owner_email text not null,
+  board_id text not null,
+  board_name text not null,
+  project_name text not null,
+  title text not null,
+  description text,
+  tags text[] not null default '{}',
+  formation text,
+  status text not null default 'unverified',
+  board_data jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists public_boards_owner_board_idx
+on public_boards(owner_id, board_id);
+
+create index if not exists public_boards_status_idx on public_boards(status);
+
+alter table public_boards enable row level security;
+
+drop policy if exists "Public boards are viewable" on public_boards;
+drop policy if exists "Users can publish boards" on public_boards;
+drop policy if exists "Users can update their public boards" on public_boards;
+drop policy if exists "Users can delete their public boards" on public_boards;
+
+create policy "Public boards are viewable"
+on public_boards
+for select
+using (
+  status in ('verified','reviewed') or auth.uid() = owner_id
+);
+
+create policy "Users can publish boards"
+on public_boards
+for insert
+with check (auth.uid() = owner_id);
+
+create policy "Users can update their public boards"
+on public_boards
+for update
+using (auth.uid() = owner_id);
+
+create policy "Users can delete their public boards"
+on public_boards
+for delete
+using (auth.uid() = owner_id);
+
+create table if not exists public_board_reports (
+  id uuid primary key default gen_random_uuid(),
+  board_id uuid not null references public_boards(id) on delete cascade,
+  reporter_id uuid not null references auth.users(id) on delete cascade,
+  reporter_email text not null,
+  reason text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public_board_reports enable row level security;
+
+drop policy if exists "Users can report public boards" on public_board_reports;
+
+create policy "Users can report public boards"
+on public_board_reports
+for insert
+with check (auth.uid() = reporter_id);
+
 create table if not exists bug_reports (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
