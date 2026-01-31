@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { deserializeProject } from "@/persistence/serialize";
 import { loadProject, saveProject } from "@/persistence/storage";
-import type { BoardShare, Project } from "@/models";
+import type { BoardShare, BoardSharePermission, Project } from "@/models";
 import { can, getPlanLimits } from "@/utils/plan";
 import AdBanner from "@/components/AdBanner";
 import PlanModal from "@/components/PlanModal";
 import BetaNoticeModal from "@/components/BetaNoticeModal";
+import { fetchProjectCloud } from "@/persistence/cloud";
 import {
+  createBoardShare,
   fetchLatestCommentsForShares,
   fetchSharedBoards,
   fetchSharesByOwner,
@@ -51,6 +53,13 @@ export default function ProjectList() {
   const [sharedByMe, setSharedByMe] = useState<BoardShare[]>([]);
   const [sharedByMeLoading, setSharedByMeLoading] = useState(false);
   const [sharedByMeError, setSharedByMeError] = useState<string | null>(null);
+  const [shareProjectOpen, setShareProjectOpen] = useState(false);
+  const [shareProjectId, setShareProjectId] = useState<string | null>(null);
+  const [shareRecipient, setShareRecipient] = useState("");
+  const [sharePermission, setSharePermission] =
+    useState<BoardSharePermission>("comment");
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [shareSending, setShareSending] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -235,6 +244,71 @@ export default function ProjectList() {
     }
     openProject(project.id);
     setError(null);
+  };
+
+  const openProjectShare = (projectId: string) => {
+    setShareProjectId(projectId);
+    setShareRecipient("");
+    setSharePermission("comment");
+    setShareStatus(null);
+    setShareProjectOpen(true);
+  };
+
+  const onShareProject = async () => {
+    if (!can(plan, "board.share")) {
+      setShareStatus("Sharing is available on paid plans only.");
+      return;
+    }
+    if (!authUser) {
+      setShareStatus("Please sign in to share.");
+      return;
+    }
+    if (!shareProjectId) {
+      setShareStatus("Choose a project to share.");
+      return;
+    }
+    const email = shareRecipient.trim();
+    if (!email) {
+      setShareStatus("Enter a recipient email.");
+      return;
+    }
+    setShareSending(true);
+    setShareStatus(null);
+    let projectToShare = loadProject(shareProjectId, authUser.id);
+    if (!projectToShare && navigator.onLine) {
+      projectToShare = await fetchProjectCloud(shareProjectId);
+    }
+    if (!projectToShare) {
+      setShareStatus("Project not available.");
+      setShareSending(false);
+      return;
+    }
+    if (projectToShare.boards.length === 0) {
+      setShareStatus("This project has no boards to share.");
+      setShareSending(false);
+      return;
+    }
+    const results = await Promise.all(
+      projectToShare.boards.map((board) =>
+        createBoardShare({
+          project: projectToShare,
+          board,
+          recipientEmail: email,
+          permission: sharePermission,
+        })
+      )
+    );
+    const failures = results.filter((result) => !result.ok);
+    if (failures.length > 0) {
+      setShareStatus(
+        `Shared ${results.length - failures.length}/${
+          results.length
+        } boards. ${failures[0].error}`
+      );
+    } else {
+      setShareStatus(`Shared ${results.length} boards.`);
+    }
+    setShareSending(false);
   };
 
   return (
@@ -562,6 +636,19 @@ export default function ProjectList() {
                         Open
                       </button>
                       <button
+                        className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        onClick={() => openProjectShare(project.id)}
+                        disabled={!can(plan, "board.share")}
+                        data-locked={!can(plan, "board.share")}
+                        title={
+                          can(plan, "board.share")
+                            ? "Share project boards"
+                            : "Sharing is available on paid plans."
+                        }
+                      >
+                        Share
+                      </button>
+                      <button
                         className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
                         onClick={() => {
                           if (
@@ -712,6 +799,56 @@ export default function ProjectList() {
         onClose={() => setBetaOpen(false)}
         context="console"
       />
+      {shareProjectOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="w-full max-w-lg rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="display-font text-xl text-[var(--accent-0)]">
+                  Share project
+                </h2>
+                <p className="text-xs text-[var(--ink-1)]">
+                  Share all boards from this project with another user.
+                </p>
+              </div>
+              <button
+                className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                onClick={() => setShareProjectOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              <input
+                className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                placeholder="Recipient email"
+                value={shareRecipient}
+                onChange={(event) => setShareRecipient(event.target.value)}
+              />
+              <select
+                className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                value={sharePermission}
+                onChange={(event) =>
+                  setSharePermission(event.target.value as BoardSharePermission)
+                }
+              >
+                <option value="comment">Comment</option>
+                <option value="view">View only</option>
+              </select>
+              <button
+                className="h-10 w-full rounded-full bg-[var(--accent-0)] px-5 text-xs font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+                onClick={onShareProject}
+                disabled={shareSending}
+              >
+                {shareSending ? "Sharing..." : "Share boards"}
+              </button>
+              {shareStatus ? (
+                <p className="text-xs text-[var(--accent-1)]">{shareStatus}</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

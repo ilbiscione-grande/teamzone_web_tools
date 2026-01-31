@@ -25,7 +25,7 @@ export const lockedMessage: Record<Capability, string> = {
 
 const planCapabilities: Record<Plan, Set<Capability>> = {
   FREE: new Set([]),
-  AUTH: new Set(["project.save", "board.share", "board.comment"]),
+  AUTH: new Set(["project.save"]),
   PAID: new Set([
     "project.save",
     "project.export",
