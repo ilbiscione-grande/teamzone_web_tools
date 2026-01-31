@@ -71,7 +71,6 @@ export default function ProjectList() {
   const [publicProjects, setPublicProjects] = useState<PublicProject[]>([]);
   const [publicProjectsLoading, setPublicProjectsLoading] = useState(false);
   const [publicProjectsError, setPublicProjectsError] = useState<string | null>(null);
-  const [publicProjectOpen, setPublicProjectOpen] = useState(false);
   const [publicProjectId, setPublicProjectId] = useState<string | null>(null);
   const [publicProjectEntry, setPublicProjectEntry] = useState<PublicProject | null>(null);
   const [publicProjectTitle, setPublicProjectTitle] = useState("");
@@ -81,6 +80,9 @@ export default function ProjectList() {
   const [publicProjectLoading, setPublicProjectLoading] = useState(false);
   const [shareProjectOpen, setShareProjectOpen] = useState(false);
   const [shareProjectId, setShareProjectId] = useState<string | null>(null);
+  const [shareProjectMode, setShareProjectMode] = useState<"user" | "public">(
+    "user"
+  );
   const [shareRecipient, setShareRecipient] = useState("");
   const [sharePermission, setSharePermission] =
     useState<BoardSharePermission>("comment");
@@ -219,7 +221,6 @@ export default function ProjectList() {
     setPublicProjectTags("");
     setPublicProjectStatus(null);
     setPublicProjectEntry(null);
-    setPublicProjectOpen(true);
     if (!authUser) {
       setPublicProjectLoading(false);
       return;
@@ -388,9 +389,11 @@ export default function ProjectList() {
     setShareRecipient("");
     setSharePermission("comment");
     setShareStatus(null);
+    setShareProjectMode("user");
     const fallbackProject = loadProject(projectId, authUser?.id ?? null);
     setShareBoardIds(fallbackProject?.boards.map((board) => board.id) ?? []);
     setShareProjectOpen(true);
+    void openPublicProject(projectId);
   };
 
   const onShareProject = async () => {
@@ -784,19 +787,6 @@ export default function ProjectList() {
                       </button>
                       <button
                         className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                        onClick={() => openPublicProject(project.id)}
-                        disabled={!can(plan, "board.share")}
-                        data-locked={!can(plan, "board.share")}
-                        title={
-                          can(plan, "board.share")
-                            ? "Publish to project library"
-                            : "Publishing is available on paid plans."
-                        }
-                      >
-                        Publish
-                      </button>
-                      <button
-                        className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                         onClick={() => openProjectShare(project.id)}
                         disabled={!can(plan, "board.share")}
                         data-locked={!can(plan, "board.share")}
@@ -1034,84 +1024,6 @@ export default function ProjectList() {
         onClose={() => setBetaOpen(false)}
         context="console"
       />
-      {publicProjectOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-          <div className="w-full max-w-lg rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="display-font text-xl text-[var(--accent-0)]">
-                  Project library
-                </h2>
-                <p className="text-xs text-[var(--ink-1)]">
-                  Publish this project so others can import it.
-                </p>
-              </div>
-              <button
-                className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                onClick={() => setPublicProjectOpen(false)}
-              >
-                Close
-              </button>
-            </div>
-            <div className="mt-4 space-y-3">
-              <input
-                className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                placeholder="Title"
-                value={publicProjectTitle}
-                onChange={(event) => setPublicProjectTitle(event.target.value)}
-                disabled={!can(plan, "board.share")}
-              />
-              <textarea
-                className="min-h-[80px] w-full rounded-2xl border border-[var(--line)] bg-transparent p-2 text-xs text-[var(--ink-0)]"
-                placeholder="Description"
-                value={publicProjectDescription}
-                onChange={(event) =>
-                  setPublicProjectDescription(event.target.value)
-                }
-                disabled={!can(plan, "board.share")}
-              />
-              <input
-                className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                placeholder="Tags (comma separated)"
-                value={publicProjectTags}
-                onChange={(event) => setPublicProjectTags(event.target.value)}
-                disabled={!can(plan, "board.share")}
-              />
-              <div className="flex gap-2">
-                <button
-                  className="h-10 flex-1 rounded-full bg-[var(--accent-0)] px-5 text-xs font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
-                  onClick={onPublishProject}
-                  disabled={!can(plan, "board.share") || publicProjectLoading}
-                >
-                  {publicProjectEntry ? "Update listing" : "Publish project"}
-                </button>
-                <button
-                  className="h-10 flex-1 rounded-full border border-[var(--line)] px-5 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)] disabled:cursor-not-allowed disabled:opacity-70"
-                  onClick={onUnpublishProject}
-                  disabled={!publicProjectEntry || publicProjectLoading}
-                >
-                  Remove
-                </button>
-              </div>
-              {!can(plan, "board.share") && (
-                <p className="text-[11px] text-[var(--accent-1)]">
-                  Publishing is available on paid plans.
-                </p>
-              )}
-              {publicProjectEntry && (
-                <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Status: {publicProjectEntry.status}
-                </p>
-              )}
-              {publicProjectStatus ? (
-                <p className="text-xs text-[var(--accent-1)]">
-                  {publicProjectStatus}
-                </p>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      )}
       {shareProjectOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
           <div className="w-full max-w-lg rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
@@ -1121,7 +1033,7 @@ export default function ProjectList() {
                   Share project
                 </h2>
                 <p className="text-xs text-[var(--ink-1)]">
-                  Share all boards from this project with another user.
+                  Choose whether to share by email or publish to the library.
                 </p>
               </div>
               <button
@@ -1132,73 +1044,164 @@ export default function ProjectList() {
               </button>
             </div>
             <div className="mt-4 space-y-3">
-              <input
-                className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                placeholder="Recipient email"
-                value={shareRecipient}
-                onChange={(event) => setShareRecipient(event.target.value)}
-              />
-              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
-                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Boards to share
-                </p>
-                {(() => {
-                  const projectToShare = shareProjectId
-                    ? loadProject(shareProjectId, authUser?.id ?? null) ??
-                      (project?.id === shareProjectId ? project : null)
-                    : null;
-                  const boards = projectToShare?.boards ?? [];
-                  if (boards.length === 0) {
-                    return (
-                      <p className="text-xs text-[var(--ink-1)]">
-                        No boards available.
-                      </p>
-                    );
-                  }
-                  return boards.map((board) => {
-                    const checked = shareBoardIds.includes(board.id);
-                    return (
-                      <label
-                        key={board.id}
-                        className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"
-                      >
-                        <span className="text-[var(--ink-0)]">{board.name}</span>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(event) => {
-                            setShareBoardIds((prev) =>
-                              event.target.checked
-                                ? [...prev, board.id]
-                                : prev.filter((id) => id !== board.id)
-                            );
-                          }}
-                        />
-                      </label>
-                    );
-                  });
-                })()}
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: "user", label: "Share by email" },
+                  { id: "public", label: "Publish to library" },
+                ].map((option) => (
+                  <button
+                    key={option.id}
+                    className={`rounded-2xl border px-3 py-2 text-xs ${
+                      shareProjectMode === option.id
+                        ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                        : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                    }`}
+                    onClick={() =>
+                      setShareProjectMode(option.id as "user" | "public")
+                    }
+                  >
+                    {option.label}
+                  </button>
+                ))}
               </div>
-              <select
-                className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-                value={sharePermission}
-                onChange={(event) =>
-                  setSharePermission(event.target.value as BoardSharePermission)
-                }
-              >
-                <option value="comment">Comment</option>
-                <option value="view">View only</option>
-              </select>
-              <button
-                className="h-10 w-full rounded-full bg-[var(--accent-0)] px-5 text-xs font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
-                onClick={onShareProject}
-                disabled={shareSending}
-              >
-                {shareSending ? "Sharing..." : "Share boards"}
-              </button>
-              {shareStatus ? (
-                <p className="text-xs text-[var(--accent-1)]">{shareStatus}</p>
-              ) : null}
+              {shareProjectMode === "user" ? (
+                <>
+                  <input
+                    className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                    placeholder="Recipient email"
+                    value={shareRecipient}
+                    onChange={(event) => setShareRecipient(event.target.value)}
+                  />
+                  <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                    <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                      Boards to share
+                    </p>
+                    {(() => {
+                      const projectToShare = shareProjectId
+                        ? loadProject(shareProjectId, authUser?.id ?? null) ??
+                          (project?.id === shareProjectId ? project : null)
+                        : null;
+                      const boards = projectToShare?.boards ?? [];
+                      if (boards.length === 0) {
+                        return (
+                          <p className="text-xs text-[var(--ink-1)]">
+                            No boards available.
+                          </p>
+                        );
+                      }
+                      return boards.map((board) => {
+                        const checked = shareBoardIds.includes(board.id);
+                        return (
+                          <label
+                            key={board.id}
+                            className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"
+                          >
+                            <span className="text-[var(--ink-0)]">
+                              {board.name}
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(event) => {
+                                setShareBoardIds((prev) =>
+                                  event.target.checked
+                                    ? [...prev, board.id]
+                                    : prev.filter((id) => id !== board.id)
+                                );
+                              }}
+                            />
+                          </label>
+                        );
+                      });
+                    })()}
+                  </div>
+                  <select
+                    className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                    value={sharePermission}
+                    onChange={(event) =>
+                      setSharePermission(
+                        event.target.value as BoardSharePermission
+                      )
+                    }
+                  >
+                    <option value="comment">Comment</option>
+                    <option value="view">View only</option>
+                  </select>
+                  <button
+                    className="h-10 w-full rounded-full bg-[var(--accent-0)] px-5 text-xs font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+                    onClick={onShareProject}
+                    disabled={shareSending}
+                  >
+                    {shareSending ? "Sharing..." : "Share boards"}
+                  </button>
+                  {shareStatus ? (
+                    <p className="text-xs text-[var(--accent-1)]">
+                      {shareStatus}
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <input
+                    className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                    placeholder="Title"
+                    value={publicProjectTitle}
+                    onChange={(event) =>
+                      setPublicProjectTitle(event.target.value)
+                    }
+                    disabled={!can(plan, "board.share")}
+                  />
+                  <textarea
+                    className="min-h-[80px] w-full rounded-2xl border border-[var(--line)] bg-transparent p-2 text-xs text-[var(--ink-0)]"
+                    placeholder="Description"
+                    value={publicProjectDescription}
+                    onChange={(event) =>
+                      setPublicProjectDescription(event.target.value)
+                    }
+                    disabled={!can(plan, "board.share")}
+                  />
+                  <input
+                    className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                    placeholder="Tags (comma separated)"
+                    value={publicProjectTags}
+                    onChange={(event) =>
+                      setPublicProjectTags(event.target.value)
+                    }
+                    disabled={!can(plan, "board.share")}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      className="h-10 flex-1 rounded-full bg-[var(--accent-0)] px-5 text-xs font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+                      onClick={onPublishProject}
+                      disabled={!can(plan, "board.share") || publicProjectLoading}
+                    >
+                      {publicProjectEntry ? "Update listing" : "Publish project"}
+                    </button>
+                    <button
+                      className="h-10 flex-1 rounded-full border border-[var(--line)] px-5 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)] disabled:cursor-not-allowed disabled:opacity-70"
+                      onClick={onUnpublishProject}
+                      disabled={!publicProjectEntry || publicProjectLoading}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  {!can(plan, "board.share") && (
+                    <p className="text-[11px] text-[var(--accent-1)]">
+                      Publishing is available on paid plans.
+                    </p>
+                  )}
+                  {publicProjectEntry && (
+                    <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                      Status: {publicProjectEntry.status}
+                    </p>
+                  )}
+                  {publicProjectStatus ? (
+                    <p className="text-xs text-[var(--accent-1)]">
+                      {publicProjectStatus}
+                    </p>
+                  ) : null}
+                </>
+              )}
             </div>
           </div>
         </div>
