@@ -13,6 +13,7 @@ export type PublicBoard = {
   description: string;
   tags: string[];
   formation?: string | null;
+  thumbnail?: string | null;
   status: PublicBoardStatus;
   createdAt: string;
   updatedAt: string;

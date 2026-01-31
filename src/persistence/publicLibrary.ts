@@ -22,6 +22,7 @@ const mapPublicBoard = (row: any): PublicBoard => ({
   description: row.description ?? "",
   tags: row.tags ?? [],
   formation: row.formation ?? null,
+  thumbnail: row.thumbnail ?? null,
   status: row.status as PublicBoardStatus,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -78,6 +79,7 @@ export const publishPublicBoard = async (payload: {
   description: string;
   tags: string[];
   formation?: string;
+  thumbnail?: string | null;
 }) => {
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
@@ -107,6 +109,7 @@ export const publishPublicBoard = async (payload: {
         description: payload.description,
         tags: payload.tags,
         formation: payload.formation ?? null,
+        thumbnail: payload.thumbnail ?? null,
         status: "unverified",
         board_data: snapshot,
       },

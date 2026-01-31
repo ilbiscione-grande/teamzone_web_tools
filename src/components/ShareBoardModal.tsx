@@ -21,6 +21,8 @@ import {
   reportPublicBoard,
   unpublishPublicBoard,
 } from "@/persistence/publicLibrary";
+import { getPitchViewBounds } from "@/board/pitch/Pitch";
+import { useEditorStore } from "@/state/useEditorStore";
 
 type ShareBoardModalProps = {
   open: boolean;
@@ -37,6 +39,7 @@ export default function ShareBoardModal({
 }: ShareBoardModalProps) {
   const plan = useProjectStore((state) => state.plan);
   const authUser = useProjectStore((state) => state.authUser);
+  const stage = useEditorStore((state) => state.stage);
   const [recipientEmail, setRecipientEmail] = useState("");
   const [permission, setPermission] = useState<BoardSharePermission>("comment");
   const [status, setStatus] = useState<string | null>(null);
@@ -59,6 +62,102 @@ export default function ShareBoardModal({
   const addBoardFromSnapshot = useProjectStore(
     (state) => state.addBoardFromSnapshot
   );
+  const setActiveFrameIndex = useProjectStore(
+    (state) => state.setActiveFrameIndex
+  );
+
+  const captureThumbnail = async () => {
+    if (!stage) {
+      return null;
+    }
+    const editorState = useEditorStore.getState();
+    const previousFrameIndex = board.activeFrameIndex;
+    const previousPlayhead = editorState.playheadFrame;
+    const previousViewport = editorState.viewport;
+    const wasPlaying = editorState.isPlaying;
+    editorState.setPlaying(false);
+
+    const shouldResetFrame = board.mode === "DYNAMIC";
+    if (shouldResetFrame) {
+      if (previousFrameIndex !== 0) {
+        setActiveFrameIndex(board.id, 0);
+      }
+      if (previousPlayhead !== 0) {
+        editorState.setPlayheadFrame(0);
+      }
+    }
+    editorState.setViewport({ zoom: 1, offsetX: 0, offsetY: 0 });
+
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    const pitchBounds = getPitchViewBounds(board.pitchView);
+    const viewRotation =
+      board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF" ? -90 : 0;
+    const effectiveBounds =
+      viewRotation === 0
+        ? pitchBounds
+        : {
+            x: pitchBounds.x + pitchBounds.width / 2 - pitchBounds.height / 2,
+            y: pitchBounds.y + pitchBounds.height / 2 - pitchBounds.width / 2,
+            width: pitchBounds.height,
+            height: pitchBounds.width,
+          };
+    const pixelRatio = window.devicePixelRatio ?? 1;
+    const stageScale = stage.scaleX();
+    const stageOffsetX = stage.x();
+    const stageOffsetY = stage.y();
+    const srcX = (effectiveBounds.x * stageScale + stageOffsetX) * pixelRatio;
+    const srcY = (effectiveBounds.y * stageScale + stageOffsetY) * pixelRatio;
+    const srcW = effectiveBounds.width * stageScale * pixelRatio;
+    const srcH = effectiveBounds.height * stageScale * pixelRatio;
+    const targetW = Math.max(1, Math.round(srcW));
+    const targetH = Math.max(1, Math.round(srcH));
+    const canvas = document.createElement("canvas");
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return null;
+    }
+    ctx.fillStyle = "#1f5f3f";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    stage.getLayers().forEach((layer) => {
+      const layerCanvas = (layer.getCanvas() as any)?._canvas as
+        | HTMLCanvasElement
+        | undefined;
+      if (!layerCanvas) {
+        return;
+      }
+      ctx.drawImage(
+        layerCanvas,
+        srcX,
+        srcY,
+        srcW,
+        srcH,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+    });
+    const dataUrl = canvas.toDataURL("image/png");
+
+    editorState.setViewport(previousViewport);
+    if (shouldResetFrame) {
+      if (previousFrameIndex !== 0) {
+        setActiveFrameIndex(board.id, previousFrameIndex);
+      }
+      if (previousPlayhead !== 0) {
+        editorState.setPlayheadFrame(previousPlayhead);
+      }
+    }
+    if (wasPlaying) {
+      editorState.setPlaying(true);
+    }
+
+    return dataUrl;
+  };
 
   useEffect(() => {
     if (!open || !authUser || !canShare) {
@@ -189,6 +288,12 @@ export default function ShareBoardModal({
       .split(",")
       .map((tag) => tag.trim())
       .filter(Boolean);
+    const thumbnail = await captureThumbnail();
+    if (!thumbnail) {
+      setStatus("Unable to capture thumbnail.");
+      setPublicLoading(false);
+      return;
+    }
     const result = await publishPublicBoard({
       project,
       board,
@@ -196,6 +301,7 @@ export default function ShareBoardModal({
       description: publicDescription.trim(),
       tags,
       formation: publicFormation.trim() || undefined,
+      thumbnail,
     });
     if (!result.ok) {
       setStatus(result.error);
@@ -368,6 +474,15 @@ export default function ShareBoardModal({
               </span>
             )}
           </div>
+          {publicBoard?.thumbnail && (
+            <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/60">
+              <img
+                src={publicBoard.thumbnail}
+                alt={`${publicBoard.title || publicBoard.boardName} thumbnail`}
+                className="h-32 w-full object-cover"
+              />
+            </div>
+          )}
 
           <div className="grid gap-3 md:grid-cols-[1.4fr_0.6fr]">
             <div className="space-y-2">
@@ -449,13 +564,20 @@ export default function ShareBoardModal({
                       className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div>
+                        <div className="flex-1">
                           <p className="text-[var(--ink-0)]">
                             {entry.title || entry.boardName}
                           </p>
                           <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                             {entry.status} • {entry.ownerEmail}
                           </p>
+                          {entry.thumbnail && (
+                            <img
+                              src={entry.thumbnail}
+                              alt={`${entry.title || entry.boardName} thumbnail`}
+                              className="mt-2 h-20 w-full rounded-xl border border-[var(--line)] object-cover"
+                            />
+                          )}
                           {entry.formation && (
                             <p className="text-[11px] text-[var(--ink-1)]">
                               Formation: {entry.formation}

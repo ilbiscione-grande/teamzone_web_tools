@@ -87,11 +87,15 @@ create table if not exists public_boards (
   description text,
   tags text[] not null default '{}',
   formation text,
+  thumbnail text,
   status text not null default 'unverified',
   board_data jsonb not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public_boards
+add column if not exists thumbnail text;
 
 create unique index if not exists public_boards_owner_board_idx
 on public_boards(owner_id, board_id);
