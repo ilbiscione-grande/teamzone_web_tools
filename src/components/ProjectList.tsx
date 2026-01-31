@@ -6,10 +6,19 @@ import { deserializeProject } from "@/persistence/serialize";
 import { loadProject, saveProject } from "@/persistence/storage";
 import type { BoardShare, BoardSharePermission, Project } from "@/models";
 import { can, getPlanLimits } from "@/utils/plan";
+import { createId } from "@/utils/id";
+import { clone } from "@/utils/clone";
 import AdBanner from "@/components/AdBanner";
 import PlanModal from "@/components/PlanModal";
 import BetaNoticeModal from "@/components/BetaNoticeModal";
 import { fetchProjectCloud } from "@/persistence/cloud";
+import {
+  fetchPublicProjects,
+  fetchPublicProjectForOwner,
+  publishPublicProject,
+  unpublishPublicProject,
+  reportPublicProject,
+} from "@/persistence/publicProjects";
 import {
   createBoardShare,
   fetchLatestCommentsForShares,
@@ -20,6 +29,7 @@ import {
 export default function ProjectList() {
   const index = useProjectStore((state) => state.index);
   const openProject = useProjectStore((state) => state.openProject);
+  const openProjectFromData = useProjectStore((state) => state.openProjectFromData);
   const openSharedBoard = useProjectStore((state) => state.openSharedBoard);
   const createProject = useProjectStore((state) => state.createProject);
   const deleteProject = useProjectStore((state) => state.deleteProject);
@@ -53,6 +63,17 @@ export default function ProjectList() {
   const [sharedByMe, setSharedByMe] = useState<BoardShare[]>([]);
   const [sharedByMeLoading, setSharedByMeLoading] = useState(false);
   const [sharedByMeError, setSharedByMeError] = useState<string | null>(null);
+  const [publicProjects, setPublicProjects] = useState<PublicProject[]>([]);
+  const [publicProjectsLoading, setPublicProjectsLoading] = useState(false);
+  const [publicProjectsError, setPublicProjectsError] = useState<string | null>(null);
+  const [publicProjectOpen, setPublicProjectOpen] = useState(false);
+  const [publicProjectId, setPublicProjectId] = useState<string | null>(null);
+  const [publicProjectEntry, setPublicProjectEntry] = useState<PublicProject | null>(null);
+  const [publicProjectTitle, setPublicProjectTitle] = useState("");
+  const [publicProjectDescription, setPublicProjectDescription] = useState("");
+  const [publicProjectTags, setPublicProjectTags] = useState("");
+  const [publicProjectStatus, setPublicProjectStatus] = useState<string | null>(null);
+  const [publicProjectLoading, setPublicProjectLoading] = useState(false);
   const [shareProjectOpen, setShareProjectOpen] = useState(false);
   const [shareProjectId, setShareProjectId] = useState<string | null>(null);
   const [shareRecipient, setShareRecipient] = useState("");
@@ -60,6 +81,7 @@ export default function ProjectList() {
     useState<BoardSharePermission>("comment");
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [shareSending, setShareSending] = useState(false);
+  const [shareBoardIds, setShareBoardIds] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -171,27 +193,137 @@ export default function ProjectList() {
   }, [authUser, plan]);
 
   useEffect(() => {
-    if (!authUser || !can(plan, "board.share")) {
-      setCommentUnread(0);
+    setPublicProjectsLoading(true);
+    setPublicProjectsError(null);
+    fetchPublicProjects()
+      .then((result) => {
+        if (!result.ok) {
+          setPublicProjectsError(result.error);
+          setPublicProjects([]);
+          return;
+        }
+        setPublicProjects(result.projects);
+      })
+      .finally(() => setPublicProjectsLoading(false));
+  }, []);
+
+  const openPublicProject = async (projectId: string) => {
+    setPublicProjectId(projectId);
+    setPublicProjectTitle("");
+    setPublicProjectDescription("");
+    setPublicProjectTags("");
+    setPublicProjectStatus(null);
+    setPublicProjectEntry(null);
+    setPublicProjectOpen(true);
+    if (!authUser) {
+      setPublicProjectLoading(false);
       return;
     }
-    const shareIds = [
-      ...sharedBoards.map((share) => share.id),
-      ...sharedByMe.map((share) => share.id),
-    ];
-    fetchLatestCommentsForShares(shareIds).then((result) => {
-      if (!result.ok) {
-        setCommentUnread(0);
-        return;
+    setPublicProjectLoading(true);
+    const result = await fetchPublicProjectForOwner(projectId);
+    if (result.ok) {
+      setPublicProjectEntry(result.project);
+      if (result.project) {
+        setPublicProjectTitle(result.project.title || "");
+        setPublicProjectDescription(result.project.description || "");
+        setPublicProjectTags((result.project.tags || []).join(", "));
       }
-      const seenMap = loadCommentsSeen();
-      const unread = Object.entries(result.latest).filter(
-        ([shareId, createdAt]) =>
-          new Date(createdAt).getTime() > (seenMap[shareId] ?? 0)
-      ).length;
-      setCommentUnread(unread);
+    }
+    setPublicProjectLoading(false);
+  };
+
+  const onPublishProject = async () => {
+    if (!authUser) {
+      setPublicProjectStatus("Please sign in to publish.");
+      return;
+    }
+    if (!can(plan, "board.share")) {
+      setPublicProjectStatus("Publishing is available on paid plans.");
+      return;
+    }
+    if (!publicProjectId) {
+      setPublicProjectStatus("Choose a project to publish.");
+      return;
+    }
+    if (!publicProjectTitle.trim()) {
+      setPublicProjectStatus("Enter a title.");
+      return;
+    }
+    let projectToPublish = loadProject(publicProjectId, authUser.id);
+    if (!projectToPublish && navigator.onLine) {
+      projectToPublish = await fetchProjectCloud(publicProjectId);
+    }
+    if (!projectToPublish) {
+      setPublicProjectStatus("Project not available.");
+      return;
+    }
+    setPublicProjectLoading(true);
+    const tags = publicProjectTags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const result = await publishPublicProject({
+      project: projectToPublish,
+      title: publicProjectTitle.trim(),
+      description: publicProjectDescription.trim(),
+      tags,
     });
-  }, [authUser, plan, sharedBoards, sharedByMe]);
+    if (!result.ok) {
+      setPublicProjectStatus(result.error);
+      setPublicProjectLoading(false);
+      return;
+    }
+    setPublicProjectEntry(result.project);
+    setPublicProjects((prev) => {
+      const next = prev.filter((entry) => entry.id !== result.project.id);
+      return [result.project, ...next];
+    });
+    setPublicProjectStatus("Project published to library.");
+    setPublicProjectLoading(false);
+  };
+
+  const onUnpublishProject = async () => {
+    if (!publicProjectEntry) {
+      return;
+    }
+    if (!window.confirm("Remove this project from the public library?")) {
+      return;
+    }
+    const result = await unpublishPublicProject(publicProjectEntry.id);
+    if (!result.ok) {
+      setPublicProjectStatus(result.error);
+      return;
+    }
+    setPublicProjects((prev) => prev.filter((entry) => entry.id !== publicProjectEntry.id));
+    setPublicProjectEntry(null);
+    setPublicProjectStatus("Project removed from library.");
+  };
+
+  const onReportProject = async (projectId: string) => {
+    if (!authUser) {
+      setPublicProjectsError("Please sign in to report.");
+      return;
+    }
+    const reason = window.prompt("Why are you reporting this project?") ?? "";
+    if (!reason.trim()) {
+      return;
+    }
+    const result = await reportPublicProject({ projectId, reason: reason.trim() });
+    if (!result.ok) {
+      setPublicProjectsError(result.error);
+      return;
+    }
+    setPublicProjectsError("Report submitted.");
+  };
+
+  const onImportProject = (entry: PublicProject) => {
+    const nextProject = clone(entry.projectData);
+    nextProject.id = createId();
+    nextProject.name = entry.title || entry.projectName;
+    nextProject.createdAt = new Date().toISOString();
+    nextProject.updatedAt = nextProject.createdAt;
+    openProjectFromData(nextProject);
+  };
 
   const onCreate = () => {
     if (!name.trim()) {
@@ -251,6 +383,8 @@ export default function ProjectList() {
     setShareRecipient("");
     setSharePermission("comment");
     setShareStatus(null);
+    const fallbackProject = loadProject(projectId, authUser?.id ?? null);
+    setShareBoardIds(fallbackProject?.boards.map((board) => board.id) ?? []);
     setShareProjectOpen(true);
   };
 
@@ -283,13 +417,21 @@ export default function ProjectList() {
       setShareSending(false);
       return;
     }
-    if (projectToShare.boards.length === 0) {
+    if (shareBoardIds.length === 0) {
+      setShareStatus("Select at least one board to share.");
+      setShareSending(false);
+      return;
+    }
+    const boardsToShare = projectToShare.boards.filter((board) =>
+      shareBoardIds.includes(board.id)
+    );
+    if (boardsToShare.length === 0) {
       setShareStatus("This project has no boards to share.");
       setShareSending(false);
       return;
     }
     const results = await Promise.all(
-      projectToShare.boards.map((board) =>
+      boardsToShare.map((board) =>
         createBoardShare({
           project: projectToShare,
           board,
@@ -637,6 +779,19 @@ export default function ProjectList() {
                       </button>
                       <button
                         className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        onClick={() => openPublicProject(project.id)}
+                        disabled={!can(plan, "board.share")}
+                        data-locked={!can(plan, "board.share")}
+                        title={
+                          can(plan, "board.share")
+                            ? "Publish to project library"
+                            : "Publishing is available on paid plans."
+                        }
+                      >
+                        Publish
+                      </button>
+                      <button
+                        className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                         onClick={() => openProjectShare(project.id)}
                         disabled={!can(plan, "board.share")}
                         data-locked={!can(plan, "board.share")}
@@ -790,6 +945,81 @@ export default function ProjectList() {
                 ))
               )}
             </div>
+            <div className="mt-6 space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="display-font text-lg text-[var(--accent-0)]">
+                  Project library
+                </h3>
+                <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                  {publicProjects.length}
+                </span>
+              </div>
+              {publicProjectsLoading ? (
+                <p className="text-sm text-[var(--ink-1)]">
+                  Loading project library...
+                </p>
+              ) : publicProjectsError ? (
+                <p className="text-sm text-[var(--accent-1)]">
+                  {publicProjectsError}
+                </p>
+              ) : publicProjects.length === 0 ? (
+                <p className="text-sm text-[var(--ink-1)]">
+                  No public projects yet.
+                </p>
+              ) : (
+                publicProjects
+                  .filter((entry) => {
+                    if (entry.status === "unverified") {
+                      return entry.ownerId === authUser?.id;
+                    }
+                    return true;
+                  })
+                  .map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-4 py-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--ink-0)]">
+                            {entry.title || entry.projectName}
+                          </p>
+                          <p className="text-xs text-[var(--ink-1)]">
+                            {entry.projectName} · {entry.ownerEmail}
+                          </p>
+                          <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                            {entry.status}
+                          </p>
+                          {entry.tags?.length ? (
+                            <p className="text-[11px] text-[var(--ink-1)]">
+                              {entry.tags.join(", ")}
+                            </p>
+                          ) : null}
+                          {entry.description ? (
+                            <p className="mt-1 text-[11px] text-[var(--ink-1)]">
+                              {entry.description}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                            onClick={() => onImportProject(entry)}
+                          >
+                            Import
+                          </button>
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                            onClick={() => onReportProject(entry.id)}
+                          >
+                            Report
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
           </div>
         </section>
       </div>
@@ -799,6 +1029,84 @@ export default function ProjectList() {
         onClose={() => setBetaOpen(false)}
         context="console"
       />
+      {publicProjectOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="w-full max-w-lg rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="display-font text-xl text-[var(--accent-0)]">
+                  Project library
+                </h2>
+                <p className="text-xs text-[var(--ink-1)]">
+                  Publish this project so others can import it.
+                </p>
+              </div>
+              <button
+                className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                onClick={() => setPublicProjectOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              <input
+                className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                placeholder="Title"
+                value={publicProjectTitle}
+                onChange={(event) => setPublicProjectTitle(event.target.value)}
+                disabled={!can(plan, "board.share")}
+              />
+              <textarea
+                className="min-h-[80px] w-full rounded-2xl border border-[var(--line)] bg-transparent p-2 text-xs text-[var(--ink-0)]"
+                placeholder="Description"
+                value={publicProjectDescription}
+                onChange={(event) =>
+                  setPublicProjectDescription(event.target.value)
+                }
+                disabled={!can(plan, "board.share")}
+              />
+              <input
+                className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                placeholder="Tags (comma separated)"
+                value={publicProjectTags}
+                onChange={(event) => setPublicProjectTags(event.target.value)}
+                disabled={!can(plan, "board.share")}
+              />
+              <div className="flex gap-2">
+                <button
+                  className="h-10 flex-1 rounded-full bg-[var(--accent-0)] px-5 text-xs font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+                  onClick={onPublishProject}
+                  disabled={!can(plan, "board.share") || publicProjectLoading}
+                >
+                  {publicProjectEntry ? "Update listing" : "Publish project"}
+                </button>
+                <button
+                  className="h-10 flex-1 rounded-full border border-[var(--line)] px-5 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)] disabled:cursor-not-allowed disabled:opacity-70"
+                  onClick={onUnpublishProject}
+                  disabled={!publicProjectEntry || publicProjectLoading}
+                >
+                  Remove
+                </button>
+              </div>
+              {!can(plan, "board.share") && (
+                <p className="text-[11px] text-[var(--accent-1)]">
+                  Publishing is available on paid plans.
+                </p>
+              )}
+              {publicProjectEntry && (
+                <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                  Status: {publicProjectEntry.status}
+                </p>
+              )}
+              {publicProjectStatus ? (
+                <p className="text-xs text-[var(--accent-1)]">
+                  {publicProjectStatus}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
       {shareProjectOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
           <div className="w-full max-w-lg rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
@@ -825,6 +1133,47 @@ export default function ProjectList() {
                 value={shareRecipient}
                 onChange={(event) => setShareRecipient(event.target.value)}
               />
+              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                  Boards to share
+                </p>
+                {(() => {
+                  const projectToShare = shareProjectId
+                    ? loadProject(shareProjectId, authUser?.id ?? null) ??
+                      (project?.id === shareProjectId ? project : null)
+                    : null;
+                  const boards = projectToShare?.boards ?? [];
+                  if (boards.length === 0) {
+                    return (
+                      <p className="text-xs text-[var(--ink-1)]">
+                        No boards available.
+                      </p>
+                    );
+                  }
+                  return boards.map((board) => {
+                    const checked = shareBoardIds.includes(board.id);
+                    return (
+                      <label
+                        key={board.id}
+                        className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"
+                      >
+                        <span className="text-[var(--ink-0)]">{board.name}</span>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(event) => {
+                            setShareBoardIds((prev) =>
+                              event.target.checked
+                                ? [...prev, board.id]
+                                : prev.filter((id) => id !== board.id)
+                            );
+                          }}
+                        />
+                      </label>
+                    );
+                  });
+                })()}
+              </div>
               <select
                 className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
                 value={sharePermission}

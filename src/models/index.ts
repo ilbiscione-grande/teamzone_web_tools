@@ -7,3 +7,4 @@ export * from "./plan";
 export * from "./user";
 export * from "./share";
 export * from "./publicLibrary";
+export * from "./publicProjects";

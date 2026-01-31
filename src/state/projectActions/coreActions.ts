@@ -34,6 +34,7 @@ type CoreActionSlice = Pick<
   | "syncNow"
   | "createProject"
   | "openProject"
+  | "openProjectFromData"
   | "openSharedBoard"
   | "closeProject"
   | "deleteProject"
@@ -283,6 +284,25 @@ export const createCoreActions: StateCreator<
     set((state) => {
       state.project = project;
       state.activeProjectId = id;
+      if (can(state.plan, "project.save")) {
+        state.index = updateIndex(state.index, project);
+      }
+    });
+    if (can(get().plan, "project.save")) {
+      saveProjectIndex(get().index, get().authUser?.id ?? null);
+    }
+  },
+  openProjectFromData: (project) => {
+    ensureBoardSquads(project);
+    if (can(get().plan, "project.save")) {
+      saveProject(project, get().authUser?.id ?? null);
+      if (get().authUser && get().plan === "PAID") {
+        saveProjectCloud(project);
+      }
+    }
+    set((state) => {
+      state.project = project;
+      state.activeProjectId = project.id;
       if (can(state.plan, "project.save")) {
         state.index = updateIndex(state.index, project);
       }

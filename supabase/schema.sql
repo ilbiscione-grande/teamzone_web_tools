@@ -149,6 +149,73 @@ on public_board_reports
 for insert
 with check (auth.uid() = reporter_id);
 
+create table if not exists public_projects (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  owner_email text not null,
+  project_id text not null,
+  project_name text not null,
+  title text not null,
+  description text,
+  tags text[] not null default '{}',
+  status text not null default 'unverified',
+  project_data jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists public_projects_owner_project_idx
+on public_projects(owner_id, project_id);
+
+create index if not exists public_projects_status_idx on public_projects(status);
+
+alter table public_projects enable row level security;
+
+drop policy if exists "Public projects are viewable" on public_projects;
+drop policy if exists "Users can publish projects" on public_projects;
+drop policy if exists "Users can update their public projects" on public_projects;
+drop policy if exists "Users can delete their public projects" on public_projects;
+
+create policy "Public projects are viewable"
+on public_projects
+for select
+using (
+  status in ('verified','reviewed') or auth.uid() = owner_id
+);
+
+create policy "Users can publish projects"
+on public_projects
+for insert
+with check (auth.uid() = owner_id);
+
+create policy "Users can update their public projects"
+on public_projects
+for update
+using (auth.uid() = owner_id);
+
+create policy "Users can delete their public projects"
+on public_projects
+for delete
+using (auth.uid() = owner_id);
+
+create table if not exists public_project_reports (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public_projects(id) on delete cascade,
+  reporter_id uuid not null references auth.users(id) on delete cascade,
+  reporter_email text not null,
+  reason text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public_project_reports enable row level security;
+
+drop policy if exists "Users can report public projects" on public_project_reports;
+
+create policy "Users can report public projects"
+on public_project_reports
+for insert
+with check (auth.uid() = reporter_id);
+
 create table if not exists bug_reports (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
