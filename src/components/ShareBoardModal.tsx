@@ -368,7 +368,7 @@ export default function ShareBoardModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-      <div className="w-full max-w-xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+      <div className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="display-font text-xl text-[var(--accent-0)]">
