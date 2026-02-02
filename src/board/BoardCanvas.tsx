@@ -260,6 +260,14 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
       return a.zIndex - b.zIndex;
     });
   }, [renderObjects]);
+  const nonPlayerObjects = useMemo(
+    () => sortedObjects.filter((item) => item.type !== "player" && item.type !== "ball"),
+    [sortedObjects]
+  );
+  const playerObjects = useMemo(
+    () => sortedObjects.filter((item) => item.type === "player" || item.type === "ball"),
+    [sortedObjects]
+  );
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -576,6 +584,42 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
               overlay={board.pitchOverlay}
               overlayText={board.pitchOverlayText ?? false}
             />
+            {nonPlayerObjects.map((object) => (
+              <BoardObject
+                key={object.id}
+                object={object}
+                objects={renderObjects}
+                activeTool={activeTool}
+                isSelected={selection.includes(object.id)}
+                isHighlighted={highlightedPlayers.includes(object.id)}
+                isLinking={isLinkingPlayers}
+                isLinkCandidate={linkingPlayerIds.includes(object.id)}
+                onLinkPlayer={(id) => addLinkingPlayer(id)}
+                squadPlayers={squadPlayers}
+                kitByPlayerId={kitByPlayerId}
+                vestByPlayerId={vestByPlayerId}
+                defaultPlayerFill={defaultPlayerFill}
+                playerTokenSize={playerTokenSize}
+                showPlayerName={board.playerLabel?.showName ?? true}
+                showPlayerPosition={board.playerLabel?.showPosition ?? false}
+                showPlayerNumber={board.playerLabel?.showNumber ?? false}
+                labelRotation={labelRotation}
+                readOnly={isSharedReadOnly}
+                onSelect={handleSelect}
+                onDragStart={() => pushHistory(clone(objects))}
+                onDragEnd={updatePosition}
+                onBallDragStart={(id, position) =>
+                  updateObject(board.id, frameIndex, id, {
+                    attachedToId: undefined,
+                    offset: undefined,
+                    position,
+                  })
+                }
+                registerNode={(id, node) => {
+                  shapeRefs.current[id] = node;
+                }}
+              />
+            ))}
             {playerLinks.map((link) => {
               const points = link.playerIds
                 .map((id) => playerPositions.get(id))
@@ -629,7 +673,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                 </Group>
               );
             })}
-            {sortedObjects.map((object) => (
+            {playerObjects.map((object) => (
               <BoardObject
                 key={object.id}
                 object={object}
