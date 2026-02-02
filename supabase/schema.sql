@@ -238,6 +238,26 @@ on bug_reports
 for insert
 with check (true);
 
+create table if not exists contact_messages (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  plan text not null,
+  user_email text,
+  subject text,
+  message text not null,
+  url text,
+  user_agent text
+);
+
+alter table contact_messages enable row level security;
+
+drop policy if exists "Anyone can submit contact messages" on contact_messages;
+
+create policy "Anyone can submit contact messages"
+on contact_messages
+for insert
+with check (true);
+
 create table if not exists board_shares (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,

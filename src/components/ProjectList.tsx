@@ -17,6 +17,7 @@ import AdBanner from "@/components/AdBanner";
 import PlanModal from "@/components/PlanModal";
 import BetaNoticeModal from "@/components/BetaNoticeModal";
 import { fetchProjectCloud } from "@/persistence/cloud";
+import { submitContactMessage } from "@/persistence/contact";
 import {
   fetchPublicProjects,
   fetchPublicProjectForOwner,
@@ -90,6 +91,12 @@ export default function ProjectList() {
   const [shareSending, setShareSending] = useState(false);
   const [shareBoardIds, setShareBoardIds] = useState<string[]>([]);
   const [publicProjectBoardIds, setPublicProjectBoardIds] = useState<string[]>([]);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactSubject, setContactSubject] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  const [contactStatus, setContactStatus] = useState<string | null>(null);
+  const [contactSending, setContactSending] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -400,6 +407,32 @@ export default function ProjectList() {
     setError(null);
   };
 
+  const onContactSubmit = async () => {
+    if (!contactMessage.trim()) {
+      setContactStatus("Please enter a message.");
+      return;
+    }
+    setContactSending(true);
+    setContactStatus(null);
+    const result = await submitContactMessage({
+      plan,
+      userEmail: contactEmail.trim() || authUser?.email || null,
+      subject: contactSubject.trim() || undefined,
+      message: contactMessage.trim(),
+      url: typeof window !== "undefined" ? window.location.href : undefined,
+      userAgent: typeof window !== "undefined" ? window.navigator.userAgent : undefined,
+    });
+    if (!result.ok) {
+      setContactStatus(result.error);
+      setContactSending(false);
+      return;
+    }
+    setContactStatus("Message sent. We'll get back to you.");
+    setContactMessage("");
+    setContactSubject("");
+    setContactSending(false);
+  };
+
   const openProjectShare = (projectId: string) => {
     setShareProjectId(projectId);
     setShareRecipient("");
@@ -562,6 +595,14 @@ export default function ProjectList() {
             Create a new tactics project, resume from local storage, or import a
             JSON file.
           </p>
+          <a
+            className="text-xs uppercase tracking-[0.3em] text-[var(--accent-2)] hover:text-[var(--accent-0)]"
+            href="https://x.com/teamzoneapp"
+            target="_blank"
+            rel="noreferrer"
+          >
+            @teamzoneapp
+          </a>
           <div className="mt-4 rounded-3xl border border-[var(--accent-0)]/60 bg-[var(--accent-0)]/90 p-4 text-black shadow-xl shadow-black/30">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -573,12 +614,20 @@ export default function ProjectList() {
                   features. Please report issues so we can improve it quickly.
                 </p>
               </div>
-              <button
-                className="rounded-full border border-black/40 px-4 py-2 text-xs font-semibold text-black hover:border-black/70"
-                onClick={() => setBetaOpen(true)}
-              >
-                Report a bug
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="rounded-full border border-black/40 px-4 py-2 text-xs font-semibold text-black hover:border-black/70"
+                  onClick={() => setBetaOpen(true)}
+                >
+                  Report a bug
+                </button>
+                <button
+                  className="rounded-full border border-black/40 px-4 py-2 text-xs font-semibold text-black hover:border-black/70"
+                  onClick={() => setContactOpen(true)}
+                >
+                  Contact us
+                </button>
+              </div>
             </div>
           </div>
         </header>
@@ -1258,6 +1307,58 @@ export default function ProjectList() {
                   ) : null}
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {contactOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="w-full max-w-lg rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="display-font text-xl text-[var(--accent-0)]">
+                  Contact Teamzone
+                </h2>
+                <p className="text-xs text-[var(--ink-1)]">
+                  For questions or feedback outside of bug reports.
+                </p>
+              </div>
+              <button
+                className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                onClick={() => setContactOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              <input
+                className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                placeholder="Your email (optional)"
+                value={contactEmail}
+                onChange={(event) => setContactEmail(event.target.value)}
+              />
+              <input
+                className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                placeholder="Subject (optional)"
+                value={contactSubject}
+                onChange={(event) => setContactSubject(event.target.value)}
+              />
+              <textarea
+                className="min-h-[120px] w-full rounded-2xl border border-[var(--line)] bg-transparent p-2 text-xs text-[var(--ink-0)]"
+                placeholder="Message"
+                value={contactMessage}
+                onChange={(event) => setContactMessage(event.target.value)}
+              />
+              <button
+                className="h-10 w-full rounded-full bg-[var(--accent-0)] px-5 text-xs font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+                onClick={onContactSubmit}
+                disabled={contactSending}
+              >
+                {contactSending ? "Sending..." : "Send message"}
+              </button>
+              {contactStatus ? (
+                <p className="text-xs text-[var(--accent-1)]">{contactStatus}</p>
+              ) : null}
             </div>
           </div>
         </div>
