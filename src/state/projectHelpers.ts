@@ -61,7 +61,7 @@ const POSITION_CYCLE = [
 
 const createPlayers = (
   count: number,
-  options?: { vestColors?: string[] }
+  options?: { vestColors?: Array<string | undefined> }
 ) =>
   Array.from({ length: count }).map((_, index) => ({
     id: createId(),
