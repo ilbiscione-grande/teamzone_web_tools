@@ -38,6 +38,22 @@ export default function ShareBoardModal({
   project,
   board,
 }: ShareBoardModalProps) {
+  const categoryOptions = [
+    "Warmup",
+    "Passing",
+    "Shooting",
+    "Finishing",
+    "Possession",
+    "Pressing",
+    "Counter",
+    "Transition",
+    "Defending",
+    "Attacking",
+    "Set pieces",
+    "Small-sided games",
+    "Fitness",
+    "Other",
+  ];
   const plan = useProjectStore((state) => state.plan);
   const authUser = useProjectStore((state) => state.authUser);
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -540,13 +556,19 @@ export default function ShareBoardModal({
                 onChange={(event) => setPublicDescription(event.target.value)}
                 disabled={!canPublish}
               />
-              <input
-                className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                placeholder="Category"
+              <select
+                className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
                 value={publicCategory}
                 onChange={(event) => setPublicCategory(event.target.value)}
                 disabled={!canPublish}
-              />
+              >
+                <option value="">Category</option>
+                {categoryOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
               <input
                 className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                 placeholder="Tags (comma separated)"
@@ -597,12 +619,18 @@ export default function ShareBoardModal({
                 value={publicQuery}
                 onChange={(event) => setPublicQuery(event.target.value)}
               />
-              <input
-                className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                placeholder="Filter category"
+              <select
+                className="h-9 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
                 value={publicCategoryFilter}
                 onChange={(event) => setPublicCategoryFilter(event.target.value)}
-              />
+              >
+                <option value="">Filter category</option>
+                {categoryOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="max-h-56 space-y-2 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
               {publicListLoading ? (

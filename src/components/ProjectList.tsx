@@ -34,6 +34,22 @@ import {
 } from "@/persistence/shares";
 
 export default function ProjectList() {
+  const categoryOptions = [
+    "Warmup",
+    "Passing",
+    "Shooting",
+    "Finishing",
+    "Possession",
+    "Pressing",
+    "Counter",
+    "Transition",
+    "Defending",
+    "Attacking",
+    "Set pieces",
+    "Small-sided games",
+    "Fitness",
+    "Other",
+  ];
   const index = useProjectStore((state) => state.index);
   const openProject = useProjectStore((state) => state.openProject);
   const openProjectFromData = useProjectStore((state) => state.openProjectFromData);
@@ -949,12 +965,18 @@ export default function ProjectList() {
                   value={publicProjectsQuery}
                   onChange={(event) => setPublicProjectsQuery(event.target.value)}
                 />
-                <input
-                  className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                  placeholder="Filter category"
+                <select
+                  className="h-9 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
                   value={publicProjectsCategory}
                   onChange={(event) => setPublicProjectsCategory(event.target.value)}
-                />
+                >
+                  <option value="">Filter category</option>
+                  {categoryOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
               {publicProjectsLoading ? (
                 <p className="text-sm text-[var(--ink-1)]">
@@ -1465,15 +1487,21 @@ export default function ProjectList() {
                     }
                     disabled={!can(plan, "board.share")}
                   />
-                  <input
-                    className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                    placeholder="Category"
+                  <select
+                    className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
                     value={publicProjectCategory}
                     onChange={(event) =>
                       setPublicProjectCategory(event.target.value)
                     }
                     disabled={!can(plan, "board.share")}
-                  />
+                  >
+                    <option value="">Category</option>
+                    {categoryOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                     placeholder="Tags (comma separated)"
