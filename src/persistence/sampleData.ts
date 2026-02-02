@@ -32,6 +32,8 @@ const createFrame = (
   action: "",
   notes: "",
   durationMs: 0,
+  playerHighlights: [],
+  playerLinks: [],
 });
 
 const createBoard = (
@@ -497,9 +499,18 @@ export const createSampleProject = (): Project => {
     schemaVersion: SCHEMA_VERSION,
     isSample: true,
     settings: {
+      mode: "match",
       homeKit: { ...homeSquad.kit },
       awayKit: { ...awaySquad.kit },
       attachBallToPlayer: false,
+      defaultPitchView: "FULL",
+      defaultPitchOverlay: "CORRIDORS",
+      defaultPitchShape: "none",
+      defaultPlayerLabel: {
+        showName: true,
+        showPosition: true,
+        showNumber: false,
+      },
     },
     boards: [board],
     squads: [homeSquad, awaySquad],

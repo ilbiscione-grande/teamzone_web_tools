@@ -38,6 +38,11 @@ export type ProjectActions = {
       homeKit?: Squad["kit"];
       awayKit?: Squad["kit"];
       attachBallToPlayer?: boolean;
+      mode?: Project["settings"]["mode"];
+      pitchView?: Board["pitchView"];
+      pitchOverlay?: Board["pitchOverlay"];
+      pitchShape?: Project["settings"]["defaultPitchShape"];
+      playerLabel?: Board["playerLabel"];
     }
   ) => void;
   openProject: (id: string) => void;

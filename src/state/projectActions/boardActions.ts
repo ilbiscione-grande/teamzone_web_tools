@@ -77,7 +77,16 @@ export const createBoardActions: StateCreator<
         kit: { ...awayKit },
         players: [],
       });
-      const board = createEmptyBoard(name, { homeSquadId, awaySquadId });
+      const board = createEmptyBoard(
+        name,
+        { homeSquadId, awaySquadId },
+        {
+          pitchView: state.project.settings?.defaultPitchView,
+          pitchOverlay: state.project.settings?.defaultPitchOverlay,
+          pitchShape: state.project.settings?.defaultPitchShape,
+          playerLabel: state.project.settings?.defaultPlayerLabel,
+        }
+      );
       state.project.boards.push(board);
       state.project.activeBoardId = board.id;
       state.project.updatedAt = new Date().toISOString();

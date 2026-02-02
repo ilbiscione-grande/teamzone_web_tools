@@ -1,5 +1,8 @@
-import type { Board } from "./board";
+import type { Board, PitchOverlay, PitchView } from "./board";
 import type { Squad } from "./squad";
+
+export type ProjectMode = "training" | "match" | "education";
+export type PitchShape = "none" | "circle" | "square" | "rect";
 
 export type Project = {
   id: string;
@@ -17,6 +20,7 @@ export type Project = {
     boardId: string;
   };
   settings: {
+    mode: ProjectMode;
     homeKit: {
       shirt: string;
       shorts: string;
@@ -30,6 +34,14 @@ export type Project = {
       vest?: string;
     };
     attachBallToPlayer: boolean;
+    defaultPitchView: PitchView;
+    defaultPitchOverlay: PitchOverlay;
+    defaultPitchShape: PitchShape;
+    defaultPlayerLabel: {
+      showName: boolean;
+      showPosition: boolean;
+      showNumber: boolean;
+    };
   };
   boards: Board[];
   squads: Squad[];

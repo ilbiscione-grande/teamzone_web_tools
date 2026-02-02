@@ -490,8 +490,9 @@ export default function Toolbox() {
     }
     if (isLinkingPlayers) {
       if (linkingPlayerIds.length >= 2) {
+        const activeFrame = board.frames[frameIndex];
         const nextLinks = [
-          ...(board.playerLinks ?? []),
+          ...((activeFrame?.playerLinks ?? board.playerLinks) ?? []),
           {
             id: createId(),
             playerIds: [...linkingPlayerIds],
@@ -506,7 +507,10 @@ export default function Toolbox() {
             },
           },
         ];
-        updateBoard(board.id, { playerLinks: nextLinks });
+        const nextFrames = board.frames.map((frame, index) =>
+          index === frameIndex ? { ...frame, playerLinks: nextLinks } : frame
+        );
+        updateBoard(board.id, { frames: nextFrames });
       }
       setLinkingPlayers(false);
       clearLinkingPlayers();

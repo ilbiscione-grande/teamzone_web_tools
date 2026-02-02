@@ -231,11 +231,16 @@ export default function AppShell() {
         useProjectStore.getState().removeObject(board.id, frameIndex, id);
       });
       if (selectedLinkId) {
-        const nextLinks = (board.playerLinks ?? []).filter(
+        const frameLinks =
+          board.frames[frameIndex]?.playerLinks ?? board.playerLinks ?? [];
+        const nextLinks = frameLinks.filter(
           (link) => link.id !== selectedLinkId
         );
+        const nextFrames = board.frames.map((frame, index) =>
+          index === frameIndex ? { ...frame, playerLinks: nextLinks } : frame
+        );
         useProjectStore.getState().updateBoard(board.id, {
-          playerLinks: nextLinks,
+          frames: nextFrames,
         });
         useEditorStore.getState().setSelectedLinkId(null);
       }

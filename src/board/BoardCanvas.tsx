@@ -64,6 +64,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
 
   const frameIndex = board.activeFrameIndex;
+  const activeFrame = board.frames[frameIndex];
   const objects = board.frames[frameIndex]?.objects ?? [];
   const selectedArrows = useMemo(
     () =>
@@ -339,8 +340,39 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
       ? project?.settings?.awayKit.shirt
       : project?.settings?.homeKit.shirt) ??
     "#f9bf4a";
-  const highlightedPlayers = board.playerHighlights ?? [];
-  const playerLinks = board.playerLinks ?? [];
+  const highlightedPlayers =
+    activeFrame?.playerHighlights ?? board.playerHighlights ?? [];
+  const playerLinks = activeFrame?.playerLinks ?? board.playerLinks ?? [];
+
+  useEffect(() => {
+    if (!activeFrame) {
+      return;
+    }
+    const needsHighlights =
+      activeFrame.playerHighlights === undefined &&
+      (board.playerHighlights ?? []).length > 0;
+    const needsLinks =
+      activeFrame.playerLinks === undefined &&
+      (board.playerLinks ?? []).length > 0;
+    if (!needsHighlights && !needsLinks) {
+      return;
+    }
+    const nextFrames = board.frames.map((frame, index) =>
+      index === frameIndex
+        ? {
+            ...frame,
+            playerHighlights:
+              frame.playerHighlights ?? board.playerHighlights ?? [],
+            playerLinks: frame.playerLinks ?? board.playerLinks ?? [],
+          }
+        : frame
+    );
+    useProjectStore.getState().updateBoard(board.id, {
+      frames: nextFrames,
+      playerHighlights: [],
+      playerLinks: [],
+    });
+  }, [activeFrame, board, frameIndex]);
   const playerPositions = useMemo(() => {
     const map = new Map<string, { x: number; y: number }>();
     renderObjects.forEach((item) => {
@@ -463,12 +495,16 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
     setSelectedLinkId(null);
     const target = objects.find((item) => item.id === id);
     if (isHighlighting && target?.type === "player") {
-      const current = board.playerHighlights ?? [];
+      const current =
+        activeFrame?.playerHighlights ?? board.playerHighlights ?? [];
       const next = current.includes(id)
         ? current.filter((entry) => entry !== id)
         : [...current, id];
+      const nextFrames = board.frames.map((frame, index) =>
+        index === frameIndex ? { ...frame, playerHighlights: next } : frame
+      );
       useProjectStore.getState().updateBoard(board.id, {
-        playerHighlights: next,
+        frames: nextFrames,
       });
     }
     if (multi) {

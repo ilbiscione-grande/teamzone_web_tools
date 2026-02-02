@@ -39,6 +39,7 @@ export default function PropertiesPanel() {
 
   const board = getActiveBoard(project);
   const frameIndex = board?.activeFrameIndex ?? 0;
+  const activeFrame = board?.frames[frameIndex];
   const objects = board?.frames[frameIndex]?.objects ?? [];
   const canCopyAcrossFrames =
     board?.mode === "DYNAMIC" && (board?.frames.length ?? 0) > 1;
@@ -47,9 +48,24 @@ export default function PropertiesPanel() {
     [objects, selection]
   );
   const target = selected[0];
-  const selectedLink = board?.playerLinks?.find(
+  const selectedLink = activeFrame?.playerLinks?.find(
     (link) => link.id === selectedLinkId
   );
+  const boardSquads = useMemo(
+    () => getBoardSquads(project ?? null, board ?? null),
+    [project, board]
+  );
+  const playerNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    const squads = [boardSquads.home, boardSquads.away].filter(Boolean);
+    squads.forEach((squad) => {
+      squad?.players.forEach((player) => {
+        const label = player.name || player.positionLabel || "";
+        map.set(player.id, label);
+      });
+    });
+    return map;
+  }, [boardSquads]);
   const selectedLinkStyle = selectedLink?.style ?? {
     stroke: "#f9bf4a",
     strokeWidth: 0.5,
@@ -102,22 +118,66 @@ export default function PropertiesPanel() {
     if (!board || !selectedLinkId) {
       return;
     }
-    const nextLinks = (board.playerLinks ?? []).filter(
+    const nextLinks = (activeFrame?.playerLinks ?? []).filter(
       (link) => link.id !== selectedLinkId
     );
     useEditorStore.getState().setSelectedLinkId(null);
-    updateBoard(board.id, { playerLinks: nextLinks });
+    const nextFrames = board.frames.map((frame, index) =>
+      index === frameIndex ? { ...frame, playerLinks: nextLinks } : frame
+    );
+    updateBoard(board.id, { frames: nextFrames });
   };
   const updateLinkStyle = (payload: Partial<typeof selectedLinkStyle>) => {
     if (!board || !selectedLink) {
       return;
     }
-    const nextLinks = (board.playerLinks ?? []).map((link) =>
+    const nextLinks = (activeFrame?.playerLinks ?? []).map((link) =>
       link.id === selectedLink.id
         ? { ...link, style: { ...selectedLinkStyle, ...payload } }
         : link
     );
-    updateBoard(board.id, { playerLinks: nextLinks });
+    const nextFrames = board.frames.map((frame, index) =>
+      index === frameIndex ? { ...frame, playerLinks: nextLinks } : frame
+    );
+    updateBoard(board.id, { frames: nextFrames });
+  };
+  const removeLinkPlayer = (index: number) => {
+    if (!board || !selectedLink) {
+      return;
+    }
+    const nextIds = selectedLink.playerIds.filter((_, i) => i !== index);
+    if (nextIds.length < 2) {
+      const nextLinks = (activeFrame?.playerLinks ?? []).filter(
+        (link) => link.id !== selectedLink.id
+      );
+      useEditorStore.getState().setSelectedLinkId(null);
+      const nextFrames = board.frames.map((frame, idx) =>
+        idx === frameIndex ? { ...frame, playerLinks: nextLinks } : frame
+      );
+      updateBoard(board.id, { frames: nextFrames });
+      return;
+    }
+    const nextLinks = (activeFrame?.playerLinks ?? []).map((link) =>
+      link.id === selectedLink.id ? { ...link, playerIds: nextIds } : link
+    );
+    const nextFrames = board.frames.map((frame, idx) =>
+      idx === frameIndex ? { ...frame, playerLinks: nextLinks } : frame
+    );
+    updateBoard(board.id, { frames: nextFrames });
+  };
+  const getLinkPlayerLabel = (playerId: string) => {
+    const playerObject = objects.find(
+      (item) => item.id === playerId && item.type === "player"
+    );
+    if (playerObject && "squadPlayerId" in playerObject) {
+      const name = playerObject.squadPlayerId
+        ? playerNameById.get(playerObject.squadPlayerId)
+        : "";
+      if (name) {
+        return name;
+      }
+    }
+    return playerId;
   };
 
   const copyPlayerPositions = (direction: "prev" | "next") => {
@@ -231,6 +291,24 @@ export default function PropertiesPanel() {
               <p className="text-[11px] uppercase text-[var(--ink-1)]">
                 Link line
               </p>
+              <div className="mt-2 space-y-2">
+                {selectedLink.playerIds.map((id, index) => (
+                  <div
+                    key={`${id}-${index}`}
+                    className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/70 px-3 py-2 text-[11px]"
+                  >
+                    <span>
+                      {index + 1}. {getLinkPlayerLabel(id)}
+                    </span>
+                    <button
+                      className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                      onClick={() => removeLinkPlayer(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <label className="space-y-1">
                   <span className="text-[11px]">Stroke</span>

@@ -11,6 +11,8 @@ export type BoardFrame = {
   action?: string;
   notes?: string;
   durationMs?: number;
+  playerHighlights?: string[];
+  playerLinks?: PlayerLink[];
 };
 
 export type PlayerLink = {

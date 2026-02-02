@@ -134,6 +134,9 @@ export default function TopBar() {
   const boardLimitReached =
     Number.isFinite(limits.maxBoards) &&
     project.boards.length >= limits.maxBoards;
+  const modeLabel =
+    project?.settings?.mode ?? ("match" as "training" | "match" | "education");
+  const modeText = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
 
   const onExport = () => {
     if (!can(plan, "project.export")) {
@@ -204,6 +207,9 @@ export default function TopBar() {
               updateProjectMeta({ name: event.target.value })
             }
           />
+          <span className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
+            {modeText} mode
+          </span>
           <div className="flex flex-col items-center gap-1">
             <button
               className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"

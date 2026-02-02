@@ -13,6 +13,7 @@ import type {
 import { can, getPlanLimits } from "@/utils/plan";
 import { createId } from "@/utils/id";
 import { clone } from "@/utils/clone";
+import { getDefaultBoardSettings } from "@/state/projectHelpers";
 import AdBanner from "@/components/AdBanner";
 import PlanModal from "@/components/PlanModal";
 import BetaNoticeModal from "@/components/BetaNoticeModal";
@@ -97,6 +98,16 @@ export default function ProjectList() {
   const [contactMessage, setContactMessage] = useState("");
   const [contactStatus, setContactStatus] = useState<string | null>(null);
   const [contactSending, setContactSending] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createMode, setCreateMode] = useState<"training" | "match" | "education">("match");
+  const [createPitchView, setCreatePitchView] = useState<"FULL" | "DEF_HALF" | "OFF_HALF" | "GREEN_EMPTY">("FULL");
+  const [createPitchOverlay, setCreatePitchOverlay] = useState<"NONE" | "THIRDS" | "ZONES_18" | "CORRIDORS">("NONE");
+  const [createPitchShape, setCreatePitchShape] = useState<"none" | "circle" | "square" | "rect">("none");
+  const [createPlayerLabel, setCreatePlayerLabel] = useState({
+    showName: true,
+    showPosition: false,
+    showNumber: false,
+  });
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -354,38 +365,21 @@ export default function ProjectList() {
     openProjectFromData(nextProject);
   };
 
+  useEffect(() => {
+    const defaults = getDefaultBoardSettings(createMode);
+    setAttachBallToPlayer(defaults.attachBallToPlayer);
+    setCreatePitchView(defaults.pitchView);
+    setCreatePitchOverlay(defaults.pitchOverlay);
+    setCreatePitchShape(defaults.pitchShape);
+    setCreatePlayerLabel(defaults.playerLabel);
+  }, [createMode]);
+
   const onCreate = () => {
     if (!name.trim()) {
+      setError("Enter a project name.");
       return;
     }
-    const limits = getPlanLimits(plan);
-    const existingIds = new Set(index.map((item) => item.id));
-    if (project) {
-      existingIds.add(project.id);
-    }
-    if (existingIds.size >= limits.maxProjects) {
-      setError("Project limit reached for this plan.");
-      return;
-    }
-    createProject(name.trim(), {
-      homeKit,
-      awayKit,
-      attachBallToPlayer,
-    });
-    setName("");
-    setHomeKit({
-      shirt: "#e24a3b",
-      shorts: "#0f1b1a",
-      socks: "#f06d4f",
-      vest: "",
-    });
-    setAwayKit({
-      shirt: "#2f6cf6",
-      shorts: "#0f1b1a",
-      socks: "#f2f1e9",
-      vest: "",
-    });
-    setAttachBallToPlayer(false);
+    setCreateOpen(true);
   };
 
   const onImport = async (file: File) => {
@@ -658,113 +652,6 @@ export default function ProjectList() {
               >
                 Create
               </button>
-            </div>
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-4 text-xs text-[var(--ink-1)]">
-              <p className="mb-3 text-[11px] uppercase">Project defaults</p>
-              <div className="grid gap-3">
-                <div className="grid gap-2">
-                  <p className="text-[11px] uppercase text-[var(--ink-1)]">
-                    Home kit
-                  </p>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <label className="flex items-center gap-2">
-                      <span>Shirt</span>
-                      <input
-                        type="color"
-                        value={homeKit.shirt}
-                        onChange={(event) =>
-                          setHomeKit((prev) => ({
-                            ...prev,
-                            shirt: event.target.value,
-                          }))
-                        }
-                      />
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <span>Shorts</span>
-                      <input
-                        type="color"
-                        value={homeKit.shorts}
-                        onChange={(event) =>
-                          setHomeKit((prev) => ({
-                            ...prev,
-                            shorts: event.target.value,
-                          }))
-                        }
-                      />
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <span>Socks</span>
-                      <input
-                        type="color"
-                        value={homeKit.socks}
-                        onChange={(event) =>
-                          setHomeKit((prev) => ({
-                            ...prev,
-                            socks: event.target.value,
-                          }))
-                        }
-                      />
-                    </label>
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <p className="text-[11px] uppercase text-[var(--ink-1)]">
-                    Away kit
-                  </p>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <label className="flex items-center gap-2">
-                      <span>Shirt</span>
-                      <input
-                        type="color"
-                        value={awayKit.shirt}
-                        onChange={(event) =>
-                          setAwayKit((prev) => ({
-                            ...prev,
-                            shirt: event.target.value,
-                          }))
-                        }
-                      />
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <span>Shorts</span>
-                      <input
-                        type="color"
-                        value={awayKit.shorts}
-                        onChange={(event) =>
-                          setAwayKit((prev) => ({
-                            ...prev,
-                            shorts: event.target.value,
-                          }))
-                        }
-                      />
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <span>Socks</span>
-                      <input
-                        type="color"
-                        value={awayKit.socks}
-                        onChange={(event) =>
-                          setAwayKit((prev) => ({
-                            ...prev,
-                            socks: event.target.value,
-                          }))
-                        }
-                      />
-                    </label>
-                  </div>
-                </div>
-                <label className="flex items-center justify-between rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px]">
-                  <span>Attach ball to player on drop</span>
-                  <input
-                    type="checkbox"
-                    checked={attachBallToPlayer}
-                    onChange={(event) =>
-                      setAttachBallToPlayer(event.target.checked)
-                    }
-                  />
-                </label>
-              </div>
             </div>
             <div className="flex flex-wrap gap-3 text-xs text-[var(--ink-1)]">
               <button
@@ -1086,6 +973,269 @@ export default function ProjectList() {
           </div>
         </section>
       </div>
+      {createOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="w-full max-w-2xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="display-font text-xl text-[var(--accent-0)]">New project settings</h2>
+                <p className="text-xs text-[var(--ink-1)]">Choose a mode and defaults for this project.</p>
+              </div>
+              <button
+                className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                onClick={() => setCreateOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-4 space-y-4">
+              <input
+                className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                placeholder="Project name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+              <div className="grid grid-cols-3 gap-2">
+                {["training", "match", "education"].map((mode) => (
+                  <button
+                    key={mode}
+                    className={`rounded-2xl border px-3 py-2 text-xs ${
+                      createMode === mode
+                        ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                        : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                    }`}
+                    onClick={() => setCreateMode(mode as "training" | "match" | "education")}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Labels</p>
+                  <label className="flex items-center justify-between text-xs">
+                    <span>Show name</span>
+                    <input
+                      type="checkbox"
+                      checked={createPlayerLabel.showName}
+                      onChange={(event) =>
+                        setCreatePlayerLabel((prev) => ({
+                          ...prev,
+                          showName: event.target.checked,
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="flex items-center justify-between text-xs">
+                    <span>Show position</span>
+                    <input
+                      type="checkbox"
+                      checked={createPlayerLabel.showPosition}
+                      onChange={(event) =>
+                        setCreatePlayerLabel((prev) => ({
+                          ...prev,
+                          showPosition: event.target.checked,
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="flex items-center justify-between text-xs">
+                    <span>Show number</span>
+                    <input
+                      type="checkbox"
+                      checked={createPlayerLabel.showNumber}
+                      onChange={(event) =>
+                        setCreatePlayerLabel((prev) => ({
+                          ...prev,
+                          showNumber: event.target.checked,
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Pitch</p>
+                  <select
+                    className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                    value={createPitchView}
+                    onChange={(event) => {
+                      const nextView = event.target.value as
+                        | "FULL"
+                        | "DEF_HALF"
+                        | "OFF_HALF"
+                        | "GREEN_EMPTY";
+                      setCreatePitchView(nextView);
+                      if (nextView !== "GREEN_EMPTY") {
+                        setCreatePitchShape("none");
+                      }
+                    }}
+                  >
+                    <option value="FULL">Full</option>
+                    <option value="DEF_HALF">Half (def)</option>
+                    <option value="OFF_HALF">Half (off)</option>
+                    <option value="GREEN_EMPTY">Empty</option>
+                  </select>
+                  {createPitchView === "GREEN_EMPTY" && (
+                    <select
+                      className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                      value={createPitchShape}
+                      onChange={(event) => setCreatePitchShape(event.target.value as any)}
+                    >
+                      <option value="none">No shape</option>
+                      <option value="circle">Circle</option>
+                      <option value="square">Square</option>
+                      <option value="rect">Rectangle</option>
+                    </select>
+                  )}
+                  <select
+                    className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                    value={createPitchOverlay}
+                    onChange={(event) => setCreatePitchOverlay(event.target.value as any)}
+                  >
+                    <option value="NONE">No overlay</option>
+                    <option value="THIRDS">Thirds</option>
+                    <option value="ZONES_18">Zones</option>
+                    <option value="CORRIDORS">Corridors</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Team colors</p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <p className="text-[11px] uppercase text-[var(--ink-1)]">Home kit</p>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="flex items-center gap-2">
+                        <span>Shirt</span>
+                        <input
+                          type="color"
+                          value={homeKit.shirt}
+                          onChange={(event) =>
+                            setHomeKit((prev) => ({
+                              ...prev,
+                              shirt: event.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <span>Shorts</span>
+                        <input
+                          type="color"
+                          value={homeKit.shorts}
+                          onChange={(event) =>
+                            setHomeKit((prev) => ({
+                              ...prev,
+                              shorts: event.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <span>Socks</span>
+                        <input
+                          type="color"
+                          value={homeKit.socks}
+                          onChange={(event) =>
+                            setHomeKit((prev) => ({
+                              ...prev,
+                              socks: event.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-[11px] uppercase text-[var(--ink-1)]">Away kit</p>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="flex items-center gap-2">
+                        <span>Shirt</span>
+                        <input
+                          type="color"
+                          value={awayKit.shirt}
+                          onChange={(event) =>
+                            setAwayKit((prev) => ({
+                              ...prev,
+                              shirt: event.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <span>Shorts</span>
+                        <input
+                          type="color"
+                          value={awayKit.shorts}
+                          onChange={(event) =>
+                            setAwayKit((prev) => ({
+                              ...prev,
+                              shorts: event.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <span>Socks</span>
+                        <input
+                          type="color"
+                          value={awayKit.socks}
+                          onChange={(event) =>
+                            setAwayKit((prev) => ({
+                              ...prev,
+                              socks: event.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <label className="flex items-center justify-between rounded-2xl border border-[var(--line)] px-3 py-2 text-xs">
+                <span>Attach ball to player on drop</span>
+                <input
+                  type="checkbox"
+                  checked={attachBallToPlayer}
+                  onChange={(event) => setAttachBallToPlayer(event.target.checked)}
+                />
+              </label>
+              <button
+                className="h-10 w-full rounded-full bg-[var(--accent-0)] px-5 text-xs font-semibold text-black transition hover:brightness-110"
+                onClick={() => {
+                  const limits = getPlanLimits(plan);
+                  const existingIds = new Set(index.map((item) => item.id));
+                  if (project) {
+                    existingIds.add(project.id);
+                  }
+                  if (existingIds.size >= limits.maxProjects) {
+                    setError("Project limit reached for this plan.");
+                    return;
+                  }
+                  if (!name.trim()) {
+                    setError("Enter a project name.");
+                    return;
+                  }
+                  createProject(name.trim(), {
+                    homeKit,
+                    awayKit,
+                    attachBallToPlayer,
+                    mode: createMode,
+                    pitchView: createPitchView,
+                    pitchOverlay: createPitchOverlay,
+                    pitchShape: createPitchShape,
+                    playerLabel: createPlayerLabel,
+                  });
+                  setCreateOpen(false);
+                  setName("");
+                }}
+              >
+                Create project
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <PlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
       <BetaNoticeModal
         open={betaOpen}
