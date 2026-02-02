@@ -51,13 +51,13 @@ export default function PropertiesPanel() {
   const selectedLink = activeFrame?.playerLinks?.find(
     (link) => link.id === selectedLinkId
   );
-  const boardSquads = useMemo(
+  const memoBoardSquads = useMemo(
     () => getBoardSquads(project ?? null, board ?? null),
     [project, board]
   );
   const playerNameById = useMemo(() => {
     const map = new Map<string, string>();
-    const squads = [boardSquads.home, boardSquads.away].filter(Boolean);
+    const squads = [memoBoardSquads.home, memoBoardSquads.away].filter(Boolean);
     squads.forEach((squad) => {
       squad?.players.forEach((player) => {
         const label = player.name || player.positionLabel || "";
@@ -65,7 +65,7 @@ export default function PropertiesPanel() {
       });
     });
     return map;
-  }, [boardSquads]);
+  }, [memoBoardSquads]);
   const selectedLinkStyle = selectedLink?.style ?? {
     stroke: "#f9bf4a",
     strokeWidth: 0.5,
@@ -225,34 +225,33 @@ export default function PropertiesPanel() {
     });
   };
 
-  const boardSquads = getBoardSquads(project, board);
   const squadPlayerById = useMemo(() => {
     const map = new Map<
       string,
-      typeof boardSquads.all[number]["players"][number]
+      typeof memoBoardSquads.all[number]["players"][number]
     >();
-    boardSquads.all.forEach((squad) => {
+    memoBoardSquads.all.forEach((squad) => {
       squad.players.forEach((player) => {
         map.set(player.id, player);
       });
     });
     return map;
-  }, [boardSquads]);
+  }, [memoBoardSquads]);
   const squadIdByPlayerId = useMemo(() => {
     const map = new Map<string, string>();
-    boardSquads.all.forEach((squad) => {
+    memoBoardSquads.all.forEach((squad) => {
       squad.players.forEach((player) => {
         map.set(player.id, squad.id);
       });
     });
     return map;
-  }, [boardSquads]);
+  }, [memoBoardSquads]);
   const playerOptions = [
-    ...(boardSquads.home?.players.map((player) => ({
+    ...(memoBoardSquads.home?.players.map((player) => ({
       id: player.id,
       label: `Home: ${player.name} (${player.positionLabel})`,
     })) ?? []),
-    ...(boardSquads.away?.players.map((player) => ({
+    ...(memoBoardSquads.away?.players.map((player) => ({
       id: player.id,
       label: `Away: ${player.name} (${player.positionLabel})`,
     })) ?? []),
