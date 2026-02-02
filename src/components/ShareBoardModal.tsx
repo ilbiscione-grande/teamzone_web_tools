@@ -50,12 +50,15 @@ export default function ShareBoardModal({
   const [loadingShares, setLoadingShares] = useState(false);
   const [publicTitle, setPublicTitle] = useState(board.name);
   const [publicDescription, setPublicDescription] = useState("");
+  const [publicCategory, setPublicCategory] = useState("");
   const [publicTags, setPublicTags] = useState("");
   const [publicFormation, setPublicFormation] = useState("");
   const [publicBoard, setPublicBoard] = useState<PublicBoard | null>(null);
   const [publicBoards, setPublicBoards] = useState<PublicBoard[]>([]);
   const [publicLoading, setPublicLoading] = useState(false);
   const [publicListLoading, setPublicListLoading] = useState(false);
+  const [publicQuery, setPublicQuery] = useState("");
+  const [publicCategoryFilter, setPublicCategoryFilter] = useState("");
 
   const canShare = can(plan, "board.share");
   const canPublish = can(plan, "board.share");
@@ -215,6 +218,7 @@ export default function ShareBoardModal({
         if (result.board) {
           setPublicTitle(result.board.title || board.name);
           setPublicDescription(result.board.description || "");
+          setPublicCategory(result.board.category || "");
           setPublicTags((result.board.tags || []).join(", "));
           setPublicFormation(result.board.formation ?? "");
         }
@@ -300,6 +304,7 @@ export default function ShareBoardModal({
       board,
       title: publicTitle.trim(),
       description: publicDescription.trim(),
+      category: publicCategory.trim(),
       tags,
       formation: publicFormation.trim() || undefined,
       thumbnail,
@@ -365,6 +370,40 @@ export default function ShareBoardModal({
   if (!open) {
     return null;
   }
+
+  const filteredPublicBoards = publicBoards
+    .filter((entry) => {
+      if (entry.status === "unverified") {
+        return entry.ownerId === authUser?.id;
+      }
+      return true;
+    })
+    .filter((entry) => {
+      if (!publicCategoryFilter.trim()) {
+        return true;
+      }
+      return entry.category
+        .toLowerCase()
+        .includes(publicCategoryFilter.trim().toLowerCase());
+    })
+    .filter((entry) => {
+      if (!publicQuery.trim()) {
+        return true;
+      }
+      const query = publicQuery.trim().toLowerCase();
+      const haystack = [
+        entry.title,
+        entry.boardName,
+        entry.projectName,
+        entry.description,
+        entry.formation ?? "",
+        entry.category ?? "",
+        entry.tags?.join(" ") ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
@@ -503,6 +542,13 @@ export default function ShareBoardModal({
               />
               <input
                 className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                placeholder="Category"
+                value={publicCategory}
+                onChange={(event) => setPublicCategory(event.target.value)}
+                disabled={!canPublish}
+              />
+              <input
+                className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                 placeholder="Tags (comma separated)"
                 value={publicTags}
                 onChange={(event) => setPublicTags(event.target.value)}
@@ -544,22 +590,29 @@ export default function ShareBoardModal({
               <span>Browse public boards</span>
               <span>{publicBoards.length}</span>
             </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input
+                className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                placeholder="Search title, tags, formation"
+                value={publicQuery}
+                onChange={(event) => setPublicQuery(event.target.value)}
+              />
+              <input
+                className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                placeholder="Filter category"
+                value={publicCategoryFilter}
+                onChange={(event) => setPublicCategoryFilter(event.target.value)}
+              />
+            </div>
             <div className="max-h-56 space-y-2 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
               {publicListLoading ? (
                 <p className="text-xs text-[var(--ink-1)]">Loading library...</p>
-              ) : publicBoards.length === 0 ? (
+              ) : filteredPublicBoards.length === 0 ? (
                 <p className="text-xs text-[var(--ink-1)]">
                   No public boards yet.
                 </p>
               ) : (
-                publicBoards
-                  .filter((entry) => {
-                    if (entry.status === "unverified") {
-                      return entry.ownerId === authUser?.id;
-                    }
-                    return true;
-                  })
-                  .map((entry) => (
+                filteredPublicBoards.map((entry) => (
                     <div
                       key={entry.id}
                       className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"
@@ -584,6 +637,11 @@ export default function ShareBoardModal({
                               Formation: {entry.formation}
                             </p>
                           )}
+                          {entry.category ? (
+                            <p className="text-[11px] text-[var(--ink-1)]">
+                              Category: {entry.category}
+                            </p>
+                          ) : null}
                           {entry.tags?.length ? (
                             <p className="text-[11px] text-[var(--ink-1)]">
                               {entry.tags.join(", ")}

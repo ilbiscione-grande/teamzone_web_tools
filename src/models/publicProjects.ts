@@ -10,6 +10,7 @@ export type PublicProject = {
   projectName: string;
   title: string;
   description: string;
+  category: string;
   tags: string[];
   status: PublicProjectStatus;
   createdAt: string;

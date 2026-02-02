@@ -11,6 +11,7 @@ export type PublicBoard = {
   projectName: string;
   title: string;
   description: string;
+  category: string;
   tags: string[];
   formation?: string | null;
   thumbnail?: string | null;

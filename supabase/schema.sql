@@ -85,6 +85,7 @@ create table if not exists public_boards (
   project_name text not null,
   title text not null,
   description text,
+  category text not null default '',
   tags text[] not null default '{}',
   formation text,
   thumbnail text,
@@ -96,6 +97,9 @@ create table if not exists public_boards (
 
 alter table public_boards
 add column if not exists thumbnail text;
+
+alter table public_boards
+add column if not exists category text not null default '';
 
 create unique index if not exists public_boards_owner_board_idx
 on public_boards(owner_id, board_id);
@@ -157,6 +161,7 @@ create table if not exists public_projects (
   project_name text not null,
   title text not null,
   description text,
+  category text not null default '',
   tags text[] not null default '{}',
   status text not null default 'unverified',
   project_data jsonb not null,
@@ -166,6 +171,9 @@ create table if not exists public_projects (
 
 create unique index if not exists public_projects_owner_project_idx
 on public_projects(owner_id, project_id);
+
+alter table public_projects
+add column if not exists category text not null default '';
 
 create index if not exists public_projects_status_idx on public_projects(status);
 

@@ -20,6 +20,7 @@ const mapPublicBoard = (row: any): PublicBoard => ({
   projectName: row.project_name,
   title: row.title,
   description: row.description ?? "",
+  category: row.category ?? "",
   tags: row.tags ?? [],
   formation: row.formation ?? null,
   thumbnail: row.thumbnail ?? null,
@@ -77,6 +78,7 @@ export const publishPublicBoard = async (payload: {
   board: Board;
   title: string;
   description: string;
+  category: string;
   tags: string[];
   formation?: string;
   thumbnail?: string | null;
@@ -107,6 +109,7 @@ export const publishPublicBoard = async (payload: {
         project_name: payload.project.name,
         title: payload.title,
         description: payload.description,
+        category: payload.category,
         tags: payload.tags,
         formation: payload.formation ?? null,
         thumbnail: payload.thumbnail ?? null,

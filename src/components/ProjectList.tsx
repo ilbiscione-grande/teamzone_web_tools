@@ -77,9 +77,12 @@ export default function ProjectList() {
   const [publicProjectEntry, setPublicProjectEntry] = useState<PublicProject | null>(null);
   const [publicProjectTitle, setPublicProjectTitle] = useState("");
   const [publicProjectDescription, setPublicProjectDescription] = useState("");
+  const [publicProjectCategory, setPublicProjectCategory] = useState("");
   const [publicProjectTags, setPublicProjectTags] = useState("");
   const [publicProjectStatus, setPublicProjectStatus] = useState<string | null>(null);
   const [publicProjectLoading, setPublicProjectLoading] = useState(false);
+  const [publicProjectsQuery, setPublicProjectsQuery] = useState("");
+  const [publicProjectsCategory, setPublicProjectsCategory] = useState("");
   const [shareProjectOpen, setShareProjectOpen] = useState(false);
   const [shareProjectId, setShareProjectId] = useState<string | null>(null);
   const [shareProjectMode, setShareProjectMode] = useState<"user" | "public">(
@@ -237,6 +240,7 @@ export default function ProjectList() {
     setPublicProjectId(projectId);
     setPublicProjectTitle("");
     setPublicProjectDescription("");
+    setPublicProjectCategory("");
     setPublicProjectTags("");
     setPublicProjectStatus(null);
     setPublicProjectEntry(null);
@@ -251,6 +255,7 @@ export default function ProjectList() {
       if (result.project) {
         setPublicProjectTitle(result.project.title || "");
         setPublicProjectDescription(result.project.description || "");
+        setPublicProjectCategory(result.project.category || "");
         setPublicProjectTags((result.project.tags || []).join(", "));
       }
     }
@@ -306,6 +311,7 @@ export default function ProjectList() {
       project: payloadProject,
       title: publicProjectTitle.trim(),
       description: publicProjectDescription.trim(),
+      category: publicProjectCategory.trim(),
       tags,
     });
     if (!result.ok) {
@@ -506,6 +512,38 @@ export default function ProjectList() {
     }
     setShareSending(false);
   };
+
+  const filteredPublicProjects = publicProjects
+    .filter((entry) => {
+      if (entry.status === "unverified") {
+        return entry.ownerId === authUser?.id;
+      }
+      return true;
+    })
+    .filter((entry) => {
+      if (!publicProjectsCategory.trim()) {
+        return true;
+      }
+      return entry.category
+        .toLowerCase()
+        .includes(publicProjectsCategory.trim().toLowerCase());
+    })
+    .filter((entry) => {
+      if (!publicProjectsQuery.trim()) {
+        return true;
+      }
+      const query = publicProjectsQuery.trim().toLowerCase();
+      const haystack = [
+        entry.title,
+        entry.projectName,
+        entry.description,
+        entry.category ?? "",
+        entry.tags?.join(" ") ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
 
   return (
     <div className="h-screen overflow-y-auto px-8 py-12" data-scrollable>
@@ -904,6 +942,20 @@ export default function ProjectList() {
                   {publicProjects.length}
                 </span>
               </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input
+                  className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                  placeholder="Search title, tags"
+                  value={publicProjectsQuery}
+                  onChange={(event) => setPublicProjectsQuery(event.target.value)}
+                />
+                <input
+                  className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                  placeholder="Filter category"
+                  value={publicProjectsCategory}
+                  onChange={(event) => setPublicProjectsCategory(event.target.value)}
+                />
+              </div>
               {publicProjectsLoading ? (
                 <p className="text-sm text-[var(--ink-1)]">
                   Loading project library...
@@ -912,19 +964,12 @@ export default function ProjectList() {
                 <p className="text-sm text-[var(--accent-1)]">
                   {publicProjectsError}
                 </p>
-              ) : publicProjects.length === 0 ? (
+              ) : filteredPublicProjects.length === 0 ? (
                 <p className="text-sm text-[var(--ink-1)]">
                   No public projects yet.
                 </p>
               ) : (
-                publicProjects
-                  .filter((entry) => {
-                    if (entry.status === "unverified") {
-                      return entry.ownerId === authUser?.id;
-                    }
-                    return true;
-                  })
-                  .map((entry) => (
+                filteredPublicProjects.map((entry) => (
                     <div
                       key={entry.id}
                       className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-4 py-3"
@@ -940,6 +985,11 @@ export default function ProjectList() {
                           <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                             {entry.status}
                           </p>
+                          {entry.category ? (
+                            <p className="text-[11px] text-[var(--ink-1)]">
+                              Category: {entry.category}
+                            </p>
+                          ) : null}
                           {entry.tags?.length ? (
                             <p className="text-[11px] text-[var(--ink-1)]">
                               {entry.tags.join(", ")}
@@ -1412,6 +1462,15 @@ export default function ProjectList() {
                     value={publicProjectDescription}
                     onChange={(event) =>
                       setPublicProjectDescription(event.target.value)
+                    }
+                    disabled={!can(plan, "board.share")}
+                  />
+                  <input
+                    className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                    placeholder="Category"
+                    value={publicProjectCategory}
+                    onChange={(event) =>
+                      setPublicProjectCategory(event.target.value)
                     }
                     disabled={!can(plan, "board.share")}
                   />

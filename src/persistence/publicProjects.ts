@@ -17,6 +17,7 @@ const mapPublicProject = (row: any): PublicProject => ({
   projectName: row.project_name,
   title: row.title,
   description: row.description ?? "",
+  category: row.category ?? "",
   tags: row.tags ?? [],
   status: row.status as PublicProjectStatus,
   createdAt: row.created_at,
@@ -71,6 +72,7 @@ export const publishPublicProject = async (payload: {
   project: Project;
   title: string;
   description: string;
+  category: string;
   tags: string[];
 }) => {
   if (!supabase) {
@@ -92,6 +94,7 @@ export const publishPublicProject = async (payload: {
         project_name: payload.project.name,
         title: payload.title,
         description: payload.description,
+        category: payload.category,
         tags: payload.tags,
         status: "unverified",
         project_data: payload.project,
