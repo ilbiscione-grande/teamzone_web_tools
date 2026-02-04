@@ -63,6 +63,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
   const addObject = useProjectStore((state) => state.addObject);
   const updateObject = useProjectStore((state) => state.updateObject);
   const removeObject = useProjectStore((state) => state.removeObject);
+  const updateBoard = useProjectStore((state) => state.updateBoard);
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
 
   const frameIndex = board.activeFrameIndex;
@@ -1422,60 +1423,158 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                   y={anchor.y - 1.4}
                 >
                   <Rect
-                    x={-1.6}
-                    y={-1.6}
-                    width={3.2}
-                    height={3.2}
-                    cornerRadius={0.6}
+                    x={-1.3}
+                    y={-1.3}
+                    width={2.6}
+                    height={2.6}
+                    cornerRadius={0.5}
                     fill="#0f1b1a"
                     opacity={0.85}
-                    stroke="#f9bf4a"
-                    strokeWidth={0.15}
-                  />
-                  <Rect
-                    x={-0.7}
-                    y={-0.2}
-                    width={1.4}
-                    height={1.2}
-                    stroke="#f9bf4a"
-                    strokeWidth={0.15}
-                  />
-                  <Line
-                    points={[-0.9, -0.6, 0.9, -0.6]}
-                    stroke="#f9bf4a"
-                    strokeWidth={0.15}
-                  />
-                  <Line
-                    points={[-0.4, -0.2, -0.4, 0.9]}
-                    stroke="#f9bf4a"
-                    strokeWidth={0.12}
-                  />
-                  <Line
-                    points={[0, -0.2, 0, 0.9]}
-                    stroke="#f9bf4a"
-                    strokeWidth={0.12}
-                  />
-                  <Line
-                    points={[0.4, -0.2, 0.4, 0.9]}
-                    stroke="#f9bf4a"
+                    stroke="#ffffff"
                     strokeWidth={0.12}
                   />
                   <Rect
-                    x={-1.6}
-                    y={-1.6}
-                    width={3.2}
-                    height={3.2}
-                    cornerRadius={0.6}
+                    x={-0.55}
+                    y={-0.15}
+                    width={1.1}
+                    height={0.9}
+                    stroke="#ffffff"
+                    strokeWidth={0.12}
+                  />
+                  <Line
+                    points={[-0.75, -0.45, 0.75, -0.45]}
+                    stroke="#ffffff"
+                    strokeWidth={0.12}
+                  />
+                  <Line
+                    points={[-0.35, -0.15, -0.35, 0.65]}
+                    stroke="#ffffff"
+                    strokeWidth={0.1}
+                  />
+                  <Line
+                    points={[0, -0.15, 0, 0.65]}
+                    stroke="#ffffff"
+                    strokeWidth={0.1}
+                  />
+                  <Line
+                    points={[0.35, -0.15, 0.35, 0.65]}
+                    stroke="#ffffff"
+                    strokeWidth={0.1}
+                  />
+                  <Rect
+                    x={-1.3}
+                    y={-1.3}
+                    width={2.6}
+                    height={2.6}
+                    cornerRadius={0.5}
                     opacity={0}
                     onClick={(event) => {
                       event.cancelBubble = true;
                       pushHistory(clone(objects));
                       removeObject(board.id, frameIndex, selectedItem.id);
+                      setSelection([]);
+                      setSelectedLinkId(null);
                     }}
                     onTap={(event) => {
                       event.cancelBubble = true;
                       pushHistory(clone(objects));
                       removeObject(board.id, frameIndex, selectedItem.id);
+                      setSelection([]);
+                      setSelectedLinkId(null);
+                    }}
+                  />
+                </Group>
+              );
+            })()}
+            {selectedLinkId && !isSharedReadOnly && (() => {
+              const link = playerLinks.find((entry) => entry.id === selectedLinkId);
+              if (!link) {
+                return null;
+              }
+              const points = link.playerIds
+                .map((id) => playerPositions.get(id))
+                .filter(Boolean) as { x: number; y: number }[];
+              if (points.length === 0) {
+                return null;
+              }
+              const anchor = points[points.length - 1]!;
+              return (
+                <Group
+                  key={`${link.id}-delete`}
+                  x={anchor.x + 1.4}
+                  y={anchor.y - 1.4}
+                >
+                  <Rect
+                    x={-1.3}
+                    y={-1.3}
+                    width={2.6}
+                    height={2.6}
+                    cornerRadius={0.5}
+                    fill="#0f1b1a"
+                    opacity={0.85}
+                    stroke="#ffffff"
+                    strokeWidth={0.12}
+                  />
+                  <Rect
+                    x={-0.55}
+                    y={-0.15}
+                    width={1.1}
+                    height={0.9}
+                    stroke="#ffffff"
+                    strokeWidth={0.12}
+                  />
+                  <Line
+                    points={[-0.75, -0.45, 0.75, -0.45]}
+                    stroke="#ffffff"
+                    strokeWidth={0.12}
+                  />
+                  <Line
+                    points={[-0.35, -0.15, -0.35, 0.65]}
+                    stroke="#ffffff"
+                    strokeWidth={0.1}
+                  />
+                  <Line
+                    points={[0, -0.15, 0, 0.65]}
+                    stroke="#ffffff"
+                    strokeWidth={0.1}
+                  />
+                  <Line
+                    points={[0.35, -0.15, 0.35, 0.65]}
+                    stroke="#ffffff"
+                    strokeWidth={0.1}
+                  />
+                  <Rect
+                    x={-1.3}
+                    y={-1.3}
+                    width={2.6}
+                    height={2.6}
+                    cornerRadius={0.5}
+                    opacity={0}
+                    onClick={(event) => {
+                      event.cancelBubble = true;
+                      const nextLinks = (activeFrame?.playerLinks ?? []).filter(
+                        (entry) => entry.id !== link.id
+                      );
+                      const nextFrames = board.frames.map((frame, index) =>
+                        index === frameIndex
+                          ? { ...frame, playerLinks: nextLinks }
+                          : frame
+                      );
+                      updateBoard(board.id, { frames: nextFrames });
+                      setSelectedLinkId(null);
+                    }}
+                    onTap={(event) => {
+                      event.cancelBubble = true;
+                      const nextLinks = (activeFrame?.playerLinks ?? []).filter(
+                        (entry) => entry.id !== link.id
+                      );
+                      const nextFrames = board.frames.map((frame, index) =>
+                        index === frameIndex
+                          ? { ...frame, playerLinks: nextLinks }
+                          : frame
+                      );
+                      updateBoard(board.id, { frames: nextFrames });
+                      setSelectedLinkId(null);
                     }}
                   />
                 </Group>
