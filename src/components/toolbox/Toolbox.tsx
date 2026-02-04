@@ -787,7 +787,7 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
       </div>
 
       {!collapsed && (
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-8 gap-2">
         {[
           { id: "items", label: "Items", icon: <PlayerIcon /> },
           { id: "draw", label: "Forms", icon: <LineIcon /> },
@@ -808,7 +808,7 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
             className={`relative flex flex-col items-center justify-center rounded-2xl border px-2 py-2 text-[11px] uppercase tracking-wide ${
-              isActive ? "col-span-2 h-14 border-[var(--accent-0)] text-[var(--ink-0)]" : "col-span-1 h-12"
+              isActive ? "col-span-3 h-14 border-[var(--accent-0)] text-[var(--ink-0)]" : "col-span-1 h-11"
             } ${
               !isActive && hasShared
                 ? "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"

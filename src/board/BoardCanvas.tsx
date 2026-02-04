@@ -61,6 +61,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
   const isSharedReadOnly = project?.isShared ?? false;
   const addObject = useProjectStore((state) => state.addObject);
   const updateObject = useProjectStore((state) => state.updateObject);
+  const removeObject = useProjectStore((state) => state.removeObject);
   const setFrameObjects = useProjectStore((state) => state.setFrameObjects);
 
   const frameIndex = board.activeFrameIndex;
@@ -525,6 +526,55 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
 
   const handleResetView = () => {
     setViewport({ zoom: 1, offsetX: 0, offsetY: 0 });
+  };
+
+  const getDeleteAnchor = (item: DrawableObject) => {
+    if (item.type === "arrow" || item.type === "path") {
+      const points = item.points ?? [];
+      let maxX = item.position.x;
+      let minY = item.position.y;
+      for (let i = 0; i < points.length; i += 2) {
+        const x = item.position.x + points[i]!;
+        const y = item.position.y + points[i + 1]!;
+        if (x > maxX) {
+          maxX = x;
+        }
+        if (y < minY) {
+          minY = y;
+        }
+      }
+      return { x: maxX, y: minY };
+    }
+    if (item.type === "circle") {
+      return {
+        x: item.position.x + item.radius,
+        y: item.position.y - item.radius,
+      };
+    }
+    if (item.type === "player" || item.type === "ball") {
+      return {
+        x: item.position.x + playerTokenSize,
+        y: item.position.y - playerTokenSize,
+      };
+    }
+    if (
+      item.type === "rect" ||
+      item.type === "triangle" ||
+      item.type === "goal" ||
+      item.type === "cone"
+    ) {
+      return {
+        x: item.position.x + item.width,
+        y: item.position.y - 1.5,
+      };
+    }
+    if (item.type === "text") {
+      return {
+        x: item.position.x + item.width,
+        y: item.position.y - 1.5,
+      };
+    }
+    return { x: item.position.x, y: item.position.y };
   };
 
 
@@ -1355,6 +1405,80 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
                   </Group>
                 );
               })}
+            {selection.length > 0 && !isSharedReadOnly && (() => {
+              const selectedItem = objects.find(
+                (item) => item.id === selection[0]
+              );
+              if (!selectedItem) {
+                return null;
+              }
+              const anchor = getDeleteAnchor(selectedItem);
+              return (
+                <Group
+                  key={`${selectedItem.id}-delete`}
+                  x={anchor.x + 1.4}
+                  y={anchor.y - 1.4}
+                >
+                  <Rect
+                    x={-1.6}
+                    y={-1.6}
+                    width={3.2}
+                    height={3.2}
+                    cornerRadius={0.6}
+                    fill="#0f1b1a"
+                    opacity={0.85}
+                    stroke="#f9bf4a"
+                    strokeWidth={0.15}
+                  />
+                  <Rect
+                    x={-0.7}
+                    y={-0.2}
+                    width={1.4}
+                    height={1.2}
+                    stroke="#f9bf4a"
+                    strokeWidth={0.15}
+                  />
+                  <Line
+                    points={[-0.9, -0.6, 0.9, -0.6]}
+                    stroke="#f9bf4a"
+                    strokeWidth={0.15}
+                  />
+                  <Line
+                    points={[-0.4, -0.2, -0.4, 0.9]}
+                    stroke="#f9bf4a"
+                    strokeWidth={0.12}
+                  />
+                  <Line
+                    points={[0, -0.2, 0, 0.9]}
+                    stroke="#f9bf4a"
+                    strokeWidth={0.12}
+                  />
+                  <Line
+                    points={[0.4, -0.2, 0.4, 0.9]}
+                    stroke="#f9bf4a"
+                    strokeWidth={0.12}
+                  />
+                  <Rect
+                    x={-1.6}
+                    y={-1.6}
+                    width={3.2}
+                    height={3.2}
+                    cornerRadius={0.6}
+                    opacity={0}
+                    onClick={(event) => {
+                      event.cancelBubble = true;
+                      pushHistory(clone(objects));
+                      removeObject(board.id, frameIndex, selectedItem.id);
+                    }}
+                    onTap={(event) => {
+                      event.cancelBubble = true;
+                      pushHistory(clone(objects));
+                      removeObject(board.id, frameIndex, selectedItem.id);
+                    }}
+                  />
+                </Group>
+              );
+            })()}
             {draft && draft.type === "arrow" && (
               <Arrow
                 points={[
