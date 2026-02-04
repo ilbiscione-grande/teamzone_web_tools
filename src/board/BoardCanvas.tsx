@@ -7,6 +7,7 @@ import type {
   ArrowLine,
   BallToken,
   Board,
+  DrawableObject,
   PlayerToken,
   ShapeCircle,
   ShapeRect,
