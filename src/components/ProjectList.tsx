@@ -127,6 +127,9 @@ export default function ProjectList() {
     showPosition: false,
     showNumber: false,
   });
+  const [consoleTab, setConsoleTab] = useState<
+    "projects" | "shared" | "library"
+  >("projects");
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -680,6 +683,27 @@ export default function ProjectList() {
           </div>
         </header>
 
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: "projects", label: "Projects" },
+            { id: "shared", label: "Shared" },
+            { id: "library", label: "Library" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
+                consoleTab === tab.id
+                  ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                  : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+              }`}
+              onClick={() => setConsoleTab(tab.id as typeof consoleTab)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {consoleTab === "projects" && (
         <section className="grid gap-6 rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40 md:grid-cols-[1.2fr_1fr]">
           <div className="space-y-4">
             <h2 className="display-font text-xl text-[var(--accent-0)]">
@@ -826,7 +850,14 @@ export default function ProjectList() {
                 ))
               )}
             </div>
-            <div className="mt-6 space-y-2">
+          </div>
+        </section>
+        )}
+
+        {consoleTab === "shared" && (
+        <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40">
+          <div className="space-y-6">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="display-font text-lg text-[var(--accent-0)]">
                   Shared with me
@@ -949,7 +980,13 @@ export default function ProjectList() {
                 ))
               )}
             </div>
-            <div className="mt-6 space-y-2">
+          </div>
+        </section>
+        )}
+
+        {consoleTab === "library" && (
+        <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40">
+          <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="display-font text-lg text-[var(--accent-0)]">
                   Project library
@@ -1042,8 +1079,8 @@ export default function ProjectList() {
                   ))
               )}
             </div>
-          </div>
         </section>
+        )}
       </div>
       {createOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
