@@ -514,6 +514,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
       useProjectStore.getState().updateBoard(board.id, {
         frames: nextFrames,
       });
+      return;
     }
     if (multi) {
       setSelection(Array.from(new Set([...selection, id])));
