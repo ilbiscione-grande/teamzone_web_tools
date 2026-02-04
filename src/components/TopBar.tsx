@@ -31,7 +31,6 @@ export default function TopBar() {
   const plan = useProjectStore((state) => state.plan);
   const index = useProjectStore((state) => state.index);
   const authUser = useProjectStore((state) => state.authUser);
-  const syncStatus = useProjectStore((state) => state.syncStatus);
   const setPlan = useProjectStore((state) => state.setPlan);
   const exportGate = usePlanGate("project.export");
   const importGate = usePlanGate("project.import");
@@ -54,6 +53,7 @@ export default function TopBar() {
   const [betaOpen, setBetaOpen] = useState(false);
   const [hideBetaBanner, setHideBetaBanner] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
   const showAds = plan === "FREE";
@@ -200,19 +200,17 @@ export default function TopBar() {
               Tactics Board
             </h1>
           </div>
-          <input
-            className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-            value={project.name}
-            onChange={(event) =>
-              updateProjectMeta({ name: event.target.value })
-            }
-          />
-          <span className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
-            {modeText} mode
-          </span>
-          <div className="flex flex-col items-center gap-1">
+          <div className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-transparent px-3 py-1">
+            <input
+              className="h-7 bg-transparent text-sm text-[var(--ink-0)] focus:outline-none"
+              value={project.name}
+              onChange={(event) =>
+                updateProjectMeta({ name: event.target.value })
+              }
+            />
+            <div className="h-6 w-px bg-[var(--line)]" />
             <button
-              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
               onClick={() => {
                 const name = window.prompt("New project name") ?? "";
                 if (name.trim()) {
@@ -245,13 +243,8 @@ export default function TopBar() {
                 <path d="M12 5v14M5 12h14" />
               </svg>
             </button>
-            <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
-              New
-            </span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
             <button
-              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+              className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
               onClick={closeProject}
               title="Back to list"
               aria-label="Back to list"
@@ -269,10 +262,10 @@ export default function TopBar() {
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
-            <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
-              Back
-            </span>
           </div>
+          <span className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
+            {modeText} mode
+          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--ink-1)]">
@@ -468,50 +461,9 @@ export default function TopBar() {
               DYNAMIC
             </option>
           </select>
-          <FormationMenu />
-          {authUser && (
-            <div className="flex flex-col items-center gap-1">
-              <div
-                className={`rounded-full border p-2 ${
-                  syncStatus.state === "error"
-                    ? "border-[var(--accent-1)] text-[var(--accent-1)]"
-                    : syncStatus.state === "syncing"
-                    ? "border-[var(--accent-2)] text-[var(--accent-2)]"
-                    : syncStatus.state === "offline"
-                    ? "border-[var(--accent-1)] text-[var(--accent-1)]"
-                    : "border-[var(--line)] text-[var(--ink-1)]"
-                }`}
-                title={
-                  syncStatus.state === "error"
-                    ? syncStatus.message ?? "Cloud sync error."
-                    : syncStatus.state === "syncing"
-                    ? "Syncing to cloud..."
-                    : syncStatus.state === "offline"
-                    ? syncStatus.message ?? "Offline."
-                    : "Cloud synced."
-                }
-              >
-                <svg
-                  aria-hidden
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M20 6v6h-6" />
-                  <path d="M4 18v-6h6" />
-                  <path d="M20 12a8 8 0 0 0-14-5" />
-                  <path d="M4 12a8 8 0 0 0 14 5" />
-                </svg>
-              </div>
-              <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
-                Sync
-              </span>
-            </div>
-          )}
+          <div className="flex flex-col items-center gap-1">
+            <FormationMenu />
+          </div>
           {isOffline && (
             <div
               className="rounded-full border border-[var(--accent-1)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-1)]"
@@ -586,42 +538,6 @@ export default function TopBar() {
               Account
             </span>
           </div>
-          {activeBoard && authUser && !isSharedView && (
-            <div className="flex flex-col items-center gap-1">
-              <button
-                className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                onClick={() => setShareOpen(true)}
-                title={
-                  can(plan, "board.share")
-                    ? "Share board"
-                    : "Sharing is available on paid plans."
-                }
-                aria-label="Share board"
-                disabled={!can(plan, "board.share")}
-                data-locked={!can(plan, "board.share")}
-              >
-                <svg
-                  aria-hidden
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="18" cy="5" r="3" />
-                  <circle cx="6" cy="12" r="3" />
-                  <circle cx="18" cy="19" r="3" />
-                  <path d="M8.6 10.7l6.8-3.9" />
-                  <path d="M8.6 13.3l6.8 3.9" />
-                </svg>
-              </button>
-              <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
-                Share
-              </span>
-            </div>
-          )}
           {isSharedView && project.sharedMeta && (
             <div className="flex flex-col items-center gap-1">
               <button
@@ -701,62 +617,71 @@ export default function TopBar() {
               Settings
             </span>
           </div>
-          <div className="flex flex-col items-center gap-1">
-            <button
-              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-              onClick={onExport}
-              title={exportGate.allowed ? "Save" : exportGate.message}
-              aria-label="Save"
-              disabled={!can(plan, "project.export")}
-              data-locked={!can(plan, "project.export")}
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+          {!isSharedView && (
+            <div className="relative flex flex-col items-center gap-1">
+              <button
+                className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => setActionsOpen((prev) => !prev)}
+                title="Project actions"
+                aria-label="Project actions"
               >
-                <path d="M5 5h11l3 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
-                <path d="M7 5v6h8V5" />
-                <path d="M7 19v-6h10v6" />
-              </svg>
-            </button>
-            <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
-              Save
-            </span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <button
-              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-              onClick={() => fileRef.current?.click()}
-              title={importGate.allowed ? "Load" : importGate.message}
-              aria-label="Load"
-              disabled={!can(plan, "project.import")}
-              data-locked={!can(plan, "project.import")}
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 19V7a2 2 0 0 1 2-2h9l3 3v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
-                <path d="M12 10v6" />
-                <path d="M9 13l3 3 3-3" />
-              </svg>
-            </button>
-            <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
-              Load
-            </span>
-          </div>
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              </button>
+              <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+                Actions
+              </span>
+              {actionsOpen && (
+                <div className="absolute right-0 top-10 z-30 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30">
+                  <button
+                    className="w-full rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                    onClick={() => {
+                      setActionsOpen(false);
+                      onExport();
+                    }}
+                    disabled={!can(plan, "project.export")}
+                    data-locked={!can(plan, "project.export")}
+                  >
+                    Save project
+                  </button>
+                  <button
+                    className="w-full rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                    onClick={() => {
+                      setActionsOpen(false);
+                      fileRef.current?.click();
+                    }}
+                    disabled={!can(plan, "project.import")}
+                    data-locked={!can(plan, "project.import")}
+                  >
+                    Load project
+                  </button>
+                  {activeBoard && authUser && !isSharedView && (
+                    <button
+                      className="w-full rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                      onClick={() => {
+                        setActionsOpen(false);
+                        setShareOpen(true);
+                      }}
+                      disabled={!can(plan, "board.share")}
+                      data-locked={!can(plan, "board.share")}
+                    >
+                      Share board
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <input
             ref={fileRef}
             type="file"

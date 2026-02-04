@@ -347,9 +347,9 @@ export default function FormationMenu() {
   };
 
   return (
-    <div className="relative">
+    <div className="relative flex flex-col items-center gap-1">
       <button
-        className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+        className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
         onClick={() => {
           setOpen((value) => {
             if (value) {
@@ -360,9 +360,30 @@ export default function FormationMenu() {
         }}
         disabled={formationDisabled}
         data-locked={formationDisabled}
+        aria-label="Formations"
+        title="Formations"
       >
-        Formations
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="4" y="4" width="16" height="16" rx="2" />
+          <circle cx="8" cy="8" r="1" />
+          <circle cx="16" cy="8" r="1" />
+          <circle cx="12" cy="12" r="1" />
+          <circle cx="8" cy="16" r="1" />
+          <circle cx="16" cy="16" r="1" />
+        </svg>
       </button>
+      <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+        Formations
+      </span>
       {open && (
         <div className="absolute right-0 top-10 z-40 w-72 rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[11px] text-[var(--ink-1)] shadow-xl shadow-black/40">
           <p className="mb-2 uppercase text-[var(--ink-1)]">Formation</p>
