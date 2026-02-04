@@ -56,7 +56,7 @@ export default function EditorLayout() {
         <div className="flex min-h-0 flex-col gap-3 overflow-hidden pr-1">
           <AdBanner variant="side" />
           <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 p-3 shadow-xl shadow-black/30">
-            <Toolbox />
+            <Toolbox collapsed={selection.length > 0 && !propertiesFloating} />
           </div>
           {selection.length > 0 && !propertiesFloating && (
             <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 p-4 shadow-xl shadow-black/30">

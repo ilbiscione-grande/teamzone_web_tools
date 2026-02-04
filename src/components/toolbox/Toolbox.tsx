@@ -193,7 +193,11 @@ const LinkIcon = () => (
   </svg>
 );
 
-export default function Toolbox() {
+type ToolboxProps = {
+  collapsed?: boolean;
+};
+
+export default function Toolbox({ collapsed = false }: ToolboxProps) {
   const activeTool = useEditorStore((state) => state.activeTool);
   const setTool = useEditorStore((state) => state.setTool);
   const undo = useEditorStore((state) => state.undo);
@@ -782,6 +786,7 @@ export default function Toolbox() {
         </div>
       </div>
 
+      {!collapsed && (
       <div className="grid grid-cols-6 gap-2">
         {[
           { id: "items", label: "Items", icon: <PlayerIcon /> },
@@ -827,7 +832,9 @@ export default function Toolbox() {
         );
         })}
       </div>
+      )}
 
+      {!collapsed && (
       <div className="min-h-0 flex-1 overflow-y-auto pr-1" data-scrollable>
       {activeTab === "items" && (
         <div className="space-y-3">
@@ -1398,6 +1405,7 @@ export default function Toolbox() {
         )
       )}
       </div>
+      )}
       {showMarkdownHelp && markdownHelpPos && (
         <div
           className="fixed z-50 w-64 -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-[10px] text-[var(--ink-0)] shadow-xl shadow-black/30"
