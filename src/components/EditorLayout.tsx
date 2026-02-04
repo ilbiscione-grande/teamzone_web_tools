@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type Konva from "konva";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
@@ -25,12 +25,59 @@ export default function EditorLayout() {
   );
   const [stage, setStage] = useState<Konva.Stage | null>(null);
   const [propertiesFloating, setPropertiesFloating] = useState(false);
+  const [propertiesPos, setPropertiesPos] = useState({ x: 24, y: 140 });
+  const dragOffsetRef = useRef<{ x: number; y: number } | null>(null);
+  const draggingRef = useRef(false);
 
   useEffect(() => {
     if (project?.settings) {
       setAttachBallToPlayer(project.settings.attachBallToPlayer);
     }
   }, [project?.id, project?.settings?.attachBallToPlayer, setAttachBallToPlayer]);
+  useEffect(() => {
+    if (!propertiesFloating || typeof window === "undefined") {
+      return;
+    }
+    setPropertiesPos((prev) => {
+      if (prev.x !== 24 || prev.y !== 140) {
+        return prev;
+      }
+      return {
+        x: Math.max(24, window.innerWidth - 360),
+        y: 140,
+      };
+    });
+  }, [propertiesFloating]);
+
+  useEffect(() => {
+    if (!propertiesFloating) {
+      return;
+    }
+    const handleMove = (event: PointerEvent) => {
+      if (!draggingRef.current || !dragOffsetRef.current) {
+        return;
+      }
+      const nextX = event.clientX - dragOffsetRef.current.x;
+      const nextY = event.clientY - dragOffsetRef.current.y;
+      const maxX = window.innerWidth - 320;
+      const maxY = window.innerHeight - 160;
+      setPropertiesPos({
+        x: Math.min(Math.max(8, nextX), Math.max(8, maxX)),
+        y: Math.min(Math.max(8, nextY), Math.max(8, maxY)),
+      });
+    };
+    const handleUp = () => {
+      draggingRef.current = false;
+      dragOffsetRef.current = null;
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [propertiesFloating]);
+  const toolboxCollapsed = selection.length > 0 && !propertiesFloating;
   if (!project || !board) {
     return null;
   }
@@ -55,8 +102,12 @@ export default function EditorLayout() {
         </div>
         <div className="flex min-h-0 flex-col gap-3 overflow-hidden pr-1">
           <AdBanner variant="side" />
-          <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 p-3 shadow-xl shadow-black/30">
-            <Toolbox collapsed={selection.length > 0 && !propertiesFloating} />
+          <div
+            className={`flex flex-col rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 p-3 shadow-xl shadow-black/30 ${
+              toolboxCollapsed ? "flex-none" : "min-h-0 flex-1"
+            }`}
+          >
+            <Toolbox collapsed={toolboxCollapsed} />
           </div>
           {selection.length > 0 && !propertiesFloating && (
             <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 p-4 shadow-xl shadow-black/30">
@@ -71,7 +122,20 @@ export default function EditorLayout() {
         </div>
       </div>
       {selection.length > 0 && propertiesFloating && (
-        <div className="fixed bottom-24 right-6 z-40 w-[320px] rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 p-4 shadow-2xl shadow-black/40">
+        <div
+          className="fixed z-40 w-[320px] rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 p-4 shadow-2xl shadow-black/40"
+          style={{ left: propertiesPos.x, top: propertiesPos.y }}
+        >
+          <div
+            className="mb-3 h-4 w-full cursor-move rounded-full bg-[var(--panel-2)]/70"
+            onPointerDown={(event) => {
+              draggingRef.current = true;
+              dragOffsetRef.current = {
+                x: event.clientX - propertiesPos.x,
+                y: event.clientY - propertiesPos.y,
+              };
+            }}
+          />
           <PropertiesPanel
             floating={propertiesFloating}
             onToggleFloating={() =>
