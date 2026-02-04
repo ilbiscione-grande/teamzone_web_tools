@@ -798,11 +798,13 @@ export default function Toolbox() {
           const showBadge =
             tab.id === "shared" && sharedUnreadCount > 0 && hasShared;
           return (
+          const isActive = activeTab === tab.id;
+          return (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
-            className={`relative flex h-20 flex-col items-center justify-center rounded-2xl border px-2 py-2 text-[11px] uppercase tracking-wide ${
-              activeTab === tab.id
+            className={`relative flex h-16 flex-col items-center justify-center rounded-2xl border px-2 py-2 text-[11px] uppercase tracking-wide ${
+              isActive
                 ? "border-[var(--accent-0)] text-[var(--ink-0)]"
                 : hasShared
                 ? "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
@@ -813,8 +815,14 @@ export default function Toolbox() {
             {showBadge && (
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[var(--accent-1)]" />
             )}
-            <div className={activeTab === tab.id ? "mb-1" : ""}>{tab.icon}</div>
-            {activeTab === tab.id && <span>{tab.label}</span>}
+            <div
+              className={`flex items-center justify-center ${
+                isActive ? "mb-1 w-6" : "w-4"
+              }`}
+            >
+              {tab.icon}
+            </div>
+            {isActive && <span>{tab.label}</span>}
           </button>
         );
         })}

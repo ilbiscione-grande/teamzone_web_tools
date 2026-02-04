@@ -24,6 +24,7 @@ export default function EditorLayout() {
     (state) => state.setAttachBallToPlayer
   );
   const [stage, setStage] = useState<Konva.Stage | null>(null);
+  const [propertiesFloating, setPropertiesFloating] = useState(false);
 
   useEffect(() => {
     if (project?.settings) {
@@ -57,13 +58,28 @@ export default function EditorLayout() {
           <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 p-3 shadow-xl shadow-black/30">
             <Toolbox />
           </div>
-          {selection.length > 0 && (
+          {selection.length > 0 && !propertiesFloating && (
             <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 p-4 shadow-xl shadow-black/30">
-              <PropertiesPanel />
+              <PropertiesPanel
+                floating={propertiesFloating}
+                onToggleFloating={() =>
+                  setPropertiesFloating((prev) => !prev)
+                }
+              />
             </div>
           )}
         </div>
       </div>
+      {selection.length > 0 && propertiesFloating && (
+        <div className="fixed bottom-24 right-6 z-40 w-[320px] rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 p-4 shadow-2xl shadow-black/40">
+          <PropertiesPanel
+            floating={propertiesFloating}
+            onToggleFloating={() =>
+              setPropertiesFloating((prev) => !prev)
+            }
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -26,7 +26,15 @@ const numberField = (
   />
 );
 
-export default function PropertiesPanel() {
+type PropertiesPanelProps = {
+  floating: boolean;
+  onToggleFloating: () => void;
+};
+
+export default function PropertiesPanel({
+  floating,
+  onToggleFloating,
+}: PropertiesPanelProps) {
   const project = useProjectStore((state) => state.project);
   const updateObject = useProjectStore((state) => state.updateObject);
   const removeObject = useProjectStore((state) => state.removeObject);
@@ -282,6 +290,12 @@ export default function PropertiesPanel() {
           Properties
         </span>
         <div className="flex gap-2">
+          <button
+            className="rounded-full border border-[var(--line)] px-3 py-1 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            onClick={onToggleFloating}
+          >
+            {floating ? "Dock" : "Float"}
+          </button>
           <button
             className="rounded-full border border-[var(--line)] px-3 py-1 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={handleDuplicate}
