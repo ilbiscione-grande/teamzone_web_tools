@@ -48,6 +48,14 @@ export default function PropertiesPanel() {
     [objects, selection]
   );
   const target = selected[0];
+  const lockableSelected = selected.filter((item) =>
+    ["cone", "goal", "circle", "rect", "triangle", "arrow", "text"].includes(
+      item.type
+    )
+  );
+  const allLocked =
+    lockableSelected.length > 0 &&
+    lockableSelected.every((item) => item.locked);
   const selectedLink = activeFrame?.playerLinks?.find(
     (link) => link.id === selectedLinkId
   );
@@ -86,6 +94,16 @@ export default function PropertiesPanel() {
     }
     pushHistory(clone(objects));
     updateObject(board.id, frameIndex, target.id, payload);
+  };
+
+  const toggleLock = (nextLocked: boolean) => {
+    if (lockableSelected.length === 0) {
+      return;
+    }
+    pushHistory(clone(objects));
+    lockableSelected.forEach((item) => {
+      updateObject(board.id, frameIndex, item.id, { locked: nextLocked });
+    });
   };
 
   const handleDelete = () => {
@@ -280,6 +298,17 @@ export default function PropertiesPanel() {
           </button>
         </div>
       </div>
+      {lockableSelected.length > 0 && (
+        <label className="flex items-center justify-between rounded-2xl border border-[var(--line)] px-3 py-2 text-xs">
+          <span>Locked</span>
+          <input
+            type="checkbox"
+            checked={allLocked}
+            onChange={(event) => toggleLock(event.target.checked)}
+            disabled={project?.isShared}
+          />
+        </label>
+      )}
 
       {selected.length === 0 && !selectedLink ? (
         <p>Select an object to edit its properties.</p>

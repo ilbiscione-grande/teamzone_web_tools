@@ -169,6 +169,12 @@ const NotesIcon = () => (
     <path d="M9 12h6M9 16h6M9 8h3" />
   </svg>
 );
+const FramesIcon = () => (
+  <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
+    <rect x="4" y="6" width="16" height="12" rx="2" />
+    <path d="M8 6v12M16 6v12" />
+  </svg>
+);
 const CommentsIcon = () => (
   <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
     <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
@@ -193,7 +199,7 @@ export default function Toolbox() {
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
   const [activeTab, setActiveTab] = useState<
-    "items" | "draw" | "squad" | "notes" | "shared"
+    "items" | "draw" | "squad" | "notes" | "frames" | "shared"
   >("items");
   const [notesView, setNotesView] = useState<"edit" | "preview">("preview");
   const notesInputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -776,12 +782,13 @@ export default function Toolbox() {
         </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-6 gap-2">
         {[
           { id: "items", label: "Items", icon: <PlayerIcon /> },
           { id: "draw", label: "Forms", icon: <LineIcon /> },
           { id: "squad", label: "Squad", icon: <SquadIcon /> },
           { id: "notes", label: "Notes", icon: <NotesIcon /> },
+          { id: "frames", label: "Frames", icon: <FramesIcon /> },
           { id: "shared", label: "Shared", icon: <CommentsIcon /> },
         ].map((tab) => {
           const hasShared =
@@ -794,7 +801,7 @@ export default function Toolbox() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
-            className={`relative flex h-20 flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-2 text-[11px] uppercase tracking-wide ${
+            className={`relative flex h-20 flex-col items-center justify-center rounded-2xl border px-2 py-2 text-[11px] uppercase tracking-wide ${
               activeTab === tab.id
                 ? "border-[var(--accent-0)] text-[var(--ink-0)]"
                 : hasShared
@@ -806,8 +813,8 @@ export default function Toolbox() {
             {showBadge && (
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[var(--accent-1)]" />
             )}
-            {tab.icon}
-            <span>{tab.label}</span>
+            <div className={activeTab === tab.id ? "mb-1" : ""}>{tab.icon}</div>
+            {activeTab === tab.id && <span>{tab.label}</span>}
           </button>
         );
         })}
@@ -1301,80 +1308,86 @@ export default function Toolbox() {
           )}
         </div>
       )}
-      {board?.mode === "DYNAMIC" && activeFrame && (
-        <div className="mt-3 rounded-2xl border border-[var(--line)] p-3 text-xs text-[var(--ink-1)]">
-          <p className="text-[11px] uppercase text-[var(--ink-1)]">
-            Frame details
-          </p>
-          <div className="mt-2 grid gap-2">
-            <label className="space-y-1">
-              <span className="text-[11px]">Title</span>
-              <input
-                className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
-                value={activeFrame.name}
-                onChange={(event) =>
-                  updateFrameMeta({ name: event.target.value })
-                }
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="text-[11px]">Action</span>
-              <select
-                className="h-8 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)]"
-                value={activeFrame.action ?? ""}
-                onChange={(event) =>
-                  updateFrameMeta({ action: event.target.value })
-                }
-              >
-                {frameActions.map((action) => (
-                  <option
-                    key={action || "none"}
-                    value={action}
-                    className="bg-[var(--panel-2)] text-[var(--ink-0)]"
-                  >
-                    {action || "Select action"}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="space-y-1">
-              <span className="text-[11px]">Notes</span>
-              <textarea
-                className="min-h-[72px] w-full rounded-lg border border-[var(--line)] bg-transparent p-2 text-xs text-[var(--ink-0)]"
-                value={activeFrame.notes ?? ""}
-                onChange={(event) =>
-                  updateFrameMeta({ notes: event.target.value })
-                }
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="text-[11px]">Duration (sec)</span>
-              <input
-                type="number"
-                min={0}
-                step={0.1}
-                className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
-                value={
-                  activeFrame.durationMs
-                    ? String(activeFrame.durationMs / 1000)
-                    : "0"
-                }
-                onChange={(event) => {
-                  const nextSeconds = Number(event.target.value);
-                  if (Number.isNaN(nextSeconds)) {
-                    return;
+      {activeTab === "frames" && (
+        board?.mode === "DYNAMIC" && activeFrame ? (
+          <div className="rounded-2xl border border-[var(--line)] p-3 text-xs text-[var(--ink-1)]">
+            <p className="text-[11px] uppercase text-[var(--ink-1)]">
+              Frame details
+            </p>
+            <div className="mt-2 grid gap-2">
+              <label className="space-y-1">
+                <span className="text-[11px]">Title</span>
+                <input
+                  className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                  value={activeFrame.name}
+                  onChange={(event) =>
+                    updateFrameMeta({ name: event.target.value })
                   }
-                  updateFrameMeta({
-                    durationMs: Math.max(0, nextSeconds) * 1000,
-                  });
-                }}
-              />
-              <span className="text-[10px] text-[var(--ink-1)]">
-                Use 0 to keep the default playback speed.
-              </span>
-            </label>
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-[11px]">Action</span>
+                <select
+                  className="h-8 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)]"
+                  value={activeFrame.action ?? ""}
+                  onChange={(event) =>
+                    updateFrameMeta({ action: event.target.value })
+                  }
+                >
+                  {frameActions.map((action) => (
+                    <option
+                      key={action || "none"}
+                      value={action}
+                      className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                    >
+                      {action || "Select action"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="text-[11px]">Notes</span>
+                <textarea
+                  className="min-h-[72px] w-full rounded-lg border border-[var(--line)] bg-transparent p-2 text-xs text-[var(--ink-0)]"
+                  value={activeFrame.notes ?? ""}
+                  onChange={(event) =>
+                    updateFrameMeta({ notes: event.target.value })
+                  }
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-[11px]">Duration (sec)</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                  value={
+                    activeFrame.durationMs
+                      ? String(activeFrame.durationMs / 1000)
+                      : "0"
+                  }
+                  onChange={(event) => {
+                    const nextSeconds = Number(event.target.value);
+                    if (Number.isNaN(nextSeconds)) {
+                      return;
+                    }
+                    updateFrameMeta({
+                      durationMs: Math.max(0, nextSeconds) * 1000,
+                    });
+                  }}
+                />
+                <span className="text-[10px] text-[var(--ink-1)]">
+                  Use 0 to keep the default playback speed.
+                </span>
+              </label>
+            </div>
           </div>
-        </div>
+        ) : (
+          <p className="text-xs text-[var(--ink-1)]">
+            Frames are available when the board is in Dynamic mode.
+          </p>
+        )
       )}
       </div>
       {showMarkdownHelp && markdownHelpPos && (
