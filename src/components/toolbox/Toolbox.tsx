@@ -802,10 +802,9 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
               : !!project?.sharedMeta || ownerShares.length > 0;
           const showBadge =
             tab.id === "shared" && sharedUnreadCount > 0 && hasShared;
-          return (
           const isActive = activeTab === tab.id;
           return (
-          <button
+            <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
             className={`relative flex h-16 flex-col items-center justify-center rounded-2xl border px-2 py-2 text-[11px] uppercase tracking-wide ${
