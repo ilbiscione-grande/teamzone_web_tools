@@ -530,6 +530,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
   };
 
   const getDeleteAnchor = (item: DrawableObject) => {
+    const fallback = { x: item.position.x, y: item.position.y };
     if (item.type === "arrow" || item.type === "path") {
       const points = item.points ?? [];
       let maxX = item.position.x;
@@ -575,7 +576,7 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
         y: item.position.y - 1.5,
       };
     }
-    return { x: item.position.x, y: item.position.y };
+    return fallback;
   };
 
 
