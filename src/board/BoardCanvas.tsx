@@ -25,9 +25,16 @@ import { getBoardSquads } from "@/utils/board";
 type BoardCanvasProps = {
   board: Board;
   onStageReady?: (stage: Konva.Stage | null) => void;
+  isMaximized?: boolean;
+  onToggleMaximize?: () => void;
 };
 
-export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
+export default function BoardCanvas({
+  board,
+  onStageReady,
+  isMaximized,
+  onToggleMaximize,
+}: BoardCanvasProps) {
   const stageRef = useRef<Konva.Stage | null>(null);
   const shapeRefs = useRef<Record<string, Konva.Node>>({});
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -587,24 +594,98 @@ export default function BoardCanvas({ board, onStageReady }: BoardCanvasProps) {
       className="relative h-full w-full"
       data-disable-pull
     >
-      <button
-        className="absolute right-4 top-4 z-10 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-xs text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-        onClick={handleResetView}
-      >
-        Reset view
-      </button>
-      <button
-        className="absolute right-4 top-12 z-10 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-xs text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-        onClick={() => {
-          if (!window.confirm("Clear all objects from this frame?")) {
-            return;
-          }
-          pushHistory(clone(objects));
-          setFrameObjects(board.id, frameIndex, []);
-        }}
-      >
-        Clear pitch
-      </button>
+      <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
+        <button
+          className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+          onClick={handleResetView}
+          title="Reset view"
+          aria-label="Reset view"
+        >
+          <svg
+            aria-hidden
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M20 6v6h-6" />
+            <path d="M4 18v-6h6" />
+            <path d="M20 12a8 8 0 0 0-14-5" />
+            <path d="M4 12a8 8 0 0 0 14 5" />
+          </svg>
+        </button>
+        <button
+          className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+          onClick={() => {
+            if (!window.confirm("Clear all objects from this frame?")) {
+              return;
+            }
+            pushHistory(clone(objects));
+            setFrameObjects(board.id, frameIndex, []);
+          }}
+          title="Clear pitch"
+          aria-label="Clear pitch"
+        >
+          <svg
+            aria-hidden
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M4 7h16" />
+            <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
+            <path d="M10 11v6M14 11v6" />
+          </svg>
+        </button>
+        <button
+          className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+          onClick={onToggleMaximize}
+          title={isMaximized ? "Exit full screen" : "Full screen"}
+          aria-label="Toggle full screen"
+        >
+          <svg
+            aria-hidden
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5" />
+          </svg>
+        </button>
+        {isMaximized && (
+          <button
+            className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+            onClick={onToggleMaximize}
+            title="Close full screen"
+            aria-label="Close full screen"
+          >
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
       <Stage
         ref={stageRef}
         width={size.width}

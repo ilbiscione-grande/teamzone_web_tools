@@ -95,6 +95,25 @@ export default function TopBar() {
       window.removeEventListener("offline", update);
     };
   }, []);
+  useEffect(() => {
+    if (!actionsOpen) {
+      return;
+    }
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) {
+        return;
+      }
+      if (target.closest("[data-actions-menu]")) {
+        return;
+      }
+      setActionsOpen(false);
+    };
+    window.addEventListener("mousedown", handleClick);
+    return () => {
+      window.removeEventListener("mousedown", handleClick);
+    };
+  }, [actionsOpen]);
 
   useEffect(() => {
     if (!titleRef.current) {
@@ -263,9 +282,6 @@ export default function TopBar() {
               </svg>
             </button>
           </div>
-          <span className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
-            {modeText} mode
-          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--ink-1)]">
@@ -513,31 +529,6 @@ export default function TopBar() {
               </span>
             </div>
           )}
-          <div className="flex flex-col items-center gap-1">
-            <button
-              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-              onClick={() => setPlanOpen(true)}
-              title="Account"
-              aria-label="Account"
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M20 21a8 8 0 0 0-16 0" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </button>
-            <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
-              Account
-            </span>
-          </div>
           {isSharedView && project.sharedMeta && (
             <div className="flex flex-col items-center gap-1">
               <button
@@ -592,33 +583,8 @@ export default function TopBar() {
               </option>
             </select>
           )}
-          <div className="flex flex-col items-center gap-1">
-            <button
-              className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-              onClick={() => setSettingsOpen(true)}
-              title="Settings"
-              aria-label="Settings"
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
-              </svg>
-            </button>
-            <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
-              Settings
-            </span>
-          </div>
           {!isSharedView && (
-            <div className="relative flex flex-col items-center gap-1">
+            <div className="relative flex flex-col items-center gap-1" data-actions-menu>
               <button
                 className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                 onClick={() => setActionsOpen((prev) => !prev)}
@@ -644,7 +610,7 @@ export default function TopBar() {
               {actionsOpen && (
                 <div className="absolute right-0 top-10 z-30 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30">
                   <button
-                    className="w-full rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                     onClick={() => {
                       setActionsOpen(false);
                       onExport();
@@ -652,10 +618,24 @@ export default function TopBar() {
                     disabled={!can(plan, "project.export")}
                     data-locked={!can(plan, "project.export")}
                   >
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 24 24"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M5 5h11l3 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
+                      <path d="M7 5v6h8V5" />
+                      <path d="M7 19v-6h10v6" />
+                    </svg>
                     Save project
                   </button>
                   <button
-                    className="w-full rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                     onClick={() => {
                       setActionsOpen(false);
                       fileRef.current?.click();
@@ -663,11 +643,25 @@ export default function TopBar() {
                     disabled={!can(plan, "project.import")}
                     data-locked={!can(plan, "project.import")}
                   >
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 24 24"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M4 19V7a2 2 0 0 1 2-2h9l3 3v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+                      <path d="M12 10v6" />
+                      <path d="M9 13l3 3 3-3" />
+                    </svg>
                     Load project
                   </button>
                   {activeBoard && authUser && !isSharedView && (
                     <button
-                      className="w-full rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                       onClick={() => {
                         setActionsOpen(false);
                         setShareOpen(true);
@@ -675,9 +669,69 @@ export default function TopBar() {
                       disabled={!can(plan, "board.share")}
                       data-locked={!can(plan, "board.share")}
                     >
+                      <svg
+                        aria-hidden
+                        viewBox="0 0 24 24"
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="18" cy="5" r="3" />
+                        <circle cx="6" cy="12" r="3" />
+                        <circle cx="18" cy="19" r="3" />
+                        <path d="M8.6 10.7l6.8-3.9" />
+                        <path d="M8.6 13.3l6.8 3.9" />
+                      </svg>
                       Share board
                     </button>
                   )}
+                  <button
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                    onClick={() => {
+                      setActionsOpen(false);
+                      setPlanOpen(true);
+                    }}
+                  >
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 24 24"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M20 21a8 8 0 0 0-16 0" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    Account
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                    onClick={() => {
+                      setActionsOpen(false);
+                      setSettingsOpen(true);
+                    }}
+                  >
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 24 24"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+                    </svg>
+                    Settings
+                  </button>
                 </div>
               )}
             </div>

@@ -19,6 +19,9 @@ export default function EditorLayout() {
     () => project?.boards.find((item) => item.id === activeBoardId),
     [project, activeBoardId]
   );
+  const modeLabel =
+    project?.settings?.mode ?? ("match" as "training" | "match" | "education");
+  const modeText = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
   const selection = useEditorStore((state) => state.selection);
   const setAttachBallToPlayer = useEditorStore(
     (state) => state.setAttachBallToPlayer
@@ -28,6 +31,7 @@ export default function EditorLayout() {
   const [propertiesPos, setPropertiesPos] = useState({ x: 24, y: 140 });
   const dragOffsetRef = useRef<{ x: number; y: number } | null>(null);
   const draggingRef = useRef(false);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
     if (project?.settings) {
@@ -82,6 +86,32 @@ export default function EditorLayout() {
     return null;
   }
 
+  if (isMaximized && board) {
+    return (
+      <div className="fixed inset-0 z-50 flex h-screen flex-col bg-[var(--panel)]">
+        <div className="relative flex-1 overflow-hidden">
+          <div className="pointer-events-none absolute left-4 top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
+            {modeText}
+          </div>
+          <BoardCanvas
+            board={board}
+            onStageReady={(nextStage) => {
+              setStage(nextStage);
+              setStageRef(nextStage);
+            }}
+            isMaximized={isMaximized}
+            onToggleMaximize={() => setIsMaximized(false)}
+          />
+        </div>
+        {board.mode === "DYNAMIC" && (
+          <div className="px-4 pb-4">
+            <FramesBar board={board} stage={stage} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="grid h-screen grid-rows-[auto_1fr] overflow-hidden">
       <div className="px-6 pt-4">
@@ -90,12 +120,17 @@ export default function EditorLayout() {
       <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_320px] gap-4 px-6 pb-6">
         <div className="relative flex min-h-0 flex-col overflow-visible">
           <div className="relative flex-1 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] shadow-xl shadow-black/30">
+            <div className="pointer-events-none absolute left-4 top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
+              {modeText}
+            </div>
             <BoardCanvas
               board={board}
               onStageReady={(nextStage) => {
                 setStage(nextStage);
                 setStageRef(nextStage);
               }}
+              isMaximized={isMaximized}
+              onToggleMaximize={() => setIsMaximized(true)}
             />
           </div>
           <FramesBar board={board} stage={stage} />
