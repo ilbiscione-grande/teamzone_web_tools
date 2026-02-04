@@ -17,6 +17,7 @@ export default function SquadEditor() {
   const plan = useProjectStore((state) => state.plan);
   const setPlayerSide = useEditorStore((state) => state.setPlayerSide);
   const [activeSide, setActiveSide] = useState<"home" | "away">("home");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -124,206 +125,39 @@ export default function SquadEditor() {
   };
 
   return (
-    <div className="space-y-3 text-xs text-[var(--ink-1)]">
+    <div className="flex h-full flex-col text-xs text-[var(--ink-1)]">
       <div className="flex items-center justify-between">
         <span className="display-font text-sm text-[var(--accent-0)]">
           Squad Editor
         </span>
-        <div className="flex items-center gap-2">
-          <button
-            className="rounded-full border border-[var(--line)] px-3 py-1 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={onExportSquad}
-            disabled={!activeSquad || !can(plan, "squad.export")}
-            data-locked={!can(plan, "squad.export")}
+        <button
+          className="rounded-full border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Squad settings"
+          title="Squad settings"
+        >
+          <svg
+            aria-hidden
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            Export squad
-          </button>
-          <button
-            className="rounded-full border border-[var(--line)] px-3 py-1 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={() => importRef.current?.click()}
-            disabled={!can(plan, "squad.import")}
-            data-locked={!can(plan, "squad.import")}
-          >
-            Import squad
-          </button>
-        </div>
+            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
+            <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 1 1-4 0v-.1a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 1 1 0-4h.1a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 1 1 4 0v.1a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 1 1 0 4h-.1a1 1 0 0 0-.5.6z" />
+          </svg>
+        </button>
       </div>
 
       {activeSquad ? (
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { id: "home", label: "Home" },
-              { id: "away", label: "Away" },
-            ].map((side) => (
-              <button
-                key={side.id}
-                className={`rounded-full border px-3 py-2 text-[11px] uppercase tracking-wide ${
-                  activeSide === side.id
-                    ? "border-[var(--accent-0)] text-[var(--ink-0)]"
-                    : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-                }`}
-                onClick={() => {
-                  const nextSide = side.id as "home" | "away";
-                  setActiveSide(nextSide);
-                  setPlayerSide(nextSide);
-                }}
-              >
-                {side.label}
-              </button>
-            ))}
-          </div>
-          {boards.length > 1 && (
-            <div className="rounded-2xl border border-[var(--line)] p-3 text-[11px]">
-              <p className="mb-2 uppercase text-[var(--ink-1)]">
-                Import from board
-              </p>
-              <div className="grid gap-2">
-                <select
-                  className="h-9 w-full rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-                  value={importBoardId}
-                  onChange={(event) => setImportBoardId(event.target.value)}
-                >
-                  <option
-                    value=""
-                    className="bg-[var(--panel-2)] text-[var(--ink-0)]"
-                  >
-                    Select board
-                  </option>
-                  {boards
-                    .filter((item) => item.id !== board?.id)
-                    .map((item) => (
-                      <option
-                        key={item.id}
-                        value={item.id}
-                        className="bg-[var(--panel-2)] text-[var(--ink-0)]"
-                      >
-                        {item.name}
-                      </option>
-                    ))}
-                </select>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: "home", label: "Home" },
-                    { id: "away", label: "Away" },
-                  ].map((side) => (
-                    <button
-                      key={side.id}
-                      className={`rounded-2xl border px-3 py-2 text-[11px] uppercase tracking-wide ${
-                        importSide === side.id
-                          ? "border-[var(--accent-0)] text-[var(--ink-0)]"
-                          : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-                      }`}
-                      onClick={() => setImportSide(side.id as "home" | "away")}
-                    >
-                      {side.label}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                  onClick={importFromBoard}
-                  disabled={!importBoardId}
-                >
-                  Replace current squad
-                </button>
-              </div>
-            </div>
-          )}
-          <input
-            className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-            value={activeSquad.name}
-            onChange={(event) =>
-              updateSquad(activeSquad.id, { name: event.target.value })
-            }
-          />
-          <div className="grid grid-cols-3 gap-2">
-            <label className="space-y-1">
-              <span className="text-[11px]">Shirt</span>
-              <input
-                type="color"
-                className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
-                value={activeSquad.kit.shirt}
-                onChange={(event) =>
-                  updateSquad(activeSquad.id, {
-                    kit: { ...activeSquad.kit, shirt: event.target.value },
-                  })
-                }
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="text-[11px]">Shorts</span>
-              <input
-                type="color"
-                className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
-                value={activeSquad.kit.shorts}
-                onChange={(event) =>
-                  updateSquad(activeSquad.id, {
-                    kit: { ...activeSquad.kit, shorts: event.target.value },
-                  })
-                }
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="text-[11px]">Socks</span>
-              <input
-                type="color"
-                className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
-                value={activeSquad.kit.socks}
-                onChange={(event) =>
-                  updateSquad(activeSquad.id, {
-                    kit: { ...activeSquad.kit, socks: event.target.value },
-                  })
-                }
-              />
-            </label>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              className="rounded-full border border-[var(--line)] px-3 py-1 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-              onClick={() => fileRef.current?.click()}
-            >
-              Upload logo
-            </button>
-            {activeSquad.clubLogo ? (
-              <img
-                src={activeSquad.clubLogo}
-                alt="Club logo"
-                className="h-8 w-8 rounded-full object-cover"
-              />
-            ) : (
-              <span>None</span>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) {
-                  onLogoUpload(file);
-                }
-              }}
-            />
-            <input
-              ref={importRef}
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) {
-                  onImportSquad(file);
-                }
-              }}
-            />
-          </div>
-
-          <div className="space-y-2">
+        <div className="mt-3 flex min-h-0 flex-1 flex-col space-y-3">
+          <div className="flex min-h-0 flex-1 flex-col space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] uppercase text-[var(--ink-1)]">
-                Players
+                {activeSide === "home" ? "Home squad" : "Away squad"}
               </span>
               <button
                 className="rounded-full border border-[var(--line)] px-3 py-1 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
@@ -338,7 +172,7 @@ export default function SquadEditor() {
               <span>Pos</span>
               <span />
             </div>
-            <div className="max-h-48 space-y-2 overflow-auto pr-1" data-scrollable>
+            <div className="flex-1 space-y-2 overflow-auto pr-1" data-scrollable>
               {activeSquad.players.map((player) => (
                 <div
                   key={player.id}
@@ -435,6 +269,218 @@ export default function SquadEditor() {
         </div>
       ) : (
         <p>No squads yet.</p>
+      )}
+      {settingsOpen && activeSquad && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="w-full max-w-lg rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="display-font text-lg text-[var(--accent-0)]">
+                  Squad settings
+                </h2>
+                <p className="text-xs text-[var(--ink-1)]">
+                  Update squad details, kits, logos, and imports.
+                </p>
+              </div>
+              <button
+                className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                onClick={() => setSettingsOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-4 space-y-3 text-xs text-[var(--ink-1)]">
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: "home", label: "Home" },
+                  { id: "away", label: "Away" },
+                ].map((side) => (
+                  <button
+                    key={side.id}
+                    className={`rounded-2xl border px-3 py-2 text-[11px] uppercase tracking-wide ${
+                      activeSide === side.id
+                        ? "border-[var(--accent-0)] text-[var(--ink-0)]"
+                        : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                    }`}
+                    onClick={() => {
+                      const nextSide = side.id as "home" | "away";
+                      setActiveSide(nextSide);
+                      setPlayerSide(nextSide);
+                    }}
+                  >
+                    {side.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={onExportSquad}
+                  disabled={!can(plan, "squad.export")}
+                  data-locked={!can(plan, "squad.export")}
+                >
+                  Export squad
+                </button>
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={() => importRef.current?.click()}
+                  disabled={!can(plan, "squad.import")}
+                  data-locked={!can(plan, "squad.import")}
+                >
+                  Import squad
+                </button>
+              </div>
+              {boards.length > 1 && (
+                <div className="rounded-2xl border border-[var(--line)] p-3 text-[11px]">
+                  <p className="mb-2 uppercase text-[var(--ink-1)]">
+                    Import from board
+                  </p>
+                  <div className="grid gap-2">
+                    <select
+                      className="h-9 w-full rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                      value={importBoardId}
+                      onChange={(event) => setImportBoardId(event.target.value)}
+                    >
+                      <option
+                        value=""
+                        className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                      >
+                        Select board
+                      </option>
+                      {boards
+                        .filter((item) => item.id !== board?.id)
+                        .map((item) => (
+                          <option
+                            key={item.id}
+                            value={item.id}
+                            className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                          >
+                            {item.name}
+                          </option>
+                        ))}
+                    </select>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: "home", label: "Home" },
+                        { id: "away", label: "Away" },
+                      ].map((side) => (
+                        <button
+                          key={side.id}
+                          className={`rounded-2xl border px-3 py-2 text-[11px] uppercase tracking-wide ${
+                            importSide === side.id
+                              ? "border-[var(--accent-0)] text-[var(--ink-0)]"
+                              : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                          }`}
+                          onClick={() =>
+                            setImportSide(side.id as "home" | "away")
+                          }
+                        >
+                          {side.label}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      className="rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={importFromBoard}
+                      disabled={!importBoardId}
+                    >
+                      Replace current squad
+                    </button>
+                  </div>
+                </div>
+              )}
+              <input
+                className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                value={activeSquad.name}
+                onChange={(event) =>
+                  updateSquad(activeSquad.id, { name: event.target.value })
+                }
+              />
+              <div className="grid grid-cols-3 gap-2">
+                <label className="space-y-1">
+                  <span className="text-[11px]">Shirt</span>
+                  <input
+                    type="color"
+                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                    value={activeSquad.kit.shirt}
+                    onChange={(event) =>
+                      updateSquad(activeSquad.id, {
+                        kit: { ...activeSquad.kit, shirt: event.target.value },
+                      })
+                    }
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[11px]">Shorts</span>
+                  <input
+                    type="color"
+                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                    value={activeSquad.kit.shorts}
+                    onChange={(event) =>
+                      updateSquad(activeSquad.id, {
+                        kit: { ...activeSquad.kit, shorts: event.target.value },
+                      })
+                    }
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[11px]">Socks</span>
+                  <input
+                    type="color"
+                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                    value={activeSquad.kit.socks}
+                    onChange={(event) =>
+                      updateSquad(activeSquad.id, {
+                        kit: { ...activeSquad.kit, socks: event.target.value },
+                      })
+                    }
+                  />
+                </label>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={() => fileRef.current?.click()}
+                >
+                  Upload logo
+                </button>
+                {activeSquad.clubLogo ? (
+                  <img
+                    src={activeSquad.clubLogo}
+                    alt="Club logo"
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <span>None</span>
+                )}
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) {
+                    onLogoUpload(file);
+                  }
+                }}
+              />
+              <input
+                ref={importRef}
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) {
+                    onImportSquad(file);
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
