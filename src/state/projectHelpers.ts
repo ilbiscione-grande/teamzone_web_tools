@@ -242,6 +242,14 @@ export const createEmptyBoard = (
   activeFrameIndex: 0,
 });
 
+export type CreateBoardTemplate = {
+  id: string;
+  name: string;
+  pitchView?: PitchView;
+  pitchOverlay?: PitchOverlay;
+  pitchShape?: PitchShape;
+};
+
 export const createDefaultProject = (
   name: string,
   options?: {
@@ -253,6 +261,7 @@ export const createDefaultProject = (
     pitchOverlay?: PitchOverlay;
     pitchShape?: PitchShape;
     playerLabel?: Board["playerLabel"];
+    boardTemplates?: CreateBoardTemplate[];
   }
 ): Project => {
   const mode = options?.mode ?? "match";
@@ -277,15 +286,31 @@ export const createDefaultProject = (
     kit: { ...awayKit },
     players: createPlayers(defaults.awayCount, { vestColors }),
   });
-  const board = createEmptyBoard("Board 1", {
-    homeSquadId: homeSquad.id,
-    awaySquadId: awaySquad.id,
-  }, {
+  const baseOverrides = {
     pitchView: options?.pitchView ?? defaults.pitchView,
     pitchOverlay: options?.pitchOverlay ?? defaults.pitchOverlay,
     pitchShape: options?.pitchShape ?? defaults.pitchShape,
     playerLabel: options?.playerLabel ?? defaults.playerLabel,
-  });
+  };
+  const templates =
+    options?.boardTemplates && options.boardTemplates.length > 0
+      ? options.boardTemplates
+      : [{ id: "board-1", name: "Board 1" }];
+  const boards = templates.map((template) =>
+    createEmptyBoard(
+      template.name,
+      {
+        homeSquadId: homeSquad.id,
+        awaySquadId: awaySquad.id,
+      },
+      {
+        pitchView: template.pitchView ?? baseOverrides.pitchView,
+        pitchOverlay: template.pitchOverlay ?? baseOverrides.pitchOverlay,
+        pitchShape: template.pitchShape ?? baseOverrides.pitchShape,
+        playerLabel: baseOverrides.playerLabel,
+      }
+    )
+  );
   return {
     id: createId(),
     name,
@@ -303,9 +328,9 @@ export const createDefaultProject = (
       defaultPitchShape: options?.pitchShape ?? defaults.pitchShape,
       defaultPlayerLabel: options?.playerLabel ?? defaults.playerLabel,
     },
-    boards: [board],
+    boards,
     squads: [homeSquad, awaySquad],
-    activeBoardId: board.id,
+    activeBoardId: boards[0]?.id,
   };
 };
 

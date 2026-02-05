@@ -43,6 +43,13 @@ export type ProjectActions = {
       pitchOverlay?: Board["pitchOverlay"];
       pitchShape?: Project["settings"]["defaultPitchShape"];
       playerLabel?: Board["playerLabel"];
+      boardTemplates?: {
+        id: string;
+        name: string;
+        pitchView?: Board["pitchView"];
+        pitchOverlay?: Board["pitchOverlay"];
+        pitchShape?: Project["settings"]["defaultPitchShape"];
+      }[];
     }
   ) => void;
   openProject: (id: string) => void;

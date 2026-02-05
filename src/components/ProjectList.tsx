@@ -127,6 +127,7 @@ export default function ProjectList() {
     showPosition: false,
     showNumber: false,
   });
+  const [createBoards, setCreateBoards] = useState<string[]>([]);
   const [consoleTab, setConsoleTab] = useState<
     "projects" | "shared" | "library"
   >("projects");
@@ -137,6 +138,45 @@ export default function ProjectList() {
   ).size;
   const projectLimitReached =
     Number.isFinite(limits.maxProjects) && projectCount >= limits.maxProjects;
+
+  const getBoardTemplates = (
+    mode: "training" | "match" | "education"
+  ): {
+    id: string;
+    name: string;
+    pitchView?: "FULL" | "DEF_HALF" | "OFF_HALF" | "GREEN_EMPTY";
+    pitchShape?: "none" | "circle" | "square" | "rect";
+  }[] => {
+    if (mode === "match") {
+      return [
+        { id: "team-setup", name: "Team Setup", pitchView: "FULL" },
+        { id: "off-corners", name: "Offensive Corners", pitchView: "OFF_HALF" },
+        { id: "def-corners", name: "Defensive Corners", pitchView: "DEF_HALF" },
+        { id: "off-fk", name: "Offensive Freekicks", pitchView: "OFF_HALF" },
+        { id: "def-fk", name: "Defensive Freekicks", pitchView: "DEF_HALF" },
+        { id: "off-throw", name: "Offensive Throw-ins", pitchView: "OFF_HALF" },
+        { id: "def-throw", name: "Defensive Throw-ins", pitchView: "DEF_HALF" },
+      ];
+    }
+    if (mode === "education") {
+      return [
+        { id: "principle", name: "Principle", pitchView: "FULL" },
+        { id: "build-up", name: "Build-up", pitchView: "FULL" },
+        { id: "pressing", name: "Pressing", pitchView: "FULL" },
+        { id: "transitions", name: "Transitions", pitchView: "FULL" },
+        { id: "attacking", name: "Attacking shape", pitchView: "FULL" },
+        { id: "defending", name: "Defensive shape", pitchView: "FULL" },
+      ];
+    }
+    return [
+      { id: "warmup", name: "Warmup", pitchView: "GREEN_EMPTY", pitchShape: "square" },
+      { id: "technical", name: "Technical", pitchView: "GREEN_EMPTY", pitchShape: "square" },
+      { id: "passing", name: "Passing", pitchView: "GREEN_EMPTY", pitchShape: "square" },
+      { id: "possession", name: "Possession", pitchView: "GREEN_EMPTY", pitchShape: "square" },
+      { id: "finishing", name: "Finishing", pitchView: "GREEN_EMPTY", pitchShape: "square" },
+      { id: "small-sided", name: "Small-sided", pitchView: "GREEN_EMPTY", pitchShape: "square" },
+    ];
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -397,6 +437,8 @@ export default function ProjectList() {
     setCreatePitchOverlay(defaults.pitchOverlay);
     setCreatePitchShape(defaults.pitchShape);
     setCreatePlayerLabel(defaults.playerLabel);
+    const defaultsBoards = getBoardTemplates(createMode);
+    setCreateBoards(defaultsBoards.map((board) => board.id));
   }, [createMode]);
 
   const onCreate = () => {
@@ -1209,6 +1251,33 @@ export default function ProjectList() {
                 </div>
               </div>
               <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Boards to create</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {getBoardTemplates(createMode).map((board) => {
+                    const checked = createBoards.includes(board.id);
+                    return (
+                      <label
+                        key={board.id}
+                        className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"
+                      >
+                        <span className="text-[var(--ink-0)]">{board.name}</span>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(event) => {
+                            setCreateBoards((prev) =>
+                              event.target.checked
+                                ? [...prev, board.id]
+                                : prev.filter((id) => id !== board.id)
+                            );
+                          }}
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                 <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Team colors</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-2">
@@ -1325,6 +1394,9 @@ export default function ProjectList() {
                     setError("Enter a project name.");
                     return;
                   }
+                  const templates = getBoardTemplates(createMode).filter((board) =>
+                    createBoards.includes(board.id)
+                  );
                   createProject(name.trim(), {
                     homeKit,
                     awayKit,
@@ -1334,6 +1406,15 @@ export default function ProjectList() {
                     pitchOverlay: createPitchOverlay,
                     pitchShape: createPitchShape,
                     playerLabel: createPlayerLabel,
+                    boardTemplates:
+                      templates.length > 0
+                        ? templates.map((board) => ({
+                            id: board.id,
+                            name: board.name,
+                            pitchView: board.pitchView,
+                            pitchShape: board.pitchShape,
+                          }))
+                        : undefined,
                   });
                   setCreateOpen(false);
                   setName("");
