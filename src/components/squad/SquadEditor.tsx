@@ -7,6 +7,7 @@ import { createId } from "@/utils/id";
 import type { Squad } from "@/models";
 import { getActiveBoard, getBoardSquads } from "@/utils/board";
 import { can } from "@/utils/plan";
+import { createSquadPreset } from "@/persistence/squadPresets";
 
 export default function SquadEditor() {
   const project = useProjectStore((state) => state.project);
@@ -15,9 +16,12 @@ export default function SquadEditor() {
   const updateSquadPlayer = useProjectStore((state) => state.updateSquadPlayer);
   const removeSquadPlayer = useProjectStore((state) => state.removeSquadPlayer);
   const plan = useProjectStore((state) => state.plan);
+  const authUser = useProjectStore((state) => state.authUser);
   const setPlayerSide = useEditorStore((state) => state.setPlayerSide);
   const [activeSide, setActiveSide] = useState<"home" | "away">("home");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const [presetStatus, setPresetStatus] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -311,6 +315,55 @@ export default function SquadEditor() {
                     {side.label}
                   </button>
                 ))}
+              </div>
+              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                  Save preset
+                </p>
+                {plan !== "PAID" || !authUser ? (
+                  <p className="text-xs text-[var(--ink-1)]">
+                    Squad presets are available on paid plans.
+                  </p>
+                ) : (
+                  <>
+                    <input
+                      className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                      placeholder="Preset name"
+                      value={presetName}
+                      onChange={(event) => setPresetName(event.target.value)}
+                    />
+                    <button
+                      className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={async () => {
+                        if (!activeSquad) {
+                          return;
+                        }
+                        if (!presetName.trim()) {
+                          setPresetStatus("Enter a preset name.");
+                          return;
+                        }
+                        setPresetStatus(null);
+                        const result = await createSquadPreset({
+                          name: presetName.trim(),
+                          squad: activeSquad,
+                        });
+                        if (!result.ok) {
+                          setPresetStatus(result.error);
+                          return;
+                        }
+                        setPresetStatus("Preset saved.");
+                        setPresetName("");
+                      }}
+                    >
+                      Save preset
+                    </button>
+                    {presetStatus ? (
+                      <p className="text-xs text-[var(--accent-1)]">
+                        {presetStatus}
+                      </p>
+                    ) : null}
+                  </>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 <button

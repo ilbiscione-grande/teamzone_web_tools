@@ -15,6 +15,7 @@ import BetaNoticeModal from "@/components/BetaNoticeModal";
 import ShareBoardModal from "@/components/ShareBoardModal";
 import CommentsModal from "@/components/CommentsModal";
 import { getBoardSquads } from "@/utils/board";
+import { createId } from "@/utils/id";
 import {
   createSquadPreset,
   deleteSquadPreset,
@@ -28,6 +29,10 @@ export default function TopBar() {
   const setActiveBoard = useProjectStore((state) => state.setActiveBoard);
   const setBoardMode = useProjectStore((state) => state.setBoardMode);
   const setBoardPitchView = useProjectStore((state) => state.setBoardPitchView);
+  const updateSquad = useProjectStore((state) => state.updateSquad);
+  const addSquadPlayer = useProjectStore((state) => state.addSquadPlayer);
+  const updateSquadPlayer = useProjectStore((state) => state.updateSquadPlayer);
+  const removeSquadPlayer = useProjectStore((state) => state.removeSquadPlayer);
   const openProject = useProjectStore((state) => state.openProject);
   const closeProject = useProjectStore((state) => state.closeProject);
   const addBoard = useProjectStore((state) => state.addBoard);
@@ -64,6 +69,7 @@ export default function TopBar() {
   const [presetName, setPresetName] = useState("");
   const [presetSide, setPresetSide] = useState<"home" | "away">("home");
   const [presetStatus, setPresetStatus] = useState<string | null>(null);
+  const [manageSide, setManageSide] = useState<"home" | "away">("home");
   const [hideBetaBanner, setHideBetaBanner] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -180,6 +186,7 @@ export default function TopBar() {
     (board) => board.id === activeBoardId
   );
   const boardSquads = getBoardSquads(project, activeBoard ?? null);
+  const manageSquad = manageSide === "home" ? boardSquads.home : boardSquads.away;
   const isSharedView = project.isShared ?? false;
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -845,6 +852,159 @@ export default function TopBar() {
               </p>
             ) : (
               <div className="mt-4 space-y-4 text-xs text-[var(--ink-1)]">
+                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                    Edit squad
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: "home", label: "Home squad" },
+                      { id: "away", label: "Away squad" },
+                    ].map((side) => (
+                      <button
+                        key={side.id}
+                        className={`rounded-2xl border px-3 py-2 text-[11px] uppercase tracking-wide ${
+                          manageSide === side.id
+                            ? "border-[var(--accent-0)] text-[var(--ink-0)]"
+                            : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                        }`}
+                        onClick={() =>
+                          setManageSide(side.id as "home" | "away")
+                        }
+                      >
+                        {side.label}
+                      </button>
+                    ))}
+                  </div>
+                  {manageSquad ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] uppercase text-[var(--ink-1)]">
+                          Players
+                        </span>
+                        <button
+                          className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                          onClick={() =>
+                            addSquadPlayer(manageSquad.id, {
+                              id: createId(),
+                              name: "New Player",
+                              positionLabel: "",
+                              number: undefined,
+                              vestColor: undefined,
+                            })
+                          }
+                        >
+                          Add player
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-[28px_minmax(0,1fr)_50px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                        <span>#</span>
+                        <span>Name</span>
+                        <span>Pos</span>
+                        <span />
+                      </div>
+                      <div className="max-h-56 space-y-2 overflow-auto pr-1" data-scrollable>
+                        {manageSquad.players.map((player) => (
+                          <div
+                            key={player.id}
+                            className="grid grid-cols-[28px_minmax(0,1fr)_50px_20px] items-center gap-2"
+                          >
+                            <input
+                              className="h-7 rounded-md border border-[var(--line)] bg-transparent px-1 text-center text-[11px] text-[var(--ink-0)]"
+                              value={player.number ?? ""}
+                              onChange={(event) =>
+                                updateSquadPlayer(manageSquad.id, player.id, {
+                                  number: event.target.value
+                                    ? Number(event.target.value)
+                                    : undefined,
+                                })
+                              }
+                            />
+                            <input
+                              className="h-7 w-full rounded-md border border-[var(--line)] bg-transparent px-1 text-[11px] text-[var(--ink-0)]"
+                              value={player.name}
+                              onChange={(event) =>
+                                updateSquadPlayer(manageSquad.id, player.id, {
+                                  name: event.target.value,
+                                })
+                              }
+                            />
+                            <select
+                              className="h-7 w-full rounded-md border border-[var(--line)] bg-[var(--panel-2)] px-1 text-[10px] text-[var(--ink-0)]"
+                              value={player.positionLabel}
+                              onChange={(event) =>
+                                updateSquadPlayer(manageSquad.id, player.id, {
+                                  positionLabel: event.target.value,
+                                })
+                              }
+                            >
+                              <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                                
+                              </option>
+                              {[
+                                "GK",
+                                "RB",
+                                "RCB",
+                                "CB",
+                                "LCB",
+                                "LB",
+                                "RWB",
+                                "LWB",
+                                "DM",
+                                "CDM",
+                                "CM",
+                                "AM",
+                                "CAM",
+                                "RM",
+                                "LM",
+                                "RW",
+                                "LW",
+                                "ST",
+                                "CF",
+                                "SS",
+                              ].map((pos) => (
+                                <option
+                                  key={pos}
+                                  value={pos}
+                                  className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                                >
+                                  {pos}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              className="rounded-full border border-[var(--line)] p-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                              onClick={() =>
+                                removeSquadPlayer(manageSquad.id, player.id)
+                              }
+                              title="Delete"
+                              aria-label="Delete"
+                            >
+                              <svg
+                                aria-hidden
+                                viewBox="0 0 24 24"
+                                className="h-3 w-3"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M4 7h16" />
+                                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-xs text-[var(--ink-1)]">
+                      No squad data available.
+                    </p>
+                  )}
+                </div>
                 <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                     Create preset
