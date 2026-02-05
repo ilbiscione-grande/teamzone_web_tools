@@ -76,6 +76,44 @@ insert into public.profiles (id, plan)
 select id, 'FREE' from auth.users
 on conflict (id) do nothing;
 
+create table if not exists squad_presets (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  squad_data jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists squad_presets_user_id_idx on squad_presets(user_id);
+
+alter table squad_presets enable row level security;
+
+drop policy if exists "Users can view their squad presets" on squad_presets;
+drop policy if exists "Users can insert their squad presets" on squad_presets;
+drop policy if exists "Users can update their squad presets" on squad_presets;
+drop policy if exists "Users can delete their squad presets" on squad_presets;
+
+create policy "Users can view their squad presets"
+on squad_presets
+for select
+using (auth.uid() = user_id);
+
+create policy "Users can insert their squad presets"
+on squad_presets
+for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can update their squad presets"
+on squad_presets
+for update
+using (auth.uid() = user_id);
+
+create policy "Users can delete their squad presets"
+on squad_presets
+for delete
+using (auth.uid() = user_id);
+
 create table if not exists public_boards (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,

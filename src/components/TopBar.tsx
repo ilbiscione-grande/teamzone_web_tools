@@ -5,7 +5,7 @@ import { useProjectStore } from "@/state/useProjectStore";
 import { serializeProject, deserializeProject } from "@/persistence/serialize";
 import { saveProject } from "@/persistence/storage";
 import { useEditorStore } from "@/state/useEditorStore";
-import type { BoardMode, PitchOverlay, PitchView } from "@/models";
+import type { BoardMode, PitchOverlay, PitchView, SquadPreset } from "@/models";
 import FormationMenu from "@/components/FormationMenu";
 import { can, getPlanLimits } from "@/utils/plan";
 import AdBanner from "@/components/AdBanner";
@@ -14,6 +14,12 @@ import PlanModal from "@/components/PlanModal";
 import BetaNoticeModal from "@/components/BetaNoticeModal";
 import ShareBoardModal from "@/components/ShareBoardModal";
 import CommentsModal from "@/components/CommentsModal";
+import { getBoardSquads } from "@/utils/board";
+import {
+  createSquadPreset,
+  deleteSquadPreset,
+  fetchSquadPresets,
+} from "@/persistence/squadPresets";
 
 export default function TopBar() {
   const project = useProjectStore((state) => state.project);
@@ -51,6 +57,13 @@ export default function TopBar() {
   const [shareOpen, setShareOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [betaOpen, setBetaOpen] = useState(false);
+  const [squadPresetsOpen, setSquadPresetsOpen] = useState(false);
+  const [squadPresets, setSquadPresets] = useState<SquadPreset[]>([]);
+  const [squadPresetsLoading, setSquadPresetsLoading] = useState(false);
+  const [squadPresetsError, setSquadPresetsError] = useState<string | null>(null);
+  const [presetName, setPresetName] = useState("");
+  const [presetSide, setPresetSide] = useState<"home" | "away">("home");
+  const [presetStatus, setPresetStatus] = useState<string | null>(null);
   const [hideBetaBanner, setHideBetaBanner] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -132,6 +145,29 @@ export default function TopBar() {
   }, []);
 
   useEffect(() => {
+    if (!squadPresetsOpen) {
+      return;
+    }
+    if (!authUser || plan !== "PAID") {
+      setSquadPresets([]);
+      setSquadPresetsError(null);
+      return;
+    }
+    setSquadPresetsLoading(true);
+    setSquadPresetsError(null);
+    fetchSquadPresets()
+      .then((result) => {
+        if (!result.ok) {
+          setSquadPresetsError(result.error);
+          setSquadPresets([]);
+          return;
+        }
+        setSquadPresets(result.presets);
+      })
+      .finally(() => setSquadPresetsLoading(false));
+  }, [squadPresetsOpen, authUser, plan]);
+
+  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
@@ -143,6 +179,7 @@ export default function TopBar() {
   const activeBoard = project.boards.find(
     (board) => board.id === activeBoardId
   );
+  const boardSquads = getBoardSquads(project, activeBoard ?? null);
   const isSharedView = project.isShared ?? false;
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -692,6 +729,31 @@ export default function TopBar() {
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                     onClick={() => {
                       setActionsOpen(false);
+                      setSquadPresetsOpen(true);
+                    }}
+                    disabled={plan !== "PAID" || !authUser}
+                    data-locked={plan !== "PAID" || !authUser}
+                  >
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 24 24"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M7 20v-2a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v2" />
+                      <circle cx="12" cy="7" r="3" />
+                      <path d="M5 12h.01M19 12h.01" />
+                    </svg>
+                    Manage squads
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                    onClick={() => {
+                      setActionsOpen(false);
                       setPlanOpen(true);
                     }}
                   >
@@ -758,6 +820,155 @@ export default function TopBar() {
       )}
 
       <PlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
+      {squadPresetsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="w-full max-w-lg rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="display-font text-xl text-[var(--accent-0)]">
+                  Match squad presets
+                </h2>
+                <p className="text-xs text-[var(--ink-1)]">
+                  Save full match squads for new projects.
+                </p>
+              </div>
+              <button
+                className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                onClick={() => setSquadPresetsOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            {plan !== "PAID" || !authUser ? (
+              <p className="mt-4 text-xs text-[var(--ink-1)]">
+                Squad presets are available for paid plans only.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-4 text-xs text-[var(--ink-1)]">
+                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                    Create preset
+                  </p>
+                  <input
+                    className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                    placeholder="Preset name"
+                    value={presetName}
+                    onChange={(event) => setPresetName(event.target.value)}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: "home", label: "Home squad" },
+                      { id: "away", label: "Away squad" },
+                    ].map((side) => (
+                      <button
+                        key={side.id}
+                        className={`rounded-2xl border px-3 py-2 text-[11px] uppercase tracking-wide ${
+                          presetSide === side.id
+                            ? "border-[var(--accent-0)] text-[var(--ink-0)]"
+                            : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                        }`}
+                        onClick={() => setPresetSide(side.id as "home" | "away")}
+                      >
+                        {side.label}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                    onClick={async () => {
+                      if (!presetName.trim()) {
+                        setPresetStatus("Enter a preset name.");
+                        return;
+                      }
+                      const sourceSquad =
+                        presetSide === "home"
+                          ? boardSquads.home
+                          : boardSquads.away;
+                      if (!sourceSquad) {
+                        setPresetStatus("No squad data available.");
+                        return;
+                      }
+                      setPresetStatus(null);
+                      const result = await createSquadPreset({
+                        name: presetName.trim(),
+                        squad: sourceSquad,
+                      });
+                      if (!result.ok) {
+                        setPresetStatus(result.error);
+                        return;
+                      }
+                      setSquadPresets((prev) => [result.preset, ...prev]);
+                      setPresetName("");
+                      setPresetStatus("Preset saved.");
+                    }}
+                  >
+                    Save preset
+                  </button>
+                  {presetStatus ? (
+                    <p className="text-xs text-[var(--accent-1)]">
+                      {presetStatus}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                    Your presets
+                  </p>
+                  {squadPresetsLoading ? (
+                    <p className="text-xs text-[var(--ink-1)]">
+                      Loading presets...
+                    </p>
+                  ) : squadPresetsError ? (
+                    <p className="text-xs text-[var(--accent-1)]">
+                      {squadPresetsError}
+                    </p>
+                  ) : squadPresets.length === 0 ? (
+                    <p className="text-xs text-[var(--ink-1)]">
+                      No presets yet.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {squadPresets.map((preset) => (
+                        <div
+                          key={preset.id}
+                          className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2"
+                        >
+                          <div>
+                            <p className="text-xs text-[var(--ink-0)]">
+                              {preset.name}
+                            </p>
+                            <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              {preset.squad.name}
+                            </p>
+                          </div>
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                            onClick={async () => {
+                              if (!window.confirm("Delete this preset?")) {
+                                return;
+                              }
+                              const result = await deleteSquadPreset(preset.id);
+                              if (!result.ok) {
+                                setSquadPresetsError(result.error);
+                                return;
+                              }
+                              setSquadPresets((prev) =>
+                                prev.filter((item) => item.id !== preset.id)
+                              );
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       <BetaNoticeModal
         open={betaOpen}
         onClose={() => setBetaOpen(false)}

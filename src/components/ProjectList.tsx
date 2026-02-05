@@ -9,6 +9,7 @@ import type {
   BoardSharePermission,
   Project,
   PublicProject,
+  SquadPreset,
 } from "@/models";
 import { can, getPlanLimits } from "@/utils/plan";
 import { createId } from "@/utils/id";
@@ -26,6 +27,7 @@ import {
   unpublishPublicProject,
   reportPublicProject,
 } from "@/persistence/publicProjects";
+import { fetchSquadPresets } from "@/persistence/squadPresets";
 import {
   createBoardShare,
   fetchLatestCommentsForShares,
@@ -128,6 +130,11 @@ export default function ProjectList() {
     showNumber: false,
   });
   const [createBoards, setCreateBoards] = useState<string[]>([]);
+  const [squadPresets, setSquadPresets] = useState<SquadPreset[]>([]);
+  const [squadPresetsLoading, setSquadPresetsLoading] = useState(false);
+  const [squadPresetsError, setSquadPresetsError] = useState<string | null>(null);
+  const [homeSquadPresetId, setHomeSquadPresetId] = useState("");
+  const [awaySquadPresetId, setAwaySquadPresetId] = useState("");
   const [consoleTab, setConsoleTab] = useState<
     "projects" | "shared" | "library"
   >("projects");
@@ -439,7 +446,29 @@ export default function ProjectList() {
     setCreatePlayerLabel(defaults.playerLabel);
     const defaultsBoards = getBoardTemplates(createMode);
     setCreateBoards(defaultsBoards.map((board) => board.id));
+    setHomeSquadPresetId("");
+    setAwaySquadPresetId("");
   }, [createMode]);
+
+  useEffect(() => {
+    if (!authUser || plan !== "PAID") {
+      setSquadPresets([]);
+      setSquadPresetsError(null);
+      return;
+    }
+    setSquadPresetsLoading(true);
+    setSquadPresetsError(null);
+    fetchSquadPresets()
+      .then((result) => {
+        if (!result.ok) {
+          setSquadPresetsError(result.error);
+          setSquadPresets([]);
+          return;
+        }
+        setSquadPresets(result.presets);
+      })
+      .finally(() => setSquadPresetsLoading(false));
+  }, [authUser, plan]);
 
   const onCreate = () => {
     if (!name.trim()) {
@@ -1278,6 +1307,65 @@ export default function ProjectList() {
                 </div>
               </div>
               <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                  Match squad presets
+                </p>
+                {plan !== "PAID" ? (
+                  <p className="text-xs text-[var(--ink-1)]">
+                    Squad presets are available for paid plans.
+                  </p>
+                ) : squadPresetsLoading ? (
+                  <p className="text-xs text-[var(--ink-1)]">
+                    Loading presets...
+                  </p>
+                ) : squadPresetsError ? (
+                  <p className="text-xs text-[var(--accent-1)]">
+                    {squadPresetsError}
+                  </p>
+                ) : (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <label className="space-y-1">
+                      <span className="text-[11px] uppercase text-[var(--ink-1)]">
+                        Home preset
+                      </span>
+                      <select
+                        className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                        value={homeSquadPresetId}
+                        onChange={(event) => setHomeSquadPresetId(event.target.value)}
+                        disabled={plan !== "PAID"}
+                        data-locked={plan !== "PAID"}
+                      >
+                        <option value="">No preset</option>
+                        {squadPresets.map((preset) => (
+                          <option key={preset.id} value={preset.id}>
+                            {preset.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] uppercase text-[var(--ink-1)]">
+                        Away preset
+                      </span>
+                      <select
+                        className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                        value={awaySquadPresetId}
+                        onChange={(event) => setAwaySquadPresetId(event.target.value)}
+                        disabled={plan !== "PAID"}
+                        data-locked={plan !== "PAID"}
+                      >
+                        <option value="">No preset</option>
+                        {squadPresets.map((preset) => (
+                          <option key={preset.id} value={preset.id}>
+                            {preset.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                 <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Team colors</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-2">
@@ -1397,6 +1485,12 @@ export default function ProjectList() {
                   const templates = getBoardTemplates(createMode).filter((board) =>
                     createBoards.includes(board.id)
                   );
+                  const homePreset = squadPresets.find(
+                    (preset) => preset.id === homeSquadPresetId
+                  );
+                  const awayPreset = squadPresets.find(
+                    (preset) => preset.id === awaySquadPresetId
+                  );
                   createProject(name.trim(), {
                     homeKit,
                     awayKit,
@@ -1415,6 +1509,8 @@ export default function ProjectList() {
                             pitchShape: board.pitchShape,
                           }))
                         : undefined,
+                    homeSquadPreset: homePreset?.squad,
+                    awaySquadPreset: awayPreset?.squad,
                   });
                   setCreateOpen(false);
                   setName("");

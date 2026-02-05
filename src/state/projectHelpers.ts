@@ -262,12 +262,37 @@ export const createDefaultProject = (
     pitchShape?: PitchShape;
     playerLabel?: Board["playerLabel"];
     boardTemplates?: CreateBoardTemplate[];
+    homeSquadPreset?: Squad;
+    awaySquadPreset?: Squad;
   }
 ): Project => {
   const mode = options?.mode ?? "match";
   const defaults = getDefaultBoardSettings(mode);
   const homeKit = options?.homeKit ?? defaultHomeKit();
   const awayKit = options?.awayKit ?? defaultAwayKit();
+  const clonePresetSquad = (
+    preset: Squad | undefined,
+    fallbackName: string,
+    fallbackKit: Squad["kit"],
+    count: number,
+    vestColors: Array<string | undefined>
+  ) => {
+    if (!preset) {
+      return createTeamSquad(fallbackName, {
+        kit: { ...fallbackKit },
+        players: createPlayers(count, { vestColors }),
+      });
+    }
+    return createTeamSquad(preset.name || fallbackName, {
+      name: preset.name || fallbackName,
+      clubLogo: preset.clubLogo,
+      kit: { ...preset.kit },
+      players: preset.players.map((player) => ({
+        ...player,
+        id: createId(),
+      })),
+    });
+  };
   const vestColors =
     defaults.vestColors.length > 0
       ? [
@@ -278,14 +303,20 @@ export const createDefaultProject = (
           ),
         ]
       : [];
-  const homeSquad = createTeamSquad("Home", {
-    kit: { ...homeKit },
-    players: createPlayers(defaults.homeCount, { vestColors }),
-  });
-  const awaySquad = createTeamSquad("Away", {
-    kit: { ...awayKit },
-    players: createPlayers(defaults.awayCount, { vestColors }),
-  });
+  const homeSquad = clonePresetSquad(
+    options?.homeSquadPreset,
+    "Home",
+    homeKit,
+    defaults.homeCount,
+    vestColors
+  );
+  const awaySquad = clonePresetSquad(
+    options?.awaySquadPreset,
+    "Away",
+    awayKit,
+    defaults.awayCount,
+    vestColors
+  );
   const baseOverrides = {
     pitchView: options?.pitchView ?? defaults.pitchView,
     pitchOverlay: options?.pitchOverlay ?? defaults.pitchOverlay,
