@@ -610,12 +610,13 @@ export default function BoardCanvas({
       className="relative h-full w-full"
       data-disable-pull
     >
-      <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
-        <button
-          className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-          onClick={handleResetView}
-          title="Reset view"
-          aria-label="Reset view"
+      {!readOnly && (
+        <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
+          <button
+            className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            onClick={handleResetView}
+            title="Reset view"
+            aria-label="Reset view"
         >
           <svg
             aria-hidden
@@ -633,18 +634,18 @@ export default function BoardCanvas({
             <path d="M4 12a8 8 0 0 0 14 5" />
           </svg>
         </button>
-        <button
-          className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-          onClick={() => {
-            if (!window.confirm("Clear all objects from this frame?")) {
-              return;
-            }
-            pushHistory(clone(objects));
-            setFrameObjects(board.id, frameIndex, []);
-          }}
-          title="Clear pitch"
-          aria-label="Clear pitch"
-        >
+          <button
+            className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+            onClick={() => {
+              if (!window.confirm("Clear all objects from this frame?")) {
+                return;
+              }
+              pushHistory(clone(objects));
+              setFrameObjects(board.id, frameIndex, []);
+            }}
+            title="Clear pitch"
+            aria-label="Clear pitch"
+          >
           <svg
             aria-hidden
             viewBox="0 0 24 24"
@@ -661,12 +662,12 @@ export default function BoardCanvas({
             <path d="M10 11v6M14 11v6" />
           </svg>
         </button>
-        <button
-          className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-          onClick={onToggleMaximize}
-          title={isMaximized ? "Exit full screen" : "Full screen"}
-          aria-label="Toggle full screen"
-        >
+          <button
+            className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            onClick={onToggleMaximize}
+            title={isMaximized ? "Exit full screen" : "Full screen"}
+            aria-label="Toggle full screen"
+          >
           <svg
             aria-hidden
             viewBox="0 0 24 24"
@@ -680,13 +681,13 @@ export default function BoardCanvas({
             <path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5" />
           </svg>
         </button>
-        {isMaximized && (
-          <button
-            className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-            onClick={onToggleMaximize}
-            title="Close full screen"
-            aria-label="Close full screen"
-          >
+          {isMaximized && (
+            <button
+              className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+              onClick={onToggleMaximize}
+              title="Close full screen"
+              aria-label="Close full screen"
+            >
             <svg
               aria-hidden
               viewBox="0 0 24 24"
@@ -699,9 +700,10 @@ export default function BoardCanvas({
             >
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
-          </button>
-        )}
-      </div>
+            </button>
+          )}
+        </div>
+      )}
       <Stage
         ref={stageRef}
         width={size.width}
