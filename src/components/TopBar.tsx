@@ -1586,8 +1586,7 @@ export default function TopBar() {
                   setShareLinkUrl(url);
                   setShareLinkStatus("Link created.");
                 }}
-              }
-              disabled={plan !== "PAID" || !authUser}
+                disabled={plan !== "PAID" || !authUser}
               >
                 Generate link
               </button>
