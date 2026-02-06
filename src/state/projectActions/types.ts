@@ -52,6 +52,7 @@ export type ProjectActions = {
       }[];
       homeSquadPreset?: Squad;
       awaySquadPreset?: Squad;
+      startingFormation?: string;
     }
   ) => void;
   openProject: (id: string) => void;

@@ -12,6 +12,7 @@ import type {
   PitchShape,
 } from "@/models";
 import { defaultStyle } from "@/board/objects/objectFactory";
+import { createPlayer } from "@/board/objects/objectFactory";
 import { SCHEMA_VERSION } from "@/models";
 import { createId } from "@/utils/id";
 
@@ -58,6 +59,60 @@ const POSITION_CYCLE = [
   "SS",
   "AM",
 ];
+
+export const FORMATION_PRESETS: Record<string, number[]> = {
+  "4-3-3": [4, 3, 3],
+  "4-4-2": [4, 4, 2],
+  "3-5-2": [3, 5, 2],
+  "4-2-3-1": [4, 2, 3, 1],
+  "3-4-3": [3, 4, 3],
+  "4-1-4-1": [4, 1, 4, 1],
+  "4-5-1": [4, 5, 1],
+  "4-3-1-2": [4, 3, 1, 2],
+  "4-1-2-1-2": [4, 1, 2, 1, 2],
+  "3-4-1-2": [3, 4, 1, 2],
+  "3-4-2-1": [3, 4, 2, 1],
+  "3-5-1-1": [3, 5, 1, 1],
+  "5-3-2": [5, 3, 2],
+  "5-2-3": [5, 2, 3],
+  "5-4-1": [5, 4, 1],
+};
+
+const PITCH_LENGTH = 105;
+const PITCH_WIDTH = 68;
+
+const getLineYs = (count: number) => {
+  const margin = 8;
+  if (count <= 1) {
+    return [PITCH_WIDTH / 2];
+  }
+  const spacing = (PITCH_WIDTH - margin * 2) / (count - 1);
+  return Array.from({ length: count }, (_, index) => margin + spacing * index);
+};
+
+const getLineXs = (lineCount: number) => {
+  if (lineCount <= 1) {
+    return [PITCH_LENGTH * 0.5];
+  }
+  const minX = 22;
+  const maxX = 88;
+  const spacing = (maxX - minX) / (lineCount - 1);
+  return Array.from({ length: lineCount }, (_, index) => minX + spacing * index);
+};
+
+const getFormationPositions = (formation: number[], side: "home" | "away") => {
+  const positions: { x: number; y: number }[] = [];
+  const gkX = side === "home" ? 8 : PITCH_LENGTH - 8;
+  positions.push({ x: gkX, y: PITCH_WIDTH / 2 });
+  const lineXs = getLineXs(formation.length).map((x) =>
+    side === "home" ? x : PITCH_LENGTH - x
+  );
+  formation.forEach((count, index) => {
+    const ys = getLineYs(count);
+    ys.forEach((y) => positions.push({ x: lineXs[index]!, y }));
+  });
+  return positions;
+};
 
 const createPlayers = (
   count: number,
@@ -264,6 +319,7 @@ export const createDefaultProject = (
     boardTemplates?: CreateBoardTemplate[];
     homeSquadPreset?: Squad;
     awaySquadPreset?: Squad;
+    startingFormation?: string;
   }
 ): Project => {
   const mode = options?.mode ?? "match";
@@ -342,6 +398,36 @@ export const createDefaultProject = (
       }
     )
   );
+  if (options?.startingFormation && FORMATION_PRESETS[options.startingFormation]) {
+    const formation = FORMATION_PRESETS[options.startingFormation];
+    const targetBoard = boards[0];
+    if (targetBoard) {
+      const baseObjects = targetBoard.frames[0]?.objects ?? [];
+      const nextObjects = [...baseObjects];
+      const addFormation = (squad: Squad, side: "home" | "away") => {
+        const positions = getFormationPositions(formation, side);
+        positions.forEach((position, index) => {
+          const player = squad.players[index];
+          if (!player) {
+            return;
+          }
+          const token = createPlayer(position, 1.5, squad.kit.shirt);
+          token.squadPlayerId = player.id;
+          token.showName = targetBoard.playerLabel.showName;
+          token.showPosition = targetBoard.playerLabel.showPosition;
+          token.showNumber = targetBoard.playerLabel.showNumber;
+          token.vestColor = player.vestColor;
+          nextObjects.push(token);
+        });
+      };
+      addFormation(homeSquad, "home");
+      if (mode !== "training") {
+        addFormation(awaySquad, "away");
+      }
+      targetBoard.frames[0].objects = nextObjects;
+      targetBoard.layers = nextObjects;
+    }
+  }
   return {
     id: createId(),
     name,

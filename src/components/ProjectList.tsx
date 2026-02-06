@@ -14,7 +14,7 @@ import type {
 import { can, getPlanLimits } from "@/utils/plan";
 import { createId } from "@/utils/id";
 import { clone } from "@/utils/clone";
-import { getDefaultBoardSettings } from "@/state/projectHelpers";
+import { FORMATION_PRESETS, getDefaultBoardSettings } from "@/state/projectHelpers";
 import AdBanner from "@/components/AdBanner";
 import PlanModal from "@/components/PlanModal";
 import BetaNoticeModal from "@/components/BetaNoticeModal";
@@ -130,6 +130,7 @@ export default function ProjectList() {
     showNumber: false,
   });
   const [createBoards, setCreateBoards] = useState<string[]>([]);
+  const [startingFormation, setStartingFormation] = useState<string>("none");
   const [squadPresets, setSquadPresets] = useState<SquadPreset[]>([]);
   const [squadPresetsLoading, setSquadPresetsLoading] = useState(false);
   const [squadPresetsError, setSquadPresetsError] = useState<string | null>(null);
@@ -459,6 +460,7 @@ export default function ProjectList() {
     setCreateBoards(defaultsBoards.map((board) => board.id));
     setHomeSquadPresetId("");
     setAwaySquadPresetId("");
+    setStartingFormation("none");
   }, [createMode, plan]);
 
   useEffect(() => {
@@ -1479,6 +1481,26 @@ export default function ProjectList() {
                   </div>
                 </div>
               </div>
+              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                  Starting formation
+                </p>
+                <select
+                  className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                  value={startingFormation}
+                  onChange={(event) => setStartingFormation(event.target.value)}
+                >
+                  <option value="none">No formation</option>
+                  {Object.keys(FORMATION_PRESETS).map((key) => (
+                    <option key={key} value={key}>
+                      {key}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-[var(--ink-1)]">
+                  Adds players in this formation to the first board.
+                </p>
+              </div>
               <label className="flex items-center justify-between rounded-2xl border border-[var(--line)] px-3 py-2 text-xs">
                 <span>Attach ball to player on drop</span>
                 <input
@@ -1532,6 +1554,10 @@ export default function ProjectList() {
                         : undefined,
                     homeSquadPreset: homePreset?.squad,
                     awaySquadPreset: awayPreset?.squad,
+                    startingFormation:
+                      startingFormation !== "none"
+                        ? startingFormation
+                        : undefined,
                   });
                   setCreateOpen(false);
                   setName("");

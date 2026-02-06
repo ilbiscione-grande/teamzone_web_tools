@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { createId } from "@/utils/id";
-import type { Squad } from "@/models";
+import type { Squad, SquadPreset } from "@/models";
 import { getActiveBoard, getBoardSquads } from "@/utils/board";
 import { can } from "@/utils/plan";
-import { createSquadPreset } from "@/persistence/squadPresets";
+import { createSquadPreset, fetchSquadPresets } from "@/persistence/squadPresets";
 
 export default function SquadEditor() {
   const project = useProjectStore((state) => state.project);
@@ -22,6 +22,29 @@ export default function SquadEditor() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [presetStatus, setPresetStatus] = useState<string | null>(null);
+  const [presetLoadId, setPresetLoadId] = useState("");
+  const [presetLoadStatus, setPresetLoadStatus] = useState<string | null>(null);
+  const [presets, setPresets] = useState<SquadPreset[]>([]);
+  const [presetsLoading, setPresetsLoading] = useState(false);
+  const [presetsError, setPresetsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!settingsOpen || plan !== "PAID" || !authUser) {
+      return;
+    }
+    setPresetsLoading(true);
+    setPresetsError(null);
+    fetchSquadPresets()
+      .then((result) => {
+        if (!result.ok) {
+          setPresetsError(result.error);
+          setPresets([]);
+          return;
+        }
+        setPresets(result.presets);
+      })
+      .finally(() => setPresetsLoading(false));
+  }, [settingsOpen, plan, authUser]);
   const fileRef = useRef<HTMLInputElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -320,54 +343,124 @@ export default function SquadEditor() {
               </button>
             </div>
             <div className="mt-4 space-y-3 text-xs text-[var(--ink-1)]">
-              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
-                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Save preset
-                </p>
-                {plan !== "PAID" || !authUser ? (
-                  <p className="text-xs text-[var(--ink-1)]">
-                    Squad presets are available on paid plans.
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                    Save preset
                   </p>
-                ) : (
-                  <>
-                    <input
-                      className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                      placeholder="Preset name"
-                      value={presetName}
-                      onChange={(event) => setPresetName(event.target.value)}
-                    />
-                    <button
-                      className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      onClick={async () => {
-                        if (!activeSquad) {
-                          return;
-                        }
-                        if (!presetName.trim()) {
-                          setPresetStatus("Enter a preset name.");
-                          return;
-                        }
-                        setPresetStatus(null);
-                        const result = await createSquadPreset({
-                          name: presetName.trim(),
-                          squad: activeSquad,
-                        });
-                        if (!result.ok) {
-                          setPresetStatus(result.error);
-                          return;
-                        }
-                        setPresetStatus("Preset saved.");
-                        setPresetName("");
-                      }}
-                    >
-                      Save preset
-                    </button>
-                    {presetStatus ? (
-                      <p className="text-xs text-[var(--accent-1)]">
-                        {presetStatus}
-                      </p>
-                    ) : null}
-                  </>
-                )}
+                  {plan !== "PAID" || !authUser ? (
+                    <p className="text-xs text-[var(--ink-1)]">
+                      Squad presets are available on paid plans.
+                    </p>
+                  ) : (
+                    <>
+                      <input
+                        className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                        placeholder="Preset name"
+                        value={presetName}
+                        onChange={(event) => setPresetName(event.target.value)}
+                      />
+                      <button
+                        className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        onClick={async () => {
+                          if (!activeSquad) {
+                            return;
+                          }
+                          if (!presetName.trim()) {
+                            setPresetStatus("Enter a preset name.");
+                            return;
+                          }
+                          setPresetStatus(null);
+                          const result = await createSquadPreset({
+                            name: presetName.trim(),
+                            squad: activeSquad,
+                          });
+                          if (!result.ok) {
+                            setPresetStatus(result.error);
+                            return;
+                          }
+                          setPresetStatus("Preset saved.");
+                          setPresetName("");
+                        }}
+                      >
+                        Save preset
+                      </button>
+                      {presetStatus ? (
+                        <p className="text-xs text-[var(--accent-1)]">
+                          {presetStatus}
+                        </p>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                    Load preset
+                  </p>
+                  {plan !== "PAID" || !authUser ? (
+                    <p className="text-xs text-[var(--ink-1)]">
+                      Squad presets are available on paid plans.
+                    </p>
+                  ) : presetsLoading ? (
+                    <p className="text-xs text-[var(--ink-1)]">
+                      Loading presets...
+                    </p>
+                  ) : presetsError ? (
+                    <p className="text-xs text-[var(--accent-1)]">
+                      {presetsError}
+                    </p>
+                  ) : (
+                    <>
+                      <select
+                        className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                        value={presetLoadId}
+                        onChange={(event) => setPresetLoadId(event.target.value)}
+                      >
+                        <option value="">Select preset</option>
+                        {presets.map((preset) => (
+                          <option key={preset.id} value={preset.id}>
+                            {preset.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        onClick={() => {
+                          if (!presetLoadId || !activeSquad) {
+                            setPresetLoadStatus("Select a preset.");
+                            return;
+                          }
+                          const preset = presets.find(
+                            (item) => item.id === presetLoadId
+                          );
+                          if (!preset) {
+                            setPresetLoadStatus("Preset not found.");
+                            return;
+                          }
+                          setPresetLoadStatus(null);
+                          updateSquad(activeSquad.id, {
+                            name: preset.squad.name,
+                            clubLogo: preset.squad.clubLogo,
+                            kit: preset.squad.kit,
+                            captainId: preset.squad.captainId,
+                            substituteIds: preset.squad.substituteIds,
+                            players: preset.squad.players.map((player) => ({
+                              ...player,
+                              id: createId(),
+                            })),
+                          });
+                        }}
+                      >
+                        Load into squad
+                      </button>
+                      {presetLoadStatus ? (
+                        <p className="text-xs text-[var(--accent-1)]">
+                          {presetLoadStatus}
+                        </p>
+                      ) : null}
+                    </>
+                  )}
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
