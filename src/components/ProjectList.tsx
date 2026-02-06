@@ -1166,7 +1166,7 @@ export default function ProjectList() {
       </div>
       {createOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
             <div className="flex items-center justify-between p-6 pb-0">
               <div>
                 <h2 className="display-font text-xl text-[var(--accent-0)]">New project settings</h2>
@@ -1179,7 +1179,7 @@ export default function ProjectList() {
                 Close
               </button>
             </div>
-            <div className="mt-4 max-h-[calc(90vh-96px)] overflow-y-auto p-6 pt-0" data-scrollable>
+            <div className="mt-4 max-h-[calc(80vh-96px)] overflow-y-auto p-6 pt-0" data-scrollable>
               <input
                 className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                 placeholder="Project name"

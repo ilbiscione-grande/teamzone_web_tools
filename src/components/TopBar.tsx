@@ -858,8 +858,8 @@ export default function TopBar() {
       <PlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
       {squadPresetsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-          <div className="w-full max-w-3xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
-            <div className="flex items-center justify-between">
+          <div className="max-h-[80vh] w-full max-w-3xl overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="flex items-center justify-between p-6 pb-0">
               <div>
                 <h2 className="display-font text-xl text-[var(--accent-0)]">
                   Match squad presets
@@ -876,11 +876,11 @@ export default function TopBar() {
               </button>
             </div>
             {plan !== "PAID" || !authUser ? (
-              <p className="mt-4 text-xs text-[var(--ink-1)]">
+              <p className="mt-4 p-6 pt-0 text-xs text-[var(--ink-1)]">
                 Squad presets are available for paid plans only.
               </p>
             ) : (
-              <div className="mt-4 space-y-4 text-xs text-[var(--ink-1)]">
+              <div className="mt-4 max-h-[calc(80vh-96px)] space-y-4 overflow-y-auto p-6 pt-0 text-xs text-[var(--ink-1)]" data-scrollable>
                 <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                     Edit squad
