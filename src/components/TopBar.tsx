@@ -1139,60 +1139,9 @@ export default function TopBar() {
                         <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                           Roles
                         </p>
-                        <label className="space-y-1">
-                          <span className="text-[11px] uppercase text-[var(--ink-1)]">
-                            Captain
-                          </span>
-                          <select
-                            className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-                            value={editableSquad.captainId ?? ""}
-                            onChange={(event) =>
-                              updateEditableSquad({
-                                captainId: event.target.value || undefined,
-                              })
-                            }
-                          >
-                            <option value="">No captain</option>
-                            {editableSquad.players.map((player) => (
-                              <option key={player.id} value={player.id}>
-                                {player.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <div className="space-y-1">
-                          <span className="text-[11px] uppercase text-[var(--ink-1)]">
-                            Substitutes
-                          </span>
-                          <div className="max-h-28 space-y-1 overflow-auto pr-1" data-scrollable>
-                            {editableSquad.players.map((player) => {
-                              const substitutes = editableSquad.substituteIds ?? [];
-                              const checked = substitutes.includes(player.id);
-                              return (
-                                <label
-                                  key={player.id}
-                                  className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-2 py-1 text-[11px]"
-                                >
-                                  <span className="text-[var(--ink-0)]">
-                                    {player.name}
-                                  </span>
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={(event) => {
-                                      const next = event.target.checked
-                                        ? [...substitutes, player.id]
-                                        : substitutes.filter((id) => id !== player.id);
-                                      updateEditableSquad({
-                                        substituteIds: next,
-                                      });
-                                    }}
-                                  />
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
+                        <p className="text-[11px] text-[var(--ink-1)]">
+                          Set captain (single) and subs (multi) per player row.
+                        </p>
                       </div>
                     </div>
                   ) : null}
@@ -1253,17 +1202,18 @@ export default function TopBar() {
                           Add player
                         </button>
                       </div>
-                      <div className="grid grid-cols-[28px_minmax(0,1fr)_50px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                      <div className="grid grid-cols-[28px_minmax(0,1fr)_50px_44px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                         <span>#</span>
                         <span>Name</span>
                         <span>Pos</span>
+                        <span className="text-center">C/S</span>
                         <span />
                       </div>
                       <div className="max-h-56 space-y-2 overflow-auto pr-1" data-scrollable>
                         {(managePresetSquad ?? manageSquad)?.players.map((player) => (
                           <div
                             key={player.id}
-                            className="grid grid-cols-[28px_minmax(0,1fr)_50px_20px] items-center gap-2"
+                            className="grid grid-cols-[28px_minmax(0,1fr)_50px_44px_20px] items-center gap-2"
                           >
                             <input
                               className="h-7 rounded-md border border-[var(--line)] bg-transparent px-1 text-center text-[11px] text-[var(--ink-0)]"
@@ -1372,6 +1322,48 @@ export default function TopBar() {
                                 </option>
                               ))}
                             </select>
+                            {(() => {
+                              const substitutes = editableSquad?.substituteIds ?? [];
+                              const isCaptain = editableSquad?.captainId === player.id;
+                              const isSub = substitutes.includes(player.id);
+                              return (
+                                <div className="flex items-center justify-center gap-2">
+                                  <button
+                                    className={`h-4 w-4 rounded-full border text-[9px] uppercase ${
+                                      isCaptain
+                                        ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                                        : "border-[var(--line)] text-[var(--ink-1)]"
+                                    }`}
+                                    onClick={() =>
+                                      updateEditableSquad({
+                                        captainId: isCaptain ? undefined : player.id,
+                                      })
+                                    }
+                                    title="Captain"
+                                    aria-label="Captain"
+                                  >
+                                    C
+                                  </button>
+                                  <button
+                                    className={`h-4 w-4 rounded-full border text-[9px] uppercase ${
+                                      isSub
+                                        ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                                        : "border-[var(--line)] text-[var(--ink-1)]"
+                                    }`}
+                                    onClick={() => {
+                                      const next = isSub
+                                        ? substitutes.filter((id) => id !== player.id)
+                                        : [...substitutes, player.id];
+                                      updateEditableSquad({ substituteIds: next });
+                                    }}
+                                    title="Substitute"
+                                    aria-label="Substitute"
+                                  >
+                                    S
+                                  </button>
+                                </div>
+                              );
+                            })()}
                             <button
                               className="rounded-full border border-[var(--line)] p-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
                               onClick={() => {
