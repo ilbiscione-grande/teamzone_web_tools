@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { fetchProjectShareLink } from "@/persistence/projectShareLinks";
@@ -8,10 +9,16 @@ import BoardCanvas from "@/board/BoardCanvas";
 import type { Project } from "@/models";
 
 type ProjectShareViewProps = {
-  token: string;
+  token?: string;
 };
 
 export default function ProjectShareView({ token }: ProjectShareViewProps) {
+  const params = useParams();
+  const paramToken =
+    params && typeof params === "object" && "token" in params
+      ? (Array.isArray(params.token) ? params.token[0] : params.token)
+      : undefined;
+  const resolvedToken = token ?? paramToken ?? "";
   const openProjectReadOnly = useProjectStore(
     (state) => state.openProjectReadOnly
   );
@@ -28,7 +35,14 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     const load = async () => {
       setLoading(true);
       setError(null);
-      const result = await fetchProjectShareLink(token);
+      if (!resolvedToken) {
+        if (!cancelled) {
+          setError("Share link not found.");
+          setLoading(false);
+        }
+        return;
+      }
+      const result = await fetchProjectShareLink(resolvedToken);
       if (!result.ok) {
         if (!cancelled) {
           setError(result.error);
@@ -49,7 +63,7 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     return () => {
       cancelled = true;
     };
-  }, [token, openProjectReadOnly]);
+  }, [resolvedToken, openProjectReadOnly]);
 
   const boardId = project?.activeBoardId ?? project?.boards[0]?.id;
   const board = useMemo(
