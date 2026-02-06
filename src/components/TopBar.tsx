@@ -858,7 +858,7 @@ export default function TopBar() {
       <PlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
       {squadPresetsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-          <div className="w-full max-w-lg rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+          <div className="w-full max-w-3xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="display-font text-xl text-[var(--accent-0)]">
@@ -887,7 +887,7 @@ export default function TopBar() {
                   </p>
                   <label className="space-y-1">
                     <span className="text-[11px] uppercase text-[var(--ink-1)]">
-                      Preset to edit
+                      Preset squad
                     </span>
                     <select
                       className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
@@ -959,12 +959,15 @@ export default function TopBar() {
                       </button>
                     </div>
                   )}
-                  {managePresetId && managePresetSquad && manageSquad && (
+                  {managePresetId && managePresetSquad && (
                     <div className="flex flex-wrap gap-2">
                       <button
                         className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                         onClick={() => {
-                          updateSquad(manageSquad.id, {
+                          if (!boardSquads.home) {
+                            return;
+                          }
+                          updateSquad(boardSquads.home.id, {
                             name: managePresetSquad.name,
                             clubLogo: managePresetSquad.clubLogo,
                             kit: managePresetSquad.kit,
@@ -974,8 +977,29 @@ export default function TopBar() {
                             })),
                           });
                         }}
+                        disabled={!boardSquads.home}
                       >
-                        Load to squad
+                        Load to Home
+                      </button>
+                      <button
+                        className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        onClick={() => {
+                          if (!boardSquads.away) {
+                            return;
+                          }
+                          updateSquad(boardSquads.away.id, {
+                            name: managePresetSquad.name,
+                            clubLogo: managePresetSquad.clubLogo,
+                            kit: managePresetSquad.kit,
+                            players: managePresetSquad.players.map((player) => ({
+                              ...player,
+                              id: createId(),
+                            })),
+                          });
+                        }}
+                        disabled={!boardSquads.away}
+                      >
+                        Load to Away
                       </button>
                       <button
                         className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
