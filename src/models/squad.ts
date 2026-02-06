@@ -20,6 +20,8 @@ export type Squad = {
   clubLogo?: string;
   kit: SquadKit;
   players: SquadPlayer[];
+  captainId?: string;
+  substituteIds?: string[];
 };
 
 export type SquadPreset = {
