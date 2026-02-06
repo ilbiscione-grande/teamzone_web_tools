@@ -35,6 +35,7 @@ type CoreActionSlice = Pick<
   | "syncNow"
   | "createProject"
   | "openProject"
+  | "openProjectReadOnly"
   | "openProjectFromData"
   | "openSharedBoard"
   | "closeProject"
