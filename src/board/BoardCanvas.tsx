@@ -340,8 +340,7 @@ export default function BoardCanvas({
     }
     return 0;
   }, [board.pitchView, isPortraitFull]);
-  const labelRotation =
-    viewRotation === 0 ? 0 : isPortraitFull ? 0 : -viewRotation;
+  const labelRotation = viewRotation === 0 ? 0 : -viewRotation;
   const rotationPivot = useMemo(
     () => ({
       x: bounds.x + bounds.width / 2,

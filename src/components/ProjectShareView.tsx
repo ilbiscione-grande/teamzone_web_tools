@@ -29,6 +29,7 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
   const setPlayheadFrame = useEditorStore((state) => state.setPlayheadFrame);
   const setSelection = useEditorStore((state) => state.setSelection);
   const setSelectedLinkId = useEditorStore((state) => state.setSelectedLinkId);
+  const setViewport = useEditorStore((state) => state.setViewport);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNotes, setShowNotes] = useState(false);
@@ -82,6 +83,7 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
       }
       setSelection([]);
       setSelectedLinkId(null);
+      setViewport({ zoom: 1, offsetX: 0, offsetY: 0 });
       if (!cancelled) {
         setLoading(false);
       }
@@ -90,7 +92,14 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     return () => {
       cancelled = true;
     };
-  }, [resolvedToken, openProjectReadOnly, setSelection, setSelectedLinkId]);
+  }, [
+    resolvedToken,
+    openProjectReadOnly,
+    setSelection,
+    setSelectedLinkId,
+    setViewport,
+    setActiveBoard,
+  ]);
 
   const boardId = project?.activeBoardId ?? project?.boards[0]?.id;
   const board = useMemo(
@@ -106,7 +115,15 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     setPlayheadFrame(0);
     setSelection([]);
     setSelectedLinkId(null);
-  }, [board?.id, setPlaying, setPlayheadFrame, setSelection, setSelectedLinkId]);
+    setViewport({ zoom: 1, offsetX: 0, offsetY: 0 });
+  }, [
+    board?.id,
+    setPlaying,
+    setPlayheadFrame,
+    setSelection,
+    setSelectedLinkId,
+    setViewport,
+  ]);
 
   if (loading) {
     return (
