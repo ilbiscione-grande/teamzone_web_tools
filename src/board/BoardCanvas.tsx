@@ -39,6 +39,7 @@ type BoardCanvasProps = {
   isMaximized?: boolean;
   onToggleMaximize?: () => void;
   readOnly?: boolean;
+  forcePortrait?: boolean;
 };
 
 export default function BoardCanvas({
@@ -47,6 +48,7 @@ export default function BoardCanvas({
   isMaximized,
   onToggleMaximize,
   readOnly,
+  forcePortrait,
 }: BoardCanvasProps) {
   const stageRef = useRef<Konva.Stage | null>(null);
   const shapeRefs = useRef<Record<string, Konva.Node>>({});
@@ -323,7 +325,9 @@ export default function BoardCanvas({
     [board.pitchView]
   );
   const isPortraitFull =
-    readOnly && board.pitchView === "FULL" && size.height > size.width;
+    readOnly &&
+    board.pitchView === "FULL" &&
+    (forcePortrait || size.height > size.width);
   const viewRotation = useMemo(() => {
     if (board.pitchView === "DEF_HALF") {
       return -90;

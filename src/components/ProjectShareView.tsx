@@ -32,6 +32,22 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNotes, setShowNotes] = useState(false);
+  const [forcePortrait, setForcePortrait] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const media = window.matchMedia("(max-width: 768px)");
+    const update = () => setForcePortrait(media.matches);
+    update();
+    if (media.addEventListener) {
+      media.addEventListener("change", update);
+      return () => media.removeEventListener("change", update);
+    }
+    media.addListener(update);
+    return () => media.removeListener(update);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -139,7 +155,7 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
       <div className="flex min-h-0 flex-1">
         <div className="flex-1 px-2 pb-3 md:px-4 md:pb-4">
           <div className="h-full rounded-2xl border border-[var(--line)] bg-[var(--panel)]/70 p-2 md:rounded-3xl md:p-3">
-            <BoardCanvas board={board} readOnly />
+            <BoardCanvas board={board} readOnly forcePortrait={forcePortrait} />
           </div>
         </div>
       </div>
