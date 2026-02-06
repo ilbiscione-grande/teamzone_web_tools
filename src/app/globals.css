@@ -59,10 +59,6 @@ body {
   background: color-mix(in srgb, var(--accent-2) 85%, transparent);
 }
 
-.share-portrait .board-fit-cover canvas {
-  transform: scale(1.08);
-  transform-origin: center;
-}
 
 .display-font {
   font-family: var(--font-display), "Segoe UI", system-ui, sans-serif;
