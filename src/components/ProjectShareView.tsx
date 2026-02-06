@@ -153,11 +153,11 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
 
   return (
     <div className="flex h-screen flex-col bg-[var(--app-bg)] text-[var(--ink-0)]">
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-3 text-xs text-[var(--ink-1)] md:px-4">
-        <span className="display-font text-sm text-[var(--accent-0)]">
+      <div className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--ink-1)] md:px-4">
+        <span className="display-font min-w-0 flex-1 truncate text-[11px] text-[var(--accent-0)] sm:text-xs md:text-sm">
           {project.name}
         </span>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <button
             className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => setShowNotes((prev) => !prev)}
@@ -167,7 +167,7 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
           </button>
           {project.boards.length > 1 && (
             <select
-              className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+              className="h-7 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-[11px] text-[var(--ink-0)] md:h-8 md:text-xs"
               value={board.id}
               onChange={(event) => setActiveBoard(event.target.value)}
             >
