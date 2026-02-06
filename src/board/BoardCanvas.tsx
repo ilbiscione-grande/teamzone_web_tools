@@ -429,12 +429,10 @@ export default function BoardCanvas({
     Math.min(size.width / effectiveWidth, size.height / effectiveHeight) *
     fitScale;
   const stageScale = baseScale * viewport.zoom;
-  const baseOffsetX = isPortraitFull
-    ? size.width / 2 - (effectiveWidth / 2) * baseScale
-    : size.width / 2 - (bounds.x + bounds.width / 2) * baseScale;
-  const baseOffsetY = isPortraitFull
-    ? size.height / 2 - (effectiveHeight / 2) * baseScale
-    : size.height / 2 - (bounds.y + bounds.height / 2) * baseScale;
+  const baseOffsetX =
+    size.width / 2 - (bounds.x + bounds.width / 2) * baseScale;
+  const baseOffsetY =
+    size.height / 2 - (bounds.y + bounds.height / 2) * baseScale;
 
   const {
     draft,
