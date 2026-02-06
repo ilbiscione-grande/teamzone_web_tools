@@ -27,8 +27,11 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
   const isPlaying = useEditorStore((state) => state.isPlaying);
   const setPlaying = useEditorStore((state) => state.setPlaying);
   const setPlayheadFrame = useEditorStore((state) => state.setPlayheadFrame);
+  const setSelection = useEditorStore((state) => state.setSelection);
+  const setSelectedLinkId = useEditorStore((state) => state.setSelectedLinkId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showNotes, setShowNotes] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +58,8 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
         isShared: true,
       };
       openProjectReadOnly(sharedProject);
+      setSelection([]);
+      setSelectedLinkId(null);
       if (!cancelled) {
         setLoading(false);
       }
@@ -63,7 +68,7 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     return () => {
       cancelled = true;
     };
-  }, [resolvedToken, openProjectReadOnly]);
+  }, [resolvedToken, openProjectReadOnly, setSelection, setSelectedLinkId]);
 
   const boardId = project?.activeBoardId ?? project?.boards[0]?.id;
   const board = useMemo(
@@ -77,7 +82,9 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     }
     setPlaying(false);
     setPlayheadFrame(0);
-  }, [board?.id, setPlaying, setPlayheadFrame]);
+    setSelection([]);
+    setSelectedLinkId(null);
+  }, [board?.id, setPlaying, setPlayheadFrame, setSelection, setSelectedLinkId]);
 
   if (loading) {
     return (
@@ -100,19 +107,29 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
         <span className="display-font text-sm text-[var(--accent-0)]">
           {project.name}
         </span>
-        {project.boards.length > 1 && (
-          <select
-            className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-            value={board.id}
-            onChange={(event) => setActiveBoard(event.target.value)}
-          >
-            {project.boards.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        )}
+        <div className="flex items-center gap-2">
+          {board.notes?.trim() && (
+            <button
+              className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={() => setShowNotes((prev) => !prev)}
+            >
+              {showNotes ? "Hide notes" : "Show notes"}
+            </button>
+          )}
+          {project.boards.length > 1 && (
+            <select
+              className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+              value={board.id}
+              onChange={(event) => setActiveBoard(event.target.value)}
+            >
+              {project.boards.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
       <div className="flex min-h-0 flex-1">
         <div className="flex-1 px-4 pb-4">
@@ -121,6 +138,16 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
           </div>
         </div>
       </div>
+      {showNotes && (
+        <div className="border-t border-[var(--line)] bg-[var(--panel)]/85 px-4 py-3 text-xs text-[var(--ink-0)]">
+          <p className="mb-2 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+            Notes
+          </p>
+          <div className="max-h-40 overflow-auto whitespace-pre-wrap rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-[11px]">
+            {board.notes}
+          </div>
+        </div>
+      )}
       {board.mode === "DYNAMIC" && (
         <div className="flex items-center justify-center gap-3 border-t border-[var(--line)] bg-[var(--panel)]/80 px-4 py-3">
           <button

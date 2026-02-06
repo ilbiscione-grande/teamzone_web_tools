@@ -103,6 +103,9 @@ export const useBoardInteractions = ({
 
   const handleWheel = (event: Konva.KonvaEventObject<WheelEvent>) => {
     event.evt.preventDefault();
+    if (readOnly) {
+      return;
+    }
     const stage = stageRef.current;
     if (!stage) {
       return;
@@ -145,7 +148,6 @@ export const useBoardInteractions = ({
     if (isStage) {
       clearSelection();
       if (readOnly) {
-        setIsPanning(true);
         return;
       }
       if (!isShapeTool) {
@@ -349,7 +351,6 @@ export const useBoardInteractions = ({
     if (isStage) {
       clearSelection();
       if (readOnly) {
-        setIsPanning(true);
         return;
       }
       if (!isShapeTool) {
