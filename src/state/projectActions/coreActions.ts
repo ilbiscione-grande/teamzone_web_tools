@@ -311,7 +311,7 @@ export const createCoreActions: StateCreator<
       saveProjectIndex(get().index, get().authUser?.id ?? null);
     }
   },
-  openProjectReadOnly: (project) => {
+  openProjectReadOnly: (project: Project) => {
     ensureBoardSquads(project);
     set((state) => {
       state.project = project;
