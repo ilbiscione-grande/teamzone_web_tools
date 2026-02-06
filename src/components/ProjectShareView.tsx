@@ -58,6 +58,12 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
         isShared: true,
       };
       openProjectReadOnly(sharedProject);
+      const teamSetupBoard = sharedProject.boards.find(
+        (item) => item.name.toLowerCase() === "team setup"
+      );
+      if (teamSetupBoard) {
+        setActiveBoard(teamSetupBoard.id);
+      }
       setSelection([]);
       setSelectedLinkId(null);
       if (!cancelled) {
