@@ -1031,118 +1031,108 @@ export default function TopBar() {
                     </p>
                   ) : null}
                   {editableSquad ? (
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-                        <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                          Squad details
-                        </p>
-                        <input
-                          className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                          value={editableSquad.name}
-                          onChange={(event) =>
-                            updateEditableSquad({ name: event.target.value })
-                          }
-                          placeholder="Squad name"
-                        />
-                        <div className="grid grid-cols-3 gap-2">
-                          <label className="space-y-1">
-                            <span className="text-[11px]">Shirt</span>
-                            <input
-                              type="color"
-                              className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
-                              value={editableSquad.kit.shirt}
-                              onChange={(event) =>
-                                updateEditableSquad({
-                                  kit: {
-                                    ...editableSquad.kit,
-                                    shirt: event.target.value,
-                                  },
-                                })
-                              }
-                            />
-                          </label>
-                          <label className="space-y-1">
-                            <span className="text-[11px]">Shorts</span>
-                            <input
-                              type="color"
-                              className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
-                              value={editableSquad.kit.shorts}
-                              onChange={(event) =>
-                                updateEditableSquad({
-                                  kit: {
-                                    ...editableSquad.kit,
-                                    shorts: event.target.value,
-                                  },
-                                })
-                              }
-                            />
-                          </label>
-                          <label className="space-y-1">
-                            <span className="text-[11px]">Socks</span>
-                            <input
-                              type="color"
-                              className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
-                              value={editableSquad.kit.socks}
-                              onChange={(event) =>
-                                updateEditableSquad({
-                                  kit: {
-                                    ...editableSquad.kit,
-                                    socks: event.target.value,
-                                  },
-                                })
-                              }
-                            />
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                            onClick={() => manageLogoRef.current?.click()}
-                          >
-                            Upload logo
-                          </button>
-                          {editableSquad.clubLogo ? (
-                            <img
-                              src={editableSquad.clubLogo}
-                              alt="Club logo"
-                              className="h-8 w-8 rounded-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-[11px] text-[var(--ink-1)]">
-                              None
-                            </span>
-                          )}
-                        </div>
-                        <input
-                          ref={manageLogoRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            if (!file) {
-                              return;
+                    <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Squad details
+                      </p>
+                      <input
+                        className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                        value={editableSquad.name}
+                        onChange={(event) =>
+                          updateEditableSquad({ name: event.target.value })
+                        }
+                        placeholder="Squad name"
+                      />
+                      <div className="grid grid-cols-3 gap-2">
+                        <label className="space-y-1">
+                          <span className="text-[11px]">Shirt</span>
+                          <input
+                            type="color"
+                            className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                            value={editableSquad.kit.shirt}
+                            onChange={(event) =>
+                              updateEditableSquad({
+                                kit: {
+                                  ...editableSquad.kit,
+                                  shirt: event.target.value,
+                                },
+                              })
                             }
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              if (typeof reader.result === "string") {
-                                updateEditableSquad({
-                                  clubLogo: reader.result,
-                                });
-                              }
-                            };
-                            reader.readAsDataURL(file);
-                          }}
-                        />
+                          />
+                        </label>
+                        <label className="space-y-1">
+                          <span className="text-[11px]">Shorts</span>
+                          <input
+                            type="color"
+                            className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                            value={editableSquad.kit.shorts}
+                            onChange={(event) =>
+                              updateEditableSquad({
+                                kit: {
+                                  ...editableSquad.kit,
+                                  shorts: event.target.value,
+                                },
+                              })
+                            }
+                          />
+                        </label>
+                        <label className="space-y-1">
+                          <span className="text-[11px]">Socks</span>
+                          <input
+                            type="color"
+                            className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                            value={editableSquad.kit.socks}
+                            onChange={(event) =>
+                              updateEditableSquad({
+                                kit: {
+                                  ...editableSquad.kit,
+                                  socks: event.target.value,
+                                },
+                              })
+                            }
+                          />
+                        </label>
                       </div>
-                      <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-                        <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                          Roles
-                        </p>
-                        <p className="text-[11px] text-[var(--ink-1)]">
-                          Set captain (single) and subs (multi) per player row.
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <button
+                          className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                          onClick={() => manageLogoRef.current?.click()}
+                        >
+                          Upload logo
+                        </button>
+                        {editableSquad.clubLogo ? (
+                          <img
+                            src={editableSquad.clubLogo}
+                            alt="Club logo"
+                            className="h-8 w-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-[11px] text-[var(--ink-1)]">
+                            None
+                          </span>
+                        )}
                       </div>
+                      <input
+                        ref={manageLogoRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (!file) {
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            if (typeof reader.result === "string") {
+                              updateEditableSquad({
+                                clubLogo: reader.result,
+                              });
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                      />
                     </div>
                   ) : null}
                   <div className="grid grid-cols-2 gap-2">

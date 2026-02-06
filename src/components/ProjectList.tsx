@@ -147,16 +147,22 @@ export default function ProjectList() {
     Number.isFinite(limits.maxProjects) && projectCount >= limits.maxProjects;
 
   const getBoardTemplates = (
-    mode: "training" | "match" | "education"
+    mode: "training" | "match" | "education",
+    planMode: typeof plan
   ): {
     id: string;
     name: string;
     pitchView?: "FULL" | "DEF_HALF" | "OFF_HALF" | "GREEN_EMPTY";
     pitchShape?: "none" | "circle" | "square" | "rect";
   }[] => {
+    if (planMode !== "PAID") {
+      return [{ id: "board-1", name: "Board 1", pitchView: "FULL" }];
+    }
     if (mode === "match") {
       return [
         { id: "team-setup", name: "Team Setup", pitchView: "FULL" },
+        { id: "build-up", name: "Build-up", pitchView: "FULL" },
+        { id: "off-setup", name: "Offensive Setup", pitchView: "FULL" },
         { id: "off-corners", name: "Offensive Corners", pitchView: "OFF_HALF" },
         { id: "def-corners", name: "Defensive Corners", pitchView: "DEF_HALF" },
         { id: "off-fk", name: "Offensive Freekicks", pitchView: "OFF_HALF" },
@@ -438,17 +444,22 @@ export default function ProjectList() {
   };
 
   useEffect(() => {
-    const defaults = getDefaultBoardSettings(createMode);
+    const paid = plan === "PAID";
+    const nextMode = paid ? createMode : "match";
+    if (!paid && createMode !== "match") {
+      setCreateMode("match");
+    }
+    const defaults = getDefaultBoardSettings(nextMode);
     setAttachBallToPlayer(defaults.attachBallToPlayer);
-    setCreatePitchView(defaults.pitchView);
+    setCreatePitchView(paid ? defaults.pitchView : "FULL");
     setCreatePitchOverlay(defaults.pitchOverlay);
-    setCreatePitchShape(defaults.pitchShape);
+    setCreatePitchShape(paid ? defaults.pitchShape : "none");
     setCreatePlayerLabel(defaults.playerLabel);
-    const defaultsBoards = getBoardTemplates(createMode);
+    const defaultsBoards = getBoardTemplates(nextMode, plan);
     setCreateBoards(defaultsBoards.map((board) => board.id));
     setHomeSquadPresetId("");
     setAwaySquadPresetId("");
-  }, [createMode]);
+  }, [createMode, plan]);
 
   useEffect(() => {
     if (!authUser || plan !== "PAID") {
@@ -1155,8 +1166,8 @@ export default function ProjectList() {
       </div>
       {createOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-          <div className="w-full max-w-2xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
-            <div className="flex items-center justify-between">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="flex items-center justify-between p-6 pb-0">
               <div>
                 <h2 className="display-font text-xl text-[var(--accent-0)]">New project settings</h2>
                 <p className="text-xs text-[var(--ink-1)]">Choose a mode and defaults for this project.</p>
@@ -1168,7 +1179,7 @@ export default function ProjectList() {
                 Close
               </button>
             </div>
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 max-h-[calc(90vh-96px)] overflow-y-auto p-6 pt-0" data-scrollable>
               <input
                 className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                 placeholder="Project name"
@@ -1183,8 +1194,18 @@ export default function ProjectList() {
                       createMode === mode
                         ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
                         : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-                    }`}
-                    onClick={() => setCreateMode(mode as "training" | "match" | "education")}
+                    } ${plan !== "PAID" ? "cursor-not-allowed opacity-50" : ""}`}
+                    onClick={() =>
+                      plan === "PAID" &&
+                      setCreateMode(mode as "training" | "match" | "education")
+                    }
+                    disabled={plan !== "PAID"}
+                    data-locked={plan !== "PAID"}
+                    title={
+                      plan !== "PAID"
+                        ? "Mode selection is available on paid plans."
+                        : undefined
+                    }
                   >
                     {mode}
                   </button>
@@ -1282,7 +1303,7 @@ export default function ProjectList() {
               <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                 <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Boards to create</p>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {getBoardTemplates(createMode).map((board) => {
+                  {getBoardTemplates(createMode, plan).map((board) => {
                     const checked = createBoards.includes(board.id);
                     return (
                       <label
@@ -1482,7 +1503,7 @@ export default function ProjectList() {
                     setError("Enter a project name.");
                     return;
                   }
-                  const templates = getBoardTemplates(createMode).filter((board) =>
+                  const templates = getBoardTemplates(createMode, plan).filter((board) =>
                     createBoards.includes(board.id)
                   );
                   const homePreset = squadPresets.find(
