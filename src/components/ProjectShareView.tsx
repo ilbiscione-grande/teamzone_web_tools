@@ -51,6 +51,17 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
   }, []);
 
   useEffect(() => {
+    if (forcePortrait) {
+      document.body.classList.add("share-portrait");
+    } else {
+      document.body.classList.remove("share-portrait");
+    }
+    return () => {
+      document.body.classList.remove("share-portrait");
+    };
+  }, [forcePortrait]);
+
+  useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
@@ -171,7 +182,7 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
       </div>
       <div className="flex min-h-0 flex-1">
         <div className="flex-1 px-2 pb-3 md:px-4 md:pb-4">
-          <div className="h-full rounded-2xl border border-[var(--line)] bg-[var(--panel)]/70 p-2 md:rounded-3xl md:p-3">
+          <div className="board-fit-cover h-full rounded-2xl border border-[var(--line)] bg-[var(--panel)]/70 p-2 md:rounded-3xl md:p-3">
             <BoardCanvas board={board} readOnly forcePortrait={forcePortrait} />
           </div>
         </div>
