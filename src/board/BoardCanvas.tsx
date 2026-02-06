@@ -22,6 +22,17 @@ import BoardObject from "@/board/objects/BoardObject";
 import { useBoardInteractions } from "@/board/useBoardInteractions";
 import { getBoardSquads } from "@/utils/board";
 
+const getLineOutlineWidth = (strokeWidth: number) =>
+  Math.max(0.15, strokeWidth * 0.6);
+
+const getArrowHeadSize = (strokeWidth: number) => {
+  const base = Math.max(0.35, strokeWidth);
+  return {
+    length: Math.max(1.8, base * 4.2),
+    width: Math.max(1.4, base * 3.2),
+  };
+};
+
 type BoardCanvasProps = {
   board: Board;
   onStageReady?: (stage: Konva.Stage | null) => void;
@@ -770,15 +781,14 @@ export default function BoardCanvas({
               const isSelectedLink = selectedLinkId === link.id;
               const style = link.style ?? {
                 stroke: "#f9bf4a",
-                strokeWidth: 0.5,
+                strokeWidth: 0.65,
                 fill: "transparent",
                 dash: [],
                 opacity: 1,
                 outlineStroke: "#111111",
-                outlineWidth: 0.35,
               };
               const strokeWidth = style.strokeWidth + (isSelectedLink ? 0.1 : 0);
-              const outlineWidth = style.outlineWidth ?? 0;
+              const outlineWidth = getLineOutlineWidth(strokeWidth);
               const outlineStroke = style.outlineStroke;
               return (
                 <Group key={link.id}>
@@ -1675,9 +1685,9 @@ export default function BoardCanvas({
                   draft.current.y,
                 ]}
                 stroke="#ffffff"
-                strokeWidth={0.6}
-                pointerLength={2.5}
-                pointerWidth={2}
+                strokeWidth={0.65}
+                pointerLength={getArrowHeadSize(0.65).length}
+                pointerWidth={getArrowHeadSize(0.65).width}
               />
             )}
             {draft && draft.type !== "arrow" && (

@@ -26,6 +26,27 @@ const numberField = (
   />
 );
 
+const lineWidthOptions = [
+  { label: "1", value: 0.35 },
+  { label: "2", value: 0.5 },
+  { label: "3", value: 0.65 },
+  { label: "4", value: 0.85 },
+  { label: "5", value: 1.1 },
+];
+
+const getLineWidthOption = (width: number) => {
+  let closest = lineWidthOptions[0];
+  let best = Math.abs(width - closest.value);
+  for (const option of lineWidthOptions) {
+    const delta = Math.abs(width - option.value);
+    if (delta < best) {
+      closest = option;
+      best = delta;
+    }
+  }
+  return closest;
+};
+
 type PropertiesPanelProps = {
   floating: boolean;
   onToggleFloating: () => void;
@@ -84,12 +105,11 @@ export default function PropertiesPanel({
   }, [memoBoardSquads]);
   const selectedLinkStyle = selectedLink?.style ?? {
     stroke: "#f9bf4a",
-    strokeWidth: 0.5,
+    strokeWidth: 0.65,
     fill: "transparent",
     dash: [],
     opacity: 1,
     outlineStroke: "#111111",
-    outlineWidth: 0.35,
   };
 
   if (!board) {
@@ -375,16 +395,25 @@ export default function PropertiesPanel({
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-[11px]">Stroke Width</span>
-                  {numberField(selectedLinkStyle.strokeWidth, (value) =>
-                    updateLinkStyle({ strokeWidth: value })
-                  )}
-                </label>
-                <label className="space-y-1">
-                  <span className="text-[11px]">Outline Width</span>
-                  {numberField(selectedLinkStyle.outlineWidth ?? 0, (value) =>
-                    updateLinkStyle({ outlineWidth: value })
-                  )}
+                  <span className="text-[11px]">Stroke Size</span>
+                  <select
+                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                    value={getLineWidthOption(selectedLinkStyle.strokeWidth).label}
+                    onChange={(event) => {
+                      const option = lineWidthOptions.find(
+                        (item) => item.label === event.target.value
+                      );
+                      if (option) {
+                        updateLinkStyle({ strokeWidth: option.value });
+                      }
+                    }}
+                  >
+                    {lineWidthOptions.map((option) => (
+                      <option key={option.label} value={option.label}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -429,11 +458,39 @@ export default function PropertiesPanel({
                     />
                   </label>
                   <label className="space-y-1">
-                    <span className="text-[11px]">Stroke Width</span>
-                    {numberField(target.style.strokeWidth, (value) =>
-                      update({
-                        style: { ...target.style, strokeWidth: value },
-                      })
+                    <span className="text-[11px]">
+                      {target.type === "arrow" ? "Stroke Size" : "Stroke Width"}
+                    </span>
+                    {target.type === "arrow" ? (
+                      <select
+                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                        value={getLineWidthOption(target.style.strokeWidth).label}
+                        onChange={(event) => {
+                          const option = lineWidthOptions.find(
+                            (item) => item.label === event.target.value
+                          );
+                          if (option) {
+                            update({
+                              style: {
+                                ...target.style,
+                                strokeWidth: option.value,
+                              },
+                            });
+                          }
+                        }}
+                      >
+                        {lineWidthOptions.map((option) => (
+                          <option key={option.label} value={option.label}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      numberField(target.style.strokeWidth, (value) =>
+                        update({
+                          style: { ...target.style, strokeWidth: value },
+                        })
+                      )
                     )}
                   </label>
                   {target.type === "arrow" && (
@@ -453,14 +510,6 @@ export default function PropertiesPanel({
                             })
                           }
                         />
-                      </label>
-                      <label className="space-y-1">
-                        <span className="text-[11px]">Outline Width</span>
-                        {numberField(target.style.outlineWidth ?? 0, (value) =>
-                          update({
-                            style: { ...target.style, outlineWidth: value },
-                          })
-                        )}
                       </label>
                     </>
                   )}

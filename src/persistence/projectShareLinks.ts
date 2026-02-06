@@ -63,7 +63,13 @@ export const fetchProjectShareLink = async (token: string) => {
     .select("id, token, project_id, project_name, project_data, created_at")
     .eq("token", token)
     .maybeSingle<ProjectShareRow>();
-  if (error || !data) {
+  if (error) {
+    return {
+      ok: false as const,
+      error: error.message || "Unable to fetch share link.",
+    };
+  }
+  if (!data) {
     return { ok: false as const, error: "Share link not found." };
   }
   return {

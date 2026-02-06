@@ -309,9 +309,8 @@ export const useBoardInteractions = ({
         style: {
           ...defaultStyle,
           stroke: "#f9bf4a",
-          strokeWidth: 0.6,
+          strokeWidth: 0.65,
           outlineStroke: "#111111",
-          outlineWidth: 0.35,
         },
         zIndex: 1,
         locked: false,

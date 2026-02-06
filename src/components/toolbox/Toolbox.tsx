@@ -508,12 +508,11 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
             playerIds: [...linkingPlayerIds],
             style: {
               stroke: "#f9bf4a",
-              strokeWidth: 0.5,
+              strokeWidth: 0.65,
               fill: "transparent",
               dash: [],
               opacity: 1,
               outlineStroke: "#111111",
-              outlineWidth: 0.35,
             },
           },
         ];

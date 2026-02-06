@@ -28,6 +28,17 @@ import type {
 } from "@/models";
 import type { Tool } from "@/state/useEditorStore";
 
+const getLineOutlineWidth = (strokeWidth: number) =>
+  Math.max(0.15, strokeWidth * 0.6);
+
+const getArrowHeadSize = (strokeWidth: number) => {
+  const base = Math.max(0.35, strokeWidth);
+  return {
+    length: Math.max(1.8, base * 4.2),
+    width: Math.max(1.4, base * 3.2),
+  };
+};
+
 type BoardObjectProps = {
   object: DrawableObject;
   objects: DrawableObject[];
@@ -570,7 +581,10 @@ export default function BoardObject({
         })()
       : arrow.points;
     const outlineStroke = arrow.style.outlineStroke;
-    const outlineWidth = arrow.style.outlineWidth ?? 0;
+    const outlineWidth = outlineStroke
+      ? getLineOutlineWidth(arrow.style.strokeWidth)
+      : 0;
+    const headSize = getArrowHeadSize(arrow.style.strokeWidth);
     return (
       <Group>
         {outlineStroke && outlineWidth > 0 && (
@@ -581,8 +595,8 @@ export default function BoardObject({
             stroke={outlineStroke}
             strokeWidth={arrow.style.strokeWidth + outlineWidth * 2}
             fill={outlineStroke}
-            pointerLength={arrow.head ? 2.5 + outlineWidth : 0}
-            pointerWidth={arrow.head ? 2 + outlineWidth : 0}
+            pointerLength={arrow.head ? headSize.length + outlineWidth * 2 : 0}
+            pointerWidth={arrow.head ? headSize.width + outlineWidth * 2 : 0}
             dash={arrow.dashed ? [1, 1] : []}
             listening={false}
           />
@@ -594,8 +608,8 @@ export default function BoardObject({
           stroke={arrow.style.stroke}
           strokeWidth={arrow.style.strokeWidth}
           fill={arrow.style.stroke}
-          pointerLength={arrow.head ? 2.5 : 0}
-          pointerWidth={arrow.head ? 2 : 0}
+          pointerLength={arrow.head ? headSize.length : 0}
+          pointerWidth={arrow.head ? headSize.width : 0}
           dash={arrow.dashed ? [1, 1] : []}
           ref={(node) => {
             if (node) {
