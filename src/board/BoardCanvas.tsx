@@ -68,7 +68,7 @@ export default function BoardCanvas({
   const selectedLinkId = useEditorStore((state) => state.selectedLinkId);
 
   const project = useProjectStore((state) => state.project);
-  const isSharedReadOnly = readOnly || project?.isShared ?? false;
+  const isSharedReadOnly = readOnly || (project?.isShared ?? false);
   const addObject = useProjectStore((state) => state.addObject);
   const updateObject = useProjectStore((state) => state.updateObject);
   const removeObject = useProjectStore((state) => state.removeObject);
