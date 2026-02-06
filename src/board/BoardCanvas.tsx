@@ -329,8 +329,11 @@ export default function BoardCanvas({
     if (board.pitchView === "OFF_HALF") {
       return -90;
     }
+    if (board.pitchView === "FULL" && size.height > size.width) {
+      return 90;
+    }
     return 0;
-  }, [board.pitchView]);
+  }, [board.pitchView, size.height, size.width]);
   const labelRotation = viewRotation === 0 ? 0 : -viewRotation;
   const rotationPivot = useMemo(
     () => ({

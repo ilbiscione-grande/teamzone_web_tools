@@ -109,19 +109,18 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
 
   return (
     <div className="flex h-screen flex-col bg-[var(--app-bg)] text-[var(--ink-0)]">
-      <div className="flex items-center justify-between px-4 py-3 text-xs text-[var(--ink-1)]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-3 text-xs text-[var(--ink-1)] md:px-4">
         <span className="display-font text-sm text-[var(--accent-0)]">
           {project.name}
         </span>
-        <div className="flex items-center gap-2">
-          {board.notes?.trim() && (
-            <button
-              className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-              onClick={() => setShowNotes((prev) => !prev)}
-            >
-              {showNotes ? "Hide notes" : "Show notes"}
-            </button>
-          )}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => setShowNotes((prev) => !prev)}
+            disabled={!board.notes?.trim()}
+          >
+            {showNotes ? "Hide notes" : "Show notes"}
+          </button>
           {project.boards.length > 1 && (
             <select
               className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
@@ -138,14 +137,14 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
         </div>
       </div>
       <div className="flex min-h-0 flex-1">
-        <div className="flex-1 px-4 pb-4">
-          <div className="h-full rounded-3xl border border-[var(--line)] bg-[var(--panel)]/70 p-3">
+        <div className="flex-1 px-2 pb-3 md:px-4 md:pb-4">
+          <div className="h-full rounded-2xl border border-[var(--line)] bg-[var(--panel)]/70 p-2 md:rounded-3xl md:p-3">
             <BoardCanvas board={board} readOnly />
           </div>
         </div>
       </div>
       {showNotes && (
-        <div className="border-t border-[var(--line)] bg-[var(--panel)]/85 px-4 py-3 text-xs text-[var(--ink-0)]">
+        <div className="border-t border-[var(--line)] bg-[var(--panel)]/85 px-3 py-3 text-xs text-[var(--ink-0)] md:px-4">
           <p className="mb-2 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
             Notes
           </p>
@@ -155,7 +154,7 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
         </div>
       )}
       {board.mode === "DYNAMIC" && (
-        <div className="flex items-center justify-center gap-3 border-t border-[var(--line)] bg-[var(--panel)]/80 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-center gap-2 border-t border-[var(--line)] bg-[var(--panel)]/80 px-3 py-3 md:gap-3 md:px-4">
           <button
             className="rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={() => {
