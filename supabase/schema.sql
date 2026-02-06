@@ -114,6 +114,40 @@ on squad_presets
 for delete
 using (auth.uid() = user_id);
 
+create table if not exists project_share_links (
+  id uuid primary key default gen_random_uuid(),
+  token text not null unique,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  project_id text not null,
+  project_name text not null,
+  project_data jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists project_share_links_user_id_idx on project_share_links(user_id);
+create index if not exists project_share_links_token_idx on project_share_links(token);
+
+alter table project_share_links enable row level security;
+
+drop policy if exists "Public can view project share links" on project_share_links;
+drop policy if exists "Users can insert project share links" on project_share_links;
+drop policy if exists "Users can delete project share links" on project_share_links;
+
+create policy "Public can view project share links"
+on project_share_links
+for select
+using (true);
+
+create policy "Users can insert project share links"
+on project_share_links
+for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can delete project share links"
+on project_share_links
+for delete
+using (auth.uid() = user_id);
+
 create table if not exists public_boards (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,

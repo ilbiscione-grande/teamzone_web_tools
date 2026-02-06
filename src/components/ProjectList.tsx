@@ -1181,7 +1181,7 @@ export default function ProjectList() {
                 Close
               </button>
             </div>
-            <div className="mt-4 max-h-[calc(80vh-96px)] overflow-y-auto p-6 pt-0" data-scrollable>
+            <div className="mt-4 max-h-[calc(80vh-96px)] overflow-y-auto p-6 pt-2" data-scrollable>
               <input
                 className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                 placeholder="Project name"

@@ -27,6 +27,7 @@ type BoardCanvasProps = {
   onStageReady?: (stage: Konva.Stage | null) => void;
   isMaximized?: boolean;
   onToggleMaximize?: () => void;
+  readOnly?: boolean;
 };
 
 export default function BoardCanvas({
@@ -34,6 +35,7 @@ export default function BoardCanvas({
   onStageReady,
   isMaximized,
   onToggleMaximize,
+  readOnly,
 }: BoardCanvasProps) {
   const stageRef = useRef<Konva.Stage | null>(null);
   const shapeRefs = useRef<Record<string, Konva.Node>>({});
@@ -66,7 +68,7 @@ export default function BoardCanvas({
   const selectedLinkId = useEditorStore((state) => state.selectedLinkId);
 
   const project = useProjectStore((state) => state.project);
-  const isSharedReadOnly = project?.isShared ?? false;
+  const isSharedReadOnly = readOnly || project?.isShared ?? false;
   const addObject = useProjectStore((state) => state.addObject);
   const updateObject = useProjectStore((state) => state.updateObject);
   const removeObject = useProjectStore((state) => state.removeObject);
@@ -510,6 +512,9 @@ export default function BoardCanvas({
 
 
   const handleSelect = (id: string, multi: boolean) => {
+    if (isSharedReadOnly) {
+      return;
+    }
     setSelectedLinkId(null);
     const target = objects.find((item) => item.id === id);
     if (isHighlighting && target?.type === "player") {

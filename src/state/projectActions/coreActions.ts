@@ -311,6 +311,13 @@ export const createCoreActions: StateCreator<
       saveProjectIndex(get().index, get().authUser?.id ?? null);
     }
   },
+  openProjectReadOnly: (project) => {
+    ensureBoardSquads(project);
+    set((state) => {
+      state.project = project;
+      state.activeProjectId = project.id;
+    });
+  },
   openSharedBoard: (share) => {
     const project = createSharedProject(share.boardData, {
       shareId: share.id,

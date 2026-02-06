@@ -57,6 +57,7 @@ export type ProjectActions = {
   ) => void;
   openProject: (id: string) => void;
   openProjectFromData: (project: Project) => void;
+  openProjectReadOnly: (project: Project) => void;
   openSharedBoard: (share: BoardShare) => void;
   closeProject: () => void;
   deleteProject: (id: string) => void;
