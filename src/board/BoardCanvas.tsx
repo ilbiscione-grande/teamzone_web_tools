@@ -322,6 +322,8 @@ export default function BoardCanvas({
     () => getPitchViewBounds(board.pitchView),
     [board.pitchView]
   );
+  const isPortraitFull =
+    readOnly && board.pitchView === "FULL" && size.height > size.width;
   const viewRotation = useMemo(() => {
     if (board.pitchView === "DEF_HALF") {
       return -90;
@@ -329,12 +331,13 @@ export default function BoardCanvas({
     if (board.pitchView === "OFF_HALF") {
       return -90;
     }
-    if (board.pitchView === "FULL" && size.height > size.width) {
+    if (isPortraitFull) {
       return 90;
     }
     return 0;
-  }, [board.pitchView, size.height, size.width]);
-  const labelRotation = viewRotation === 0 ? 0 : -viewRotation;
+  }, [board.pitchView, isPortraitFull]);
+  const labelRotation =
+    viewRotation === 0 ? 0 : isPortraitFull ? 0 : -viewRotation;
   const rotationPivot = useMemo(
     () => ({
       x: bounds.x + bounds.width / 2,
