@@ -1,5 +1,6 @@
 import type { StateCreator } from "zustand";
 import type { ProjectActions, ProjectStore } from "./types";
+import type { Project } from "@/models";
 import {
   deleteProject as deleteStoredProject,
   loadProject,
