@@ -250,9 +250,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     const pixelRatio = window.devicePixelRatio ?? 1;
     const pitchBounds = getPitchViewBounds(board.pitchView);
     const viewRotation =
-      (board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF"
-        ? -90
-        : 0) + (board.pitchRotation ?? 0);
+      board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF" ? -90 : 0;
     const effectiveBounds =
       viewRotation === 0
         ? pitchBounds

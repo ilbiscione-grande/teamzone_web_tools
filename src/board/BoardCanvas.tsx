@@ -337,7 +337,7 @@ export default function BoardCanvas({
     } else if (isPortraitFull) {
       rotation = 90;
     }
-    if (board.pitchRotation === 180) {
+    if (isPortraitFull && board.pitchRotation === 180) {
       rotation += 180;
     }
     return rotation;
