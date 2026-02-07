@@ -254,7 +254,6 @@ export const createEmptyBoard = (
     pitchShape?: PitchShape;
     playerLabel?: Board["playerLabel"];
     pitchRotation?: Board["pitchRotation"];
-    pitchRotation?: Board["pitchRotation"];
   }
 ): Board => ({
   id: createId(),
