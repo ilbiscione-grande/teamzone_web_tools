@@ -1690,6 +1690,30 @@ export default function TopBar() {
                   ))}
                 </div>
               </div>
+              {activeBoard.pitchView === "FULL" && (
+                <div>
+                  <p className="mb-2 text-[11px] uppercase">Pitch rotation</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[0, 180].map((value) => (
+                      <button
+                        key={value}
+                        className={`rounded-2xl border px-3 py-2 text-xs ${
+                          (activeBoard.pitchRotation ?? 0) === value
+                            ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                            : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                        }`}
+                        onClick={() =>
+                          updateBoard(activeBoard.id, {
+                            pitchRotation: value as 0 | 180,
+                          })
+                        }
+                      >
+                        {value === 0 ? "Standard" : "Flipped"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div>
                 <p className="mb-2 text-[11px] uppercase">Pitch overlay</p>
                 <div className="grid grid-cols-2 gap-2">

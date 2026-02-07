@@ -253,12 +253,15 @@ export const createEmptyBoard = (
     pitchOverlay?: PitchOverlay;
     pitchShape?: PitchShape;
     playerLabel?: Board["playerLabel"];
+    pitchRotation?: Board["pitchRotation"];
+    pitchRotation?: Board["pitchRotation"];
   }
 ): Board => ({
   id: createId(),
   name,
   mode: "STATIC",
   pitchView: overrides?.pitchView ?? "FULL",
+  pitchRotation: overrides?.pitchRotation ?? 0,
   pitchOverlay: overrides?.pitchOverlay ?? "NONE",
   pitchOverlayText: false,
   watermarkEnabled: true,
@@ -303,6 +306,7 @@ export type CreateBoardTemplate = {
   pitchView?: PitchView;
   pitchOverlay?: PitchOverlay;
   pitchShape?: PitchShape;
+  pitchRotation?: Board["pitchRotation"];
 };
 
 export const createDefaultProject = (
@@ -378,6 +382,7 @@ export const createDefaultProject = (
     pitchOverlay: options?.pitchOverlay ?? defaults.pitchOverlay,
     pitchShape: options?.pitchShape ?? defaults.pitchShape,
     playerLabel: options?.playerLabel ?? defaults.playerLabel,
+    pitchRotation: options?.pitchRotation ?? 0,
   };
   const templates =
     options?.boardTemplates && options.boardTemplates.length > 0
@@ -392,6 +397,7 @@ export const createDefaultProject = (
       },
       {
         pitchView: template.pitchView ?? baseOverrides.pitchView,
+        pitchRotation: template.pitchRotation ?? baseOverrides.pitchRotation,
         pitchOverlay: template.pitchOverlay ?? baseOverrides.pitchOverlay,
         pitchShape: template.pitchShape ?? baseOverrides.pitchShape,
         playerLabel: baseOverrides.playerLabel,
@@ -462,6 +468,13 @@ export const ensureBoardSquads = (project: Project): Project => {
   };
 
   project.boards.forEach((board, index) => {
+    if (
+      board.pitchRotation == null &&
+      project.settings?.mode === "match" &&
+      ["Team Setup", "Build-up", "Offensive Setup"].includes(board.name)
+    ) {
+      board.pitchRotation = 180;
+    }
     let home = getSquad(board.homeSquadId);
     let away = getSquad(board.awaySquadId);
 

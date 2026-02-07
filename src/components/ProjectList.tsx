@@ -155,15 +155,31 @@ export default function ProjectList() {
     name: string;
     pitchView?: "FULL" | "DEF_HALF" | "OFF_HALF" | "GREEN_EMPTY";
     pitchShape?: "none" | "circle" | "square" | "rect";
+    pitchRotation?: 0 | 180;
   }[] => {
     if (planMode !== "PAID") {
       return [{ id: "board-1", name: "Board 1", pitchView: "FULL" }];
     }
     if (mode === "match") {
       return [
-        { id: "team-setup", name: "Team Setup", pitchView: "FULL" },
-        { id: "build-up", name: "Build-up", pitchView: "FULL" },
-        { id: "off-setup", name: "Offensive Setup", pitchView: "FULL" },
+        {
+          id: "team-setup",
+          name: "Team Setup",
+          pitchView: "FULL",
+          pitchRotation: 180,
+        },
+        {
+          id: "build-up",
+          name: "Build-up",
+          pitchView: "FULL",
+          pitchRotation: 180,
+        },
+        {
+          id: "off-setup",
+          name: "Offensive Setup",
+          pitchView: "FULL",
+          pitchRotation: 180,
+        },
         { id: "off-corners", name: "Offensive Corners", pitchView: "OFF_HALF" },
         { id: "def-corners", name: "Defensive Corners", pitchView: "DEF_HALF" },
         { id: "off-fk", name: "Offensive Freekicks", pitchView: "OFF_HALF" },

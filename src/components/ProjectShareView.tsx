@@ -152,8 +152,14 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-[var(--app-bg)] text-[var(--ink-0)]">
-      <div className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--ink-1)] md:px-4">
+    <div className="relative flex h-screen flex-col bg-[var(--app-bg)] text-[var(--ink-0)]">
+      <div
+        className={
+          forcePortrait
+            ? "absolute left-0 right-0 top-0 z-10 flex items-center gap-2 bg-[var(--panel)]/85 px-3 py-2 text-xs text-[var(--ink-1)] backdrop-blur"
+            : "flex items-center gap-2 px-3 py-2 text-xs text-[var(--ink-1)] md:px-4"
+        }
+      >
         <span className="display-font min-w-0 flex-1 truncate text-[11px] text-[var(--accent-0)] sm:text-xs md:text-sm">
           {project.name}
         </span>
@@ -206,7 +212,13 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
         </div>
       </div>
       {showNotes && (
-        <div className="border-t border-[var(--line)] bg-[var(--panel)]/85 px-3 py-3 text-xs text-[var(--ink-0)] md:px-4">
+        <div
+          className={
+            forcePortrait
+              ? "absolute bottom-0 left-0 right-0 z-10 border-t border-[var(--line)] bg-[var(--panel)]/92 px-3 py-3 text-xs text-[var(--ink-0)] backdrop-blur"
+              : "border-t border-[var(--line)] bg-[var(--panel)]/85 px-3 py-3 text-xs text-[var(--ink-0)] md:px-4"
+          }
+        >
           <p className="mb-2 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
             Notes
           </p>
@@ -216,7 +228,13 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
         </div>
       )}
       {board.mode === "DYNAMIC" && (
-        <div className="flex flex-wrap items-center justify-center gap-2 border-t border-[var(--line)] bg-[var(--panel)]/80 px-3 py-3 md:gap-3 md:px-4">
+        <div
+          className={
+            forcePortrait
+              ? "absolute bottom-0 left-0 right-0 z-10 flex flex-wrap items-center justify-center gap-2 border-t border-[var(--line)] bg-[var(--panel)]/90 px-3 py-3 backdrop-blur"
+              : "flex flex-wrap items-center justify-center gap-2 border-t border-[var(--line)] bg-[var(--panel)]/80 px-3 py-3 md:gap-3 md:px-4"
+          }
+        >
           <button
             className="rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={() => {
