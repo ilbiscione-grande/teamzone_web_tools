@@ -26,8 +26,14 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
   );
   const project = useProjectStore((state) => state.project);
   const setActiveBoard = useProjectStore((state) => state.setActiveBoard);
+  const setActiveFrameIndex = useProjectStore(
+    (state) => state.setActiveFrameIndex
+  );
   const isPlaying = useEditorStore((state) => state.isPlaying);
   const setPlaying = useEditorStore((state) => state.setPlaying);
+  const frameDurationMs = useEditorStore((state) => state.frameDurationMs);
+  const loopPlayback = useEditorStore((state) => state.loopPlayback);
+  const playheadFrame = useEditorStore((state) => state.playheadFrame);
   const setPlayheadFrame = useEditorStore((state) => state.setPlayheadFrame);
   const setSelection = useEditorStore((state) => state.setSelection);
   const setSelectedLinkId = useEditorStore((state) => state.setSelectedLinkId);
@@ -153,6 +159,84 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     setSelection,
     setSelectedLinkId,
     setViewport,
+  ]);
+
+  useEffect(() => {
+    if (!board || board.mode !== "DYNAMIC" || !isPlaying) {
+      return;
+    }
+    const lastIndex = Math.max(0, board.frames.length - 1);
+    const startIndex = Math.min(
+      lastIndex,
+      Math.max(0, Math.floor(playheadFrame))
+    );
+    if (board.activeFrameIndex !== startIndex) {
+      setActiveFrameIndex(board.id, startIndex);
+    }
+    const durations = board.frames.map((frame) =>
+      frame.durationMs && frame.durationMs > 0 ? frame.durationMs : frameDurationMs
+    );
+    const startFraction = Math.max(
+      0,
+      Math.min(1, playheadFrame - startIndex)
+    );
+    let startTime = performance.now() - durations[startIndex] * startFraction;
+    const totalDuration = durations
+      .slice(startIndex, lastIndex + 1)
+      .reduce((sum, value) => sum + value, 0);
+    let raf = 0;
+    const resolvePlayhead = (elapsedMs: number) => {
+      let acc = 0;
+      for (let index = startIndex; index <= lastIndex; index += 1) {
+        const segment = durations[index];
+        if (elapsedMs <= acc + segment || index === lastIndex) {
+          const t = segment > 0 ? (elapsedMs - acc) / segment : 0;
+          return {
+            playhead: index + Math.max(0, Math.min(1, t)),
+            index,
+          };
+        }
+        acc += segment;
+      }
+      return { playhead: lastIndex, index: lastIndex };
+    };
+    const tick = (now: number) => {
+      if (!startTime) {
+        startTime = now;
+      }
+      const elapsed = now - startTime;
+      const total = Math.max(totalDuration, 1);
+      if (!loopPlayback && elapsed >= total) {
+        setPlaying(false);
+        setActiveFrameIndex(board.id, lastIndex);
+        setPlayheadFrame(lastIndex);
+        return;
+      }
+      const elapsedCycle = loopPlayback
+        ? elapsed % total
+        : Math.min(elapsed, total);
+      const { playhead, index } = resolvePlayhead(elapsedCycle);
+      setPlayheadFrame(playhead);
+      if (index !== board.activeFrameIndex) {
+        setActiveFrameIndex(board.id, index);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      if (raf) {
+        cancelAnimationFrame(raf);
+      }
+    };
+  }, [
+    board,
+    isPlaying,
+    playheadFrame,
+    frameDurationMs,
+    loopPlayback,
+    setActiveFrameIndex,
+    setPlayheadFrame,
+    setPlaying,
   ]);
 
   if (loading) {

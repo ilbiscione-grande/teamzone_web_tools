@@ -36,7 +36,34 @@ export const createProjectShareLink = async (project: Project) => {
       error: "Paid plan required to create share links.",
     };
   }
-  const token = createId();
+  const { data: existing, error: existingError } = await supabase
+    .from(TABLE)
+    .select("id, token")
+    .eq("project_id", project.id)
+    .eq("user_id", userData.user.id)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (existingError) {
+    return {
+      ok: false as const,
+      error: existingError.message || "Failed to check existing share link.",
+    };
+  }
+  const existingRow = Array.isArray(existing) ? existing[0] : undefined;
+  const token = existingRow?.token ?? createId();
+  if (existingRow?.id) {
+    const { error: deleteError } = await supabase
+      .from(TABLE)
+      .delete()
+      .eq("id", existingRow.id)
+      .eq("user_id", userData.user.id);
+    if (deleteError) {
+      return {
+        ok: false as const,
+        error: deleteError.message || "Failed to update share link.",
+      };
+    }
+  }
   const { data, error } = await supabase
     .from(TABLE)
     .insert({
