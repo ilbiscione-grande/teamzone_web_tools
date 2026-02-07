@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { useParams } from "next/navigation";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { fetchProjectShareLink } from "@/persistence/projectShareLinks";
 import BoardCanvas from "@/board/BoardCanvas";
+import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import type { Project } from "@/models";
 
 type ProjectShareViewProps = {
@@ -117,6 +119,23 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     () => project?.boards.find((item) => item.id === boardId) ?? null,
     [project, boardId]
   );
+  const portraitStyle = useMemo(() => {
+    if (!board || !forcePortrait) {
+      return undefined;
+    }
+    const bounds = getPitchViewBounds(board.pitchView);
+    const rotated =
+      board.pitchView === "DEF_HALF" ||
+      board.pitchView === "OFF_HALF" ||
+      board.pitchView === "FULL";
+    const effectiveWidth = rotated ? bounds.height : bounds.width;
+    const effectiveHeight = rotated ? bounds.width : bounds.height;
+    return {
+      width: "100vw",
+      maxWidth: "100vw",
+      aspectRatio: `${effectiveWidth} / ${effectiveHeight}`,
+    } as CSSProperties;
+  }, [board, forcePortrait]);
 
   useEffect(() => {
     if (!board) {
@@ -195,13 +214,12 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
           <div
             className={
               forcePortrait
-                ? "board-fit-cover h-full bg-transparent p-0"
+                ? "board-fit-cover bg-transparent p-0"
                 : "board-fit-cover h-full rounded-2xl border border-[var(--line)] bg-[var(--panel)]/70 p-2 md:rounded-3xl md:p-3"
             }
+            style={forcePortrait ? portraitStyle : undefined}
           >
-            <div
-              className={forcePortrait ? "h-full w-full" : "h-full w-full"}
-            >
+            <div className="h-full w-full">
               <BoardCanvas
                 board={board}
                 readOnly
