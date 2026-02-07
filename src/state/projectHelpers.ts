@@ -310,19 +310,20 @@ export type CreateBoardTemplate = {
 
 export const createDefaultProject = (
   name: string,
-  options?: {
-    homeKit?: Squad["kit"];
-    awayKit?: Squad["kit"];
-    attachBallToPlayer?: boolean;
-    mode?: ProjectMode;
-    pitchView?: PitchView;
-    pitchOverlay?: PitchOverlay;
-    pitchShape?: PitchShape;
-    playerLabel?: Board["playerLabel"];
-    boardTemplates?: CreateBoardTemplate[];
-    homeSquadPreset?: Squad;
-    awaySquadPreset?: Squad;
-    startingFormation?: string;
+    options?: {
+      homeKit?: Squad["kit"];
+      awayKit?: Squad["kit"];
+      attachBallToPlayer?: boolean;
+      mode?: ProjectMode;
+      pitchView?: PitchView;
+      pitchOverlay?: PitchOverlay;
+      pitchShape?: PitchShape;
+      pitchRotation?: Board["pitchRotation"];
+      playerLabel?: Board["playerLabel"];
+      boardTemplates?: CreateBoardTemplate[];
+      homeSquadPreset?: Squad;
+      awaySquadPreset?: Squad;
+      startingFormation?: string;
   }
 ): Project => {
   const mode = options?.mode ?? "match";
