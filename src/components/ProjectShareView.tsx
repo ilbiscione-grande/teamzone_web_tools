@@ -181,11 +181,20 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
         </div>
       </div>
       <div className="flex min-h-0 flex-1">
-        <div className="flex-1 px-2 pb-3 md:px-4 md:pb-4">
-          <div className="board-fit-cover h-full rounded-2xl border border-[var(--line)] bg-[var(--panel)]/70 p-2 md:rounded-3xl md:p-3">
+        <div
+          className={
+            forcePortrait ? "flex-1 px-0 pb-0" : "flex-1 px-2 pb-3 md:px-4 md:pb-4"
+          }
+        >
+          <div
+            className={
+              forcePortrait
+                ? "board-fit-cover h-full bg-transparent p-0"
+                : "board-fit-cover h-full rounded-2xl border border-[var(--line)] bg-[var(--panel)]/70 p-2 md:rounded-3xl md:p-3"
+            }
+          >
             <div
-              className={forcePortrait ? "w-full" : "h-full w-full"}
-              style={forcePortrait ? { aspectRatio: "110 / 73" } : undefined}
+              className={forcePortrait ? "h-full w-full" : "h-full w-full"}
             >
               <BoardCanvas
                 board={board}
