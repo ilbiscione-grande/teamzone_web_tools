@@ -424,9 +424,10 @@ export default function BoardCanvas({
   }, [renderObjects]);
   const effectiveWidth = viewRotation !== 0 ? bounds.height : bounds.width;
   const effectiveHeight = viewRotation !== 0 ? bounds.width : bounds.height;
-  const baseScale = isPortraitFull
-    ? Math.max(size.width / effectiveWidth, size.height / effectiveHeight)
-    : Math.min(size.width / effectiveWidth, size.height / effectiveHeight);
+  const baseScale = Math.min(
+    size.width / effectiveWidth,
+    size.height / effectiveHeight
+  );
   const stageScale = baseScale * viewport.zoom;
   const baseOffsetX =
     size.width / 2 - (bounds.x + bounds.width / 2) * baseScale;
