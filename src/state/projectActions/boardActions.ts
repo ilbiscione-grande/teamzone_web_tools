@@ -84,6 +84,11 @@ export const createBoardActions: StateCreator<
           pitchView: state.project.settings?.defaultPitchView,
           pitchOverlay: state.project.settings?.defaultPitchOverlay,
           pitchShape: state.project.settings?.defaultPitchShape,
+          pitchRotation:
+            state.project.settings?.mode === "match" &&
+            (state.project.settings?.defaultPitchView ?? "FULL") === "FULL"
+              ? 180
+              : 0,
           playerLabel: state.project.settings?.defaultPlayerLabel,
         }
       );

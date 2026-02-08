@@ -337,24 +337,77 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
         <div
           className={
             forcePortrait
-              ? "absolute bottom-0 left-0 right-0 z-10 flex flex-wrap items-center justify-center gap-2 border-t border-[var(--line)] bg-[var(--panel)]/90 px-3 py-3 backdrop-blur"
+              ? "absolute right-3 top-14 z-20 flex items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/92 px-2 py-2 backdrop-blur"
               : "flex flex-wrap items-center justify-center gap-2 border-t border-[var(--line)] bg-[var(--panel)]/80 px-3 py-3 md:gap-3 md:px-4"
           }
         >
           <button
-            className="rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            className={
+              forcePortrait
+                ? "inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                : "rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            }
             onClick={() => {
               setPlayheadFrame(0);
               setPlaying(false);
             }}
+            title="Rewind"
+            aria-label="Rewind"
           >
-            Rewind
+            {forcePortrait ? (
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M11 19L2 12l9-7v14z" />
+                <path d="M22 19l-9-7 9-7v14z" />
+              </svg>
+            ) : (
+              "Rewind"
+            )}
           </button>
           <button
-            className="rounded-full border border-[var(--line)] px-6 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            className={
+              forcePortrait
+                ? "inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                : "rounded-full border border-[var(--line)] px-6 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            }
             onClick={() => setPlaying(!isPlaying)}
+            title={isPlaying ? "Pause" : "Play"}
+            aria-label={isPlaying ? "Pause" : "Play"}
           >
-            {isPlaying ? "Pause" : "Play"}
+            {forcePortrait ? (
+              isPlaying ? (
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <rect x="6" y="4" width="4" height="16" rx="1" />
+                  <rect x="14" y="4" width="4" height="16" rx="1" />
+                </svg>
+              ) : (
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              )
+            ) : isPlaying ? (
+              "Pause"
+            ) : (
+              "Play"
+            )}
           </button>
         </div>
       )}
