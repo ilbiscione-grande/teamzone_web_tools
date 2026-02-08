@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useParams } from "next/navigation";
 import { useProjectStore } from "@/state/useProjectStore";
@@ -42,6 +42,9 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [showNotes, setShowNotes] = useState(false);
   const [forcePortrait, setForcePortrait] = useState(false);
+  const [controlsOffset, setControlsOffset] = useState({ x: 0, y: 0 });
+  const [draggingControls, setDraggingControls] = useState(false);
+  const dragPointRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -68,6 +71,36 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
       document.body.classList.remove("share-portrait");
     };
   }, [forcePortrait]);
+
+  useEffect(() => {
+    if (!draggingControls) {
+      return;
+    }
+    const onMove = (event: PointerEvent) => {
+      const prev = dragPointRef.current;
+      if (!prev) {
+        dragPointRef.current = { x: event.clientX, y: event.clientY };
+        return;
+      }
+      const dx = event.clientX - prev.x;
+      const dy = event.clientY - prev.y;
+      dragPointRef.current = { x: event.clientX, y: event.clientY };
+      setControlsOffset((prev) => ({
+        x: prev.x + dx,
+        y: prev.y + dy,
+      }));
+    };
+    const onUp = () => {
+      setDraggingControls(false);
+      dragPointRef.current = null;
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [draggingControls]);
 
   useEffect(() => {
     let cancelled = false;
@@ -254,6 +287,12 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     );
   }
 
+  const lastFrameIndex = Math.max(0, board.frames.length - 1);
+  const timelinePercent =
+    lastFrameIndex <= 0
+      ? 0
+      : Math.max(0, Math.min(100, (playheadFrame / lastFrameIndex) * 100));
+
   return (
     <div className="relative flex h-screen flex-col bg-[var(--app-bg)] text-[var(--ink-0)]">
       <div
@@ -337,78 +376,117 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
         <div
           className={
             forcePortrait
-              ? "absolute right-3 top-14 z-20 flex items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/92 px-2 py-2 backdrop-blur"
+              ? "absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 flex-col gap-1 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/60 px-2 py-1.5 backdrop-blur"
               : "flex flex-wrap items-center justify-center gap-2 border-t border-[var(--line)] bg-[var(--panel)]/80 px-3 py-3 md:gap-3 md:px-4"
           }
+          style={
+            forcePortrait
+              ? {
+                  transform: `translate(calc(-50% + ${controlsOffset.x}px), ${controlsOffset.y}px)`,
+                }
+              : undefined
+          }
+          onPointerDown={(event) => {
+            if (!forcePortrait) {
+              return;
+            }
+            const target = event.target as HTMLElement;
+            if (target.closest("button")) {
+              return;
+            }
+            dragPointRef.current = { x: event.clientX, y: event.clientY };
+            setDraggingControls(true);
+          }}
         >
-          <button
-            className={
-              forcePortrait
-                ? "inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                : "rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            }
-            onClick={() => {
-              setPlayheadFrame(0);
-              setPlaying(false);
-            }}
-            title="Rewind"
-            aria-label="Rewind"
-          >
-            {forcePortrait ? (
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M11 19L2 12l9-7v14z" />
-                <path d="M22 19l-9-7 9-7v14z" />
-              </svg>
-            ) : (
-              "Rewind"
+          <div className="flex items-center gap-2">
+            {forcePortrait && (
+              <div
+                className="h-6 w-3 cursor-grab rounded-full border border-[var(--line)] bg-[var(--panel-2)]/60 active:cursor-grabbing"
+                title="Move controls"
+                aria-label="Move controls"
+              />
             )}
-          </button>
-          <button
-            className={
-              forcePortrait
-                ? "inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                : "rounded-full border border-[var(--line)] px-6 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            }
-            onClick={() => setPlaying(!isPlaying)}
-            title={isPlaying ? "Pause" : "Play"}
-            aria-label={isPlaying ? "Pause" : "Play"}
-          >
-            {forcePortrait ? (
-              isPlaying ? (
+            <button
+              className={
+                forcePortrait
+                  ? "inline-flex h-7 w-12 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/45 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  : "rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              }
+              onClick={() => {
+                setPlayheadFrame(0);
+                setPlaying(false);
+              }}
+              title="Rewind"
+              aria-label="Rewind"
+            >
+              {forcePortrait ? (
                 <svg
                   width="14"
                   height="14"
                   viewBox="0 0 24 24"
-                  fill="currentColor"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <rect x="6" y="4" width="4" height="16" rx="1" />
-                  <rect x="14" y="4" width="4" height="16" rx="1" />
+                  <path d="M11 19L2 12l9-7v14z" />
+                  <path d="M22 19l-9-7 9-7v14z" />
                 </svg>
               ) : (
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              )
-            ) : isPlaying ? (
-              "Pause"
-            ) : (
-              "Play"
-            )}
-          </button>
+                "Rewind"
+              )}
+            </button>
+            <button
+              className={
+                forcePortrait
+                  ? "inline-flex h-7 w-12 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/45 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  : "rounded-full border border-[var(--line)] px-6 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              }
+              onClick={() => setPlaying(!isPlaying)}
+              title={isPlaying ? "Pause" : "Play"}
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              {forcePortrait ? (
+                isPlaying ? (
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <rect x="6" y="4" width="4" height="16" rx="1" />
+                    <rect x="14" y="4" width="4" height="16" rx="1" />
+                  </svg>
+                ) : (
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                )
+              ) : isPlaying ? (
+                "Pause"
+              ) : (
+                "Play"
+              )}
+            </button>
+          </div>
+          {forcePortrait && (
+            <div className="relative h-1.5 w-[132px] rounded-full bg-[var(--panel-2)]/75">
+              <div
+                className="h-full rounded-full bg-[var(--accent-0)]"
+                style={{ width: `${timelinePercent}%` }}
+              />
+              <div
+                className="absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border border-[var(--panel)] bg-[var(--accent-0)]"
+                style={{ left: `calc(${timelinePercent}% - 5px)` }}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
