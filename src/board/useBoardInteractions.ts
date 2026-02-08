@@ -16,9 +16,10 @@ import {
 import { createId } from "@/utils/id";
 
 type DraftShape = {
-  type: "circle" | "rect" | "triangle" | "arrow";
+  type: "circle" | "rect" | "triangle" | "arrow" | "path";
   start: { x: number; y: number };
   current: { x: number; y: number };
+  points?: number[];
   constrain?: boolean;
 };
 
@@ -70,6 +71,59 @@ export const useBoardInteractions = ({
   const [draft, setDraft] = useState<DraftShape | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const circleSnapTolerance = 0.08;
+  const smoothPathPoints = (points: number[]) => {
+    if (points.length <= 6) {
+      return points;
+    }
+
+    const minDistance = 0.45;
+    const filtered: number[] = [points[0] ?? 0, points[1] ?? 0];
+    let lastX = filtered[0] ?? 0;
+    let lastY = filtered[1] ?? 0;
+
+    for (let i = 2; i < points.length; i += 2) {
+      const x = points[i] ?? lastX;
+      const y = points[i + 1] ?? lastY;
+      if (Math.hypot(x - lastX, y - lastY) < minDistance) {
+        continue;
+      }
+      filtered.push(x, y);
+      lastX = x;
+      lastY = y;
+    }
+
+    const endX = points[points.length - 2];
+    const endY = points[points.length - 1];
+    if (
+      typeof endX === "number" &&
+      typeof endY === "number" &&
+      (filtered[filtered.length - 2] !== endX ||
+        filtered[filtered.length - 1] !== endY)
+    ) {
+      filtered.push(endX, endY);
+    }
+
+    if (filtered.length <= 6) {
+      return filtered;
+    }
+
+    const smoothed: number[] = [filtered[0] ?? 0, filtered[1] ?? 0];
+    for (let i = 2; i < filtered.length - 2; i += 2) {
+      const px = filtered[i - 2] ?? filtered[i] ?? 0;
+      const py = filtered[i - 1] ?? filtered[i + 1] ?? 0;
+      const cx = filtered[i] ?? px;
+      const cy = filtered[i + 1] ?? py;
+      const nx = filtered[i + 2] ?? cx;
+      const ny = filtered[i + 3] ?? cy;
+      smoothed.push(px * 0.25 + cx * 0.5 + nx * 0.25);
+      smoothed.push(py * 0.25 + cy * 0.5 + ny * 0.25);
+    }
+    smoothed.push(
+      filtered[filtered.length - 2] ?? 0,
+      filtered[filtered.length - 1] ?? 0
+    );
+    return smoothed;
+  };
 
   const rotatePoint = (
     point: { x: number; y: number },
@@ -128,11 +182,13 @@ export const useBoardInteractions = ({
     activeTool === "line_dashed" ||
     activeTool === "arrow" ||
     activeTool === "arrow_dashed";
+  const isFreehandTool = activeTool === "freehand";
   const isShapeTool =
     activeTool === "circle" ||
     activeTool === "rect" ||
     activeTool === "triangle" ||
-    isLineTool;
+    isLineTool ||
+    isFreehandTool;
 
   const linePreset = {
     head: activeTool === "arrow" || activeTool === "arrow_dashed",
@@ -195,6 +251,15 @@ export const useBoardInteractions = ({
         constrain: event.evt.shiftKey,
       });
     }
+    if (isFreehandTool) {
+      setDraft({
+        type: "path",
+        start: world,
+        current: world,
+        points: [0, 0],
+        constrain: false,
+      });
+    }
   };
 
   const handleMouseMove = (event: Konva.KonvaEventObject<MouseEvent>) => {
@@ -209,9 +274,27 @@ export const useBoardInteractions = ({
     if (!pointer) {
       return;
     }
+    const world = stageToWorld(pointer);
+    if (draft.type === "path") {
+      const points = draft.points ?? [0, 0];
+      const lastX = points[points.length - 2] ?? 0;
+      const lastY = points[points.length - 1] ?? 0;
+      const nextX = world.x - draft.start.x;
+      const nextY = world.y - draft.start.y;
+      if (Math.hypot(nextX - lastX, nextY - lastY) < 0.25) {
+        return;
+      }
+      setDraft({
+        ...draft,
+        current: world,
+        points: [...points, nextX, nextY],
+        constrain: false,
+      });
+      return;
+    }
     setDraft({
       ...draft,
-      current: stageToWorld(pointer),
+      current: world,
       constrain: event.evt.shiftKey,
     });
   };
@@ -323,6 +406,29 @@ export const useBoardInteractions = ({
         curved: false,
       });
     }
+    if (draft.type === "path") {
+      const points = smoothPathPoints(draft.points ?? []);
+      if (points.length >= 4) {
+        addObject(boardId, frameIndex, {
+          id: createId(),
+          type: "path",
+          position: start,
+          rotation: 0,
+          scale: { x: 1, y: 1 },
+          style: {
+            ...defaultStyle,
+            stroke: "#f9bf4a",
+            strokeWidth: 0.65,
+            dash: [],
+            outlineStroke: "#111111",
+          },
+          zIndex: 1,
+          locked: false,
+          visible: true,
+          points,
+        });
+      }
+    }
     setDraft(null);
   };
 
@@ -378,6 +484,15 @@ export const useBoardInteractions = ({
     if (isLineTool) {
       setDraft({ type: "arrow", start: world, current: world, constrain: false });
     }
+    if (isFreehandTool) {
+      setDraft({
+        type: "path",
+        start: world,
+        current: world,
+        points: [0, 0],
+        constrain: false,
+      });
+    }
   };
 
   const handleTouchMove = (event: Konva.KonvaEventObject<TouchEvent>) => {
@@ -394,7 +509,25 @@ export const useBoardInteractions = ({
     }
     event.evt.preventDefault();
     if (draft) {
-      setDraft({ ...draft, current: stageToWorld(pointer), constrain: false });
+      const world = stageToWorld(pointer);
+      if (draft.type === "path") {
+        const points = draft.points ?? [0, 0];
+        const lastX = points[points.length - 2] ?? 0;
+        const lastY = points[points.length - 1] ?? 0;
+        const nextX = world.x - draft.start.x;
+        const nextY = world.y - draft.start.y;
+        if (Math.hypot(nextX - lastX, nextY - lastY) < 0.25) {
+          return;
+        }
+        setDraft({
+          ...draft,
+          current: world,
+          points: [...points, nextX, nextY],
+          constrain: false,
+        });
+        return;
+      }
+      setDraft({ ...draft, current: world, constrain: false });
       return;
     }
   };

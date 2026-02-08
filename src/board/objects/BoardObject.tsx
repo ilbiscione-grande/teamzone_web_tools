@@ -661,14 +661,41 @@ export default function BoardObject({
 
   if (object.type === "path") {
     const path = object as MovementPath;
+    const outlineStroke = path.style.outlineStroke;
+    const outlineWidth = outlineStroke
+      ? getLineOutlineWidth(path.style.strokeWidth)
+      : 0;
     return (
-      <Line
-        {...commonProps}
-        points={path.points}
-        stroke={path.style.stroke}
-        strokeWidth={path.style.strokeWidth}
-        dash={[1, 1]}
-      />
+      <Group>
+        {outlineStroke && outlineWidth > 0 && (
+          <Line
+            {...commonProps}
+            points={path.points}
+            stroke={outlineStroke}
+            strokeWidth={path.style.strokeWidth + outlineWidth * 2}
+            dash={path.style.dash}
+            tension={0.45}
+            lineCap="round"
+            lineJoin="round"
+            listening={false}
+          />
+        )}
+        <Line
+          {...commonProps}
+          points={path.points}
+          stroke={path.style.stroke}
+          strokeWidth={path.style.strokeWidth}
+          dash={path.style.dash}
+          tension={0.45}
+          lineCap="round"
+          lineJoin="round"
+          ref={(node) => {
+            if (node) {
+              registerNode(object.id, node);
+            }
+          }}
+        />
+      </Group>
     );
   }
 

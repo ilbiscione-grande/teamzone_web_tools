@@ -1703,7 +1703,21 @@ export default function BoardCanvas({
                 pointerWidth={getArrowHeadSize(0.65).width}
               />
             )}
-            {draft && draft.type !== "arrow" && (
+            {draft && draft.type === "path" && (
+              <Line
+                points={(draft.points ?? []).flatMap((value, index) =>
+                  index % 2 === 0
+                    ? [value + draft.start.x]
+                    : [value + draft.start.y]
+                )}
+                stroke="#f9bf4a"
+                strokeWidth={0.65}
+                tension={0.45}
+                lineCap="round"
+                lineJoin="round"
+              />
+            )}
+            {draft && draft.type !== "arrow" && draft.type !== "path" && (
               <Rect
                 x={Math.min(draft.start.x, draft.current.x)}
                 y={Math.min(draft.start.y, draft.current.y)}

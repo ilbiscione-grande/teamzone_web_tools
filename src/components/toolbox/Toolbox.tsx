@@ -74,6 +74,11 @@ const DashedArrowIcon = () => (
     <path d="M12 4h6v6" />
   </svg>
 );
+const FreehandIcon = () => (
+  <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
+    <path d="M4 15c2.5-4 4.5-6 7-5 2.3 1 2 4 4 4 1.6 0 2.4-1.2 5-4" />
+  </svg>
+);
 const CircleIcon = () => (
   <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
     <circle cx="12" cy="12" r="6" />
@@ -111,6 +116,7 @@ const lineTools: { id: Tool; label: string; hint: string; icon: ReactNode }[] = 
   { id: "line_dashed", label: "Dashed line", hint: "Drag to draw", icon: <DashedLineIcon /> },
   { id: "arrow", label: "Arrow", hint: "Drag to draw", icon: <ArrowIcon /> },
   { id: "arrow_dashed", label: "Dashed arrow", hint: "Drag to draw", icon: <DashedArrowIcon /> },
+  { id: "freehand", label: "Freehand", hint: "Drag to draw", icon: <FreehandIcon /> },
 ];
 
 const formTools: { id: Tool; label: string; hint: string; icon: ReactNode }[] = [

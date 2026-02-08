@@ -14,6 +14,7 @@ export type Tool =
   | "line_dashed"
   | "arrow"
   | "arrow_dashed"
+  | "freehand"
   | "text";
 
 type Viewport = {
