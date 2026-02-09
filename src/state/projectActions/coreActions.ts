@@ -242,11 +242,8 @@ export const createCoreActions: StateCreator<
   },
   openProject: (id) => {
     if (get().authUser && get().plan === "PAID") {
-      if (typeof window !== "undefined" && !window.navigator.onLine) {
-        const project = loadProject(id, get().authUser?.id ?? null);
-        if (!project) {
-          return;
-        }
+      const localProject = loadProject(id, get().authUser?.id ?? null);
+      const applyOpenedProject = (project: Project) => {
         ensureBoardSquads(project);
         set((state) => {
           state.project = project;
@@ -258,23 +255,47 @@ export const createCoreActions: StateCreator<
         if (can(get().plan, "project.save")) {
           saveProjectIndex(get().index, get().authUser?.id ?? null);
         }
+      };
+      if (typeof window !== "undefined" && !window.navigator.onLine) {
+        const project = localProject;
+        if (!project) {
+          return;
+        }
+        applyOpenedProject(project);
         return;
       }
       fetchProjectCloud(id).then((project) => {
-        if (!project) {
+        if (!project && !localProject) {
           return;
         }
-        ensureBoardSquads(project);
-        set((state) => {
-          state.project = project;
-          state.activeProjectId = id;
-          if (can(state.plan, "project.save")) {
-            state.index = updateIndex(state.index, project);
+        let opened: Project | null = null;
+        if (project && localProject) {
+          const cloudAt = Date.parse(project.updatedAt || project.createdAt || "");
+          const localAt = Date.parse(
+            localProject.updatedAt || localProject.createdAt || ""
+          );
+          const localIsNewer =
+            Number.isFinite(localAt) &&
+            Number.isFinite(cloudAt) &&
+            localAt >= cloudAt;
+          const localHasMoreBoards =
+            localProject.boards.length > project.boards.length;
+          opened =
+            localIsNewer || localHasMoreBoards
+              ? localProject
+              : project;
+          if (opened === localProject) {
+            saveProjectCloud(localProject);
+          } else {
+            saveProject(project, get().authUser?.id ?? null);
           }
-        });
-        if (can(get().plan, "project.save")) {
-          saveProjectIndex(get().index, get().authUser?.id ?? null);
+        } else {
+          opened = project ?? localProject;
         }
+        if (!opened) {
+          return;
+        }
+        applyOpenedProject(opened);
       });
       return;
     }
