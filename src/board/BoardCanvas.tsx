@@ -211,15 +211,21 @@ export default function BoardCanvas({
                 next.type === "ball" && next.offset
                   ? next.offset
                   : baseOffset;
+              const blendedOffset = {
+                x: baseOffset.x + (nextOffset.x - baseOffset.x) * t,
+                y: baseOffset.y + (nextOffset.y - baseOffset.y) * t,
+              };
+              blendedBall.attachedToId = attachId;
+              blendedBall.offset = blendedOffset;
               blended.position = {
                 x:
                   basePlayer.position.x +
                   (nextPlayer.position.x - basePlayer.position.x) * t +
-                  (baseOffset.x + (nextOffset.x - baseOffset.x) * t),
+                  blendedOffset.x,
                 y:
                   basePlayer.position.y +
                   (nextPlayer.position.y - basePlayer.position.y) * t +
-                  (baseOffset.y + (nextOffset.y - baseOffset.y) * t),
+                  blendedOffset.y,
               };
             }
           } else {
