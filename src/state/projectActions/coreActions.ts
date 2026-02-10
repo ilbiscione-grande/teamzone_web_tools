@@ -16,7 +16,11 @@ import {
   updateIndex,
 } from "@/state/projectHelpers";
 import { can, getPlanLimits } from "@/utils/plan";
-import { persistAuthUser, persistPlan } from "@/state/useProjectStore";
+import {
+  persistActiveProject,
+  persistAuthUser,
+  persistPlan,
+} from "@/state/useProjectStore";
 import {
   deleteProjectCloud,
   fetchProjectCloud,
@@ -355,6 +359,7 @@ export const createCoreActions: StateCreator<
     });
   },
   closeProject: () => {
+    persistActiveProject();
     set((state) => {
       state.project = null;
       state.activeProjectId = null;
