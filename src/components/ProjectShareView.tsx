@@ -274,22 +274,7 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     setPlaying,
   ]);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center text-sm text-[var(--ink-1)]">
-        Loading shared project...
-      </div>
-    );
-  }
-  if (error || !project || !board) {
-    return (
-      <div className="flex h-screen items-center justify-center text-sm text-[var(--accent-1)]">
-        {error ?? "Share link not available."}
-      </div>
-    );
-  }
-
-  const lastFrameIndex = Math.max(0, board.frames.length - 1);
+  const lastFrameIndex = Math.max(0, (board?.frames.length ?? 1) - 1);
   const timelinePercent =
     lastFrameIndex <= 0
       ? 0
@@ -349,6 +334,21 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
       window.removeEventListener("touchend", onTouchEnd);
     };
   }, [lastFrameIndex, board?.id]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center text-sm text-[var(--ink-1)]">
+        Loading shared project...
+      </div>
+    );
+  }
+  if (error || !project || !board) {
+    return (
+      <div className="flex h-screen items-center justify-center text-sm text-[var(--accent-1)]">
+        {error ?? "Share link not available."}
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex h-screen flex-col bg-[var(--app-bg)] text-[var(--ink-0)]">
