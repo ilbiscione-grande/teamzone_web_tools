@@ -22,4 +22,40 @@ export const useAutosave = () => {
     }
     debouncedSave();
   }, [project, plan, debouncedSave]);
+
+  useEffect(() => {
+    if (!project) {
+      return;
+    }
+    if (!can(plan, "project.save")) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      persistActiveProject();
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [project, plan]);
+
+  useEffect(() => {
+    if (!project) {
+      return;
+    }
+    if (!can(plan, "project.save")) {
+      return;
+    }
+    const flush = () => persistActiveProject();
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        flush();
+      }
+    };
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("beforeunload", flush);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      window.removeEventListener("beforeunload", flush);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [project, plan]);
 };

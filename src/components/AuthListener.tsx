@@ -2,7 +2,11 @@
 
 import { useEffect } from "react";
 import { supabase } from "@/utils/supabaseClient";
-import { useProjectStore, persistPlanCheck } from "@/state/useProjectStore";
+import {
+  useProjectStore,
+  persistActiveProject,
+  persistPlanCheck,
+} from "@/state/useProjectStore";
 
 const getDisplayName = (email: string | null, fullName?: string | null) => {
   if (fullName && fullName.trim().length > 0) {
@@ -75,6 +79,7 @@ export default function AuthListener() {
     };
 
     supabase.auth.getSession().then(({ data }) => {
+      persistActiveProject();
       const session = data.session;
       if (session?.user) {
         const user = session.user;
@@ -98,6 +103,7 @@ export default function AuthListener() {
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        persistActiveProject();
         if (session?.user) {
           const user = session.user;
           setAuthUser({
