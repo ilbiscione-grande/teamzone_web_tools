@@ -45,6 +45,8 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
   const [controlsOffset, setControlsOffset] = useState({ x: 0, y: 0 });
   const [draggingControls, setDraggingControls] = useState(false);
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
+  const scrubTrackRef = useRef<HTMLDivElement | null>(null);
+  const scrubbingRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -293,6 +295,61 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
       ? 0
       : Math.max(0, Math.min(100, (playheadFrame / lastFrameIndex) * 100));
 
+  const scrubToClientX = (clientX: number) => {
+    if (!board) {
+      return;
+    }
+    const track = scrubTrackRef.current;
+    if (!track) {
+      return;
+    }
+    const rect = track.getBoundingClientRect();
+    if (rect.width <= 0) {
+      return;
+    }
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const frameValue = lastFrameIndex > 0 ? ratio * lastFrameIndex : 0;
+    const frameIndex = Math.floor(frameValue);
+    setPlaying(false);
+    setActiveFrameIndex(board.id, frameIndex);
+    setPlayheadFrame(frameValue);
+  };
+
+  useEffect(() => {
+    const onPointerMove = (event: PointerEvent) => {
+      if (!scrubbingRef.current) {
+        return;
+      }
+      scrubToClientX(event.clientX);
+    };
+    const onPointerUp = () => {
+      scrubbingRef.current = false;
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      if (!scrubbingRef.current) {
+        return;
+      }
+      const touch = event.touches[0];
+      if (!touch) {
+        return;
+      }
+      scrubToClientX(touch.clientX);
+    };
+    const onTouchEnd = () => {
+      scrubbingRef.current = false;
+    };
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchend", onTouchEnd);
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [lastFrameIndex, board?.id]);
+
   return (
     <div className="relative flex h-screen flex-col bg-[var(--app-bg)] text-[var(--ink-0)]">
       <div
@@ -391,7 +448,7 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
               return;
             }
             const target = event.target as HTMLElement;
-            if (target.closest("button")) {
+            if (target.closest("button") || target.closest("[data-scrub]")) {
               return;
             }
             dragPointRef.current = { x: event.clientX, y: event.clientY };
@@ -475,18 +532,42 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
               )}
             </button>
           </div>
-          {forcePortrait && (
-            <div className="relative h-1.5 w-[132px] rounded-full bg-[var(--panel-2)]/75">
-              <div
-                className="h-full rounded-full bg-[var(--accent-0)]"
-                style={{ width: `${timelinePercent}%` }}
-              />
-              <div
-                className="absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border border-[var(--panel)] bg-[var(--accent-0)]"
-                style={{ left: `calc(${timelinePercent}% - 5px)` }}
-              />
-            </div>
-          )}
+          <div
+            ref={scrubTrackRef}
+            data-scrub
+            className={`relative rounded-full bg-[var(--panel-2)]/75 ${
+              forcePortrait ? "h-1.5 w-[132px]" : "h-2 w-[280px]"
+            }`}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              scrubbingRef.current = true;
+              scrubToClientX(event.clientX);
+            }}
+            onTouchStart={(event) => {
+              event.stopPropagation();
+              const touch = event.touches[0];
+              if (!touch) {
+                return;
+              }
+              scrubbingRef.current = true;
+              scrubToClientX(touch.clientX);
+            }}
+          >
+            <div
+              className="h-full rounded-full bg-[var(--accent-0)]"
+              style={{ width: `${timelinePercent}%` }}
+            />
+            <div
+              className={`absolute top-1/2 rounded-full border border-[var(--panel)] bg-[var(--accent-0)] ${
+                forcePortrait ? "h-2.5 w-2.5 -translate-y-1/2" : "h-3.5 w-3.5 -translate-y-1/2"
+              }`}
+              style={{
+                left: forcePortrait
+                  ? `calc(${timelinePercent}% - 5px)`
+                  : `calc(${timelinePercent}% - 7px)`,
+              }}
+            />
+          </div>
         </div>
       )}
     </div>
