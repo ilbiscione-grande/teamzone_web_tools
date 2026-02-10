@@ -107,6 +107,77 @@ export const deleteProjectCloud = async (id: string): Promise<boolean> => {
 
 const compareUpdatedAt = (a: string, b: string) => a.localeCompare(b);
 
+const safeTimestamp = (value: string | null | undefined) => {
+  const ts = Date.parse(value ?? "");
+  return Number.isFinite(ts) ? ts : -1;
+};
+
+const getProjectShapeScore = (project: Project) => {
+  let frames = 0;
+  let objects = 0;
+  for (const board of project.boards ?? []) {
+    frames += board.frames?.length ?? 0;
+    for (const frame of board.frames ?? []) {
+      objects += frame.objects?.length ?? 0;
+    }
+  }
+  return {
+    boards: project.boards?.length ?? 0,
+    frames,
+    objects,
+  };
+};
+
+const chooseBestProject = (local: Project | null, cloud: Project | null) => {
+  if (local && !cloud) {
+    return local;
+  }
+  if (cloud && !local) {
+    return cloud;
+  }
+  if (!local && !cloud) {
+    return null;
+  }
+  const localProject = local as Project;
+  const cloudProject = cloud as Project;
+
+  const localTs = safeTimestamp(localProject.updatedAt ?? localProject.createdAt);
+  const cloudTs = safeTimestamp(cloudProject.updatedAt ?? cloudProject.createdAt);
+
+  if (localTs > cloudTs) {
+    return localProject;
+  }
+  if (cloudTs > localTs) {
+    return cloudProject;
+  }
+
+  const localShape = getProjectShapeScore(localProject);
+  const cloudShape = getProjectShapeScore(cloudProject);
+
+  if (localShape.boards !== cloudShape.boards) {
+    return localShape.boards > cloudShape.boards ? localProject : cloudProject;
+  }
+  if (localShape.frames !== cloudShape.frames) {
+    return localShape.frames > cloudShape.frames ? localProject : cloudProject;
+  }
+  if (localShape.objects !== cloudShape.objects) {
+    return localShape.objects > cloudShape.objects ? localProject : cloudProject;
+  }
+
+  return localProject;
+};
+
+const sameProjectShape = (a: Project, b: Project) => {
+  const aShape = getProjectShapeScore(a);
+  const bShape = getProjectShapeScore(b);
+  return (
+    (a.updatedAt ?? "") === (b.updatedAt ?? "") &&
+    aShape.boards === bShape.boards &&
+    aShape.frames === bShape.frames &&
+    aShape.objects === bShape.objects
+  );
+};
+
 export const syncProjects = async (): Promise<ProjectSummary[]> => {
   if (!supabase) {
     return loadProjectIndex();
@@ -118,42 +189,37 @@ export const syncProjects = async (): Promise<ProjectSummary[]> => {
 
   const localIndex = loadProjectIndex(userId);
   const cloudIndex = await fetchProjectIndexCloud();
-  const cloudMap = new Map(cloudIndex.map((item) => [item.id, item]));
-  const localMap = new Map(localIndex.map((item) => [item.id, item]));
+  const localIdSet = new Set(localIndex.map((item) => item.id));
+  const cloudIdSet = new Set(cloudIndex.map((item) => item.id));
+  const allIds = new Set<string>([...localIdSet, ...cloudIdSet]);
 
-  for (const local of localIndex) {
-    const cloud = cloudMap.get(local.id);
-    if (!cloud || compareUpdatedAt(local.updatedAt, cloud.updatedAt) > 0) {
-      const project = loadProject(local.id, userId);
-      if (project) {
-        await saveProjectCloud(project);
-      }
+  const summaries: ProjectSummary[] = [];
+
+  for (const id of allIds) {
+    const localProject = loadProject(id, userId);
+    const cloudProject = cloudIdSet.has(id) ? await fetchProjectCloud(id) : null;
+    const best = chooseBestProject(localProject, cloudProject);
+
+    if (!best) {
+      continue;
     }
-  }
 
-  for (const cloud of cloudIndex) {
-    const local = localMap.get(cloud.id);
-    if (!local || compareUpdatedAt(cloud.updatedAt, local.updatedAt) > 0) {
-      const project = await fetchProjectCloud(cloud.id);
-      if (project) {
-        saveProject(project, userId);
-      }
+    if (!localProject || !sameProjectShape(localProject, best)) {
+      saveProject(best, userId);
     }
-  }
-
-  const merged = new Map<string, ProjectSummary>();
-  for (const item of localIndex) {
-    merged.set(item.id, item);
-  }
-  for (const item of cloudIndex) {
-    const existing = merged.get(item.id);
-    if (!existing || compareUpdatedAt(item.updatedAt, existing.updatedAt) > 0) {
-      merged.set(item.id, item);
+    if (!cloudProject || !sameProjectShape(cloudProject, best)) {
+      await saveProjectCloud(best);
     }
+
+    summaries.push({
+      id: best.id,
+      name: best.name,
+      updatedAt: best.updatedAt ?? best.createdAt ?? new Date().toISOString(),
+    });
   }
 
-  const mergedIndex = Array.from(merged.values()).sort((a, b) =>
-    b.updatedAt.localeCompare(a.updatedAt)
+  const mergedIndex = summaries.sort((a, b) =>
+    compareUpdatedAt(b.updatedAt, a.updatedAt)
   );
   saveProjectIndex(mergedIndex, userId);
   return mergedIndex;
