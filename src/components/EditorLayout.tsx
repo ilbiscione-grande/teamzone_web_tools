@@ -146,27 +146,34 @@ export default function EditorLayout() {
                 className={`absolute inset-0 z-40 ${
                   isMaximizedPenMode ? "pointer-events-auto" : "pointer-events-none"
                 }`}
+                style={{ touchAction: "none" }}
                 onPointerDown={(event) => {
                   if (!isMaximizedPenMode) {
                     return;
                   }
+                  event.preventDefault();
                   const rect = event.currentTarget.getBoundingClientRect();
                   const x = event.clientX - rect.left;
                   const y = event.clientY - rect.top;
-                  setMaximizedInkStrokes((prev) => [...prev, [x, y]]);
-                  drawingStrokeIndexRef.current = maximizedInkStrokes.length;
+                  setMaximizedInkStrokes((prev) => {
+                    const index = prev.length;
+                    drawingStrokeIndexRef.current = index;
+                    return [...prev, [x, y]];
+                  });
                   event.currentTarget.setPointerCapture(event.pointerId);
                 }}
                 onPointerMove={(event) => {
                   if (!isMaximizedPenMode) {
                     return;
                   }
+                  event.preventDefault();
                   appendInkPoint(event);
                 }}
                 onPointerUp={(event) => {
                   if (!isMaximizedPenMode) {
                     return;
                   }
+                  event.preventDefault();
                   appendInkPoint(event);
                   drawingStrokeIndexRef.current = null;
                   event.currentTarget.releasePointerCapture(event.pointerId);
@@ -181,8 +188,8 @@ export default function EditorLayout() {
                       key={`ink-${index}`}
                       points={points.join(",")}
                       fill="none"
-                      stroke="#f6c453"
-                      strokeOpacity={0.92}
+                      stroke="#ffffff"
+                      strokeOpacity={0.96}
                       strokeWidth={3}
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -250,27 +257,34 @@ export default function EditorLayout() {
                 className={`absolute inset-0 z-40 ${
                   isMaximizedPenMode ? "pointer-events-auto" : "pointer-events-none"
                 }`}
+                style={{ touchAction: "none" }}
                 onPointerDown={(event) => {
                   if (!isMaximizedPenMode) {
                     return;
                   }
+                  event.preventDefault();
                   const rect = event.currentTarget.getBoundingClientRect();
                   const x = event.clientX - rect.left;
                   const y = event.clientY - rect.top;
-                  setMaximizedInkStrokes((prev) => [...prev, [x, y]]);
-                  drawingStrokeIndexRef.current = maximizedInkStrokes.length;
+                  setMaximizedInkStrokes((prev) => {
+                    const index = prev.length;
+                    drawingStrokeIndexRef.current = index;
+                    return [...prev, [x, y]];
+                  });
                   event.currentTarget.setPointerCapture(event.pointerId);
                 }}
                 onPointerMove={(event) => {
                   if (!isMaximizedPenMode) {
                     return;
                   }
+                  event.preventDefault();
                   appendInkPoint(event);
                 }}
                 onPointerUp={(event) => {
                   if (!isMaximizedPenMode) {
                     return;
                   }
+                  event.preventDefault();
                   appendInkPoint(event);
                   drawingStrokeIndexRef.current = null;
                   event.currentTarget.releasePointerCapture(event.pointerId);
@@ -285,8 +299,8 @@ export default function EditorLayout() {
                       key={`ink-${index}`}
                       points={points.join(",")}
                       fill="none"
-                      stroke="#f6c453"
-                      strokeOpacity={0.92}
+                      stroke="#ffffff"
+                      strokeOpacity={0.96}
                       strokeWidth={3}
                       strokeLinecap="round"
                       strokeLinejoin="round"
