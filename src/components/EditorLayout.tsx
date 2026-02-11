@@ -37,7 +37,12 @@ export default function EditorLayout() {
   const dragOffsetRef = useRef<{ x: number; y: number } | null>(null);
   const draggingRef = useRef(false);
   const [isMaximized, setIsMaximized] = useState(false);
-  const [showMaximizedNotes, setShowMaximizedNotes] = useState(false);
+  const [showMaximizedNotes, setShowMaximizedNotes] = useState(true);
+  const [isMaximizedPenMode, setIsMaximizedPenMode] = useState(false);
+  const [maximizedInkStrokes, setMaximizedInkStrokes] = useState<number[][]>(
+    []
+  );
+  const drawingStrokeIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (project?.settings) {
@@ -58,6 +63,14 @@ export default function EditorLayout() {
       };
     });
   }, [propertiesFloating]);
+  useEffect(() => {
+    if (isMaximized) {
+      return;
+    }
+    setIsMaximizedPenMode(false);
+    setMaximizedInkStrokes([]);
+    drawingStrokeIndexRef.current = null;
+  }, [isMaximized]);
 
   useEffect(() => {
     if (!propertiesFloating) {
@@ -93,6 +106,24 @@ export default function EditorLayout() {
   }
 
   if (isMaximized && board) {
+    const appendInkPoint = (event: {
+      currentTarget: HTMLDivElement;
+      clientX: number;
+      clientY: number;
+    }) => {
+      const index = drawingStrokeIndexRef.current;
+      if (index == null) {
+        return;
+      }
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      setMaximizedInkStrokes((prev) =>
+        prev.map((stroke, strokeIndex) =>
+          strokeIndex === index ? [...stroke, x, y] : stroke
+        )
+      );
+    };
     return (
       <div className="fixed inset-0 z-50 flex h-screen flex-col bg-[var(--panel)]">
         <div
@@ -111,6 +142,54 @@ export default function EditorLayout() {
                 isMaximized={isMaximized}
                 onToggleMaximize={() => setIsMaximized(false)}
               />
+              <div
+                className={`absolute inset-0 z-40 ${
+                  isMaximizedPenMode ? "pointer-events-auto" : "pointer-events-none"
+                }`}
+                onPointerDown={(event) => {
+                  if (!isMaximizedPenMode) {
+                    return;
+                  }
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  const x = event.clientX - rect.left;
+                  const y = event.clientY - rect.top;
+                  setMaximizedInkStrokes((prev) => [...prev, [x, y]]);
+                  drawingStrokeIndexRef.current = maximizedInkStrokes.length;
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                }}
+                onPointerMove={(event) => {
+                  if (!isMaximizedPenMode) {
+                    return;
+                  }
+                  appendInkPoint(event);
+                }}
+                onPointerUp={(event) => {
+                  if (!isMaximizedPenMode) {
+                    return;
+                  }
+                  appendInkPoint(event);
+                  drawingStrokeIndexRef.current = null;
+                  event.currentTarget.releasePointerCapture(event.pointerId);
+                }}
+                onPointerCancel={() => {
+                  drawingStrokeIndexRef.current = null;
+                }}
+              >
+                <svg className="h-full w-full">
+                  {maximizedInkStrokes.map((points, index) => (
+                    <polyline
+                      key={`ink-${index}`}
+                      points={points.join(",")}
+                      fill="none"
+                      stroke="#f6c453"
+                      strokeOpacity={0.92}
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ))}
+                </svg>
+              </div>
             </div>
           )}
           {showMaximizedNotes && (
@@ -167,18 +246,133 @@ export default function EditorLayout() {
                 isMaximized={isMaximized}
                 onToggleMaximize={() => setIsMaximized(false)}
               />
+              <div
+                className={`absolute inset-0 z-40 ${
+                  isMaximizedPenMode ? "pointer-events-auto" : "pointer-events-none"
+                }`}
+                onPointerDown={(event) => {
+                  if (!isMaximizedPenMode) {
+                    return;
+                  }
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  const x = event.clientX - rect.left;
+                  const y = event.clientY - rect.top;
+                  setMaximizedInkStrokes((prev) => [...prev, [x, y]]);
+                  drawingStrokeIndexRef.current = maximizedInkStrokes.length;
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                }}
+                onPointerMove={(event) => {
+                  if (!isMaximizedPenMode) {
+                    return;
+                  }
+                  appendInkPoint(event);
+                }}
+                onPointerUp={(event) => {
+                  if (!isMaximizedPenMode) {
+                    return;
+                  }
+                  appendInkPoint(event);
+                  drawingStrokeIndexRef.current = null;
+                  event.currentTarget.releasePointerCapture(event.pointerId);
+                }}
+                onPointerCancel={() => {
+                  drawingStrokeIndexRef.current = null;
+                }}
+              >
+                <svg className="h-full w-full">
+                  {maximizedInkStrokes.map((points, index) => (
+                    <polyline
+                      key={`ink-${index}`}
+                      points={points.join(",")}
+                      fill="none"
+                      stroke="#f6c453"
+                      strokeOpacity={0.92}
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ))}
+                </svg>
+              </div>
             </>
           )}
           <div className="absolute right-4 top-4 z-30 flex gap-2">
             <button
-              className={`rounded-full border px-3 py-1 text-xs ${
+              className={`flex h-9 w-9 items-center justify-center rounded-full border ${
                 showMaximizedNotes
                   ? "border-[var(--accent-2)] bg-[var(--panel-2)] text-[var(--accent-2)]"
                   : "border-[var(--line)] bg-[var(--panel-2)]/70 text-[var(--ink-1)]"
               }`}
               onClick={() => setShowMaximizedNotes((prev) => !prev)}
+              title={showMaximizedNotes ? "Hide notes" : "Show notes"}
+              aria-label={showMaximizedNotes ? "Hide notes" : "Show notes"}
             >
-              {showMaximizedNotes ? "Hide notes" : "Show notes"}
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 5h16v14H4z" />
+                <path d="M8 9h8M8 13h8M8 17h5" />
+              </svg>
+            </button>
+            <button
+              className={`flex h-9 w-9 items-center justify-center rounded-full border ${
+                isMaximizedPenMode
+                  ? "border-[var(--accent-2)] bg-[var(--panel-2)] text-[var(--accent-2)]"
+                  : "border-[var(--line)] bg-[var(--panel-2)]/70 text-[var(--ink-1)]"
+              }`}
+              onClick={() => {
+                setIsMaximizedPenMode((prev) => !prev);
+              }}
+              title={isMaximizedPenMode ? "Exit pen mode" : "Pen mode"}
+              aria-label={isMaximizedPenMode ? "Exit pen mode" : "Pen mode"}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5l4 4L7 21l-4 1 1-4 12.5-14.5z" />
+              </svg>
+            </button>
+            <button
+              className={`flex h-9 w-9 items-center justify-center rounded-full border ${
+                maximizedInkStrokes.length > 0
+                  ? "border-[var(--accent-1)] bg-[var(--panel-2)] text-[var(--accent-1)]"
+                  : "border-[var(--line)] bg-[var(--panel-2)]/70 text-[var(--ink-1)]"
+              }`}
+              onClick={() => {
+                setMaximizedInkStrokes([]);
+                drawingStrokeIndexRef.current = null;
+              }}
+              title="Clear pen strokes"
+              aria-label="Clear pen strokes"
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 7h16" />
+                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
+                <path d="M10 11v6M14 11v6" />
+              </svg>
             </button>
           </div>
         </div>
@@ -209,7 +403,10 @@ export default function EditorLayout() {
                 setStageRef(nextStage);
               }}
               isMaximized={isMaximized}
-              onToggleMaximize={() => setIsMaximized(true)}
+              onToggleMaximize={() => {
+                setShowMaximizedNotes(true);
+                setIsMaximized(true);
+              }}
             />
           </div>
           <FramesBar board={board} stage={stage} />

@@ -651,34 +651,36 @@ export default function BoardCanvas({
             <path d="M4 12a8 8 0 0 0 14 5" />
           </svg>
         </button>
-          <button
-            className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-            onClick={() => {
-              if (!window.confirm("Clear all objects from this frame?")) {
-                return;
-              }
-              pushHistory(clone(objects));
-              setFrameObjects(board.id, frameIndex, []);
-            }}
-            title="Clear pitch"
-            aria-label="Clear pitch"
-          >
-          <svg
-            aria-hidden
-            viewBox="0 0 24 24"
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M4 7h16" />
-            <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-            <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
-            <path d="M10 11v6M14 11v6" />
-          </svg>
-        </button>
+          {!isMaximized && (
+            <button
+              className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+              onClick={() => {
+                if (!window.confirm("Clear all objects from this frame?")) {
+                  return;
+                }
+                pushHistory(clone(objects));
+                setFrameObjects(board.id, frameIndex, []);
+              }}
+              title="Clear pitch"
+              aria-label="Clear pitch"
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 7h16" />
+                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
+                <path d="M10 11v6M14 11v6" />
+              </svg>
+            </button>
+          )}
           <button
             className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={onToggleMaximize}
