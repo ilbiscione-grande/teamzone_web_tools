@@ -17,6 +17,8 @@ const getDisplayName = (email: string | null, fullName?: string | null) => {
   }
   return email ?? "Coach";
 };
+const SESSION_KEY_STORAGE = "tacticsboard:sessionKey";
+const ACTIVE_SESSION_WINDOW_MS = 5 * 60 * 1000;
 
 export default function AuthListener() {
   const setAuthUser = useProjectStore((state) => state.setAuthUser);
@@ -33,6 +35,7 @@ export default function AuthListener() {
     }
 
     let sessionGuardTimer: ReturnType<typeof setInterval> | null = null;
+    let sessionGuardCleanup: Array<() => void> = [];
 
     const buildSessionKey = (userId: string, accessToken?: string | null) => {
       if (!accessToken) {
@@ -47,7 +50,27 @@ export default function AuthListener() {
     ) => {
       const sessionKey = buildSessionKey(userId, accessToken);
       if (!sessionKey) {
-        return;
+        return false;
+      }
+      const { data: existing } = await sb
+        .from("user_sessions")
+        .select("session_key,updated_at")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (existing?.session_key && existing.session_key !== sessionKey) {
+        const activeAt = Date.parse(existing.updated_at ?? "");
+        const activeRecently =
+          Number.isFinite(activeAt) &&
+          Date.now() - activeAt <= ACTIVE_SESSION_WINDOW_MS;
+        if (activeRecently) {
+          const shouldTakeOver = window.confirm(
+            "Du har en annan aktiv inloggning med ändringar de senaste minuterna. Om du fortsätter loggas den enheten ut och osparade ändringar där kan gå förlorade. Fortsätta?"
+          );
+          if (!shouldTakeOver) {
+            await sb.auth.signOut();
+            return false;
+          }
+        }
       }
       await sb.from("user_sessions").upsert(
         {
@@ -57,20 +80,28 @@ export default function AuthListener() {
         },
         { onConflict: "user_id" }
       );
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(SESSION_KEY_STORAGE, sessionKey);
+      }
+      return true;
     };
 
-    const startSingleSessionGuard = (
-      userId: string,
-      accessToken?: string | null
-    ) => {
+    const stopSingleSessionGuard = () => {
+      if (sessionGuardTimer) {
+        clearInterval(sessionGuardTimer);
+        sessionGuardTimer = null;
+      }
+      sessionGuardCleanup.forEach((dispose) => dispose());
+      sessionGuardCleanup = [];
+    };
+
+    const startSingleSessionGuard = (userId: string, accessToken?: string | null) => {
       const currentKey = buildSessionKey(userId, accessToken);
       if (!currentKey) {
         return;
       }
-      if (sessionGuardTimer) {
-        clearInterval(sessionGuardTimer);
-      }
-      sessionGuardTimer = setInterval(async () => {
+      stopSingleSessionGuard();
+      const checkSession = async () => {
         const { data } = await sb
           .from("user_sessions")
           .select("session_key")
@@ -81,15 +112,26 @@ export default function AuthListener() {
           persistActiveProject();
           await sb.auth.signOut();
         }
-      }, 4000);
-    };
+      };
+      // Immediate check when guard starts.
+      void checkSession();
+      // Low-frequency heartbeat to reduce read load.
+      sessionGuardTimer = setInterval(() => {
+        void checkSession();
+      }, 45000);
 
-    const stopSingleSessionGuard = () => {
-      if (!sessionGuardTimer) {
-        return;
-      }
-      clearInterval(sessionGuardTimer);
-      sessionGuardTimer = null;
+      const onFocus = () => void checkSession();
+      const onVisible = () => {
+        if (document.visibilityState === "visible") {
+          void checkSession();
+        }
+      };
+      window.addEventListener("focus", onFocus);
+      document.addEventListener("visibilitychange", onVisible);
+      sessionGuardCleanup.push(() => {
+        window.removeEventListener("focus", onFocus);
+        document.removeEventListener("visibilitychange", onVisible);
+      });
     };
 
     const syncProfilePlan = async (userId: string) => {
@@ -129,11 +171,16 @@ export default function AuthListener() {
           createdAt: user.created_at ?? new Date().toISOString(),
         });
         syncProfilePlan(user.id).finally(() => hydrateIndex());
-        claimSingleSession(user.id, session.access_token).then(() =>
-          startSingleSessionGuard(user.id, session.access_token)
-        );
+        claimSingleSession(user.id, session.access_token).then((allowed) => {
+          if (allowed) {
+            startSingleSessionGuard(user.id, session.access_token);
+          }
+        });
       } else {
         stopSingleSessionGuard();
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem(SESSION_KEY_STORAGE);
+        }
         clearAuthUser();
       }
     });
@@ -155,11 +202,16 @@ export default function AuthListener() {
             createdAt: user.created_at ?? new Date().toISOString(),
           });
           syncProfilePlan(user.id).finally(() => hydrateIndex());
-          claimSingleSession(user.id, session.access_token).then(() =>
-            startSingleSessionGuard(user.id, session.access_token)
-          );
+          claimSingleSession(user.id, session.access_token).then((allowed) => {
+            if (allowed) {
+              startSingleSessionGuard(user.id, session.access_token);
+            }
+          });
         } else {
           stopSingleSessionGuard();
+          if (typeof window !== "undefined") {
+            window.localStorage.removeItem(SESSION_KEY_STORAGE);
+          }
           clearAuthUser();
         }
       }

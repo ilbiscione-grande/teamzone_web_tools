@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { ProjectSummary, Project, Plan, AuthUser } from "@/models";
 import { saveProject, saveProjectIndex } from "@/persistence/storage";
-import { saveProjectCloud } from "@/persistence/cloud";
+import { saveProjectCloud, touchSessionActivityCloud } from "@/persistence/cloud";
 import { createProjectActions, type ProjectActions } from "@/state/projectActions";
 import { updateIndex } from "@/state/projectHelpers";
 import { can } from "@/utils/plan";
@@ -90,6 +90,9 @@ export const persistActiveProject = () => {
   const userId = authUser?.id ?? null;
   saveProject(project, userId);
   saveProjectIndex(updateIndex(index, project), userId);
+  if (authUser) {
+    void touchSessionActivityCloud();
+  }
   if (authUser && plan === "PAID") {
     if (typeof window !== "undefined" && !window.navigator.onLine) {
       useProjectStore.getState().setSyncStatus({

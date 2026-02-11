@@ -9,8 +9,15 @@ import {
 
 const TABLE = "projects";
 const BOARDS_TABLE = "project_boards";
+const SESSION_KEY_STORAGE = "tacticsboard:sessionKey";
 const saveQueueByProject = new Map<string, Promise<boolean>>();
 const pendingByProject = new Map<string, Project>();
+type BoardSyncSnapshot = {
+  signature: string;
+  orderIndex: number;
+};
+const boardCacheByProject = new Map<string, Map<string, BoardSyncSnapshot>>();
+const sessionTouchByUser = new Map<string, number>();
 
 const getUserId = async () => {
   if (!supabase) {
@@ -30,6 +37,61 @@ const toSummary = (row: {
   name: row.name,
   updatedAt: row.updated_at ?? row.created_at ?? new Date().toISOString(),
 });
+
+const boardSignature = (board: Board) => JSON.stringify(board);
+
+const getCurrentSessionKey = async (userId: string) => {
+  if (typeof window !== "undefined") {
+    const cached = window.localStorage.getItem(SESSION_KEY_STORAGE);
+    if (cached && cached.startsWith(`${userId}:`)) {
+      return cached;
+    }
+  }
+  if (!supabase) {
+    return null;
+  }
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) {
+    return null;
+  }
+  const sessionKey = `${userId}:${token.slice(0, 24)}`;
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(SESSION_KEY_STORAGE, sessionKey);
+  }
+  return sessionKey;
+};
+
+export const touchSessionActivityCloud = async (): Promise<void> => {
+  if (!supabase) {
+    return;
+  }
+  const userId = await getUserId();
+  if (!userId) {
+    return;
+  }
+  const now = Date.now();
+  const lastTouch = sessionTouchByUser.get(userId) ?? 0;
+  if (now - lastTouch < 60_000) {
+    return;
+  }
+  if (typeof window !== "undefined" && !window.navigator.onLine) {
+    return;
+  }
+  const sessionKey = await getCurrentSessionKey(userId);
+  if (!sessionKey) {
+    return;
+  }
+  sessionTouchByUser.set(userId, now);
+  await supabase.from("user_sessions").upsert(
+    {
+      user_id: userId,
+      session_key: sessionKey,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  );
+};
 
 export const fetchProjectIndexCloud = async (): Promise<ProjectSummary[]> => {
   if (!supabase) {
@@ -90,6 +152,12 @@ export const fetchProjectCloud = async (id: string): Promise<Project | null> => 
     };
   });
 
+  const cached = new Map<string, BoardSyncSnapshot>();
+  boards.forEach((board, index) => {
+    cached.set(board.id, { signature: boardSignature(board), orderIndex: index });
+  });
+  boardCacheByProject.set(id, cached);
+
   return {
     ...base,
     boards,
@@ -125,33 +193,57 @@ const saveProjectCloudNow = async (project: Project): Promise<boolean> => {
     return false;
   }
 
-  const { error: clearBoardsError } = await supabase
-    .from(BOARDS_TABLE)
-    .delete()
-    .eq("project_id", project.id)
-    .eq("user_id", userId);
-  if (clearBoardsError) {
-    return false;
-  }
+  const previous = boardCacheByProject.get(project.id) ?? new Map();
+  const next = new Map<string, BoardSyncSnapshot>();
 
-  if (project.boards.length > 0) {
-    const boardPayloads = project.boards.map((board, index) => ({
-      id: board.id,
-      project_id: project.id,
-      user_id: userId,
-      board_name: board.name,
-      order_index: index,
-      updated_at: project.updatedAt,
-      board_data: board,
-    }));
+  const changedPayloads = project.boards
+    .map((board, index) => {
+      const signature = boardSignature(board);
+      const snapshot: BoardSyncSnapshot = { signature, orderIndex: index };
+      next.set(board.id, snapshot);
+      const prev = previous.get(board.id);
+      if (
+        prev &&
+        prev.signature === snapshot.signature &&
+        prev.orderIndex === snapshot.orderIndex
+      ) {
+        return null;
+      }
+      return {
+        id: board.id,
+        project_id: project.id,
+        user_id: userId,
+        board_name: board.name,
+        order_index: index,
+        updated_at: project.updatedAt,
+        board_data: board,
+      };
+    })
+    .filter((item) => item !== null);
 
-    const { error: insertBoardsError } = await supabase
+  if (changedPayloads.length > 0) {
+    const { error: upsertBoardsError } = await supabase
       .from(BOARDS_TABLE)
-      .insert(boardPayloads);
-    if (insertBoardsError) {
+      .upsert(changedPayloads, { onConflict: "id" });
+    if (upsertBoardsError) {
       return false;
     }
   }
+
+  const removedIds = Array.from(previous.keys()).filter((id) => !next.has(id));
+  if (removedIds.length > 0) {
+    const { error: removeBoardsError } = await supabase
+      .from(BOARDS_TABLE)
+      .delete()
+      .eq("project_id", project.id)
+      .eq("user_id", userId)
+      .in("id", removedIds);
+    if (removeBoardsError) {
+      return false;
+    }
+  }
+
+  boardCacheByProject.set(project.id, next);
 
   return true;
 };
@@ -206,6 +298,7 @@ export const deleteProjectCloud = async (id: string): Promise<boolean> => {
     .delete()
     .eq("project_id", id)
     .eq("user_id", userId);
+  boardCacheByProject.delete(id);
   return !boardsError;
 };
 

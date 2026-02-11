@@ -9,7 +9,7 @@ export const useAutosave = () => {
   const project = useProjectStore((state) => state.project);
   const plan = useProjectStore((state) => state.plan);
   const debouncedSave = useMemo(
-    () => debounce(() => persistActiveProject(), 500),
+    () => debounce(() => persistActiveProject(), 1500),
     []
   );
 
@@ -20,8 +20,6 @@ export const useAutosave = () => {
     if (!can(plan, "project.save")) {
       return;
     }
-    // Persist immediately so no recent edit is lost on forced sign-out/session switch.
-    persistActiveProject();
     debouncedSave();
   }, [project, plan, debouncedSave]);
 
@@ -34,7 +32,7 @@ export const useAutosave = () => {
     }
     const timer = window.setInterval(() => {
       persistActiveProject();
-    }, 2500);
+    }, 10000);
     return () => window.clearInterval(timer);
   }, [project, plan]);
 
