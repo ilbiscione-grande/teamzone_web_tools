@@ -41,7 +41,8 @@ export default function AuthListener() {
       if (!accessToken) {
         return null;
       }
-      return `${userId}:${accessToken.slice(0, 24)}`;
+      // Token prefix is often identical across sessions; use suffix for uniqueness.
+      return `${userId}:${accessToken.slice(-48)}`;
     };
 
     const claimSingleSession = async (
@@ -149,7 +150,8 @@ export default function AuthListener() {
       if (error || !data) {
         return;
       }
-      const plan = data?.plan === "PAID" ? "PAID" : "AUTH";
+      const normalized = String(data?.plan ?? "").trim().toUpperCase();
+      const plan = normalized === "PAID" ? "PAID" : "AUTH";
       setPlanFromProfile(plan);
       persistPlanCheck();
     };

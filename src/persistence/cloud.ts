@@ -55,7 +55,7 @@ const getCurrentSessionKey = async (userId: string) => {
   if (!token) {
     return null;
   }
-  const sessionKey = `${userId}:${token.slice(0, 24)}`;
+  const sessionKey = `${userId}:${token.slice(-48)}`;
   if (typeof window !== "undefined") {
     window.localStorage.setItem(SESSION_KEY_STORAGE, sessionKey);
   }
