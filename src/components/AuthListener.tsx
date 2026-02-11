@@ -19,6 +19,7 @@ const getDisplayName = (email: string | null, fullName?: string | null) => {
 };
 const SESSION_KEY_STORAGE = "tacticsboard:sessionKey";
 const SESSION_NONCE_STORAGE = "tacticsboard:sessionNonce";
+const SESSION_DEVICE_ID_STORAGE = "tacticsboard:deviceId";
 const ACTIVE_SESSION_WINDOW_MS = 5 * 60 * 1000;
 
 export default function AuthListener() {
@@ -38,7 +39,33 @@ export default function AuthListener() {
     let sessionGuardTimer: ReturnType<typeof setInterval> | null = null;
     let sessionGuardCleanup: Array<() => void> = [];
 
+    const getDeviceId = () => {
+      const existingDeviceId =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem(SESSION_DEVICE_ID_STORAGE)
+          : null;
+      const deviceId =
+        existingDeviceId && existingDeviceId.length > 0
+          ? existingDeviceId
+          : (typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(SESSION_DEVICE_ID_STORAGE, deviceId);
+      }
+      return deviceId;
+    };
+
+    const parseDeviceIdFromSessionKey = (sessionKey: string | null | undefined) => {
+      if (!sessionKey) {
+        return null;
+      }
+      const parts = sessionKey.split(":");
+      return parts.length >= 3 ? parts[1] : null;
+    };
+
     const buildSessionKey = (userId: string, accessToken?: string | null) => {
+      const deviceId = getDeviceId();
       const existingNonce =
         typeof window !== "undefined"
           ? window.localStorage.getItem(SESSION_NONCE_STORAGE)
@@ -52,8 +79,8 @@ export default function AuthListener() {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(SESSION_NONCE_STORAGE, nonce);
       }
-      // Device/session-unique key so concurrent logins cannot collide.
-      return `${userId}:${nonce}`;
+      // Device-stable key prevents false conflict on reload/login on same device.
+      return `${userId}:${deviceId}:${nonce}`;
     };
 
     const claimSingleSession = async (
@@ -70,6 +97,22 @@ export default function AuthListener() {
         .eq("user_id", userId)
         .maybeSingle();
       if (existing?.session_key && existing.session_key !== sessionKey) {
+        const currentDeviceId = parseDeviceIdFromSessionKey(sessionKey);
+        const existingDeviceId = parseDeviceIdFromSessionKey(existing.session_key);
+        if (currentDeviceId && existingDeviceId && currentDeviceId === existingDeviceId) {
+          await sb.from("user_sessions").upsert(
+            {
+              user_id: userId,
+              session_key: sessionKey,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id" }
+          );
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(SESSION_KEY_STORAGE, sessionKey);
+          }
+          return true;
+        }
         const activeAt = Date.parse(existing.updated_at ?? "");
         const activeRecently =
           Number.isFinite(activeAt) &&
@@ -161,11 +204,21 @@ export default function AuthListener() {
       if (typeof window !== "undefined" && !window.navigator.onLine) {
         return;
       }
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("plan")
-        .eq("id", userId)
-        .single();
+      let data: { plan?: string } | null = null;
+      let error: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const result = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", userId)
+          .single();
+        data = result.data as { plan?: string } | null;
+        error = result.error;
+        if (!error && data) {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)));
+      }
       if (error || !data) {
         return;
       }
@@ -240,8 +293,17 @@ export default function AuthListener() {
       }
     );
 
+    const planRefreshTimer = window.setInterval(() => {
+      const user = useProjectStore.getState().authUser;
+      if (!user?.id) {
+        return;
+      }
+      void syncProfilePlan(user.id);
+    }, 30_000);
+
     return () => {
       stopSingleSessionGuard();
+      window.clearInterval(planRefreshTimer);
       subscription.subscription.unsubscribe();
     };
   }, [setAuthUser, clearAuthUser]);

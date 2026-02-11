@@ -11,6 +11,7 @@ const TABLE = "projects";
 const BOARDS_TABLE = "project_boards";
 const SESSION_KEY_STORAGE = "tacticsboard:sessionKey";
 const SESSION_NONCE_STORAGE = "tacticsboard:sessionNonce";
+const SESSION_DEVICE_ID_STORAGE = "tacticsboard:deviceId";
 const saveQueueByProject = new Map<string, Promise<boolean>>();
 const pendingByProject = new Map<string, Project>();
 type BoardSyncSnapshot = {
@@ -48,6 +49,16 @@ const getCurrentSessionKey = async (userId: string) => {
       return cached;
     }
   }
+  const existingDeviceId =
+    typeof window !== "undefined"
+      ? window.localStorage.getItem(SESSION_DEVICE_ID_STORAGE)
+      : null;
+  const deviceId =
+    existingDeviceId && existingDeviceId.length > 0
+      ? existingDeviceId
+      : (typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
   const existingNonce =
     typeof window !== "undefined"
       ? window.localStorage.getItem(SESSION_NONCE_STORAGE)
@@ -58,8 +69,9 @@ const getCurrentSessionKey = async (userId: string) => {
       : (typeof crypto !== "undefined" && "randomUUID" in crypto
           ? crypto.randomUUID()
           : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
-  const sessionKey = `${userId}:${nonce}`;
+  const sessionKey = `${userId}:${deviceId}:${nonce}`;
   if (typeof window !== "undefined") {
+    window.localStorage.setItem(SESSION_DEVICE_ID_STORAGE, deviceId);
     window.localStorage.setItem(SESSION_NONCE_STORAGE, nonce);
     window.localStorage.setItem(SESSION_KEY_STORAGE, sessionKey);
   }
