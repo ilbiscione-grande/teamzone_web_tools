@@ -23,6 +23,7 @@ import {
   saveProjectCloud,
   syncProjects,
 } from "@/persistence/cloud";
+import { clearOfflineDirtyProject } from "@/persistence/offlineDirty";
 
 type CoreActionSlice = Pick<
   ProjectActions,
@@ -380,6 +381,7 @@ export const createCoreActions: StateCreator<
       saveProjectIndex(updateIndex(snapshot.index, active), userId);
       if (
         snapshot.authUser &&
+        snapshot.authUser.id &&
         snapshot.plan === "PAID" &&
         (typeof window === "undefined" || window.navigator.onLine)
       ) {
@@ -388,6 +390,9 @@ export const createCoreActions: StateCreator<
           updatedAt: new Date().toISOString(),
         });
         const ok = await saveProjectCloud(active);
+        if (ok) {
+          clearOfflineDirtyProject(snapshot.authUser.id, active.id);
+        }
         get().setSyncStatus({
           state: ok ? "saved" : "error",
           message: ok ? undefined : "Cloud save failed.",

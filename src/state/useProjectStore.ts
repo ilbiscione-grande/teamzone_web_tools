@@ -3,6 +3,10 @@ import { immer } from "zustand/middleware/immer";
 import type { ProjectSummary, Project, Plan, AuthUser } from "@/models";
 import { saveProject, saveProjectIndex } from "@/persistence/storage";
 import { saveProjectCloud, touchSessionActivityCloud } from "@/persistence/cloud";
+import {
+  clearOfflineDirtyProject,
+  markOfflineDirtyProject,
+} from "@/persistence/offlineDirty";
 import { createProjectActions, type ProjectActions } from "@/state/projectActions";
 import { updateIndex } from "@/state/projectHelpers";
 import { can } from "@/utils/plan";
@@ -94,7 +98,12 @@ export const persistActiveProject = () => {
     void touchSessionActivityCloud();
   }
   if (authUser && plan === "PAID") {
+    const userId = authUser.id;
+    if (!userId) {
+      return;
+    }
     if (typeof window !== "undefined" && !window.navigator.onLine) {
+      markOfflineDirtyProject(userId, project.id);
       useProjectStore.getState().setSyncStatus({
         state: "offline",
         message: "Offline. Will sync when online.",
@@ -107,6 +116,9 @@ export const persistActiveProject = () => {
       updatedAt: new Date().toISOString(),
     });
     saveProjectCloud(project).then((ok) => {
+      if (ok) {
+        clearOfflineDirtyProject(userId, project.id);
+      }
       useProjectStore.getState().setSyncStatus({
         state: ok ? "saved" : "error",
         message: ok ? undefined : "Cloud save failed.",

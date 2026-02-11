@@ -1527,9 +1527,13 @@ export default function BoardCanvas({
               const selectedItem = objects.find(
                 (item) => item.id === selection[0]
               );
+              const selectedItems = objects.filter((item) =>
+                selection.includes(item.id)
+              );
               if (!selectedItem) {
                 return null;
               }
+              const shouldLock = !selectedItems.every((item) => item.locked);
               const anchor = getDeleteAnchor(selectedItem);
               return (
                 <Group
@@ -1537,6 +1541,68 @@ export default function BoardCanvas({
                   x={anchor.x + 1.4}
                   y={anchor.y - 1.4}
                 >
+                  <Group x={-2.9} y={0}>
+                    <Rect
+                      x={-1.3}
+                      y={-1.3}
+                      width={2.6}
+                      height={2.6}
+                      cornerRadius={0.5}
+                      fill="#0f1b1a"
+                      opacity={0.85}
+                      stroke="#ffffff"
+                      strokeWidth={0.12}
+                    />
+                    <Rect
+                      x={-0.55}
+                      y={-0.1}
+                      width={1.1}
+                      height={0.9}
+                      stroke="#ffffff"
+                      strokeWidth={0.12}
+                      cornerRadius={0.18}
+                    />
+                    <Line
+                      points={[-0.35, -0.1, -0.35, -0.45, 0.35, -0.45, 0.35, -0.1]}
+                      stroke="#ffffff"
+                      strokeWidth={0.12}
+                      lineCap="round"
+                      lineJoin="round"
+                    />
+                    {!shouldLock && (
+                      <Line
+                        points={[0.55, 0.55, -0.55, -0.55]}
+                        stroke="#ffffff"
+                        strokeWidth={0.12}
+                      />
+                    )}
+                    <Rect
+                      x={-1.3}
+                      y={-1.3}
+                      width={2.6}
+                      height={2.6}
+                      cornerRadius={0.5}
+                      opacity={0}
+                      onClick={(event) => {
+                        event.cancelBubble = true;
+                        pushHistory(clone(objects));
+                        selectedItems.forEach((item) => {
+                          updateObject(board.id, frameIndex, item.id, {
+                            locked: shouldLock,
+                          });
+                        });
+                      }}
+                      onTap={(event) => {
+                        event.cancelBubble = true;
+                        pushHistory(clone(objects));
+                        selectedItems.forEach((item) => {
+                          updateObject(board.id, frameIndex, item.id, {
+                            locked: shouldLock,
+                          });
+                        });
+                      }}
+                    />
+                  </Group>
                   <Rect
                     x={-1.3}
                     y={-1.3}

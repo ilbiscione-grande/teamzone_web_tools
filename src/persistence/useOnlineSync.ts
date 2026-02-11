@@ -12,6 +12,11 @@ import { loadProject, loadProjectIndex, saveProject } from "@/persistence/storag
 import { serializeProject } from "@/persistence/serialize";
 import type { Project } from "@/models";
 import { requestSyncConflictResolution } from "@/persistence/syncConflictBridge";
+import {
+  clearAllOfflineDirtyProjects,
+  clearOfflineDirtyProject,
+  getOfflineDirtyProjectIds,
+} from "@/persistence/offlineDirty";
 
 const sameProjectContent = (a: Project, b: Project) =>
   serializeProject(a) === serializeProject(b);
@@ -44,20 +49,32 @@ export const useOnlineSync = () => {
       if (!authUser) {
         return true;
       }
-      const localIndex = loadProjectIndex(authUser.id);
+      const userId = authUser.id;
+      if (!userId) {
+        return true;
+      }
+      const dirtyIds = new Set(getOfflineDirtyProjectIds(userId));
+      if (dirtyIds.size === 0) {
+        return true;
+      }
+      const localIndex = loadProjectIndex(userId);
       const cloudIndex = await fetchProjectIndexCloud();
       const cloudIds = new Set(cloudIndex.map((item) => item.id));
 
       for (const localSummary of localIndex) {
+        if (!dirtyIds.has(localSummary.id)) {
+          continue;
+        }
         if (!cloudIds.has(localSummary.id)) {
           continue;
         }
-        const local = loadProject(localSummary.id, authUser.id);
+        const local = loadProject(localSummary.id, userId);
         const cloud = await fetchProjectCloud(localSummary.id);
         if (!local || !cloud) {
           continue;
         }
         if (sameProjectContent(local, cloud)) {
+          clearOfflineDirtyProject(userId, localSummary.id);
           continue;
         }
 
@@ -75,6 +92,7 @@ export const useOnlineSync = () => {
             });
             return false;
           }
+          clearOfflineDirtyProject(userId, localSummary.id);
           continue;
         }
 
@@ -89,7 +107,8 @@ export const useOnlineSync = () => {
         }
 
         // Default: keep cloud; replace local cache for this project.
-        saveProject(cloud, authUser.id);
+        saveProject(cloud, userId);
+        clearOfflineDirtyProject(userId, localSummary.id);
       }
 
       return true;
@@ -114,6 +133,10 @@ export const useOnlineSync = () => {
         .then((index) => {
           if (!index) {
             return;
+          }
+          const userId = authUser.id;
+          if (userId) {
+            clearAllOfflineDirtyProjects(userId);
           }
           hydrateIndex();
           setSyncStatus({
