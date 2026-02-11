@@ -38,9 +38,6 @@ export default function EditorLayout() {
   const draggingRef = useRef(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [showMaximizedNotes, setShowMaximizedNotes] = useState(false);
-  const [maximizedNotesScope, setMaximizedNotesScope] = useState<
-    "session" | "board"
-  >("board");
 
   useEffect(() => {
     if (project?.settings) {
@@ -96,8 +93,6 @@ export default function EditorLayout() {
   }
 
   if (isMaximized && board) {
-    const scopedNotes =
-      maximizedNotesScope === "session" ? project.sessionNotes : board.notes;
     return (
       <div className="fixed inset-0 z-50 flex h-screen flex-col bg-[var(--panel)]">
         <div
@@ -119,46 +114,42 @@ export default function EditorLayout() {
             </div>
           )}
           {showMaximizedNotes && (
-            <div className="min-h-0 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-3">
-              <div className="mb-3 inline-flex rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-1">
-                <button
-                  className={`rounded-full px-3 py-1 text-xs ${
-                    maximizedNotesScope === "session"
-                      ? "bg-[var(--accent-1)] text-[var(--ink-0)]"
-                      : "text-[var(--ink-1)]"
-                  }`}
-                  onClick={() => setMaximizedNotesScope("session")}
-                >
-                  Session
-                </button>
-                <button
-                  className={`rounded-full px-3 py-1 text-xs ${
-                    maximizedNotesScope === "board"
-                      ? "bg-[var(--accent-1)] text-[var(--ink-0)]"
-                      : "text-[var(--ink-1)]"
-                  }`}
-                  onClick={() => setMaximizedNotesScope("board")}
-                >
-                  Board
-                </button>
-              </div>
-              <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-2">
-                <textarea
-                  className="h-36 w-full resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
-                  value={scopedNotes ?? ""}
-                  onChange={(event) => {
-                    if (maximizedNotesScope === "session") {
-                      updateProjectMeta({ sessionNotes: event.target.value });
-                    } else {
-                      updateBoard(board.id, { notes: event.target.value });
+            <div className="min-h-0 overflow-y-auto rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-3">
+              <div className="space-y-4">
+                <section className="rounded-2xl border border-[var(--line)] p-3">
+                  <p className="mb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                    Session notes
+                  </p>
+                  <textarea
+                    className="h-36 w-full resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
+                    value={project.sessionNotes ?? ""}
+                    onChange={(event) =>
+                      updateProjectMeta({ sessionNotes: event.target.value })
                     }
-                  }}
-                />
-                <div className="min-h-0 overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3 text-sm text-[var(--ink-0)]">
-                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                    {scopedNotes ?? ""}
-                  </ReactMarkdown>
-                </div>
+                  />
+                  <div className="mt-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3 text-sm text-[var(--ink-0)]">
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                      {project.sessionNotes ?? ""}
+                    </ReactMarkdown>
+                  </div>
+                </section>
+                <section className="rounded-2xl border border-[var(--line)] p-3">
+                  <p className="mb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                    Board notes
+                  </p>
+                  <textarea
+                    className="h-36 w-full resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
+                    value={board.notes ?? ""}
+                    onChange={(event) =>
+                      updateBoard(board.id, { notes: event.target.value })
+                    }
+                  />
+                  <div className="mt-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3 text-sm text-[var(--ink-0)]">
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                      {board.notes ?? ""}
+                    </ReactMarkdown>
+                  </div>
+                </section>
               </div>
             </div>
           )}
