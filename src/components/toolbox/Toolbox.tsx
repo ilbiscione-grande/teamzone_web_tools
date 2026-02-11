@@ -297,58 +297,6 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
     "Cross",
     "Dribble",
   ];
-  const buildNotesFromFields = (
-    template: "TRAINING" | "MATCH" | "EDUCATION" | undefined,
-    fields: NotesFields | undefined
-  ) => {
-    if (!template || !fields) {
-      return "";
-    }
-    const sections: string[] = [];
-    const add = (label: string, value?: string) => {
-      const trimmed = value?.trim();
-      if (!trimmed) {
-        return;
-      }
-      sections.push(`## ${label}\n${trimmed}`);
-    };
-    if (template === "TRAINING") {
-      add("Main Focus", fields.training?.mainFocus);
-      add("Part goals", fields.training?.partGoals);
-      add("Organisation", fields.training?.organisation);
-      add("Key behaviours", fields.training?.keyBehaviours);
-      add("Usual errors", fields.training?.usualErrors);
-      add("Coach instructions", fields.training?.coachInstructions);
-    }
-    if (template === "MATCH") {
-      add("Opposition", fields.match?.opposition);
-      add("Our game - with ball", fields.match?.ourGameWithBall);
-      add("Our game - without ball", fields.match?.ourGameWithoutBall);
-      add("Counters", fields.match?.counters);
-      add("Key Roles", fields.match?.keyRoles);
-      add("Important reminders", fields.match?.importantReminders);
-      add("Match message", fields.match?.matchMessage);
-    }
-    if (template === "EDUCATION") {
-      add("Tema", fields.education?.tema);
-      add("Grundprincip", fields.education?.grundprincip);
-      add("What to see", fields.education?.whatToSee);
-      add("What to do", fields.education?.whatToDo);
-      add("Usual errors", fields.education?.usualErrors);
-      add("Match connection", fields.education?.matchConnection);
-      add("Reflections", fields.education?.reflections);
-    }
-    if (sections.length === 0) {
-      return "";
-    }
-    const title =
-      template === "TRAINING"
-        ? "TRANING"
-        : template === "MATCH"
-        ? "MATCH"
-        : "UTBILDNING";
-    return [`# ${title}`, ...sections].join("\n\n");
-  };
   const updateScopedNotes = (nextNotes: string) => {
     if (notesScope === "project") {
       if (!project) {
@@ -363,14 +311,12 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
     updateBoard(board.id, { notes: nextNotes });
   };
   const updateScopedFields = (nextFields: NotesFields) => {
-    const nextNotes = buildNotesFromFields(notesTemplate, nextFields);
     if (notesScope === "project") {
       if (!project) {
         return;
       }
       updateProjectMeta({
         sessionNotesFields: nextFields,
-        sessionNotes: nextNotes,
       });
       return;
     }
@@ -379,8 +325,34 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
     }
     updateBoard(board.id, {
       notesFields: nextFields,
-      notes: nextNotes,
     });
+  };
+  const updateScopedTrainingField = (
+    key: keyof NonNullable<NotesFields["training"]>,
+    value: string
+  ) => {
+    const nextFields: NotesFields = {
+      ...(scopedFields ?? {}),
+      training: {
+        ...(scopedFields?.training ?? {}),
+        [key]: value,
+      },
+    };
+    updateScopedFields(nextFields);
+  };
+  const toggleScopedEquipment = (item: string) => {
+    const current = scopedFields?.training?.equipment ?? [];
+    const next = current.includes(item)
+      ? current.filter((entry) => entry !== item)
+      : [...current, item];
+    const nextFields: NotesFields = {
+      ...(scopedFields ?? {}),
+      training: {
+        ...(scopedFields?.training ?? {}),
+        equipment: next,
+      },
+    };
+    updateScopedFields(nextFields);
   };
   const notesPresets = {
     training: {
@@ -396,6 +368,13 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
         "Play through first press",
         "Support angles quickly",
       ],
+      dateTime: [
+        "Mon 18:00-19:30",
+        "Tue 17:30-19:00",
+        "Thu 18:00-19:30",
+        "Sat 10:00-11:30",
+      ],
+      equipment: ["Cones", "Bibs", "Balls", "Mini goals", "Hurdles", "Poles"],
       organisation: [
         "7v7",
         "9v9",
@@ -1031,21 +1010,6 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
               </div>
             </div>
           </div>
-          <p className="mt-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-            {project?.settings.mode === "training"
-              ? "Training mode"
-              : project?.settings.mode === "education"
-              ? "Education mode"
-              : "Match mode"}
-          </p>
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-              Active notes scope
-            </span>
-            <span className="rounded-full border border-[var(--accent-2)] bg-[var(--panel-2)] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent-2)]">
-              {notesScope === "project" ? "Session notes" : "Board notes"}
-            </span>
-          </div>
           <div className="mt-3 min-h-0 flex-1 pr-1">
             <div className="rounded-2xl border border-[var(--line)] p-3">
               <p className="mb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
@@ -1056,26 +1020,31 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                 {[
                   ["mainFocus", "Main Focus"],
                   ["partGoals", "Part goals"],
-                  ["organisation", "Organisation"],
-                  ["keyBehaviours", "Key behaviours"],
-                  ["usualErrors", "Usual errors"],
-                  ["coachInstructions", "Coach instructions"],
+                  ...(notesScope === "project"
+                    ? [
+                        ["dateTime", "Date/time"],
+                      ]
+                    : [
+                        ["organisation", "Organisation"],
+                        ["keyBehaviours", "Key behaviours"],
+                        ["coachInstructions", "Coach instructions"],
+                      ]),
                 ].map(([key, label]) => (
                   <label key={key} className="space-y-1">
                     <span>{label}</span>
                     <input
                       className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
-                      value={scopedFields?.training?.[key as keyof NonNullable<NotesFields>["training"]] ?? ""}
+                      value={
+                        scopedFields?.training?.[
+                          key as keyof NonNullable<NotesFields>["training"]
+                        ] ?? ""
+                      }
                       list={`notes-training-${key}`}
                       onChange={(event) => {
-                        const nextFields = {
-                          ...(scopedFields ?? {}),
-                          training: {
-                            ...(scopedFields?.training ?? {}),
-                            [key]: event.target.value,
-                          },
-                        };
-                        updateScopedFields(nextFields);
+                        updateScopedTrainingField(
+                          key as keyof NonNullable<NotesFields["training"]>,
+                          event.target.value
+                        );
                       }}
                     />
                     <datalist id={`notes-training-${key}`}>
@@ -1087,18 +1056,52 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                     </datalist>
                   </label>
                 ))}
+                {(notesScope === "project" || notesScope === "board") && (
+                  <div className="space-y-1">
+                    <span>Equipment</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {notesPresets.training.equipment.map((item) => {
+                        const checked =
+                          scopedFields?.training?.equipment?.includes(item) ??
+                          false;
+                        return (
+                          <label
+                            key={item}
+                            className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-2 py-1 text-xs"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleScopedEquipment(item)}
+                            />
+                            <span>{item}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
               )}
               {notesTemplate === "MATCH" && (
                 <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
                 {[
-                  ["opposition", "Opposition"],
-                  ["ourGameWithBall", "Our game - with ball"],
-                  ["ourGameWithoutBall", "Our game - without ball"],
-                  ["counters", "Counters"],
-                  ["keyRoles", "Key Roles"],
-                  ["importantReminders", "Important reminders"],
-                  ["matchMessage", "Match message"],
+                  ...(notesScope === "project"
+                    ? [
+                        ["opposition", "Opposition"],
+                        ["ourGameWithBall", "Our game - with ball"],
+                        ["ourGameWithoutBall", "Our game - without ball"],
+                        ["counters", "Counters"],
+                        ["keyRoles", "Key Roles"],
+                        ["importantReminders", "Important reminders"],
+                        ["matchMessage", "Match message"],
+                      ]
+                    : [
+                        ["ourGameWithBall", "Our game - with ball"],
+                        ["ourGameWithoutBall", "Our game - without ball"],
+                        ["counters", "Counters"],
+                        ["keyRoles", "Key roles"],
+                      ]),
                 ].map(([key, label]) => (
                   <label key={key} className="space-y-1">
                     <span>{label}</span>
@@ -1131,13 +1134,20 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
               {notesTemplate === "EDUCATION" && (
                 <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
                 {[
-                  ["tema", "Tema"],
-                  ["grundprincip", "Grundprincip"],
-                  ["whatToSee", "What to see"],
-                  ["whatToDo", "What to do"],
-                  ["usualErrors", "Usual errors"],
-                  ["matchConnection", "Match connection"],
-                  ["reflections", "Reflections"],
+                  ...(notesScope === "project"
+                    ? [
+                        ["tema", "Tema"],
+                        ["grundprincip", "Grundprincip"],
+                        ["whatToSee", "What to see"],
+                        ["matchConnection", "Match connection"],
+                        ["reflections", "Reflections"],
+                      ]
+                    : [
+                        ["tema", "Tema"],
+                        ["whatToSee", "What to see"],
+                        ["whatToDo", "What to do"],
+                        ["usualErrors", "Usual errors"],
+                      ]),
                 ].map(([key, label]) => (
                   <label key={key} className="space-y-1">
                     <span>{label}</span>

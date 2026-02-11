@@ -37,6 +37,8 @@ export type Board = {
     training?: {
       mainFocus?: string;
       partGoals?: string;
+      dateTime?: string;
+      equipment?: string[];
       organisation?: string;
       keyBehaviours?: string;
       usualErrors?: string;

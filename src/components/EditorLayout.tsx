@@ -11,6 +11,9 @@ import PropertiesPanel from "@/components/panels/PropertiesPanel";
 import FramesBar from "@/components/frames/FramesBar";
 import TopBar from "@/components/TopBar";
 import AdBanner from "@/components/AdBanner";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
+import remarkGfm from "remark-gfm";
 
 export default function EditorLayout() {
   const project = useProjectStore((state) => state.project);
@@ -26,12 +29,18 @@ export default function EditorLayout() {
   const setAttachBallToPlayer = useEditorStore(
     (state) => state.setAttachBallToPlayer
   );
+  const updateProjectMeta = useProjectStore((state) => state.updateProjectMeta);
+  const updateBoard = useProjectStore((state) => state.updateBoard);
   const [stage, setStage] = useState<Konva.Stage | null>(null);
   const [propertiesFloating, setPropertiesFloating] = useState(false);
   const [propertiesPos, setPropertiesPos] = useState({ x: 24, y: 140 });
   const dragOffsetRef = useRef<{ x: number; y: number } | null>(null);
   const draggingRef = useRef(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [showMaximizedNotes, setShowMaximizedNotes] = useState(false);
+  const [maximizedNotesScope, setMaximizedNotesScope] = useState<
+    "session" | "board"
+  >("board");
 
   useEffect(() => {
     if (project?.settings) {
@@ -87,21 +96,100 @@ export default function EditorLayout() {
   }
 
   if (isMaximized && board) {
+    const scopedNotes =
+      maximizedNotesScope === "session" ? project.sessionNotes : board.notes;
     return (
       <div className="fixed inset-0 z-50 flex h-screen flex-col bg-[var(--panel)]">
-        <div className="relative flex-1 overflow-hidden">
-          <div className="pointer-events-none absolute left-4 top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
-            {modeText}
+        <div
+          className={`relative flex-1 overflow-hidden ${
+            showMaximizedNotes ? "grid grid-cols-[minmax(0,1fr)_360px] gap-3 p-3" : ""
+          }`}
+        >
+          {showMaximizedNotes && (
+            <div className="relative min-h-0 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)]">
+              <BoardCanvas
+                board={board}
+                onStageReady={(nextStage) => {
+                  setStage(nextStage);
+                  setStageRef(nextStage);
+                }}
+                isMaximized={isMaximized}
+                onToggleMaximize={() => setIsMaximized(false)}
+              />
+            </div>
+          )}
+          {showMaximizedNotes && (
+            <div className="min-h-0 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-3">
+              <div className="mb-3 inline-flex rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-1">
+                <button
+                  className={`rounded-full px-3 py-1 text-xs ${
+                    maximizedNotesScope === "session"
+                      ? "bg-[var(--accent-1)] text-[var(--ink-0)]"
+                      : "text-[var(--ink-1)]"
+                  }`}
+                  onClick={() => setMaximizedNotesScope("session")}
+                >
+                  Session
+                </button>
+                <button
+                  className={`rounded-full px-3 py-1 text-xs ${
+                    maximizedNotesScope === "board"
+                      ? "bg-[var(--accent-1)] text-[var(--ink-0)]"
+                      : "text-[var(--ink-1)]"
+                  }`}
+                  onClick={() => setMaximizedNotesScope("board")}
+                >
+                  Board
+                </button>
+              </div>
+              <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-2">
+                <textarea
+                  className="h-36 w-full resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
+                  value={scopedNotes ?? ""}
+                  onChange={(event) => {
+                    if (maximizedNotesScope === "session") {
+                      updateProjectMeta({ sessionNotes: event.target.value });
+                    } else {
+                      updateBoard(board.id, { notes: event.target.value });
+                    }
+                  }}
+                />
+                <div className="min-h-0 overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3 text-sm text-[var(--ink-0)]">
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                    {scopedNotes ?? ""}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          )}
+          {!showMaximizedNotes && (
+            <>
+              <div className="pointer-events-none absolute left-4 top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
+                {modeText}
+              </div>
+              <BoardCanvas
+                board={board}
+                onStageReady={(nextStage) => {
+                  setStage(nextStage);
+                  setStageRef(nextStage);
+                }}
+                isMaximized={isMaximized}
+                onToggleMaximize={() => setIsMaximized(false)}
+              />
+            </>
+          )}
+          <div className="absolute right-4 top-4 z-30 flex gap-2">
+            <button
+              className={`rounded-full border px-3 py-1 text-xs ${
+                showMaximizedNotes
+                  ? "border-[var(--accent-2)] bg-[var(--panel-2)] text-[var(--accent-2)]"
+                  : "border-[var(--line)] bg-[var(--panel-2)]/70 text-[var(--ink-1)]"
+              }`}
+              onClick={() => setShowMaximizedNotes((prev) => !prev)}
+            >
+              {showMaximizedNotes ? "Hide notes" : "Show notes"}
+            </button>
           </div>
-          <BoardCanvas
-            board={board}
-            onStageReady={(nextStage) => {
-              setStage(nextStage);
-              setStageRef(nextStage);
-            }}
-            isMaximized={isMaximized}
-            onToggleMaximize={() => setIsMaximized(false)}
-          />
         </div>
         {board.mode === "DYNAMIC" && (
           <div className="px-4 pb-4">
