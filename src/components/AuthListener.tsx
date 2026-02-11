@@ -18,6 +18,7 @@ const getDisplayName = (email: string | null, fullName?: string | null) => {
   return email ?? "Coach";
 };
 const SESSION_KEY_STORAGE = "tacticsboard:sessionKey";
+const SESSION_NONCE_STORAGE = "tacticsboard:sessionNonce";
 const ACTIVE_SESSION_WINDOW_MS = 5 * 60 * 1000;
 
 export default function AuthListener() {
@@ -38,11 +39,21 @@ export default function AuthListener() {
     let sessionGuardCleanup: Array<() => void> = [];
 
     const buildSessionKey = (userId: string, accessToken?: string | null) => {
-      if (!accessToken) {
-        return null;
+      const existingNonce =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem(SESSION_NONCE_STORAGE)
+          : null;
+      const nonce =
+        existingNonce && existingNonce.length > 0
+          ? existingNonce
+          : (typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(SESSION_NONCE_STORAGE, nonce);
       }
-      // Token prefix is often identical across sessions; use suffix for uniqueness.
-      return `${userId}:${accessToken.slice(-48)}`;
+      // Device/session-unique key so concurrent logins cannot collide.
+      return `${userId}:${nonce}`;
     };
 
     const claimSingleSession = async (
@@ -71,6 +82,11 @@ export default function AuthListener() {
             await sb.auth.signOut();
             return false;
           }
+          try {
+            await sb.auth.signOut({ scope: "others" });
+          } catch {
+            // Continue with session claim even if remote revoke fails.
+          }
         }
       }
       await sb.from("user_sessions").upsert(
@@ -96,7 +112,10 @@ export default function AuthListener() {
       sessionGuardCleanup = [];
     };
 
-    const startSingleSessionGuard = (userId: string, accessToken?: string | null) => {
+    const startSingleSessionGuard = (
+      userId: string,
+      accessToken?: string | null
+    ) => {
       const currentKey = buildSessionKey(userId, accessToken);
       if (!currentKey) {
         return;
@@ -119,7 +138,7 @@ export default function AuthListener() {
       // Low-frequency heartbeat to reduce read load.
       sessionGuardTimer = setInterval(() => {
         void checkSession();
-      }, 45000);
+      }, 10000);
 
       const onFocus = () => void checkSession();
       const onVisible = () => {
@@ -182,6 +201,7 @@ export default function AuthListener() {
         stopSingleSessionGuard();
         if (typeof window !== "undefined") {
           window.localStorage.removeItem(SESSION_KEY_STORAGE);
+          window.localStorage.removeItem(SESSION_NONCE_STORAGE);
         }
         clearAuthUser();
       }
@@ -213,6 +233,7 @@ export default function AuthListener() {
           stopSingleSessionGuard();
           if (typeof window !== "undefined") {
             window.localStorage.removeItem(SESSION_KEY_STORAGE);
+            window.localStorage.removeItem(SESSION_NONCE_STORAGE);
           }
           clearAuthUser();
         }

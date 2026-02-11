@@ -366,7 +366,7 @@ export const createCoreActions: StateCreator<
       state.activeProjectId = project.id;
     });
   },
-  closeProject: () => {
+  closeProject: async () => {
     const snapshot = get();
     const active = snapshot.project;
     if (
@@ -378,8 +378,21 @@ export const createCoreActions: StateCreator<
       const userId = snapshot.authUser?.id ?? null;
       saveProject(active, userId);
       saveProjectIndex(updateIndex(snapshot.index, active), userId);
-      if (snapshot.authUser && snapshot.plan === "PAID") {
-        void saveProjectCloud(active);
+      if (
+        snapshot.authUser &&
+        snapshot.plan === "PAID" &&
+        (typeof window === "undefined" || window.navigator.onLine)
+      ) {
+        get().setSyncStatus({
+          state: "syncing",
+          updatedAt: new Date().toISOString(),
+        });
+        const ok = await saveProjectCloud(active);
+        get().setSyncStatus({
+          state: ok ? "saved" : "error",
+          message: ok ? undefined : "Cloud save failed.",
+          updatedAt: new Date().toISOString(),
+        });
       }
     }
     set((state) => {

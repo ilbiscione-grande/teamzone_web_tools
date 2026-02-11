@@ -10,6 +10,7 @@ import {
 const TABLE = "projects";
 const BOARDS_TABLE = "project_boards";
 const SESSION_KEY_STORAGE = "tacticsboard:sessionKey";
+const SESSION_NONCE_STORAGE = "tacticsboard:sessionNonce";
 const saveQueueByProject = new Map<string, Promise<boolean>>();
 const pendingByProject = new Map<string, Project>();
 type BoardSyncSnapshot = {
@@ -47,16 +48,19 @@ const getCurrentSessionKey = async (userId: string) => {
       return cached;
     }
   }
-  if (!supabase) {
-    return null;
-  }
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) {
-    return null;
-  }
-  const sessionKey = `${userId}:${token.slice(-48)}`;
+  const existingNonce =
+    typeof window !== "undefined"
+      ? window.localStorage.getItem(SESSION_NONCE_STORAGE)
+      : null;
+  const nonce =
+    existingNonce && existingNonce.length > 0
+      ? existingNonce
+      : (typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  const sessionKey = `${userId}:${nonce}`;
   if (typeof window !== "undefined") {
+    window.localStorage.setItem(SESSION_NONCE_STORAGE, nonce);
     window.localStorage.setItem(SESSION_KEY_STORAGE, sessionKey);
   }
   return sessionKey;
@@ -80,6 +84,15 @@ export const touchSessionActivityCloud = async (): Promise<void> => {
   }
   const sessionKey = await getCurrentSessionKey(userId);
   if (!sessionKey) {
+    return;
+  }
+  const { data: existing } = await supabase
+    .from("user_sessions")
+    .select("session_key")
+    .eq("user_id", userId)
+    .maybeSingle();
+  // Never steal session ownership from a newer login on another device.
+  if (existing?.session_key && existing.session_key !== sessionKey) {
     return;
   }
   sessionTouchByUser.set(userId, now);
