@@ -243,6 +243,7 @@ export const createCoreActions: StateCreator<
   openProject: (id) => {
     if (get().authUser && get().plan === "PAID") {
       const localProject = loadProject(id, get().authUser?.id ?? null);
+      const legacyLocalProject = loadProject(id, null);
       const applyOpenedProject = (project: Project) => {
         ensureBoardSquads(project);
         set((state) => {
@@ -256,46 +257,57 @@ export const createCoreActions: StateCreator<
           saveProjectIndex(get().index, get().authUser?.id ?? null);
         }
       };
+      // Open immediately from local cache (user-scoped first, then legacy local key)
+      // so the Open button always responds even if cloud is slow/unavailable.
+      if (localProject) {
+        applyOpenedProject(localProject);
+      } else if (legacyLocalProject) {
+        applyOpenedProject(legacyLocalProject);
+      }
       if (typeof window !== "undefined" && !window.navigator.onLine) {
-        const project = localProject;
+        const project = localProject ?? legacyLocalProject;
         if (!project) {
           return;
         }
-        applyOpenedProject(project);
         return;
       }
       fetchProjectCloud(id).then((project) => {
-        if (!project && !localProject) {
+        if (!project && !localProject && !legacyLocalProject) {
           return;
         }
         let opened: Project | null = null;
-        if (project && localProject) {
+        const bestLocal = localProject ?? legacyLocalProject;
+        if (project && bestLocal) {
           const cloudAt = Date.parse(project.updatedAt || project.createdAt || "");
           const localAt = Date.parse(
-            localProject.updatedAt || localProject.createdAt || ""
+            bestLocal.updatedAt || bestLocal.createdAt || ""
           );
           const localIsNewer =
             Number.isFinite(localAt) &&
             Number.isFinite(cloudAt) &&
             localAt >= cloudAt;
           const localHasMoreBoards =
-            localProject.boards.length > project.boards.length;
+            bestLocal.boards.length > project.boards.length;
           opened =
             localIsNewer || localHasMoreBoards
-              ? localProject
+              ? bestLocal
               : project;
-          if (opened === localProject) {
-            saveProjectCloud(localProject);
+          if (opened === bestLocal) {
+            saveProjectCloud(bestLocal);
           } else {
             saveProject(project, get().authUser?.id ?? null);
           }
         } else {
-          opened = project ?? localProject;
+          opened = project ?? bestLocal;
         }
         if (!opened) {
           return;
         }
-        applyOpenedProject(opened);
+        // Avoid duplicate state updates when we already opened identical local data.
+        const current = get().project;
+        if (!current || current.id !== opened.id || current.updatedAt !== opened.updatedAt) {
+          applyOpenedProject(opened);
+        }
       });
       return;
     }
