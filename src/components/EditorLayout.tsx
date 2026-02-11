@@ -273,68 +273,49 @@ export default function EditorLayout() {
                     Session notes
                   </p>
                   <div className="grid gap-2 text-xs text-[var(--ink-1)]">
-                    <label className="space-y-1">
-                      <span>Main focus</span>
-                      <input
-                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
-                        value={sessionTraining.mainFocus ?? ""}
-                        onChange={(event) =>
-                          updateSessionTrainingField("mainFocus", event.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span>Date/time</span>
-                      <input
-                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
-                        value={sessionTraining.dateTime ?? ""}
-                        onChange={(event) =>
-                          updateSessionTrainingField("dateTime", event.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span>Part goals</span>
-                      <input
-                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
-                        value={sessionTraining.partGoals ?? ""}
-                        onChange={(event) =>
-                          updateSessionTrainingField("partGoals", event.target.value)
-                        }
-                      />
-                    </label>
                     <div className="space-y-1">
-                      <span>Equipment</span>
-                      <div className="grid grid-cols-2 gap-2">
-                        {equipmentOptions.map((item) => {
-                          const checked =
-                            sessionTraining.equipment?.includes(item) ?? false;
-                          return (
-                            <label
-                              key={`session-eq-${item}`}
-                              className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-2 py-1"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleSessionEquipment(item)}
-                              />
-                              <span>{item}</span>
-                            </label>
-                          );
-                        })}
+                      <span>Main focus</span>
+                      <div className="min-h-8 w-full rounded-lg border border-[var(--line)] px-2 py-2 text-sm text-[var(--ink-0)]">
+                        {sessionTraining.mainFocus || "-"}
                       </div>
                     </div>
-                    <label className="space-y-1">
+                    <div className="space-y-1">
+                      <span>Date/time</span>
+                      <div className="min-h-8 w-full rounded-lg border border-[var(--line)] px-2 py-2 text-sm text-[var(--ink-0)]">
+                        {sessionTraining.dateTime || "-"}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span>Part goals</span>
+                      <div className="min-h-8 w-full rounded-lg border border-[var(--line)] px-2 py-2 text-sm text-[var(--ink-0)]">
+                        {sessionTraining.partGoals || "-"}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span>Equipment</span>
+                      <div className="flex flex-wrap gap-2">
+                        {(sessionTraining.equipment ?? []).length === 0 ? (
+                          <span className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11px] text-[var(--ink-1)]">
+                            -
+                          </span>
+                        ) : (
+                          (sessionTraining.equipment ?? []).map((item) => (
+                            <span
+                              key={`session-eq-${item}`}
+                              className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11px] text-[var(--ink-0)]"
+                            >
+                              {item}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
                       <span>Session notes</span>
-                      <textarea
-                        className="h-28 w-full resize-none rounded-lg border border-[var(--line)] bg-transparent px-2 py-2 text-sm text-[var(--ink-0)]"
-                        value={project.sessionNotes ?? ""}
-                        onChange={(event) =>
-                          updateProjectMeta({ sessionNotes: event.target.value })
-                        }
-                      />
-                    </label>
+                      <div className="min-h-28 w-full whitespace-pre-wrap rounded-lg border border-[var(--line)] px-2 py-2 text-sm text-[var(--ink-0)]">
+                        {project.sessionNotes || "-"}
+                      </div>
+                    </div>
                   </div>
                 </section>
                 <section className="rounded-2xl border border-[var(--line)] p-3">
@@ -342,88 +323,61 @@ export default function EditorLayout() {
                     Board notes
                   </p>
                   <div className="grid gap-2 text-xs text-[var(--ink-1)]">
-                    <label className="space-y-1">
-                      <span>Main focus</span>
-                      <input
-                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
-                        value={boardTraining.mainFocus ?? ""}
-                        onChange={(event) =>
-                          updateBoardTrainingField("mainFocus", event.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span>Part goals</span>
-                      <input
-                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
-                        value={boardTraining.partGoals ?? ""}
-                        onChange={(event) =>
-                          updateBoardTrainingField("partGoals", event.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span>Organisation</span>
-                      <textarea
-                        className="h-20 w-full resize-none rounded-lg border border-[var(--line)] bg-transparent px-2 py-2 text-sm text-[var(--ink-0)]"
-                        value={boardTraining.organisation ?? ""}
-                        onChange={(event) =>
-                          updateBoardTrainingField("organisation", event.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span>Key behaviours</span>
-                      <input
-                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
-                        value={boardTraining.keyBehaviours ?? ""}
-                        onChange={(event) =>
-                          updateBoardTrainingField("keyBehaviours", event.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span>Coach instructions</span>
-                      <input
-                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
-                        value={boardTraining.coachInstructions ?? ""}
-                        onChange={(event) =>
-                          updateBoardTrainingField("coachInstructions", event.target.value)
-                        }
-                      />
-                    </label>
                     <div className="space-y-1">
-                      <span>Equipment</span>
-                      <div className="grid grid-cols-2 gap-2">
-                        {equipmentOptions.map((item) => {
-                          const checked =
-                            boardTraining.equipment?.includes(item) ?? false;
-                          return (
-                            <label
-                              key={`board-eq-${item}`}
-                              className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-2 py-1"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleBoardEquipment(item)}
-                              />
-                              <span>{item}</span>
-                            </label>
-                          );
-                        })}
+                      <span>Main focus</span>
+                      <div className="min-h-8 w-full rounded-lg border border-[var(--line)] px-2 py-2 text-sm text-[var(--ink-0)]">
+                        {boardTraining.mainFocus || "-"}
                       </div>
                     </div>
-                    <label className="space-y-1">
+                    <div className="space-y-1">
+                      <span>Part goals</span>
+                      <div className="min-h-8 w-full rounded-lg border border-[var(--line)] px-2 py-2 text-sm text-[var(--ink-0)]">
+                        {boardTraining.partGoals || "-"}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span>Organisation</span>
+                      <div className="min-h-20 w-full whitespace-pre-wrap rounded-lg border border-[var(--line)] px-2 py-2 text-sm text-[var(--ink-0)]">
+                        {boardTraining.organisation || "-"}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span>Key behaviours</span>
+                      <div className="min-h-8 w-full rounded-lg border border-[var(--line)] px-2 py-2 text-sm text-[var(--ink-0)]">
+                        {boardTraining.keyBehaviours || "-"}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span>Coach instructions</span>
+                      <div className="min-h-8 w-full rounded-lg border border-[var(--line)] px-2 py-2 text-sm text-[var(--ink-0)]">
+                        {boardTraining.coachInstructions || "-"}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span>Equipment</span>
+                      <div className="flex flex-wrap gap-2">
+                        {(boardTraining.equipment ?? []).length === 0 ? (
+                          <span className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11px] text-[var(--ink-1)]">
+                            -
+                          </span>
+                        ) : (
+                          (boardTraining.equipment ?? []).map((item) => (
+                            <span
+                              key={`board-eq-${item}`}
+                              className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11px] text-[var(--ink-0)]"
+                            >
+                              {item}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
                       <span>Board notes</span>
-                      <textarea
-                        className="h-28 w-full resize-none rounded-lg border border-[var(--line)] bg-transparent px-2 py-2 text-sm text-[var(--ink-0)]"
-                        value={board.notes ?? ""}
-                        onChange={(event) =>
-                          updateBoard(board.id, { notes: event.target.value })
-                        }
-                      />
-                    </label>
+                      <div className="min-h-28 w-full whitespace-pre-wrap rounded-lg border border-[var(--line)] px-2 py-2 text-sm text-[var(--ink-0)]">
+                        {board.notes || "-"}
+                      </div>
+                    </div>
                   </div>
                 </section>
               </div>

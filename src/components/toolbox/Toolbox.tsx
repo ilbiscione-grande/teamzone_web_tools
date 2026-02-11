@@ -212,6 +212,8 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
     "items" | "draw" | "squad" | "notes" | "frames" | "shared"
   >("items");
   const [notesView, setNotesView] = useState<"edit" | "preview">("preview");
+  const [showDateTimeDialog, setShowDateTimeDialog] = useState(false);
+  const [dateTimeDraft, setDateTimeDraft] = useState("");
   const notesInputRef = useRef<HTMLTextAreaElement | null>(null);
   const [showMarkdownHelp, setShowMarkdownHelp] = useState(false);
   const markdownHelpRef = useRef<HTMLButtonElement | null>(null);
@@ -470,6 +472,26 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
         "Hur hjalper detta lagkamraten?",
       ],
     },
+  };
+  const toDateTimeLocalValue = (input?: string) => {
+    if (input && input.trim()) {
+      const parsed = new Date(input);
+      if (!Number.isNaN(parsed.getTime())) {
+        const y = parsed.getFullYear();
+        const m = `${parsed.getMonth() + 1}`.padStart(2, "0");
+        const d = `${parsed.getDate()}`.padStart(2, "0");
+        const hh = `${parsed.getHours()}`.padStart(2, "0");
+        const mm = `${parsed.getMinutes()}`.padStart(2, "0");
+        return `${y}-${m}-${d}T${hh}:${mm}`;
+      }
+    }
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = `${now.getMonth() + 1}`.padStart(2, "0");
+    const d = `${now.getDate()}`.padStart(2, "0");
+    const hh = `${now.getHours()}`.padStart(2, "0");
+    const mm = `${now.getMinutes()}`.padStart(2, "0");
+    return `${y}-${m}-${d}T${hh}:${mm}`;
   };
 
   const selectedPlayers = objects.filter(
@@ -1029,33 +1051,53 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                         ["keyBehaviours", "Key behaviours"],
                         ["coachInstructions", "Coach instructions"],
                       ]),
-                ].map(([key, label]) => (
-                  <label key={key} className="space-y-1">
-                    <span>{label}</span>
-                    <input
-                      className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
-                      value={
-                        scopedFields?.training?.[
-                          key as keyof NonNullable<NotesFields>["training"]
-                        ] ?? ""
-                      }
-                      list={`notes-training-${key}`}
-                      onChange={(event) => {
-                        updateScopedTrainingField(
-                          key as keyof NonNullable<NotesFields["training"]>,
-                          event.target.value
-                        );
-                      }}
-                    />
-                    <datalist id={`notes-training-${key}`}>
-                      {notesPresets.training[
-                        key as keyof typeof notesPresets.training
-                      ]?.map((item) => (
-                        <option key={item} value={item} />
-                      ))}
-                    </datalist>
-                  </label>
-                ))}
+                ].map(([key, label]) => {
+                  if (key === "dateTime") {
+                    const current = scopedFields?.training?.dateTime ?? "";
+                    return (
+                      <label key={key} className="space-y-1">
+                        <span>{label}</span>
+                        <button
+                          type="button"
+                          className="flex h-8 w-full items-center rounded-lg border border-[var(--line)] bg-transparent px-2 text-left text-xs text-[var(--ink-0)]"
+                          onClick={() => {
+                            setDateTimeDraft(toDateTimeLocalValue(current));
+                            setShowDateTimeDialog(true);
+                          }}
+                        >
+                          {current || "Choose date and time"}
+                        </button>
+                      </label>
+                    );
+                  }
+                  return (
+                    <label key={key} className="space-y-1">
+                      <span>{label}</span>
+                      <input
+                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                        value={
+                          scopedFields?.training?.[
+                            key as keyof NonNullable<NotesFields>["training"]
+                          ] ?? ""
+                        }
+                        list={`notes-training-${key}`}
+                        onChange={(event) => {
+                          updateScopedTrainingField(
+                            key as keyof NonNullable<NotesFields["training"]>,
+                            event.target.value
+                          );
+                        }}
+                      />
+                      <datalist id={`notes-training-${key}`}>
+                        {notesPresets.training[
+                          key as keyof typeof notesPresets.training
+                        ]?.map((item) => (
+                          <option key={item} value={item} />
+                        ))}
+                      </datalist>
+                    </label>
+                  );
+                })}
                 {(notesScope === "project" || notesScope === "board") && (
                   <div className="space-y-1">
                     <span>Equipment</span>
@@ -1463,6 +1505,45 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
         )
       )}
       </div>
+      )}
+      {showDateTimeDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
+            <p className="mb-3 text-sm font-semibold text-[var(--ink-0)]">
+              Select date and time
+            </p>
+            <input
+              type="datetime-local"
+              className="h-10 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
+              value={dateTimeDraft}
+              onChange={(event) => setDateTimeDraft(event.target.value)}
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-full border border-[var(--line)] px-3 py-1 text-xs text-[var(--ink-1)]"
+                onClick={() => setShowDateTimeDialog(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-[var(--accent-0)] bg-[var(--accent-0)] px-3 py-1 text-xs text-black"
+                onClick={() => {
+                  const value = dateTimeDraft || toDateTimeLocalValue();
+                  const parsed = new Date(value);
+                  const label = Number.isNaN(parsed.getTime())
+                    ? value
+                    : parsed.toLocaleString();
+                  updateScopedTrainingField("dateTime", label);
+                  setShowDateTimeDialog(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {showMarkdownHelp && markdownHelpPos && (
         <div
