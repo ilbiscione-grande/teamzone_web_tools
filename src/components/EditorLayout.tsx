@@ -11,9 +11,6 @@ import PropertiesPanel from "@/components/panels/PropertiesPanel";
 import FramesBar from "@/components/frames/FramesBar";
 import TopBar from "@/components/TopBar";
 import AdBanner from "@/components/AdBanner";
-import ReactMarkdown from "react-markdown";
-import remarkBreaks from "remark-breaks";
-import remarkGfm from "remark-gfm";
 
 export default function EditorLayout() {
   const project = useProjectStore((state) => state.project);
@@ -101,9 +98,78 @@ export default function EditorLayout() {
     };
   }, [propertiesFloating]);
   const toolboxCollapsed = selection.length > 0 && !propertiesFloating;
+  const equipmentOptions = [
+    "Cones",
+    "Bibs",
+    "Balls",
+    "Mini goals",
+    "Hurdles",
+    "Poles",
+  ];
   if (!project || !board) {
     return null;
   }
+
+  const sessionTraining = project.sessionNotesFields?.training ?? {};
+  const boardTraining = board.notesFields?.training ?? {};
+  const updateSessionTrainingField = (
+    key: keyof NonNullable<typeof sessionTraining>,
+    value: string
+  ) => {
+    updateProjectMeta({
+      sessionNotesFields: {
+        ...(project.sessionNotesFields ?? {}),
+        training: {
+          ...sessionTraining,
+          [key]: value,
+        },
+      },
+    });
+  };
+  const updateBoardTrainingField = (
+    key: keyof NonNullable<typeof boardTraining>,
+    value: string
+  ) => {
+    updateBoard(board.id, {
+      notesFields: {
+        ...(board.notesFields ?? {}),
+        training: {
+          ...boardTraining,
+          [key]: value,
+        },
+      },
+    });
+  };
+  const toggleSessionEquipment = (item: string) => {
+    const current = sessionTraining.equipment ?? [];
+    const next = current.includes(item)
+      ? current.filter((entry) => entry !== item)
+      : [...current, item];
+    updateProjectMeta({
+      sessionNotesFields: {
+        ...(project.sessionNotesFields ?? {}),
+        training: {
+          ...sessionTraining,
+          equipment: next,
+        },
+      },
+    });
+  };
+  const toggleBoardEquipment = (item: string) => {
+    const current = boardTraining.equipment ?? [];
+    const next = current.includes(item)
+      ? current.filter((entry) => entry !== item)
+      : [...current, item];
+    updateBoard(board.id, {
+      notesFields: {
+        ...(board.notesFields ?? {}),
+        training: {
+          ...boardTraining,
+          equipment: next,
+        },
+      },
+    });
+  };
 
   if (isMaximized && board) {
     const appendInkPoint = (event: {
@@ -206,34 +272,158 @@ export default function EditorLayout() {
                   <p className="mb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                     Session notes
                   </p>
-                  <textarea
-                    className="h-36 w-full resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
-                    value={project.sessionNotes ?? ""}
-                    onChange={(event) =>
-                      updateProjectMeta({ sessionNotes: event.target.value })
-                    }
-                  />
-                  <div className="mt-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3 text-sm text-[var(--ink-0)]">
-                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                      {project.sessionNotes ?? ""}
-                    </ReactMarkdown>
+                  <div className="grid gap-2 text-xs text-[var(--ink-1)]">
+                    <label className="space-y-1">
+                      <span>Main focus</span>
+                      <input
+                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
+                        value={sessionTraining.mainFocus ?? ""}
+                        onChange={(event) =>
+                          updateSessionTrainingField("mainFocus", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span>Date/time</span>
+                      <input
+                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
+                        value={sessionTraining.dateTime ?? ""}
+                        onChange={(event) =>
+                          updateSessionTrainingField("dateTime", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span>Part goals</span>
+                      <input
+                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
+                        value={sessionTraining.partGoals ?? ""}
+                        onChange={(event) =>
+                          updateSessionTrainingField("partGoals", event.target.value)
+                        }
+                      />
+                    </label>
+                    <div className="space-y-1">
+                      <span>Equipment</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        {equipmentOptions.map((item) => {
+                          const checked =
+                            sessionTraining.equipment?.includes(item) ?? false;
+                          return (
+                            <label
+                              key={`session-eq-${item}`}
+                              className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-2 py-1"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleSessionEquipment(item)}
+                              />
+                              <span>{item}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <label className="space-y-1">
+                      <span>Session notes</span>
+                      <textarea
+                        className="h-28 w-full resize-none rounded-lg border border-[var(--line)] bg-transparent px-2 py-2 text-sm text-[var(--ink-0)]"
+                        value={project.sessionNotes ?? ""}
+                        onChange={(event) =>
+                          updateProjectMeta({ sessionNotes: event.target.value })
+                        }
+                      />
+                    </label>
                   </div>
                 </section>
                 <section className="rounded-2xl border border-[var(--line)] p-3">
                   <p className="mb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                     Board notes
                   </p>
-                  <textarea
-                    className="h-36 w-full resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
-                    value={board.notes ?? ""}
-                    onChange={(event) =>
-                      updateBoard(board.id, { notes: event.target.value })
-                    }
-                  />
-                  <div className="mt-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3 text-sm text-[var(--ink-0)]">
-                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                      {board.notes ?? ""}
-                    </ReactMarkdown>
+                  <div className="grid gap-2 text-xs text-[var(--ink-1)]">
+                    <label className="space-y-1">
+                      <span>Main focus</span>
+                      <input
+                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
+                        value={boardTraining.mainFocus ?? ""}
+                        onChange={(event) =>
+                          updateBoardTrainingField("mainFocus", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span>Part goals</span>
+                      <input
+                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
+                        value={boardTraining.partGoals ?? ""}
+                        onChange={(event) =>
+                          updateBoardTrainingField("partGoals", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span>Organisation</span>
+                      <textarea
+                        className="h-20 w-full resize-none rounded-lg border border-[var(--line)] bg-transparent px-2 py-2 text-sm text-[var(--ink-0)]"
+                        value={boardTraining.organisation ?? ""}
+                        onChange={(event) =>
+                          updateBoardTrainingField("organisation", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span>Key behaviours</span>
+                      <input
+                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
+                        value={boardTraining.keyBehaviours ?? ""}
+                        onChange={(event) =>
+                          updateBoardTrainingField("keyBehaviours", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span>Coach instructions</span>
+                      <input
+                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-sm text-[var(--ink-0)]"
+                        value={boardTraining.coachInstructions ?? ""}
+                        onChange={(event) =>
+                          updateBoardTrainingField("coachInstructions", event.target.value)
+                        }
+                      />
+                    </label>
+                    <div className="space-y-1">
+                      <span>Equipment</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        {equipmentOptions.map((item) => {
+                          const checked =
+                            boardTraining.equipment?.includes(item) ?? false;
+                          return (
+                            <label
+                              key={`board-eq-${item}`}
+                              className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-2 py-1"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleBoardEquipment(item)}
+                              />
+                              <span>{item}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <label className="space-y-1">
+                      <span>Board notes</span>
+                      <textarea
+                        className="h-28 w-full resize-none rounded-lg border border-[var(--line)] bg-transparent px-2 py-2 text-sm text-[var(--ink-0)]"
+                        value={board.notes ?? ""}
+                        onChange={(event) =>
+                          updateBoard(board.id, { notes: event.target.value })
+                        }
+                      />
+                    </label>
                   </div>
                 </section>
               </div>
