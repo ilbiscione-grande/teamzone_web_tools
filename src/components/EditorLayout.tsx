@@ -388,6 +388,25 @@ export default function EditorLayout() {
                 <path d="M10 11v6M14 11v6" />
               </svg>
             </button>
+            <button
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--panel-2)]/70 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+              onClick={() => setIsMaximized(false)}
+              title="Close full screen"
+              aria-label="Close full screen"
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
         {board.mode === "DYNAMIC" && (

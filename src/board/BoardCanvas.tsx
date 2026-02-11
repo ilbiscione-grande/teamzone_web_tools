@@ -627,7 +627,7 @@ export default function BoardCanvas({
       className="relative h-full w-full"
       data-disable-pull
     >
-      {!readOnly && (
+      {!readOnly && !isMaximized && (
         <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
           <button
             className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
@@ -700,27 +700,6 @@ export default function BoardCanvas({
             <path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5" />
           </svg>
         </button>
-          {isMaximized && (
-            <button
-              className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-              onClick={onToggleMaximize}
-              title="Close full screen"
-              aria-label="Close full screen"
-            >
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-            </button>
-          )}
         </div>
       )}
       <Stage
