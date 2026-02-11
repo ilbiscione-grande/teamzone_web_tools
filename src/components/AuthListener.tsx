@@ -5,6 +5,7 @@ import { supabase } from "@/utils/supabaseClient";
 import {
   useProjectStore,
   persistActiveProject,
+  persistActiveProjectLocal,
   persistPlanCheck,
 } from "@/state/useProjectStore";
 
@@ -172,7 +173,9 @@ export default function AuthListener() {
           .single();
         const activeKey = data?.session_key;
         if (activeKey && activeKey !== currentKey) {
-          persistActiveProject();
+          // Keep local backup but do not push stale data to cloud
+          // when another device has already taken over the session.
+          persistActiveProjectLocal();
           await sb.auth.signOut();
         }
       };

@@ -116,6 +116,22 @@ export const persistActiveProject = () => {
   }
 };
 
+export const persistActiveProjectLocal = () => {
+  const { project, index, plan, authUser } = useProjectStore.getState();
+  if (!project) {
+    return;
+  }
+  if (project.isSample || project.isShared) {
+    return;
+  }
+  if (!can(plan, "project.save")) {
+    return;
+  }
+  const userId = authUser?.id ?? null;
+  saveProject(project, userId);
+  saveProjectIndex(updateIndex(index, project), userId);
+};
+
 export const persistPlan = (plan: Plan) => {
   if (typeof window === "undefined") {
     return;

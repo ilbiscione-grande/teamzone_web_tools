@@ -11,6 +11,10 @@ import { getActiveBoard } from "@/utils/board";
 import { useEditorStore } from "@/state/useEditorStore";
 import { clone } from "@/utils/clone";
 import { createId } from "@/utils/id";
+import {
+  registerSyncConflictHandler,
+  type SyncConflictChoice,
+} from "@/persistence/syncConflictBridge";
 
 export default function AppShell() {
   const project = useProjectStore((state) => state.project);
@@ -21,6 +25,10 @@ export default function AppShell() {
   const touchStartRef = useRef<number | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const clipboardRef = useRef<DrawableObject[]>([]);
+  const [syncConflict, setSyncConflict] = useState<{
+    projectName: string;
+    resolve: (choice: SyncConflictChoice) => void;
+  } | null>(null);
 
   useEffect(() => {
     hydrateIndex();
@@ -28,6 +36,16 @@ export default function AppShell() {
 
   useAutosave();
   useOnlineSync();
+
+  useEffect(() => {
+    const unregister = registerSyncConflictHandler(
+      ({ projectName }) =>
+        new Promise<SyncConflictChoice>((resolve) => {
+          setSyncConflict({ projectName, resolve });
+        })
+    );
+    return () => unregister();
+  }, []);
 
   useEffect(() => {
     const threshold = 80;
@@ -292,6 +310,50 @@ export default function AppShell() {
         </button>
       )}
       {project ? <EditorLayout /> : <ProjectList />}
+      {syncConflict && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4 py-6">
+          <div className="w-full max-w-md rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-5 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <h2 className="display-font text-lg text-[var(--accent-0)]">
+              Sync conflict detected
+            </h2>
+            <p className="mt-2 text-sm text-[var(--ink-1)]">
+              Project: <span className="text-[var(--ink-0)]">{syncConflict.projectName}</span>
+            </p>
+            <p className="mt-2 text-xs text-[var(--ink-1)]">
+              Local offline changes differ from cloud. Choose how to proceed.
+            </p>
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                className="h-10 rounded-full border border-[var(--line)] text-sm hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => {
+                  syncConflict.resolve("cloud");
+                  setSyncConflict(null);
+                }}
+              >
+                Keep cloud version
+              </button>
+              <button
+                className="h-10 rounded-full border border-[var(--accent-0)] bg-[var(--accent-0)] text-sm font-semibold text-black hover:brightness-110"
+                onClick={() => {
+                  syncConflict.resolve("local");
+                  setSyncConflict(null);
+                }}
+              >
+                Overwrite cloud with local
+              </button>
+              <button
+                className="h-10 rounded-full border border-[var(--line)] text-sm hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                onClick={() => {
+                  syncConflict.resolve("export");
+                  setSyncConflict(null);
+                }}
+              >
+                Export local backup and abort sync
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
