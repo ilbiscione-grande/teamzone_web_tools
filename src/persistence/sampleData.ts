@@ -512,6 +512,8 @@ export const createSampleProject = (): Project => {
         showNumber: false,
       },
     },
+    sessionNotes: "",
+    sessionNotesFields: {},
     boards: [board],
     squads: [homeSquad, awaySquad],
     activeBoardId: board.id,

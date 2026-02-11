@@ -451,6 +451,8 @@ export const createDefaultProject = (
       defaultPitchShape: options?.pitchShape ?? defaults.pitchShape,
       defaultPlayerLabel: options?.playerLabel ?? defaults.playerLabel,
     },
+    sessionNotes: "",
+    sessionNotesFields: {},
     boards,
     squads: [homeSquad, awaySquad],
     activeBoardId: boards[0]?.id,
@@ -458,6 +460,12 @@ export const createDefaultProject = (
 };
 
 export const ensureBoardSquads = (project: Project): Project => {
+  if (typeof project.sessionNotes !== "string") {
+    project.sessionNotes = "";
+  }
+  if (!project.sessionNotesFields) {
+    project.sessionNotesFields = {};
+  }
   const squads = project.squads ?? [];
   const getSquad = (id?: string) =>
     id ? squads.find((item) => item.id === id) : undefined;
@@ -557,6 +565,8 @@ export const createSharedProject = (
     isShared: true,
     sharedMeta: meta,
     settings,
+    sessionNotes: "",
+    sessionNotesFields: {},
     boards: [snapshot.board],
     squads: snapshot.squads ?? [],
     activeBoardId: snapshot.board.id,

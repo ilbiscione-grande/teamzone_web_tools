@@ -242,6 +242,8 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
   );
 
   const board = getActiveBoard(project);
+  const updateProjectMeta = useProjectStore((state) => state.updateProjectMeta);
+  const [notesScope, setNotesScope] = useState<"project" | "board">("board");
   const [comments, setComments] = useState<BoardComment[]>([]);
   const [ownerShares, setOwnerShares] = useState<
     {
@@ -257,8 +259,18 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentsBusy, setCommentsBusy] = useState(false);
   const [sharedUnreadCount, setSharedUnreadCount] = useState(0);
+  type NotesFields = NonNullable<NonNullable<typeof board>["notesFields"]>;
+  const notesTemplate =
+    project?.settings.mode === "training"
+      ? "TRAINING"
+      : project?.settings.mode === "education"
+      ? "EDUCATION"
+      : "MATCH";
+  const scopedNotes = notesScope === "project" ? project?.sessionNotes : board?.notes;
+  const scopedFields =
+    notesScope === "project" ? project?.sessionNotesFields : board?.notesFields;
   const previewNotes = useMemo(() => {
-    const raw = board?.notes ?? "";
+    const raw = scopedNotes ?? "";
     if (!raw) {
       return "";
     }
@@ -270,7 +282,7 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
       }
       return next;
     });
-  }, [board?.notes]);
+  }, [scopedNotes]);
   const frameIndex = board?.activeFrameIndex ?? 0;
   const objects = board?.frames[frameIndex]?.objects ?? [];
   const activeFrame = board?.frames[frameIndex];
@@ -287,7 +299,7 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
   ];
   const buildNotesFromFields = (
     template: "TRAINING" | "MATCH" | "EDUCATION" | undefined,
-    fields: NonNullable<NonNullable<typeof board>["notesFields"]> | undefined
+    fields: NotesFields | undefined
   ) => {
     if (!template || !fields) {
       return "";
@@ -336,6 +348,39 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
         ? "MATCH"
         : "UTBILDNING";
     return [`# ${title}`, ...sections].join("\n\n");
+  };
+  const updateScopedNotes = (nextNotes: string) => {
+    if (notesScope === "project") {
+      if (!project) {
+        return;
+      }
+      updateProjectMeta({ sessionNotes: nextNotes });
+      return;
+    }
+    if (!board) {
+      return;
+    }
+    updateBoard(board.id, { notes: nextNotes });
+  };
+  const updateScopedFields = (nextFields: NotesFields) => {
+    const nextNotes = buildNotesFromFields(notesTemplate, nextFields);
+    if (notesScope === "project") {
+      if (!project) {
+        return;
+      }
+      updateProjectMeta({
+        sessionNotesFields: nextFields,
+        sessionNotes: nextNotes,
+      });
+      return;
+    }
+    if (!board) {
+      return;
+    }
+    updateBoard(board.id, {
+      notesFields: nextFields,
+      notes: nextNotes,
+    });
   };
   const notesPresets = {
     training: {
@@ -960,38 +1005,54 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <select
-                className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-                value={board?.notesTemplate ?? ""}
-                onChange={(event) => {
-                  if (!board) {
-                    return;
-                  }
-                  useProjectStore.getState().updateBoard(board.id, {
-                    notesTemplate:
-                      (event.target.value as "TRAINING" | "MATCH" | "EDUCATION") ||
-                      undefined,
-                  });
-                }}
-              >
-                <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
-                  Valj mall
-                </option>
-                <option value="TRAINING" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
-                  Traning
-                </option>
-                <option value="MATCH" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
-                  Match
-                </option>
-                <option value="EDUCATION" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
-                  Utbildning
-                </option>
-              </select>
+              <div className="inline-flex rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-1">
+                <button
+                  type="button"
+                  className={`rounded-full px-3 py-1 text-xs transition ${
+                    notesScope === "project"
+                      ? "bg-[var(--accent-1)] text-[var(--ink-0)]"
+                      : "text-[var(--ink-1)]"
+                  }`}
+                  onClick={() => setNotesScope("project")}
+                >
+                  Session
+                </button>
+                <button
+                  type="button"
+                  className={`rounded-full px-3 py-1 text-xs transition ${
+                    notesScope === "board"
+                      ? "bg-[var(--accent-1)] text-[var(--ink-0)]"
+                      : "text-[var(--ink-1)]"
+                  }`}
+                  onClick={() => setNotesScope("board")}
+                >
+                  Board
+                </button>
+              </div>
             </div>
           </div>
+          <p className="mt-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+            {project?.settings.mode === "training"
+              ? "Training mode"
+              : project?.settings.mode === "education"
+              ? "Education mode"
+              : "Match mode"}
+          </p>
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+              Active notes scope
+            </span>
+            <span className="rounded-full border border-[var(--accent-2)] bg-[var(--panel-2)] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent-2)]">
+              {notesScope === "project" ? "Session notes" : "Board notes"}
+            </span>
+          </div>
           <div className="mt-3 min-h-0 flex-1 pr-1">
-            {board?.notesTemplate === "TRAINING" && (
-              <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
+            <div className="rounded-2xl border border-[var(--line)] p-3">
+              <p className="mb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                Structured fields
+              </p>
+              {notesTemplate === "TRAINING" && (
+                <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
                 {[
                   ["mainFocus", "Main Focus"],
                   ["partGoals", "Part goals"],
@@ -1004,23 +1065,17 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                     <span>{label}</span>
                     <input
                       className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
-                      value={board.notesFields?.training?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["training"]] ?? ""}
+                      value={scopedFields?.training?.[key as keyof NonNullable<NotesFields>["training"]] ?? ""}
                       list={`notes-training-${key}`}
                       onChange={(event) => {
-                        if (!board) {
-                          return;
-                        }
                         const nextFields = {
-                          ...board.notesFields,
+                          ...(scopedFields ?? {}),
                           training: {
-                            ...board.notesFields?.training,
+                            ...(scopedFields?.training ?? {}),
                             [key]: event.target.value,
                           },
                         };
-                        useProjectStore.getState().updateBoard(board.id, {
-                          notesFields: nextFields,
-                          notes: buildNotesFromFields("TRAINING", nextFields),
-                        });
+                        updateScopedFields(nextFields);
                       }}
                     />
                     <datalist id={`notes-training-${key}`}>
@@ -1033,9 +1088,9 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                   </label>
                 ))}
               </div>
-            )}
-            {board?.notesTemplate === "MATCH" && (
-              <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
+              )}
+              {notesTemplate === "MATCH" && (
+                <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
                 {[
                   ["opposition", "Opposition"],
                   ["ourGameWithBall", "Our game - with ball"],
@@ -1049,23 +1104,17 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                     <span>{label}</span>
                     <input
                       className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
-                      value={board.notesFields?.match?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["match"]] ?? ""}
+                      value={scopedFields?.match?.[key as keyof NonNullable<NotesFields>["match"]] ?? ""}
                       list={`notes-match-${key}`}
                       onChange={(event) => {
-                        if (!board) {
-                          return;
-                        }
                         const nextFields = {
-                          ...board.notesFields,
+                          ...(scopedFields ?? {}),
                           match: {
-                            ...board.notesFields?.match,
+                            ...(scopedFields?.match ?? {}),
                             [key]: event.target.value,
                           },
                         };
-                        useProjectStore.getState().updateBoard(board.id, {
-                          notesFields: nextFields,
-                          notes: buildNotesFromFields("MATCH", nextFields),
-                        });
+                        updateScopedFields(nextFields);
                       }}
                     />
                     <datalist id={`notes-match-${key}`}>
@@ -1078,9 +1127,9 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                   </label>
                 ))}
               </div>
-            )}
-            {board?.notesTemplate === "EDUCATION" && (
-              <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
+              )}
+              {notesTemplate === "EDUCATION" && (
+                <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
                 {[
                   ["tema", "Tema"],
                   ["grundprincip", "Grundprincip"],
@@ -1094,23 +1143,17 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                     <span>{label}</span>
                     <input
                       className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
-                      value={board.notesFields?.education?.[key as keyof NonNullable<NonNullable<typeof board>["notesFields"]>["education"]] ?? ""}
+                      value={scopedFields?.education?.[key as keyof NonNullable<NotesFields>["education"]] ?? ""}
                       list={`notes-education-${key}`}
                       onChange={(event) => {
-                        if (!board) {
-                          return;
-                        }
                         const nextFields = {
-                          ...board.notesFields,
+                          ...(scopedFields ?? {}),
                           education: {
-                            ...board.notesFields?.education,
+                            ...(scopedFields?.education ?? {}),
                             [key]: event.target.value,
                           },
                         };
-                        useProjectStore.getState().updateBoard(board.id, {
-                          notesFields: nextFields,
-                          notes: buildNotesFromFields("EDUCATION", nextFields),
-                        });
+                        updateScopedFields(nextFields);
                       }}
                     />
                     <datalist id={`notes-education-${key}`}>
@@ -1123,14 +1166,22 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                   </label>
                 ))}
               </div>
-            )}
-            <div className="mt-3 flex min-h-0 flex-1 flex-col">
+              )}
+            </div>
+            <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-2xl border border-[var(--line)] p-3">
+              <p className="mb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                {notesScope === "project" ? "Session / Project notes" : "Board notes"}
+              </p>
               {notesView === "edit" ? (
                 <textarea
                   className="min-h-[12rem] resize-none rounded-2xl border border-[var(--line)] bg-transparent px-3 py-2 text-sm text-[var(--ink-0)]"
                   rows={12}
-                  placeholder="Write notes for this board..."
-                  value={board?.notes ?? ""}
+                  placeholder={
+                    notesScope === "project"
+                      ? "Write notes for this session/project..."
+                      : "Write notes for this board..."
+                  }
+                  value={scopedNotes ?? ""}
                   ref={notesInputRef}
                   onFocus={() => setNotesView("edit")}
                   onBlur={() => setNotesView("preview")}
@@ -1138,20 +1189,15 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                     if (event.key !== "Enter") {
                       return;
                     }
-                    if (!board) {
-                      return;
-                    }
                     event.preventDefault();
                     const target = event.currentTarget;
-                    const current = board.notes ?? "";
+                    const current = scopedNotes ?? "";
                     const insert = event.shiftKey ? "\n" : "\n\n";
                     const start = target.selectionStart ?? current.length;
                     const end = target.selectionEnd ?? current.length;
                     const next =
                       current.slice(0, start) + insert + current.slice(end);
-                    useProjectStore.getState().updateBoard(board.id, {
-                      notes: next,
-                    });
+                    updateScopedNotes(next);
                     const cursor = start + insert.length;
                     requestAnimationFrame(() => {
                       target.selectionStart = cursor;
@@ -1159,11 +1205,7 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                     });
                   }}
                   onChange={(event) => {
-                    if (board) {
-                      useProjectStore.getState().updateBoard(board.id, {
-                        notes: event.target.value,
-                      });
-                    }
+                    updateScopedNotes(event.target.value);
                   }}
                 />
               ) : (

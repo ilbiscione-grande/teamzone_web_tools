@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { DrawableObject } from "@/models";
-import { useProjectStore } from "@/state/useProjectStore";
+import { useProjectStore, persistActiveProject } from "@/state/useProjectStore";
 import { useAutosave } from "@/persistence/useAutosave";
 import { useOnlineSync } from "@/persistence/useOnlineSync";
 import ProjectList from "@/components/ProjectList";
@@ -29,6 +29,26 @@ export default function AppShell() {
     projectName: string;
     resolve: (choice: SyncConflictChoice) => void;
   } | null>(null);
+
+  const runSoftRefresh = async () => {
+    const state = useProjectStore.getState();
+    const activeProject = state.project;
+    if (!activeProject) {
+      window.location.reload();
+      return;
+    }
+
+    // Keep current work persisted before refresh operations.
+    persistActiveProject();
+
+    if (state.authUser && state.plan === "PAID" && navigator.onLine) {
+      state.syncNow();
+      // Re-open same project id to pull latest merged data without leaving board view.
+      if (state.activeProjectId) {
+        state.openProject(state.activeProjectId);
+      }
+    }
+  };
 
   useEffect(() => {
     hydrateIndex();
@@ -97,7 +117,8 @@ export default function AppShell() {
     const handleTouchEnd = () => {
       if (pullReady) {
         setPullDistance(threshold);
-        window.location.reload();
+        void runSoftRefresh();
+        resetPull();
         return;
       }
       resetPull();

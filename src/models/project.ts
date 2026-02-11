@@ -43,6 +43,8 @@ export type Project = {
       showNumber: boolean;
     };
   };
+  sessionNotes: string;
+  sessionNotesFields?: Board["notesFields"];
   boards: Board[];
   squads: Squad[];
   activeBoardId?: string;
