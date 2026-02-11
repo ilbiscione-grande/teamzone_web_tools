@@ -20,6 +20,8 @@ export const useAutosave = () => {
     if (!can(plan, "project.save")) {
       return;
     }
+    // Persist immediately so no recent edit is lost on forced sign-out/session switch.
+    persistActiveProject();
     debouncedSave();
   }, [project, plan, debouncedSave]);
 

@@ -9,6 +9,8 @@ import {
 
 const TABLE = "projects";
 const BOARDS_TABLE = "project_boards";
+const saveQueueByProject = new Map<string, Promise<boolean>>();
+const pendingByProject = new Map<string, Project>();
 
 const getUserId = async () => {
   if (!supabase) {
@@ -94,7 +96,7 @@ export const fetchProjectCloud = async (id: string): Promise<Project | null> => 
   };
 };
 
-export const saveProjectCloud = async (project: Project): Promise<boolean> => {
+const saveProjectCloudNow = async (project: Project): Promise<boolean> => {
   if (!supabase) {
     return false;
   }
@@ -152,6 +154,35 @@ export const saveProjectCloud = async (project: Project): Promise<boolean> => {
   }
 
   return true;
+};
+
+export const saveProjectCloud = async (project: Project): Promise<boolean> => {
+  pendingByProject.set(project.id, project);
+  const existing = saveQueueByProject.get(project.id);
+  if (existing) {
+    return existing;
+  }
+
+  const run = (async () => {
+    let ok = true;
+    try {
+      while (true) {
+        const next = pendingByProject.get(project.id);
+        if (!next) {
+          break;
+        }
+        pendingByProject.delete(project.id);
+        const stepOk = await saveProjectCloudNow(next);
+        ok = ok && stepOk;
+      }
+      return ok;
+    } finally {
+      saveQueueByProject.delete(project.id);
+    }
+  })();
+
+  saveQueueByProject.set(project.id, run);
+  return run;
 };
 
 export const deleteProjectCloud = async (id: string): Promise<boolean> => {

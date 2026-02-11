@@ -27,35 +27,69 @@ export default function AuthListener() {
   const hydrateIndex = useProjectStore((state) => state.hydrateIndex);
 
   useEffect(() => {
-    if (!supabase) {
+    const sb = supabase;
+    if (!sb) {
       return;
     }
 
-    const maybeEnforceSingleSession = async (
+    let sessionGuardTimer: ReturnType<typeof setInterval> | null = null;
+
+    const buildSessionKey = (userId: string, accessToken?: string | null) => {
+      if (!accessToken) {
+        return null;
+      }
+      return `${userId}:${accessToken.slice(0, 24)}`;
+    };
+
+    const claimSingleSession = async (
       userId: string,
       accessToken?: string | null
     ) => {
-      if (!accessToken) {
+      const sessionKey = buildSessionKey(userId, accessToken);
+      if (!sessionKey) {
         return;
       }
-      const key = `tacticsboard:singleSession:${userId}:${accessToken.slice(0, 12)}`;
-      if (typeof window === "undefined") {
-        return;
-      }
-      if (window.localStorage.getItem(key)) {
-        return;
-      }
-      const confirmKick = window.confirm(
-        "Sign out other devices to keep only this session active?"
+      await sb.from("user_sessions").upsert(
+        {
+          user_id: userId,
+          session_key: sessionKey,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
       );
-      if (confirmKick && supabase) {
-        try {
-          await supabase.auth.signOut({ scope: "others" });
-        } catch {
-          // Ignore sign-out errors to avoid blocking sign-in.
-        }
+    };
+
+    const startSingleSessionGuard = (
+      userId: string,
+      accessToken?: string | null
+    ) => {
+      const currentKey = buildSessionKey(userId, accessToken);
+      if (!currentKey) {
+        return;
       }
-      window.localStorage.setItem(key, "1");
+      if (sessionGuardTimer) {
+        clearInterval(sessionGuardTimer);
+      }
+      sessionGuardTimer = setInterval(async () => {
+        const { data } = await sb
+          .from("user_sessions")
+          .select("session_key")
+          .eq("user_id", userId)
+          .single();
+        const activeKey = data?.session_key;
+        if (activeKey && activeKey !== currentKey) {
+          persistActiveProject();
+          await sb.auth.signOut();
+        }
+      }, 4000);
+    };
+
+    const stopSingleSessionGuard = () => {
+      if (!sessionGuardTimer) {
+        return;
+      }
+      clearInterval(sessionGuardTimer);
+      sessionGuardTimer = null;
     };
 
     const syncProfilePlan = async (userId: string) => {
@@ -78,7 +112,7 @@ export default function AuthListener() {
       persistPlanCheck();
     };
 
-    supabase.auth.getSession().then(({ data }) => {
+    sb.auth.getSession().then(({ data }) => {
       persistActiveProject();
       const session = data.session;
       if (session?.user) {
@@ -95,13 +129,16 @@ export default function AuthListener() {
           createdAt: user.created_at ?? new Date().toISOString(),
         });
         syncProfilePlan(user.id).finally(() => hydrateIndex());
-        maybeEnforceSingleSession(user.id, session.access_token);
+        claimSingleSession(user.id, session.access_token).then(() =>
+          startSingleSessionGuard(user.id, session.access_token)
+        );
       } else {
+        stopSingleSessionGuard();
         clearAuthUser();
       }
     });
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(
+    const { data: subscription } = sb.auth.onAuthStateChange(
       (_event, session) => {
         persistActiveProject();
         if (session?.user) {
@@ -118,14 +155,18 @@ export default function AuthListener() {
             createdAt: user.created_at ?? new Date().toISOString(),
           });
           syncProfilePlan(user.id).finally(() => hydrateIndex());
-          maybeEnforceSingleSession(user.id, session.access_token);
+          claimSingleSession(user.id, session.access_token).then(() =>
+            startSingleSessionGuard(user.id, session.access_token)
+          );
         } else {
+          stopSingleSessionGuard();
           clearAuthUser();
         }
       }
     );
 
     return () => {
+      stopSingleSessionGuard();
       subscription.subscription.unsubscribe();
     };
   }, [setAuthUser, clearAuthUser]);

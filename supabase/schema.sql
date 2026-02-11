@@ -107,6 +107,28 @@ on profiles
 for select
 using (auth.uid() = id);
 
+create table if not exists user_sessions (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  session_key text not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table user_sessions enable row level security;
+
+drop policy if exists "Users can view their session" on user_sessions;
+drop policy if exists "Users can upsert their session" on user_sessions;
+
+create policy "Users can view their session"
+on user_sessions
+for select
+using (auth.uid() = user_id);
+
+create policy "Users can upsert their session"
+on user_sessions
+for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
