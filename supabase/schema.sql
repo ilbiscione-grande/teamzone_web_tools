@@ -7,14 +7,31 @@ create table if not exists projects (
   data jsonb not null
 );
 
+create table if not exists project_boards (
+  id text primary key,
+  project_id text not null references projects(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  board_name text not null,
+  order_index integer not null default 0,
+  updated_at timestamptz not null default now(),
+  board_data jsonb not null
+);
+
 create index if not exists projects_user_id_idx on projects(user_id);
+create index if not exists project_boards_project_id_idx on project_boards(project_id);
+create index if not exists project_boards_user_id_idx on project_boards(user_id);
 
 alter table projects enable row level security;
+alter table project_boards enable row level security;
 
 drop policy if exists "Users can view their projects" on projects;
 drop policy if exists "Users can insert their projects" on projects;
 drop policy if exists "Users can update their projects" on projects;
 drop policy if exists "Users can delete their projects" on projects;
+drop policy if exists "Users can view their project boards" on project_boards;
+drop policy if exists "Users can insert their project boards" on project_boards;
+drop policy if exists "Users can update their project boards" on project_boards;
+drop policy if exists "Users can delete their project boards" on project_boards;
 
 create policy "Users can view their projects"
 on projects
@@ -35,6 +52,43 @@ create policy "Users can delete their projects"
 on projects
 for delete
 using (auth.uid() = user_id);
+
+create policy "Users can view their project boards"
+on project_boards
+for select
+using (auth.uid() = user_id);
+
+create policy "Users can insert their project boards"
+on project_boards
+for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can update their project boards"
+on project_boards
+for update
+using (auth.uid() = user_id);
+
+create policy "Users can delete their project boards"
+on project_boards
+for delete
+using (auth.uid() = user_id);
+
+insert into project_boards (id, project_id, user_id, board_name, order_index, updated_at, board_data)
+select
+  coalesce((board_item ->> 'id'), gen_random_uuid()::text) as id,
+  p.id as project_id,
+  p.user_id,
+  coalesce(board_item ->> 'name', 'Board') as board_name,
+  board_item_index as order_index,
+  p.updated_at as updated_at,
+  board_item as board_data
+from projects p
+cross join lateral jsonb_array_elements(coalesce(p.data -> 'boards', '[]'::jsonb)) with ordinality as b(board_item, board_item_index)
+on conflict (id) do update set
+  board_name = excluded.board_name,
+  order_index = excluded.order_index,
+  updated_at = excluded.updated_at,
+  board_data = excluded.board_data;
 
 create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,

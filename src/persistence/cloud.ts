@@ -1,4 +1,4 @@
-import type { Project, ProjectSummary } from "@/models";
+import type { Board, Project, ProjectSummary } from "@/models";
 import { supabase } from "@/utils/supabaseClient";
 import {
   loadProject,
@@ -8,6 +8,7 @@ import {
 } from "@/persistence/storage";
 
 const TABLE = "projects";
+const BOARDS_TABLE = "project_boards";
 
 const getUserId = async () => {
   if (!supabase) {
@@ -57,14 +58,40 @@ export const fetchProjectCloud = async (id: string): Promise<Project | null> => 
   }
   const { data, error } = await supabase
     .from(TABLE)
-    .select("data")
+    .select("id,name,created_at,updated_at,data")
     .eq("id", id)
     .eq("user_id", userId)
     .single();
   if (error || !data) {
     return null;
   }
-  return data.data as Project;
+  const base = data.data as Project;
+
+  const { data: boardRows, error: boardsError } = await supabase
+    .from(BOARDS_TABLE)
+    .select("id,board_name,order_index,updated_at,board_data")
+    .eq("project_id", id)
+    .eq("user_id", userId)
+    .order("order_index", { ascending: true });
+
+  // Backward compatibility: if board rows are missing, keep boards from legacy project payload.
+  if (boardsError || !boardRows || boardRows.length === 0) {
+    return base;
+  }
+
+  const boards = boardRows.map((row) => {
+    const parsed = row.board_data as Board;
+    return {
+      ...parsed,
+      id: parsed.id || row.id,
+      name: parsed.name || row.board_name,
+    };
+  });
+
+  return {
+    ...base,
+    boards,
+  };
 };
 
 export const saveProjectCloud = async (project: Project): Promise<boolean> => {
@@ -75,18 +102,56 @@ export const saveProjectCloud = async (project: Project): Promise<boolean> => {
   if (!userId) {
     return false;
   }
+  const projectPayload = {
+    ...project,
+    // Boards are stored in the dedicated table to keep project rows small.
+    boards: [],
+  };
+
   const payload = {
     id: project.id,
     user_id: userId,
     name: project.name,
     created_at: project.createdAt,
     updated_at: project.updatedAt,
-    data: project,
+    data: projectPayload,
   };
   const { error } = await supabase.from(TABLE).upsert(payload, {
     onConflict: "id",
   });
-  return !error;
+  if (error) {
+    return false;
+  }
+
+  const { error: clearBoardsError } = await supabase
+    .from(BOARDS_TABLE)
+    .delete()
+    .eq("project_id", project.id)
+    .eq("user_id", userId);
+  if (clearBoardsError) {
+    return false;
+  }
+
+  if (project.boards.length > 0) {
+    const boardPayloads = project.boards.map((board, index) => ({
+      id: board.id,
+      project_id: project.id,
+      user_id: userId,
+      board_name: board.name,
+      order_index: index,
+      updated_at: project.updatedAt,
+      board_data: board,
+    }));
+
+    const { error: insertBoardsError } = await supabase
+      .from(BOARDS_TABLE)
+      .insert(boardPayloads);
+    if (insertBoardsError) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 export const deleteProjectCloud = async (id: string): Promise<boolean> => {
@@ -102,7 +167,15 @@ export const deleteProjectCloud = async (id: string): Promise<boolean> => {
     .delete()
     .eq("id", id)
     .eq("user_id", userId);
-  return !error;
+  if (error) {
+    return false;
+  }
+  const { error: boardsError } = await supabase
+    .from(BOARDS_TABLE)
+    .delete()
+    .eq("project_id", id)
+    .eq("user_id", userId);
+  return !boardsError;
 };
 
 const compareUpdatedAt = (a: string, b: string) => a.localeCompare(b);

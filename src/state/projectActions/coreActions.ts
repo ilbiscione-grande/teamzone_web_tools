@@ -16,11 +16,7 @@ import {
   updateIndex,
 } from "@/state/projectHelpers";
 import { can, getPlanLimits } from "@/utils/plan";
-import {
-  persistActiveProject,
-  persistAuthUser,
-  persistPlan,
-} from "@/state/useProjectStore";
+import { persistAuthUser, persistPlan } from "@/state/useProjectStore";
 import {
   deleteProjectCloud,
   fetchProjectCloud,
@@ -359,7 +355,21 @@ export const createCoreActions: StateCreator<
     });
   },
   closeProject: () => {
-    persistActiveProject();
+    const snapshot = get();
+    const active = snapshot.project;
+    if (
+      active &&
+      !active.isSample &&
+      !active.isShared &&
+      can(snapshot.plan, "project.save")
+    ) {
+      const userId = snapshot.authUser?.id ?? null;
+      saveProject(active, userId);
+      saveProjectIndex(updateIndex(snapshot.index, active), userId);
+      if (snapshot.authUser && snapshot.plan === "PAID") {
+        void saveProjectCloud(active);
+      }
+    }
     set((state) => {
       state.project = null;
       state.activeProjectId = null;
