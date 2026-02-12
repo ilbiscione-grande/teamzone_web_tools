@@ -313,12 +313,11 @@ export default function EditorLayout() {
                     <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
                       {sessionTraining.mainFocus || "-"}
                     </p>
-                    <p className="pt-1 text-[10px] uppercase tracking-wide">Session notes</p>
+                    <p className="pt-1 text-[10px] uppercase tracking-wide">Notes</p>
                     <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
                       {sessionNotesText || "-"}
                     </p>
-                    <p className="pt-1 text-[10px] uppercase tracking-wide">Date/time</p>
-                    <p className="text-xs text-[var(--ink-0)]">{sessionDateText}</p>
+                    <p className="text-[10px] text-[var(--ink-1)]">{sessionDateText}</p>
                   </div>
                 </section>
                 <section className="rounded-2xl border border-[var(--line)] p-2">
