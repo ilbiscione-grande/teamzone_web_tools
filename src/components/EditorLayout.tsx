@@ -36,6 +36,7 @@ export default function EditorLayout() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showMaximizedNotes, setShowMaximizedNotes] = useState(true);
   const [isMaximizedPenMode, setIsMaximizedPenMode] = useState(false);
+  const [viewport, setViewport] = useState({ width: 1366, height: 768 });
   const [maximizedInkStrokes, setMaximizedInkStrokes] = useState<number[][]>(
     []
   );
@@ -68,6 +69,17 @@ export default function EditorLayout() {
     setMaximizedInkStrokes([]);
     drawingStrokeIndexRef.current = null;
   }, [isMaximized]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const updateViewport = () => {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+    };
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
 
   useEffect(() => {
     if (!propertiesFloating) {
@@ -208,6 +220,18 @@ export default function EditorLayout() {
       (boardTraining.equipment ?? []).length > 0
         ? (boardTraining.equipment ?? []).join(", ")
         : "-";
+    const viewportAspect = viewport.width / Math.max(1, viewport.height);
+    const notesWidthRatio =
+      viewportAspect >= 1.75
+        ? 0.42
+        : viewportAspect >= 1.55
+        ? 0.39
+        : viewportAspect >= 1.35
+        ? 0.35
+        : 0.31;
+    const notesWidth = Math.round(
+      Math.min(700, Math.max(420, viewport.width * notesWidthRatio))
+    );
     const appendInkPoint = (event: {
       currentTarget: HTMLDivElement;
       clientX: number;
@@ -230,8 +254,13 @@ export default function EditorLayout() {
       <div className="fixed inset-0 z-50 flex h-screen flex-col bg-[var(--panel)]">
         <div
           className={`relative flex-1 overflow-hidden ${
-            showMaximizedNotes ? "grid grid-cols-[minmax(0,1fr)_460px] gap-3 p-3" : ""
+            showMaximizedNotes ? "grid gap-3 p-3" : ""
           }`}
+          style={
+            showMaximizedNotes
+              ? { gridTemplateColumns: `minmax(0,1fr) ${notesWidth}px` }
+              : undefined
+          }
         >
           {showMaximizedNotes && (
             <div className="relative min-h-0 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)]">
@@ -302,7 +331,10 @@ export default function EditorLayout() {
             </div>
           )}
           {showMaximizedNotes && (
-            <div className="pointer-events-none absolute right-[476px] top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] text-[var(--ink-1)]">
+            <div
+              className="pointer-events-none absolute top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] text-[var(--ink-1)]"
+              style={{ right: `${notesWidth + 24}px` }}
+            >
               {sessionDateText}
             </div>
           )}
