@@ -28,6 +28,7 @@ export default function EditorLayout() {
   );
   const updateProjectMeta = useProjectStore((state) => state.updateProjectMeta);
   const updateBoard = useProjectStore((state) => state.updateBoard);
+  const setActiveBoard = useProjectStore((state) => state.setActiveBoard);
   const [stage, setStage] = useState<Konva.Stage | null>(null);
   const [propertiesFloating, setPropertiesFloating] = useState(false);
   const [propertiesPos, setPropertiesPos] = useState({ x: 24, y: 140 });
@@ -485,9 +486,23 @@ export default function EditorLayout() {
                   </div>
                 </section>
                 <section className="rounded-2xl border border-[var(--line)] p-2">
-                  <p className="mb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                    Board notes
-                  </p>
+                  <div className="mb-2">
+                    <select
+                      className="h-8 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)]"
+                      value={board.id}
+                      onChange={(event) => setActiveBoard(event.target.value)}
+                    >
+                      {project.boards.map((item) => (
+                        <option
+                          key={item.id}
+                          value={item.id}
+                          className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                        >
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="space-y-2 text-[11px] text-[var(--ink-1)]">
                     <p className="text-[10px] uppercase tracking-wide">Main focus</p>
                     <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
