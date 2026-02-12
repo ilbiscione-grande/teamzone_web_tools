@@ -5,7 +5,13 @@ import { useProjectStore } from "@/state/useProjectStore";
 import { serializeProject, deserializeProject } from "@/persistence/serialize";
 import { saveProject } from "@/persistence/storage";
 import { useEditorStore } from "@/state/useEditorStore";
-import type { BoardMode, PitchOverlay, PitchView, SquadPreset } from "@/models";
+import type {
+  Board,
+  BoardMode,
+  PitchOverlay,
+  PitchView,
+  SquadPreset,
+} from "@/models";
 import FormationMenu from "@/components/FormationMenu";
 import { can, getPlanLimits } from "@/utils/plan";
 import AdBanner from "@/components/AdBanner";
@@ -23,6 +29,8 @@ import {
   updateSquadPreset,
 } from "@/persistence/squadPresets";
 import { createProjectShareLink } from "@/persistence/projectShareLinks";
+import { getPitchViewBounds } from "@/board/pitch/Pitch";
+import { getStageRef } from "@/utils/stageRef";
 
 export default function TopBar() {
   const project = useProjectStore((state) => state.project);
@@ -31,6 +39,9 @@ export default function TopBar() {
   const setActiveBoard = useProjectStore((state) => state.setActiveBoard);
   const setBoardMode = useProjectStore((state) => state.setBoardMode);
   const setBoardPitchView = useProjectStore((state) => state.setBoardPitchView);
+  const setActiveFrameIndex = useProjectStore(
+    (state) => state.setActiveFrameIndex
+  );
   const updateSquad = useProjectStore((state) => state.updateSquad);
   const addSquadPlayer = useProjectStore((state) => state.addSquadPlayer);
   const updateSquadPlayer = useProjectStore((state) => state.updateSquadPlayer);
@@ -83,6 +94,10 @@ export default function TopBar() {
   const [shareLinkOpen, setShareLinkOpen] = useState(false);
   const [shareLinkStatus, setShareLinkStatus] = useState<string | null>(null);
   const [shareLinkUrl, setShareLinkUrl] = useState<string | null>(null);
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const [pdfScope, setPdfScope] = useState<"board" | "project">("board");
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfStatus, setPdfStatus] = useState<string | null>(null);
   const manageLogoRef = useRef<HTMLInputElement>(null);
   const [hideBetaBanner, setHideBetaBanner] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
@@ -262,6 +277,282 @@ export default function TopBar() {
     }
     saveProject(result.project, authUser?.id ?? null);
     openProject(result.project.id);
+  };
+
+  const waitForPaint = async () => {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  };
+
+  const formatFieldLabel = (key: string) =>
+    key
+      .replace(/([A-Z])/g, " $1")
+      .replace(/_/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/^\w/, (value) => value.toUpperCase());
+
+  const stringifyNotesFields = (fields: unknown, indent = 0): string[] => {
+    if (!fields || typeof fields !== "object") {
+      return [];
+    }
+    const lines: string[] = [];
+    Object.entries(fields as Record<string, unknown>).forEach(([key, value]) => {
+      if (value == null) {
+        return;
+      }
+      const label = formatFieldLabel(key);
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (!trimmed) {
+          return;
+        }
+        lines.push(`${" ".repeat(indent)}${label}: ${trimmed}`);
+        return;
+      }
+      if (Array.isArray(value)) {
+        const items = value
+          .map((item) => String(item ?? "").trim())
+          .filter(Boolean);
+        if (items.length === 0) {
+          return;
+        }
+        lines.push(`${" ".repeat(indent)}${label}: ${items.join(", ")}`);
+        return;
+      }
+      const nested = stringifyNotesFields(value, indent + 2);
+      if (nested.length > 0) {
+        lines.push(`${" ".repeat(indent)}${label}:`);
+        lines.push(...nested);
+      }
+    });
+    return lines;
+  };
+
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const buildNotesText = (board: Board) => {
+    const sessionLines = stringifyNotesFields(project.sessionNotesFields);
+    const boardLines = stringifyNotesFields(board.notesFields);
+    const sessionText = project.sessionNotes?.trim() ?? "";
+    const boardText = board.notes?.trim() ?? "";
+    return [
+      "Session notes",
+      sessionText || "-",
+      ...(sessionLines.length > 0 ? ["", ...sessionLines] : []),
+      "",
+      "Board notes",
+      boardText || "-",
+      ...(boardLines.length > 0 ? ["", ...boardLines] : []),
+    ].join("\n");
+  };
+
+  const captureBoardImage = async (board: Board): Promise<string | null> => {
+    const stage = getStageRef();
+    if (!stage) {
+      return null;
+    }
+    const editorState = useEditorStore.getState();
+    const previousPlayState = editorState.isPlaying;
+    const previousPlayhead = editorState.playheadFrame;
+    const previousFrameIndex = board.activeFrameIndex;
+
+    editorState.setPlaying(false);
+    if (board.mode === "DYNAMIC") {
+      if (board.activeFrameIndex !== 0) {
+        setActiveFrameIndex(board.id, 0);
+      }
+      if (previousPlayhead !== 0) {
+        editorState.setPlayheadFrame(0);
+      }
+    }
+    await waitForPaint();
+
+    const pitchBounds = getPitchViewBounds(board.pitchView);
+    const viewRotation =
+      board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF" ? -90 : 0;
+    const effectiveBounds =
+      viewRotation === 0
+        ? pitchBounds
+        : {
+            x: pitchBounds.x + pitchBounds.width / 2 - pitchBounds.height / 2,
+            y: pitchBounds.y + pitchBounds.height / 2 - pitchBounds.width / 2,
+            width: pitchBounds.height,
+            height: pitchBounds.width,
+          };
+    const pixelRatio = window.devicePixelRatio ?? 1;
+    const stageScale = stage.scaleX();
+    const stageOffsetX = stage.x();
+    const stageOffsetY = stage.y();
+    const srcX = (effectiveBounds.x * stageScale + stageOffsetX) * pixelRatio;
+    const srcY = (effectiveBounds.y * stageScale + stageOffsetY) * pixelRatio;
+    const srcW = effectiveBounds.width * stageScale * pixelRatio;
+    const srcH = effectiveBounds.height * stageScale * pixelRatio;
+    const targetW = Math.max(1, Math.round(srcW));
+    const targetH = Math.max(1, Math.round(srcH));
+    const canvas = document.createElement("canvas");
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return null;
+    }
+    ctx.fillStyle = "#1f5f3f";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    stage.getLayers().forEach((layer) => {
+      const layerCanvas = (layer.getCanvas() as { _canvas?: HTMLCanvasElement })
+        ?._canvas;
+      if (!layerCanvas) {
+        return;
+      }
+      ctx.drawImage(
+        layerCanvas,
+        srcX,
+        srcY,
+        srcW,
+        srcH,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+    });
+    const imageData = canvas.toDataURL("image/png");
+
+    if (board.mode === "DYNAMIC") {
+      if (previousFrameIndex !== 0) {
+        setActiveFrameIndex(board.id, previousFrameIndex);
+      }
+      if (previousPlayhead !== 0) {
+        editorState.setPlayheadFrame(previousPlayhead);
+      }
+    }
+    if (previousPlayState) {
+      editorState.setPlaying(true);
+    }
+
+    return imageData;
+  };
+
+  const openPrintablePdfView = (
+    pages: Array<{ boardName: string; notes: string; image: string }>
+  ) => {
+    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (!printWindow) {
+      return false;
+    }
+    const sections = pages
+      .map(
+        (page) => `
+          <section class="page">
+            <h2>${escapeHtml(page.boardName)}</h2>
+            <img src="${page.image}" alt="${escapeHtml(page.boardName)}" />
+            <pre>${escapeHtml(page.notes)}</pre>
+          </section>
+        `
+      )
+      .join("");
+    const doc = `<!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>${escapeHtml(project.name)} - PDF export</title>
+          <style>
+            @page { size: A4 portrait; margin: 14mm; }
+            * { box-sizing: border-box; }
+            body { margin: 0; font-family: Arial, sans-serif; color: #101010; }
+            .page { page-break-after: always; }
+            .page:last-child { page-break-after: auto; }
+            h2 { margin: 0 0 8px; font-size: 16px; }
+            img {
+              width: 100%;
+              max-height: 150mm;
+              object-fit: contain;
+              border: 1px solid #ddd;
+              background: #1f5f3f;
+              display: block;
+            }
+            pre {
+              margin: 10px 0 0;
+              padding: 10px;
+              border: 1px solid #ddd;
+              font-size: 11px;
+              line-height: 1.35;
+              white-space: pre-wrap;
+              word-break: break-word;
+            }
+          </style>
+        </head>
+        <body>${sections}</body>
+      </html>`;
+    printWindow.document.open();
+    printWindow.document.write(doc);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 150);
+    return true;
+  };
+
+  const onExportPdf = async () => {
+    if (!can(plan, "project.export")) {
+      setPdfStatus("PDF export is not available on this plan.");
+      return;
+    }
+    if (!activeBoard) {
+      setPdfStatus("No active board.");
+      return;
+    }
+    setPdfBusy(true);
+    setPdfStatus("Preparing PDF...");
+    try {
+      const originalBoardId = project.activeBoardId ?? project.boards[0]?.id;
+      const targets =
+        pdfScope === "project"
+          ? [...project.boards]
+          : [activeBoard].filter(Boolean) as Board[];
+      const pages: Array<{ boardName: string; notes: string; image: string }> = [];
+
+      for (const targetBoard of targets) {
+        if (project.activeBoardId !== targetBoard.id) {
+          setActiveBoard(targetBoard.id);
+          await waitForPaint();
+        }
+        const image = await captureBoardImage(targetBoard);
+        if (!image) {
+          continue;
+        }
+        pages.push({
+          boardName: targetBoard.name,
+          notes: buildNotesText(targetBoard),
+          image,
+        });
+      }
+
+      if (originalBoardId && project.activeBoardId !== originalBoardId) {
+        setActiveBoard(originalBoardId);
+      }
+
+      if (pages.length === 0) {
+        setPdfStatus("Could not capture boards for PDF export.");
+        return;
+      }
+      const opened = openPrintablePdfView(pages);
+      setPdfStatus(
+        opened
+          ? "Print dialog opened. Choose 'Save as PDF'."
+          : "Popup blocked. Allow popups and try again."
+      );
+    } finally {
+      setPdfBusy(false);
+    }
   };
 
   return (
@@ -710,6 +1001,31 @@ export default function TopBar() {
                       <path d="M7 19v-6h10v6" />
                     </svg>
                     Save project
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                    onClick={() => {
+                      setActionsOpen(false);
+                      setPdfOpen(true);
+                      setPdfStatus(null);
+                    }}
+                    disabled={!can(plan, "project.export")}
+                    data-locked={!can(plan, "project.export")}
+                  >
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 24 24"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
+                      <path d="M9 13h6M9 17h6M9 9h2" />
+                    </svg>
+                    Export PDF
                   </button>
                   <button
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
@@ -1621,6 +1937,62 @@ export default function TopBar() {
                 <p className="text-xs text-[var(--accent-1)]">
                   {shareLinkStatus}
                 </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+      {pdfOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="w-full max-w-lg rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="display-font text-xl text-[var(--accent-0)]">
+                  Export PDF
+                </h2>
+                <p className="text-xs text-[var(--ink-1)]">
+                  Export board screenshots with session and board notes.
+                </p>
+              </div>
+              <button
+                className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                onClick={() => setPdfOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  className={`rounded-2xl border px-3 py-2 text-xs ${
+                    pdfScope === "board"
+                      ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                      : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                  }`}
+                  onClick={() => setPdfScope("board")}
+                >
+                  Current board
+                </button>
+                <button
+                  className={`rounded-2xl border px-3 py-2 text-xs ${
+                    pdfScope === "project"
+                      ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                      : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                  }`}
+                  onClick={() => setPdfScope("project")}
+                >
+                  Whole project
+                </button>
+              </div>
+              <button
+                className="h-10 w-full rounded-full bg-[var(--accent-0)] px-5 text-xs font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+                onClick={onExportPdf}
+                disabled={pdfBusy}
+              >
+                {pdfBusy ? "Preparing..." : "Open print / PDF"}
+              </button>
+              {pdfStatus ? (
+                <p className="text-xs text-[var(--accent-1)]">{pdfStatus}</p>
               ) : null}
             </div>
           </div>
