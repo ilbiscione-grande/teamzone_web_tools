@@ -443,10 +443,6 @@ export default function TopBar() {
   const openPrintablePdfView = (
     pages: Array<{ boardName: string; notes: string; image: string }>
   ) => {
-    const printWindow = window.open("", "_blank", "noopener,noreferrer");
-    if (!printWindow) {
-      return false;
-    }
     const sections = pages
       .map(
         (page) => `
@@ -491,13 +487,46 @@ export default function TopBar() {
         </head>
         <body>${sections}</body>
       </html>`;
-    printWindow.document.open();
-    printWindow.document.write(doc);
-    printWindow.document.close();
-    printWindow.focus();
+    const frame = document.createElement("iframe");
+    frame.style.position = "fixed";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.width = "0";
+    frame.style.height = "0";
+    frame.style.border = "0";
+    frame.setAttribute("aria-hidden", "true");
+    document.body.appendChild(frame);
+    const frameDoc = frame.contentDocument;
+    if (!frameDoc || !frame.contentWindow) {
+      document.body.removeChild(frame);
+      return false;
+    }
+    frameDoc.open();
+    frameDoc.write(doc);
+    frameDoc.close();
+    const cleanup = () => {
+      setTimeout(() => {
+        if (frame.parentNode) {
+          frame.parentNode.removeChild(frame);
+        }
+      }, 800);
+    };
+    frame.onload = () => {
+      try {
+        frame.contentWindow?.focus();
+        frame.contentWindow?.print();
+      } finally {
+        cleanup();
+      }
+    };
     setTimeout(() => {
-      printWindow.print();
-    }, 150);
+      try {
+        frame.contentWindow?.focus();
+        frame.contentWindow?.print();
+      } finally {
+        cleanup();
+      }
+    }, 250);
     return true;
   };
 
