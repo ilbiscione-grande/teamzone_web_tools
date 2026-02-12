@@ -96,6 +96,7 @@ export default function TopBar() {
   const [shareLinkUrl, setShareLinkUrl] = useState<string | null>(null);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [pdfScope, setPdfScope] = useState<"board" | "project">("board");
+  const [pdfSelectedBoardIds, setPdfSelectedBoardIds] = useState<string[]>([]);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfStatus, setPdfStatus] = useState<string | null>(null);
   const manageLogoRef = useRef<HTMLInputElement>(null);
@@ -249,6 +250,17 @@ export default function TopBar() {
     project?.settings?.mode ?? ("match" as "training" | "match" | "education");
   const modeText = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
 
+  useEffect(() => {
+    if (!pdfOpen) {
+      return;
+    }
+    if (pdfScope === "board") {
+      setPdfSelectedBoardIds(activeBoard ? [activeBoard.id] : []);
+      return;
+    }
+    setPdfSelectedBoardIds(project.boards.map((board) => board.id));
+  }, [pdfOpen, pdfScope, project.boards, activeBoard]);
+
   const onExport = () => {
     if (!can(plan, "project.export")) {
       window.alert("Export is not available on this plan.");
@@ -292,41 +304,59 @@ export default function TopBar() {
       .trim()
       .replace(/^\w/, (value) => value.toUpperCase());
 
-  const stringifyNotesFields = (fields: unknown, indent = 0): string[] => {
-    if (!fields || typeof fields !== "object") {
-      return [];
+  const getTemplateKey = (board: Board) => {
+    if (board.notesTemplate === "TRAINING") {
+      return "training";
     }
-    const lines: string[] = [];
-    Object.entries(fields as Record<string, unknown>).forEach(([key, value]) => {
-      if (value == null) {
+    if (board.notesTemplate === "MATCH") {
+      return "match";
+    }
+    if (board.notesTemplate === "EDUCATION") {
+      return "education";
+    }
+    return project.settings.mode;
+  };
+
+  const toText = (value: unknown) => {
+    if (typeof value === "string") {
+      return value.trim();
+    }
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => String(item ?? "").trim())
+        .filter(Boolean)
+        .join(", ");
+    }
+    return "";
+  };
+
+  const appendStructuredFields = (
+    lines: string[],
+    fields: Record<string, unknown> | undefined,
+    orderedKeys: string[]
+  ) => {
+    if (!fields) {
+      return;
+    }
+    const used = new Set<string>();
+    orderedKeys.forEach((key) => {
+      const value = toText(fields[key]);
+      if (!value) {
         return;
       }
-      const label = formatFieldLabel(key);
-      if (typeof value === "string") {
-        const trimmed = value.trim();
-        if (!trimmed) {
-          return;
-        }
-        lines.push(`${" ".repeat(indent)}${label}: ${trimmed}`);
-        return;
-      }
-      if (Array.isArray(value)) {
-        const items = value
-          .map((item) => String(item ?? "").trim())
-          .filter(Boolean);
-        if (items.length === 0) {
-          return;
-        }
-        lines.push(`${" ".repeat(indent)}${label}: ${items.join(", ")}`);
-        return;
-      }
-      const nested = stringifyNotesFields(value, indent + 2);
-      if (nested.length > 0) {
-        lines.push(`${" ".repeat(indent)}${label}:`);
-        lines.push(...nested);
-      }
+      used.add(key);
+      lines.push(`${formatFieldLabel(key)}: ${value}`);
     });
-    return lines;
+    Object.entries(fields).forEach(([key, raw]) => {
+      if (used.has(key)) {
+        return;
+      }
+      const value = toText(raw);
+      if (!value) {
+        return;
+      }
+      lines.push(`${formatFieldLabel(key)}: ${value}`);
+    });
   };
 
   const escapeHtml = (value: string) =>
@@ -338,19 +368,73 @@ export default function TopBar() {
       .replace(/'/g, "&#39;");
 
   const buildNotesText = (board: Board) => {
-    const sessionLines = stringifyNotesFields(project.sessionNotesFields);
-    const boardLines = stringifyNotesFields(board.notesFields);
+    const templateKey = getTemplateKey(board);
+    const fieldOrderByTemplate: Record<string, string[]> = {
+      training: [
+        "mainFocus",
+        "partGoals",
+        "dateTime",
+        "organisation",
+        "keyBehaviours",
+        "coachInstructions",
+        "equipment",
+      ],
+      match: [
+        "opposition",
+        "ourGameWithBall",
+        "ourGameWithoutBall",
+        "counters",
+        "keyRoles",
+        "importantReminders",
+        "matchMessage",
+      ],
+      education: [
+        "tema",
+        "grundprincip",
+        "whatToSee",
+        "whatToDo",
+        "usualErrors",
+        "matchConnection",
+        "reflections",
+      ],
+    };
+    const fieldOrder = fieldOrderByTemplate[templateKey] ?? [];
+    const scopedSessionFields = (
+      project.sessionNotesFields?.[templateKey as keyof typeof project.sessionNotesFields] ??
+      {}
+    ) as Record<string, unknown>;
+    const scopedBoardFields = (
+      board.notesFields?.[templateKey as keyof typeof board.notesFields] ?? {}
+    ) as Record<string, unknown>;
     const sessionText = project.sessionNotes?.trim() ?? "";
     const boardText = board.notes?.trim() ?? "";
-    return [
-      "Session notes",
-      sessionText || "-",
-      ...(sessionLines.length > 0 ? ["", ...sessionLines] : []),
-      "",
-      "Board notes",
-      boardText || "-",
-      ...(boardLines.length > 0 ? ["", ...boardLines] : []),
-    ].join("\n");
+    const lines: string[] = ["Session notes"];
+    appendStructuredFields(lines, scopedSessionFields, fieldOrder);
+    lines.push("Notes:");
+    lines.push(sessionText || "-");
+    lines.push("");
+    lines.push("Board notes");
+    appendStructuredFields(lines, scopedBoardFields, fieldOrder);
+    lines.push("Notes:");
+    lines.push(boardText || "-");
+    return lines.join("\n");
+  };
+
+  const moveSelectedBoard = (boardId: string, direction: -1 | 1) => {
+    setPdfSelectedBoardIds((prev) => {
+      const index = prev.indexOf(boardId);
+      if (index < 0) {
+        return prev;
+      }
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= prev.length) {
+        return prev;
+      }
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.splice(targetIndex, 0, item);
+      return next;
+    });
   };
 
   const captureBoardImage = async (board: Board): Promise<string | null> => {
@@ -441,15 +525,26 @@ export default function TopBar() {
   };
 
   const openPrintablePdfView = (
-    pages: Array<{ boardName: string; notes: string; image: string }>
+    pages: Array<{ boardName: string; notes: string; image: string }>,
+    generatedAtLabel: string
   ) => {
     const sections = pages
       .map(
-        (page) => `
+        (page, index) => `
           <section class="page">
-            <h2>${escapeHtml(page.boardName)}</h2>
-            <img src="${page.image}" alt="${escapeHtml(page.boardName)}" />
-            <pre>${escapeHtml(page.notes)}</pre>
+            <header class="page-header">
+              <span>${escapeHtml(project.name)}</span>
+              <span>${escapeHtml(generatedAtLabel)}</span>
+            </header>
+            <main class="page-main">
+              <h2>${escapeHtml(page.boardName)}</h2>
+              <img src="${page.image}" alt="${escapeHtml(page.boardName)}" />
+              <pre>${escapeHtml(page.notes)}</pre>
+            </main>
+            <footer class="page-footer">
+              <span>Teamzone Web Tools</span>
+              <span>Page ${index + 1} / ${pages.length}</span>
+            </footer>
           </section>
         `
       )
@@ -463,12 +558,39 @@ export default function TopBar() {
             @page { size: A4 portrait; margin: 14mm; }
             * { box-sizing: border-box; }
             body { margin: 0; font-family: Arial, sans-serif; color: #101010; }
-            .page { page-break-after: always; }
+            .page {
+              height: calc(297mm - 28mm);
+              display: flex;
+              flex-direction: column;
+              page-break-after: always;
+            }
             .page:last-child { page-break-after: auto; }
-            h2 { margin: 0 0 8px; font-size: 16px; }
+            .page-header, .page-footer {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 10px;
+              color: #505050;
+              border-bottom: 1px solid #d7d7d7;
+              padding-bottom: 4px;
+            }
+            .page-footer {
+              border-bottom: 0;
+              border-top: 1px solid #d7d7d7;
+              padding-top: 4px;
+              padding-bottom: 0;
+              margin-top: 8px;
+            }
+            .page-main {
+              flex: 1;
+              min-height: 0;
+              display: flex;
+              flex-direction: column;
+            }
+            h2 { margin: 8px 0; font-size: 16px; }
             img {
               width: 100%;
-              max-height: 150mm;
+              max-height: 145mm;
               object-fit: contain;
               border: 1px solid #ddd;
               background: #1f5f3f;
@@ -482,6 +604,7 @@ export default function TopBar() {
               line-height: 1.35;
               white-space: pre-wrap;
               word-break: break-word;
+              overflow: hidden;
             }
           </style>
         </head>
@@ -545,8 +668,14 @@ export default function TopBar() {
       const originalBoardId = project.activeBoardId ?? project.boards[0]?.id;
       const targets =
         pdfScope === "project"
-          ? [...project.boards]
+          ? pdfSelectedBoardIds
+              .map((id) => project.boards.find((board) => board.id === id))
+              .filter((board): board is Board => Boolean(board))
           : [activeBoard].filter(Boolean) as Board[];
+      if (targets.length === 0) {
+        setPdfStatus("Select at least one board.");
+        return;
+      }
       const pages: Array<{ boardName: string; notes: string; image: string }> = [];
 
       for (const targetBoard of targets) {
@@ -573,11 +702,18 @@ export default function TopBar() {
         setPdfStatus("Could not capture boards for PDF export.");
         return;
       }
-      const opened = openPrintablePdfView(pages);
+      const generatedAtLabel = new Intl.DateTimeFormat("sv-SE", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date());
+      const opened = openPrintablePdfView(pages, generatedAtLabel);
       setPdfStatus(
         opened
           ? "Print dialog opened. Choose 'Save as PDF'."
-          : "Popup blocked. Allow popups and try again."
+          : "Could not open print view."
       );
     } finally {
       setPdfBusy(false);
@@ -1998,7 +2134,10 @@ export default function TopBar() {
                       ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
                       : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
                   }`}
-                  onClick={() => setPdfScope("board")}
+                  onClick={() => {
+                    setPdfScope("board");
+                    setPdfSelectedBoardIds(activeBoard ? [activeBoard.id] : []);
+                  }}
                 >
                   Current board
                 </button>
@@ -2008,10 +2147,80 @@ export default function TopBar() {
                       ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
                       : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
                   }`}
-                  onClick={() => setPdfScope("project")}
+                  onClick={() => {
+                    setPdfScope("project");
+                    setPdfSelectedBoardIds(project.boards.map((board) => board.id));
+                  }}
                 >
                   Whole project
                 </button>
+              </div>
+              <div className="max-h-48 space-y-2 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                {project.boards.map((board) => {
+                  const isChecked = pdfSelectedBoardIds.includes(board.id);
+                  const isLockedToActive =
+                    pdfScope === "board" && activeBoard?.id !== board.id;
+                  const selectedIndex = pdfSelectedBoardIds.indexOf(board.id);
+                  return (
+                    <label
+                      key={board.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"
+                    >
+                      <span className="flex min-w-0 items-center gap-2 truncate">
+                        {selectedIndex >= 0 ? (
+                          <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10px] text-[var(--ink-1)]">
+                            {selectedIndex + 1}
+                          </span>
+                        ) : null}
+                        <span className="truncate">{board.name}</span>
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {pdfScope === "project" && isChecked ? (
+                          <>
+                            <button
+                              type="button"
+                              className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[10px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                              title="Move up"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                moveSelectedBoard(board.id, -1);
+                              }}
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[10px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                              title="Move down"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                moveSelectedBoard(board.id, 1);
+                              }}
+                            >
+                              ↓
+                            </button>
+                          </>
+                        ) : null}
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        disabled={isLockedToActive}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setPdfSelectedBoardIds((prev) => {
+                            if (checked) {
+                              return prev.includes(board.id)
+                                ? prev
+                                : [...prev, board.id];
+                            }
+                            return prev.filter((id) => id !== board.id);
+                          });
+                        }}
+                      />
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
               <button
                 className="h-10 w-full rounded-full bg-[var(--accent-0)] px-5 text-xs font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
