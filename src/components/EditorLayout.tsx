@@ -37,6 +37,13 @@ export default function EditorLayout() {
   const [showMaximizedNotes, setShowMaximizedNotes] = useState(true);
   const [isMaximizedPenMode, setIsMaximizedPenMode] = useState(false);
   const [viewport, setViewport] = useState({ width: 1366, height: 768 });
+  const [notesWidthBonus, setNotesWidthBonus] = useState(0);
+  const [manualNotesWidth, setManualNotesWidth] = useState<number | null>(null);
+  const maximizedNotesRef = useRef<HTMLDivElement | null>(null);
+  const notesResizeDragRef = useRef<{
+    startX: number;
+    startWidth: number;
+  } | null>(null);
   const [maximizedInkStrokes, setMaximizedInkStrokes] = useState<number[][]>(
     []
   );
@@ -80,6 +87,64 @@ export default function EditorLayout() {
     window.addEventListener("resize", updateViewport);
     return () => window.removeEventListener("resize", updateViewport);
   }, []);
+  useEffect(() => {
+    if (!isMaximized || !showMaximizedNotes) {
+      setNotesWidthBonus(0);
+      return;
+    }
+    if (manualNotesWidth != null) {
+      return;
+    }
+    const node = maximizedNotesRef.current;
+    if (!node) {
+      return;
+    }
+    const overflow = Math.max(0, node.scrollHeight - node.clientHeight);
+    if (overflow <= 0) {
+      if (notesWidthBonus !== 0) {
+        setNotesWidthBonus(0);
+      }
+      return;
+    }
+    // Convert vertical overflow into extra width to reduce line wraps.
+    const nextBonus = Math.min(260, Math.max(24, Math.ceil(overflow * 0.75)));
+    if (Math.abs(nextBonus - notesWidthBonus) > 8) {
+      setNotesWidthBonus(nextBonus);
+    }
+  }, [
+    isMaximized,
+    showMaximizedNotes,
+    viewport.width,
+    viewport.height,
+    project?.sessionNotes,
+    board?.notes,
+    project?.sessionNotesFields,
+    board?.notesFields,
+    notesWidthBonus,
+    manualNotesWidth,
+  ]);
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      const drag = notesResizeDragRef.current;
+      if (!drag) {
+        return;
+      }
+      const deltaX = drag.startX - event.clientX;
+      const next = drag.startWidth + deltaX;
+      const minWidth = 320;
+      const maxWidth = Math.max(minWidth, Math.min(860, viewport.width - 240));
+      setManualNotesWidth(Math.max(minWidth, Math.min(maxWidth, Math.round(next))));
+    };
+    const onUp = () => {
+      notesResizeDragRef.current = null;
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [viewport.width]);
 
   useEffect(() => {
     if (!propertiesFloating) {
@@ -229,9 +294,16 @@ export default function EditorLayout() {
         : viewportAspect >= 1.35
         ? 0.35
         : 0.31;
-    const notesWidth = Math.round(
+    const baseNotesWidth = Math.round(
       Math.min(700, Math.max(420, viewport.width * notesWidthRatio))
     );
+    const autoNotesWidth = Math.round(
+      Math.min(
+        Math.max(420, viewport.width - 320),
+        Math.max(420, baseNotesWidth + notesWidthBonus)
+      )
+    );
+    const notesWidth = manualNotesWidth ?? autoNotesWidth;
     const appendInkPoint = (event: {
       currentTarget: HTMLDivElement;
       clientX: number;
@@ -258,7 +330,7 @@ export default function EditorLayout() {
           }`}
           style={
             showMaximizedNotes
-              ? { gridTemplateColumns: `minmax(0,1fr) ${notesWidth}px` }
+              ? { gridTemplateColumns: `minmax(0,1fr) 10px ${notesWidth}px` }
               : undefined
           }
         >
@@ -333,13 +405,35 @@ export default function EditorLayout() {
           {showMaximizedNotes && (
             <div
               className="pointer-events-none absolute top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] text-[var(--ink-1)]"
-              style={{ right: `${notesWidth + 24}px` }}
+              style={{ right: `${notesWidth + 38}px` }}
             >
               {sessionDateText}
             </div>
           )}
           {showMaximizedNotes && (
-            <div className="min-h-0 overflow-y-auto rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-2">
+            <button
+              type="button"
+              className="relative z-20 h-full cursor-col-resize rounded-full border border-[var(--line)] bg-[var(--panel-2)]/60 hover:border-[var(--accent-2)]"
+              title="Drag to resize notes panel (double click to auto-fit)"
+              onDoubleClick={() => setManualNotesWidth(null)}
+              onPointerDown={(event) => {
+                notesResizeDragRef.current = {
+                  startX: event.clientX,
+                  startWidth: notesWidth,
+                };
+                (event.currentTarget as HTMLButtonElement).setPointerCapture(
+                  event.pointerId
+                );
+              }}
+            >
+              <span className="absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-[var(--line)]" />
+            </button>
+          )}
+          {showMaximizedNotes && (
+            <div
+              ref={maximizedNotesRef}
+              className="min-h-0 overflow-y-auto rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-2"
+            >
               <div className="space-y-2">
                 <section className="rounded-2xl border border-[var(--line)] p-2">
                   <div className="space-y-2 text-[11px] text-[var(--ink-1)]">
