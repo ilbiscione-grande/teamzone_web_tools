@@ -194,7 +194,7 @@ export default function EditorLayout() {
       <div className="fixed inset-0 z-50 flex h-screen flex-col bg-[var(--panel)]">
         <div
           className={`relative flex-1 overflow-hidden ${
-            showMaximizedNotes ? "grid grid-cols-[minmax(0,1fr)_360px] gap-3 p-3" : ""
+            showMaximizedNotes ? "grid grid-cols-[minmax(0,1fr)_460px] gap-3 p-3" : ""
           }`}
         >
           {showMaximizedNotes && (
@@ -272,49 +272,47 @@ export default function EditorLayout() {
                   <p className="mb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                     Session notes
                   </p>
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-[var(--ink-1)]">
-                    <div className="space-y-2">
-                      <div className="space-y-1">
-                        <span>Main focus</span>
-                        <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
-                          {sessionTraining.mainFocus || "-"}
-                        </div>
+                  <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
+                    <div className="space-y-1">
+                      <span>Main focus</span>
+                      <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
+                        {sessionTraining.mainFocus || "-"}
                       </div>
-                      <div className="space-y-1">
-                        <span>Date/time</span>
-                        <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
-                          {sessionTraining.dateTime || "-"}
-                        </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span>Date/time</span>
+                      <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
+                        {sessionTraining.dateTime || "-"}
                       </div>
-                      <div className="space-y-1">
-                        <span>Part goals</span>
-                        <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
-                          {sessionTraining.partGoals || "-"}
-                        </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span>Part goals</span>
+                      <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
+                        {sessionTraining.partGoals || "-"}
                       </div>
-                      <div className="space-y-1">
-                        <span>Equipment</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {(sessionTraining.equipment ?? []).length === 0 ? (
-                            <span className="rounded-lg border border-[var(--line)] px-2 py-1 text-[10px] text-[var(--ink-1)]">
-                              -
+                    </div>
+                    <div className="space-y-1">
+                      <span>Equipment</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(sessionTraining.equipment ?? []).length === 0 ? (
+                          <span className="rounded-lg border border-[var(--line)] px-2 py-1 text-[10px] text-[var(--ink-1)]">
+                            -
+                          </span>
+                        ) : (
+                          (sessionTraining.equipment ?? []).map((item) => (
+                            <span
+                              key={`session-eq-${item}`}
+                              className="rounded-lg border border-[var(--line)] px-2 py-1 text-[10px] text-[var(--ink-0)]"
+                            >
+                              {item}
                             </span>
-                          ) : (
-                            (sessionTraining.equipment ?? []).map((item) => (
-                              <span
-                                key={`session-eq-${item}`}
-                                className="rounded-lg border border-[var(--line)] px-2 py-1 text-[10px] text-[var(--ink-0)]"
-                              >
-                                {item}
-                              </span>
-                            ))
-                          )}
-                        </div>
+                          ))
+                        )}
                       </div>
                     </div>
                     <div className="space-y-1">
                       <span>Session notes</span>
-                      <div className="h-full min-h-[132px] whitespace-pre-wrap rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
+                      <div className="min-h-[120px] whitespace-pre-wrap rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
                         {project.sessionNotes || "-"}
                       </div>
                     </div>
@@ -324,61 +322,59 @@ export default function EditorLayout() {
                   <p className="mb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                     Board notes
                   </p>
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-[var(--ink-1)]">
-                    <div className="space-y-2">
-                      <div className="space-y-1">
-                        <span>Main focus</span>
-                        <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
-                          {boardTraining.mainFocus || "-"}
-                        </div>
+                  <div className="grid gap-2 text-[11px] text-[var(--ink-1)]">
+                    <div className="space-y-1">
+                      <span>Main focus</span>
+                      <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
+                        {boardTraining.mainFocus || "-"}
                       </div>
-                      <div className="space-y-1">
-                        <span>Part goals</span>
-                        <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
-                          {boardTraining.partGoals || "-"}
-                        </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span>Part goals</span>
+                      <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
+                        {boardTraining.partGoals || "-"}
                       </div>
-                      <div className="space-y-1">
-                        <span>Organisation</span>
-                        <div className="min-h-14 whitespace-pre-wrap rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
-                          {boardTraining.organisation || "-"}
-                        </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span>Organisation</span>
+                      <div className="min-h-14 whitespace-pre-wrap rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
+                        {boardTraining.organisation || "-"}
                       </div>
-                      <div className="space-y-1">
-                        <span>Key behaviours</span>
-                        <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
-                          {boardTraining.keyBehaviours || "-"}
-                        </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span>Key behaviours</span>
+                      <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
+                        {boardTraining.keyBehaviours || "-"}
                       </div>
-                      <div className="space-y-1">
-                        <span>Coach instructions</span>
-                        <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
-                          {boardTraining.coachInstructions || "-"}
-                        </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span>Coach instructions</span>
+                      <div className="min-h-7 w-full rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
+                        {boardTraining.coachInstructions || "-"}
                       </div>
-                      <div className="space-y-1">
-                        <span>Equipment</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {(boardTraining.equipment ?? []).length === 0 ? (
-                            <span className="rounded-lg border border-[var(--line)] px-2 py-1 text-[10px] text-[var(--ink-1)]">
-                              -
+                    </div>
+                    <div className="space-y-1">
+                      <span>Equipment</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(boardTraining.equipment ?? []).length === 0 ? (
+                          <span className="rounded-lg border border-[var(--line)] px-2 py-1 text-[10px] text-[var(--ink-1)]">
+                            -
+                          </span>
+                        ) : (
+                          (boardTraining.equipment ?? []).map((item) => (
+                            <span
+                              key={`board-eq-${item}`}
+                              className="rounded-lg border border-[var(--line)] px-2 py-1 text-[10px] text-[var(--ink-0)]"
+                            >
+                              {item}
                             </span>
-                          ) : (
-                            (boardTraining.equipment ?? []).map((item) => (
-                              <span
-                                key={`board-eq-${item}`}
-                                className="rounded-lg border border-[var(--line)] px-2 py-1 text-[10px] text-[var(--ink-0)]"
-                              >
-                                {item}
-                              </span>
-                            ))
-                          )}
-                        </div>
+                          ))
+                        )}
                       </div>
                     </div>
                     <div className="space-y-1">
                       <span>Board notes</span>
-                      <div className="h-full min-h-[188px] whitespace-pre-wrap rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
+                      <div className="min-h-[168px] whitespace-pre-wrap rounded-lg border border-[var(--line)] px-2 py-1.5 text-xs text-[var(--ink-0)]">
                         {board.notes || "-"}
                       </div>
                     </div>
