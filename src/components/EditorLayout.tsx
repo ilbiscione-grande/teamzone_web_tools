@@ -205,6 +205,7 @@ export default function EditorLayout() {
     "Hurdles",
     "Poles",
   ];
+  const compactVertical = viewport.height <= 860;
   if (!project || !board) {
     return null;
   }
@@ -345,10 +346,12 @@ export default function EditorLayout() {
       );
     };
     return (
-      <div className="fixed inset-0 z-50 flex h-screen flex-col bg-[var(--panel)]">
+      <div className="fixed inset-0 z-50 flex h-[100dvh] flex-col bg-[var(--panel)]">
         <div
           className={`relative flex-1 overflow-hidden ${
-            showMaximizedNotes ? "grid gap-3 p-3" : ""
+            showMaximizedNotes
+              ? `grid ${compactVertical ? "gap-2 p-2" : "gap-3 p-3"}`
+              : ""
           }`}
           style={
             showMaximizedNotes
@@ -427,7 +430,10 @@ export default function EditorLayout() {
           {showMaximizedNotes && (
             <div
               className="pointer-events-none absolute top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] text-[var(--ink-1)]"
-              style={{ right: `${notesWidth + 38}px` }}
+              style={{
+                right: `${notesWidth + (compactVertical ? 30 : 38)}px`,
+                top: compactVertical ? "10px" : "16px",
+              }}
             >
               {sessionDateText}
             </div>
@@ -687,7 +693,7 @@ export default function EditorLayout() {
           </div>
         </div>
         {board.mode === "DYNAMIC" && (
-          <div className="px-4 pb-4">
+          <div className={compactVertical ? "px-2 pb-2" : "px-4 pb-4"}>
             <FramesBar board={board} stage={stage} />
           </div>
         )}
@@ -696,11 +702,15 @@ export default function EditorLayout() {
   }
 
   return (
-    <div className="grid h-screen grid-rows-[auto_1fr] overflow-hidden">
-      <div className="px-6 pt-4">
+    <div className="grid h-[100dvh] grid-rows-[auto_1fr] overflow-hidden">
+      <div className={compactVertical ? "px-3 pt-2" : "px-6 pt-4"}>
         <TopBar />
       </div>
-      <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_320px] gap-4 px-6 pb-6">
+      <div
+        className={`grid min-h-0 grid-cols-[minmax(0,1fr)_320px] ${
+          compactVertical ? "gap-2 px-3 pb-3" : "gap-4 px-6 pb-6"
+        }`}
+      >
         <div className="relative flex min-h-0 flex-col overflow-visible">
           <div className="relative flex-1 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] shadow-xl shadow-black/30">
             <div className="pointer-events-none absolute left-4 top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
