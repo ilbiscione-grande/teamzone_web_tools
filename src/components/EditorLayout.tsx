@@ -302,14 +302,16 @@ export default function EditorLayout() {
             </div>
           )}
           {showMaximizedNotes && (
+            <div className="pointer-events-none absolute right-[476px] top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] text-[var(--ink-1)]">
+              {sessionDateText}
+            </div>
+          )}
+          {showMaximizedNotes && (
             <div className="min-h-0 overflow-y-auto rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-2">
               <div className="space-y-2">
                 <section className="rounded-2xl border border-[var(--line)] p-2">
-                  <p className="mb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                    Session notes
-                  </p>
                   <div className="space-y-2 text-[11px] text-[var(--ink-1)]">
-                    <p className="text-[10px] uppercase tracking-wide">Main focus</p>
+                    <p className="text-[10px] uppercase tracking-wide">Session focus</p>
                     <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
                       {sessionTraining.mainFocus || "-"}
                     </p>
@@ -317,7 +319,6 @@ export default function EditorLayout() {
                     <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
                       {sessionNotesText || "-"}
                     </p>
-                    <p className="text-[10px] text-[var(--ink-1)]">{sessionDateText}</p>
                   </div>
                 </section>
                 <section className="rounded-2xl border border-[var(--line)] p-2">
