@@ -39,6 +39,7 @@ export default function EditorLayout() {
   const [viewport, setViewport] = useState({ width: 1366, height: 768 });
   const [notesWidthBonus, setNotesWidthBonus] = useState(0);
   const [manualNotesWidth, setManualNotesWidth] = useState<number | null>(null);
+  const [isResizingNotes, setIsResizingNotes] = useState(false);
   const maximizedNotesRef = useRef<HTMLDivElement | null>(null);
   const notesResizeDragRef = useRef<{
     startX: number;
@@ -129,6 +130,7 @@ export default function EditorLayout() {
       if (!drag) {
         return;
       }
+      event.preventDefault();
       const deltaX = drag.startX - event.clientX;
       const next = drag.startWidth + deltaX;
       const minWidth = 320;
@@ -137,14 +139,34 @@ export default function EditorLayout() {
     };
     const onUp = () => {
       notesResizeDragRef.current = null;
+      setIsResizingNotes(false);
+    };
+    const onCancel = () => {
+      notesResizeDragRef.current = null;
+      setIsResizingNotes(false);
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
     };
   }, [viewport.width]);
+  useEffect(() => {
+    if (!isResizingNotes || typeof document === "undefined") {
+      return;
+    }
+    const previousUserSelect = document.body.style.userSelect;
+    const previousCursor = document.body.style.cursor;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    return () => {
+      document.body.style.userSelect = previousUserSelect;
+      document.body.style.cursor = previousCursor;
+    };
+  }, [isResizingNotes]);
 
   useEffect(() => {
     if (!propertiesFloating) {
@@ -413,20 +435,29 @@ export default function EditorLayout() {
           {showMaximizedNotes && (
             <button
               type="button"
-              className="relative z-20 h-full cursor-col-resize rounded-full border border-[var(--line)] bg-[var(--panel-2)]/60 hover:border-[var(--accent-2)]"
+              className={`relative z-20 h-full cursor-col-resize rounded-full border transition ${
+                isResizingNotes
+                  ? "border-[var(--accent-2)] bg-[var(--panel-2)]"
+                  : "border-[var(--line)] bg-[var(--panel-2)]/70 hover:border-[var(--accent-2)]"
+              }`}
+              style={{ touchAction: "none" }}
               title="Drag to resize notes panel (double click to auto-fit)"
               onDoubleClick={() => setManualNotesWidth(null)}
               onPointerDown={(event) => {
+                event.preventDefault();
                 notesResizeDragRef.current = {
                   startX: event.clientX,
                   startWidth: notesWidth,
                 };
+                setIsResizingNotes(true);
                 (event.currentTarget as HTMLButtonElement).setPointerCapture(
                   event.pointerId
                 );
               }}
             >
               <span className="absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-[var(--line)]" />
+              <span className="absolute left-1/2 top-1/2 h-10 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--ink-1)]/55" />
+              <span className="absolute left-1/2 top-1/2 h-10 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--line)]" />
             </button>
           )}
           {showMaximizedNotes && (
