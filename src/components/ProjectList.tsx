@@ -130,6 +130,12 @@ export default function ProjectList() {
     showNumber: false,
   });
   const [createBoards, setCreateBoards] = useState<string[]>([]);
+  const [createBoardNames, setCreateBoardNames] = useState<Record<string, string>>(
+    {}
+  );
+  const [editingCreateBoardId, setEditingCreateBoardId] = useState<string | null>(
+    null
+  );
   const [startingFormation, setStartingFormation] = useState<string>("none");
   const [squadPresets, setSquadPresets] = useState<SquadPreset[]>([]);
   const [squadPresetsLoading, setSquadPresetsLoading] = useState(false);
@@ -474,6 +480,13 @@ export default function ProjectList() {
     setCreatePlayerLabel(defaults.playerLabel);
     const defaultsBoards = getBoardTemplates(nextMode, plan);
     setCreateBoards(defaultsBoards.map((board) => board.id));
+    setCreateBoardNames(
+      defaultsBoards.reduce<Record<string, string>>((acc, board) => {
+        acc[board.id] = board.name;
+        return acc;
+      }, {})
+    );
+    setEditingCreateBoardId(null);
     setHomeSquadPresetId("");
     setAwaySquadPresetId("");
     setStartingFormation("none");
@@ -506,6 +519,8 @@ export default function ProjectList() {
     }
     setCreateOpen(true);
   };
+
+  const createTemplateOptions = getBoardTemplates(createMode, plan);
 
   const onImport = async (file: File) => {
     if (!can(plan, "project.import")) {
@@ -1321,14 +1336,58 @@ export default function ProjectList() {
               <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                 <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Boards to create</p>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {getBoardTemplates(createMode, plan).map((board) => {
+                  {createTemplateOptions.map((board) => {
                     const checked = createBoards.includes(board.id);
+                    const boardName = createBoardNames[board.id] ?? board.name;
                     return (
                       <label
                         key={board.id}
                         className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"
                       >
-                        <span className="text-[var(--ink-0)]">{board.name}</span>
+                        {editingCreateBoardId === board.id ? (
+                          <input
+                            autoFocus
+                            className="h-7 flex-1 rounded-full border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                            value={boardName}
+                            onChange={(event) =>
+                              setCreateBoardNames((prev) => ({
+                                ...prev,
+                                [board.id]: event.target.value,
+                              }))
+                            }
+                            onBlur={() => setEditingCreateBoardId(null)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === "Escape") {
+                                setEditingCreateBoardId(null);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            className="inline-flex min-w-0 items-center gap-2 truncate text-left text-[var(--ink-0)] hover:text-[var(--accent-2)]"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              setEditingCreateBoardId(board.id);
+                            }}
+                            title="Click to rename board"
+                          >
+                            <span className="truncate">{boardName}</span>
+                            <svg
+                              aria-hidden
+                              viewBox="0 0 24 24"
+                              className="h-3.5 w-3.5 shrink-0 opacity-80"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5l4 4L7 21l-4 1 1-4 12.5-14.5z" />
+                            </svg>
+                          </button>
+                        )}
                         <input
                           type="checkbox"
                           checked={checked}
@@ -1541,7 +1600,7 @@ export default function ProjectList() {
                     setError("Enter a project name.");
                     return;
                   }
-                  const templates = getBoardTemplates(createMode, plan).filter((board) =>
+                  const templates = createTemplateOptions.filter((board) =>
                     createBoards.includes(board.id)
                   );
                   const homePreset = squadPresets.find(
@@ -1563,7 +1622,8 @@ export default function ProjectList() {
                       templates.length > 0
                         ? templates.map((board) => ({
                             id: board.id,
-                            name: board.name,
+                            name:
+                              createBoardNames[board.id]?.trim() || board.name,
                             pitchView: board.pitchView,
                             pitchShape: board.pitchShape,
                           }))
