@@ -610,28 +610,30 @@ export default function TopBar() {
         </head>
         <body>${sections}</body>
       </html>`;
+    const blob = new Blob([doc], { type: "text/html;charset=utf-8" });
+    const blobUrl = URL.createObjectURL(blob);
     const frame = document.createElement("iframe");
     frame.style.position = "fixed";
-    frame.style.right = "0";
-    frame.style.bottom = "0";
-    frame.style.width = "0";
-    frame.style.height = "0";
+    frame.style.left = "-10000px";
+    frame.style.top = "0";
+    frame.style.width = "1px";
+    frame.style.height = "1px";
     frame.style.border = "0";
     frame.setAttribute("aria-hidden", "true");
     document.body.appendChild(frame);
-    const frameDoc = frame.contentDocument;
-    if (!frameDoc || !frame.contentWindow) {
-      document.body.removeChild(frame);
+    if (!frame.contentWindow) {
+      if (frame.parentNode) {
+        frame.parentNode.removeChild(frame);
+      }
+      URL.revokeObjectURL(blobUrl);
       return false;
     }
-    frameDoc.open();
-    frameDoc.write(doc);
-    frameDoc.close();
     let didPrint = false;
     const cleanup = () => {
       if (frame.parentNode) {
         frame.parentNode.removeChild(frame);
       }
+      URL.revokeObjectURL(blobUrl);
     };
     const doPrint = () => {
       if (didPrint) {
@@ -658,8 +660,9 @@ export default function TopBar() {
       }, 30000);
     };
     frame.onload = doPrint;
-    // Some browsers do not reliably fire onload for document.write iframes.
-    setTimeout(doPrint, 300);
+    frame.src = blobUrl;
+    // Fallback for browsers where onload is flaky.
+    setTimeout(doPrint, 1200);
     return true;
   };
 
