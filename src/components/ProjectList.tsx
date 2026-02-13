@@ -36,6 +36,7 @@ import {
 } from "@/persistence/shares";
 
 export default function ProjectList() {
+  const showBetaUi = process.env.NEXT_PUBLIC_BETA_UI === "true";
   const categoryOptions = [
     "Warmup",
     "Passing",
@@ -769,33 +770,35 @@ export default function ProjectList() {
           >
             @teamzoneapp
           </a>
-          <div className="mt-4 rounded-3xl border border-[var(--accent-0)]/60 bg-[var(--accent-0)]/90 p-4 text-black shadow-xl shadow-black/30">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.4em] text-black/70">
-                  Beta notice
-                </p>
-                <p className="text-sm text-black">
-                  This app is in beta and may contain bugs or incomplete
-                  features. Please report issues so we can improve it quickly.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  className="rounded-full border border-black/40 px-4 py-2 text-xs font-semibold text-black hover:border-black/70"
-                  onClick={() => setBetaOpen(true)}
-                >
-                  Report a bug
-                </button>
-                <button
-                  className="rounded-full border border-black/40 px-4 py-2 text-xs font-semibold text-black hover:border-black/70"
-                  onClick={() => setContactOpen(true)}
-                >
-                  Contact us
-                </button>
+          {showBetaUi && (
+            <div className="mt-4 rounded-3xl border border-[var(--accent-0)]/60 bg-[var(--accent-0)]/90 p-4 text-black shadow-xl shadow-black/30">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.4em] text-black/70">
+                    Beta notice
+                  </p>
+                  <p className="text-sm text-black">
+                    This app is in beta and may contain bugs or incomplete
+                    features. Please report issues so we can improve it quickly.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="rounded-full border border-black/40 px-4 py-2 text-xs font-semibold text-black hover:border-black/70"
+                    onClick={() => setBetaOpen(true)}
+                  >
+                    Report a bug
+                  </button>
+                  <button
+                    className="rounded-full border border-black/40 px-4 py-2 text-xs font-semibold text-black hover:border-black/70"
+                    onClick={() => setContactOpen(true)}
+                  >
+                    Contact us
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </header>
 
         <div className="flex flex-wrap gap-2">
@@ -1646,11 +1649,13 @@ export default function ProjectList() {
         </div>
       )}
       <PlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
-      <BetaNoticeModal
-        open={betaOpen}
-        onClose={() => setBetaOpen(false)}
-        context="console"
-      />
+      {showBetaUi && (
+        <BetaNoticeModal
+          open={betaOpen}
+          onClose={() => setBetaOpen(false)}
+          context="console"
+        />
+      )}
       {shareProjectOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
           <div className="w-full max-w-lg rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
