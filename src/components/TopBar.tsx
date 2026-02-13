@@ -627,29 +627,39 @@ export default function TopBar() {
     frameDoc.open();
     frameDoc.write(doc);
     frameDoc.close();
+    let didPrint = false;
     const cleanup = () => {
+      if (frame.parentNode) {
+        frame.parentNode.removeChild(frame);
+      }
+    };
+    const doPrint = () => {
+      if (didPrint) {
+        return;
+      }
+      didPrint = true;
+      const win = frame.contentWindow;
+      if (!win) {
+        cleanup();
+        return;
+      }
+      const after = () => {
+        win.removeEventListener("afterprint", after);
+        cleanup();
+      };
+      win.addEventListener("afterprint", after);
+      win.focus();
+      win.print();
+      // Safety fallback in case afterprint does not fire in some browsers.
       setTimeout(() => {
         if (frame.parentNode) {
-          frame.parentNode.removeChild(frame);
+          cleanup();
         }
-      }, 800);
+      }, 30000);
     };
-    frame.onload = () => {
-      try {
-        frame.contentWindow?.focus();
-        frame.contentWindow?.print();
-      } finally {
-        cleanup();
-      }
-    };
-    setTimeout(() => {
-      try {
-        frame.contentWindow?.focus();
-        frame.contentWindow?.print();
-      } finally {
-        cleanup();
-      }
-    }, 250);
+    frame.onload = doPrint;
+    // Some browsers do not reliably fire onload for document.write iframes.
+    setTimeout(doPrint, 300);
     return true;
   };
 
