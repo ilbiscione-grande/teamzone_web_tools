@@ -330,94 +330,67 @@ export default function TopBar() {
     return "";
   };
 
-  const appendStructuredFields = (
-    lines: string[],
-    fields: Record<string, unknown> | undefined,
-    orderedKeys: string[]
-  ) => {
-    if (!fields) {
-      return;
-    }
-    const used = new Set<string>();
-    orderedKeys.forEach((key) => {
-      const value = toText(fields[key]);
-      if (!value) {
-        return;
-      }
-      used.add(key);
-      lines.push(`${formatFieldLabel(key)}: ${value}`);
-    });
-    Object.entries(fields).forEach(([key, raw]) => {
-      if (used.has(key)) {
-        return;
-      }
-      const value = toText(raw);
-      if (!value) {
-        return;
-      }
-      lines.push(`${formatFieldLabel(key)}: ${value}`);
-    });
-  };
-
-  const escapeHtml = (value: string) =>
-    value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-
-  const buildNotesText = (board: Board) => {
+  const buildPdfNotesLayout = (board: Board) => {
     const templateKey = getTemplateKey(board);
-    const fieldOrderByTemplate: Record<string, string[]> = {
-      training: [
-        "mainFocus",
-        "partGoals",
-        "dateTime",
-        "organisation",
-        "keyBehaviours",
-        "coachInstructions",
-        "equipment",
-      ],
-      match: [
-        "opposition",
-        "ourGameWithBall",
-        "ourGameWithoutBall",
-        "counters",
-        "keyRoles",
-        "importantReminders",
-        "matchMessage",
-      ],
-      education: [
-        "tema",
-        "grundprincip",
-        "whatToSee",
-        "whatToDo",
-        "usualErrors",
-        "matchConnection",
-        "reflections",
-      ],
-    };
-    const fieldOrder = fieldOrderByTemplate[templateKey] ?? [];
-    const scopedSessionFields = (
-      project.sessionNotesFields?.[templateKey as keyof typeof project.sessionNotesFields] ??
-      {}
-    ) as Record<string, unknown>;
+    const scopedSessionFields = (project.sessionNotesFields?.[
+      templateKey as keyof typeof project.sessionNotesFields
+    ] ?? {}) as Record<string, unknown>;
     const scopedBoardFields = (
       board.notesFields?.[templateKey as keyof typeof board.notesFields] ?? {}
     ) as Record<string, unknown>;
-    const sessionText = project.sessionNotes?.trim() ?? "";
     const boardText = board.notes?.trim() ?? "";
-    const lines: string[] = ["Session notes"];
-    appendStructuredFields(lines, scopedSessionFields, fieldOrder);
-    lines.push("Notes:");
-    lines.push(sessionText || "-");
-    lines.push("");
-    lines.push("Board notes");
-    appendStructuredFields(lines, scopedBoardFields, fieldOrder);
-    lines.push("Notes:");
-    lines.push(boardText || "-");
-    return lines.join("\n");
+    const dateText = toText(scopedSessionFields.dateTime) || "";
+
+    const value = (key: string) => toText(scopedBoardFields[key]) || "-";
+
+    if (templateKey === "training") {
+      return {
+        dateText,
+        left: [
+          { title: "Main Focus", text: value("mainFocus") },
+          { title: "Organisation", text: value("organisation") },
+          { title: "Equipment", text: value("equipment") },
+        ],
+        right: [
+          { title: "Part Goals", text: value("partGoals") },
+          { title: "Key Behaviours", text: value("keyBehaviours") },
+          { title: "Instructions", text: value("coachInstructions") },
+        ],
+        description: boardText || "-",
+      };
+    }
+
+    if (templateKey === "match") {
+      return {
+        dateText,
+        left: [
+          { title: "Opposition", text: value("opposition") },
+          { title: "With Ball", text: value("ourGameWithBall") },
+          { title: "Without Ball", text: value("ourGameWithoutBall") },
+        ],
+        right: [
+          { title: "Counters", text: value("counters") },
+          { title: "Key Roles", text: value("keyRoles") },
+          { title: "Reminders", text: value("importantReminders") },
+        ],
+        description: boardText || value("matchMessage") || "-",
+      };
+    }
+
+    return {
+      dateText,
+      left: [
+        { title: "Tema", text: value("tema") },
+        { title: "Grundprincip", text: value("grundprincip") },
+        { title: "What to See", text: value("whatToSee") },
+      ],
+      right: [
+        { title: "What to Do", text: value("whatToDo") },
+        { title: "Usual Errors", text: value("usualErrors") },
+        { title: "Match Connection", text: value("matchConnection") },
+      ],
+      description: boardText || value("reflections") || "-",
+    };
   };
 
   const moveSelectedBoard = (boardId: string, direction: -1 | 1) => {
@@ -525,50 +498,12 @@ export default function TopBar() {
   };
 
   const loadJsPdf = async () => {
-    const existing = (window as unknown as { jspdf?: { jsPDF?: unknown } }).jspdf
-      ?.jsPDF;
-    if (existing) {
-      return existing as new (options?: Record<string, unknown>) => {
-        addPage: () => void;
-        setFontSize: (size: number) => void;
-        text: (
-          text: string | string[],
-          x: number,
-          y: number,
-          options?: Record<string, unknown>
-        ) => void;
-        line: (x1: number, y1: number, x2: number, y2: number) => void;
-        addImage: (
-          imageData: string,
-          format: string,
-          x: number,
-          y: number,
-          width: number,
-          height: number,
-          alias?: string,
-          compression?: string
-        ) => void;
-        splitTextToSize: (text: string, maxWidth: number) => string[];
-        save: (filename: string) => void;
-      };
-    }
-    await new Promise<void>((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src =
-        "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Failed to load jsPDF."));
-      document.head.appendChild(script);
-    });
-    const loaded = (window as unknown as { jspdf?: { jsPDF?: unknown } }).jspdf
-      ?.jsPDF;
-    if (!loaded) {
-      throw new Error("jsPDF was not available after loading.");
-    }
-    return loaded as new (options?: Record<string, unknown>) => {
+    type JsPdfInstance = {
       addPage: () => void;
+      setPage: (pageNumber: number) => void;
+      setLineWidth: (width: number) => void;
       setFontSize: (size: number) => void;
+      setFont: (fontName: string, fontStyle?: string) => void;
       text: (
         text: string | string[],
         x: number,
@@ -576,6 +511,15 @@ export default function TopBar() {
         options?: Record<string, unknown>
       ) => void;
       line: (x1: number, y1: number, x2: number, y2: number) => void;
+      roundedRect: (
+        x: number,
+        y: number,
+        w: number,
+        h: number,
+        rx: number,
+        ry: number,
+        style?: string
+      ) => void;
       addImage: (
         imageData: string,
         format: string,
@@ -589,6 +533,32 @@ export default function TopBar() {
       splitTextToSize: (text: string, maxWidth: number) => string[];
       save: (filename: string) => void;
     };
+    type JsPdfCtor = new (options?: Record<string, unknown>) => JsPdfInstance;
+    const existing = (window as unknown as { jspdf?: { jsPDF?: unknown } }).jspdf
+      ?.jsPDF;
+    if (existing) {
+      return existing as JsPdfCtor;
+    }
+    const loadFrom = (src: string) =>
+      new Promise<void>((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Failed to load ${src}`));
+        document.head.appendChild(script);
+      });
+    try {
+      await loadFrom("/vendor/jspdf.umd.min.js");
+    } catch {
+      await loadFrom("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js");
+    }
+    const loaded = (window as unknown as { jspdf?: { jsPDF?: unknown } }).jspdf
+      ?.jsPDF;
+    if (!loaded) {
+      throw new Error("jsPDF was not available after loading.");
+    }
+    return loaded as JsPdfCtor;
   };
 
   const getImageSize = (src: string) =>
@@ -602,7 +572,7 @@ export default function TopBar() {
     });
 
   const downloadPdfFile = async (
-    pages: Array<{ boardName: string; notes: string; image: string }>,
+    pages: Array<{ boardName: string; image: string; board: Board }>,
     generatedAtLabel: string
   ) => {
     const JsPdf = await loadJsPdf();
@@ -612,22 +582,41 @@ export default function TopBar() {
     const margin = 12;
     const contentWidth = pageWidth - margin * 2;
 
+    const renderHeaderFooter = (pageNumber: number, totalPages: number, dateText: string) => {
+      doc.setLineWidth(0.2);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(project.name, margin, 7.5);
+      doc.text(dateText || generatedAtLabel, pageWidth - margin, 7.5, {
+        align: "right",
+      });
+      doc.line(margin, 9.5, pageWidth - margin, 9.5);
+      doc.line(margin, pageHeight - 9.5, pageWidth - margin, pageHeight - 9.5);
+      doc.text("Teamzone Web Tools - webtools.teamzoneapp.se", margin, pageHeight - 4.5);
+      doc.text(`Page ${pageNumber}/${totalPages}`, pageWidth - margin, pageHeight - 4.5, {
+        align: "right",
+      });
+    };
+
+    let pageNumber = 1;
+    const descriptionChunks: Array<{ dateText: string; lines: string[] }> = [];
+
     for (let index = 0; index < pages.length; index += 1) {
       const page = pages[index];
       if (index > 0) {
         doc.addPage();
+        pageNumber += 1;
       }
-      doc.setFontSize(10);
-      doc.text(project.name, margin, 9);
-      doc.text(generatedAtLabel, pageWidth - margin, 9, { align: "right" });
-      doc.line(margin, 11, pageWidth - margin, 11);
+      const layout = buildPdfNotesLayout(page.board);
+      renderHeaderFooter(pageNumber, 0, layout.dateText);
 
-      doc.setFontSize(15);
-      doc.text(page.boardName, margin, 18);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text(page.board.name, margin, 16.5);
 
       const imageDims = await getImageSize(page.image);
       const maxImageWidth = contentWidth;
-      const maxImageHeight = 128;
+      const maxImageHeight = 105;
       const ratio = Math.min(
         maxImageWidth / imageDims.width,
         maxImageHeight / imageDims.height
@@ -635,23 +624,99 @@ export default function TopBar() {
       const imageWidth = imageDims.width * ratio;
       const imageHeight = imageDims.height * ratio;
       const imageX = margin + (contentWidth - imageWidth) / 2;
-      const imageY = 22;
+      const imageY = 19;
       doc.addImage(page.image, "PNG", imageX, imageY, imageWidth, imageHeight);
 
-      const notesTop = imageY + imageHeight + 6;
-      const footerTop = pageHeight - 12;
-      const maxNotesHeight = Math.max(10, footerTop - notesTop - 2);
-      const allLines = doc.splitTextToSize(page.notes, contentWidth);
-      const lineHeight = 4.4;
-      const maxLines = Math.max(1, Math.floor(maxNotesHeight / lineHeight));
-      const visibleLines = allLines.slice(0, maxLines);
-      doc.setFontSize(10);
-      doc.text(visibleLines, margin, notesTop);
+      const bodyTop = imageY + imageHeight + 8;
+      const bodyBottom = pageHeight - 12;
+      const rightBoxWidth = 58;
+      const leftWidth = contentWidth - rightBoxWidth - 6;
+      const rightX = margin + leftWidth + 6;
+      const rightY = bodyTop;
+      const rightHeight = bodyBottom - bodyTop;
 
-      doc.line(margin, footerTop - 3, pageWidth - margin, footerTop - 3);
+      doc.setLineWidth(0.6);
+      doc.roundedRect(rightX, rightY, rightBoxWidth, rightHeight, 8, 8, "S");
+
+      let yLeft = bodyTop + 4;
+      const leftLineHeight = 4;
+      layout.left.forEach((block) => {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.8);
+        doc.text(block.title, margin, yLeft);
+        yLeft += leftLineHeight;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        const lines = doc.splitTextToSize(block.text || "-", leftWidth);
+        doc.text(lines, margin, yLeft);
+        yLeft += lines.length * 3.8 + 2.6;
+      });
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.8);
+      doc.text("Description", margin, yLeft);
+      yLeft += leftLineHeight;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      const descriptionLines = doc.splitTextToSize(layout.description || "-", leftWidth);
+      const maxDescriptionLinesOnFirstPage = Math.max(
+        1,
+        Math.floor((bodyBottom - yLeft) / 3.8)
+      );
+      const firstDescriptionChunk = descriptionLines.slice(
+        0,
+        maxDescriptionLinesOnFirstPage
+      );
+      const remainingDescription = descriptionLines.slice(
+        maxDescriptionLinesOnFirstPage
+      );
+      doc.text(firstDescriptionChunk, margin, yLeft);
+
+      if (remainingDescription.length > 0) {
+        descriptionChunks.push({
+          dateText: layout.dateText,
+          lines: remainingDescription,
+        });
+      }
+
+      let yRight = bodyTop + 8;
+      layout.right.forEach((block) => {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.8);
+        doc.text(block.title, rightX + rightBoxWidth / 2, yRight, { align: "center" });
+        yRight += 4.2;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        const lines = doc.splitTextToSize(
+          block.text || "-",
+          rightBoxWidth - 7
+        );
+        doc.text(lines, rightX + 3.5, yRight);
+        yRight += lines.length * 3.8 + 2.8;
+      });
+    }
+
+    for (const overflow of descriptionChunks) {
+      let offset = 0;
+      const linesPerPage = 66;
+      while (offset < overflow.lines.length) {
+        doc.addPage();
+        pageNumber += 1;
+        const chunk = overflow.lines.slice(offset, offset + linesPerPage);
+        renderHeaderFooter(pageNumber, 0, overflow.dateText);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.text(chunk, margin, 17.5);
+        offset += linesPerPage;
+      }
+    }
+
+    const totalPages = pageNumber;
+    for (let i = 1; i <= totalPages; i += 1) {
+      doc.setPage(i as unknown as number);
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
-      doc.text("Teamzone Web Tools", margin, footerTop + 1);
-      doc.text(`Page ${index + 1} / ${pages.length}`, pageWidth - margin, footerTop + 1, {
+      doc.text(`Page ${i}/${totalPages}`, pageWidth - margin, pageHeight - 4.5, {
         align: "right",
       });
     }
@@ -684,7 +749,7 @@ export default function TopBar() {
         setPdfStatus("Select at least one board.");
         return;
       }
-      const pages: Array<{ boardName: string; notes: string; image: string }> = [];
+      const pages: Array<{ boardName: string; image: string; board: Board }> = [];
 
       for (const targetBoard of targets) {
         if (project.activeBoardId !== targetBoard.id) {
@@ -697,7 +762,7 @@ export default function TopBar() {
         }
         pages.push({
           boardName: targetBoard.name,
-          notes: buildNotesText(targetBoard),
+          board: targetBoard,
           image,
         });
       }
