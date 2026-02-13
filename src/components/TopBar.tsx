@@ -524,145 +524,140 @@ export default function TopBar() {
     return imageData;
   };
 
-  const openPrintablePdfView = (
+  const loadJsPdf = async () => {
+    const existing = (window as unknown as { jspdf?: { jsPDF?: unknown } }).jspdf
+      ?.jsPDF;
+    if (existing) {
+      return existing as new (options?: Record<string, unknown>) => {
+        addPage: () => void;
+        setFontSize: (size: number) => void;
+        text: (
+          text: string | string[],
+          x: number,
+          y: number,
+          options?: Record<string, unknown>
+        ) => void;
+        line: (x1: number, y1: number, x2: number, y2: number) => void;
+        addImage: (
+          imageData: string,
+          format: string,
+          x: number,
+          y: number,
+          width: number,
+          height: number,
+          alias?: string,
+          compression?: string
+        ) => void;
+        splitTextToSize: (text: string, maxWidth: number) => string[];
+        save: (filename: string) => void;
+      };
+    }
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src =
+        "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("Failed to load jsPDF."));
+      document.head.appendChild(script);
+    });
+    const loaded = (window as unknown as { jspdf?: { jsPDF?: unknown } }).jspdf
+      ?.jsPDF;
+    if (!loaded) {
+      throw new Error("jsPDF was not available after loading.");
+    }
+    return loaded as new (options?: Record<string, unknown>) => {
+      addPage: () => void;
+      setFontSize: (size: number) => void;
+      text: (
+        text: string | string[],
+        x: number,
+        y: number,
+        options?: Record<string, unknown>
+      ) => void;
+      line: (x1: number, y1: number, x2: number, y2: number) => void;
+      addImage: (
+        imageData: string,
+        format: string,
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        alias?: string,
+        compression?: string
+      ) => void;
+      splitTextToSize: (text: string, maxWidth: number) => string[];
+      save: (filename: string) => void;
+    };
+  };
+
+  const getImageSize = (src: string) =>
+    new Promise<{ width: number; height: number }>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({ width: img.naturalWidth || 1, height: img.naturalHeight || 1 });
+      };
+      img.onerror = () => reject(new Error("Failed to read captured image."));
+      img.src = src;
+    });
+
+  const downloadPdfFile = async (
     pages: Array<{ boardName: string; notes: string; image: string }>,
     generatedAtLabel: string
   ) => {
-    const sections = pages
-      .map(
-        (page, index) => `
-          <section class="page">
-            <header class="page-header">
-              <span>${escapeHtml(project.name)}</span>
-              <span>${escapeHtml(generatedAtLabel)}</span>
-            </header>
-            <main class="page-main">
-              <h2>${escapeHtml(page.boardName)}</h2>
-              <img src="${page.image}" alt="${escapeHtml(page.boardName)}" />
-              <pre>${escapeHtml(page.notes)}</pre>
-            </main>
-            <footer class="page-footer">
-              <span>Teamzone Web Tools</span>
-              <span>Page ${index + 1} / ${pages.length}</span>
-            </footer>
-          </section>
-        `
-      )
-      .join("");
-    const doc = `<!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>${escapeHtml(project.name)} - PDF export</title>
-          <style>
-            @page { size: A4 portrait; margin: 14mm; }
-            * { box-sizing: border-box; }
-            body { margin: 0; font-family: Arial, sans-serif; color: #101010; }
-            .page {
-              height: calc(297mm - 28mm);
-              display: flex;
-              flex-direction: column;
-              page-break-after: always;
-            }
-            .page:last-child { page-break-after: auto; }
-            .page-header, .page-footer {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              font-size: 10px;
-              color: #505050;
-              border-bottom: 1px solid #d7d7d7;
-              padding-bottom: 4px;
-            }
-            .page-footer {
-              border-bottom: 0;
-              border-top: 1px solid #d7d7d7;
-              padding-top: 4px;
-              padding-bottom: 0;
-              margin-top: 8px;
-            }
-            .page-main {
-              flex: 1;
-              min-height: 0;
-              display: flex;
-              flex-direction: column;
-            }
-            h2 { margin: 8px 0; font-size: 16px; }
-            img {
-              width: 100%;
-              max-height: 145mm;
-              object-fit: contain;
-              border: 1px solid #ddd;
-              background: #1f5f3f;
-              display: block;
-            }
-            pre {
-              margin: 10px 0 0;
-              padding: 10px;
-              border: 1px solid #ddd;
-              font-size: 11px;
-              line-height: 1.35;
-              white-space: pre-wrap;
-              word-break: break-word;
-              overflow: hidden;
-            }
-          </style>
-        </head>
-        <body>${sections}</body>
-      </html>`;
-    const blob = new Blob([doc], { type: "text/html;charset=utf-8" });
-    const blobUrl = URL.createObjectURL(blob);
-    const frame = document.createElement("iframe");
-    frame.style.position = "fixed";
-    frame.style.left = "-10000px";
-    frame.style.top = "0";
-    frame.style.width = "1px";
-    frame.style.height = "1px";
-    frame.style.border = "0";
-    frame.setAttribute("aria-hidden", "true");
-    document.body.appendChild(frame);
-    if (!frame.contentWindow) {
-      if (frame.parentNode) {
-        frame.parentNode.removeChild(frame);
+    const JsPdf = await loadJsPdf();
+    const doc = new JsPdf({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 12;
+    const contentWidth = pageWidth - margin * 2;
+
+    for (let index = 0; index < pages.length; index += 1) {
+      const page = pages[index];
+      if (index > 0) {
+        doc.addPage();
       }
-      URL.revokeObjectURL(blobUrl);
-      return false;
+      doc.setFontSize(10);
+      doc.text(project.name, margin, 9);
+      doc.text(generatedAtLabel, pageWidth - margin, 9, { align: "right" });
+      doc.line(margin, 11, pageWidth - margin, 11);
+
+      doc.setFontSize(15);
+      doc.text(page.boardName, margin, 18);
+
+      const imageDims = await getImageSize(page.image);
+      const maxImageWidth = contentWidth;
+      const maxImageHeight = 128;
+      const ratio = Math.min(
+        maxImageWidth / imageDims.width,
+        maxImageHeight / imageDims.height
+      );
+      const imageWidth = imageDims.width * ratio;
+      const imageHeight = imageDims.height * ratio;
+      const imageX = margin + (contentWidth - imageWidth) / 2;
+      const imageY = 22;
+      doc.addImage(page.image, "PNG", imageX, imageY, imageWidth, imageHeight);
+
+      const notesTop = imageY + imageHeight + 6;
+      const footerTop = pageHeight - 12;
+      const maxNotesHeight = Math.max(10, footerTop - notesTop - 2);
+      const allLines = doc.splitTextToSize(page.notes, contentWidth);
+      const lineHeight = 4.4;
+      const maxLines = Math.max(1, Math.floor(maxNotesHeight / lineHeight));
+      const visibleLines = allLines.slice(0, maxLines);
+      doc.setFontSize(10);
+      doc.text(visibleLines, margin, notesTop);
+
+      doc.line(margin, footerTop - 3, pageWidth - margin, footerTop - 3);
+      doc.setFontSize(10);
+      doc.text("Teamzone Web Tools", margin, footerTop + 1);
+      doc.text(`Page ${index + 1} / ${pages.length}`, pageWidth - margin, footerTop + 1, {
+        align: "right",
+      });
     }
-    let didPrint = false;
-    const cleanup = () => {
-      if (frame.parentNode) {
-        frame.parentNode.removeChild(frame);
-      }
-      URL.revokeObjectURL(blobUrl);
-    };
-    const doPrint = () => {
-      if (didPrint) {
-        return;
-      }
-      didPrint = true;
-      const win = frame.contentWindow;
-      if (!win) {
-        cleanup();
-        return;
-      }
-      const after = () => {
-        win.removeEventListener("afterprint", after);
-        cleanup();
-      };
-      win.addEventListener("afterprint", after);
-      win.focus();
-      win.print();
-      // Safety fallback in case afterprint does not fire in some browsers.
-      setTimeout(() => {
-        if (frame.parentNode) {
-          cleanup();
-        }
-      }, 30000);
-    };
-    frame.onload = doPrint;
-    frame.src = blobUrl;
-    // Fallback for browsers where onload is flaky.
-    setTimeout(doPrint, 1200);
+
+    const safeName = project.name.replace(/[^\w\d-_]+/g, "_").slice(0, 60);
+    doc.save(`${safeName || "project"}_export.pdf`);
     return true;
   };
 
@@ -722,11 +717,11 @@ export default function TopBar() {
         hour: "2-digit",
         minute: "2-digit",
       }).format(new Date());
-      const opened = openPrintablePdfView(pages, generatedAtLabel);
+      const opened = await downloadPdfFile(pages, generatedAtLabel);
       setPdfStatus(
         opened
-          ? "Print dialog opened. Choose 'Save as PDF'."
-          : "Could not open print view."
+          ? "PDF downloaded."
+          : "Could not generate PDF."
       );
     } finally {
       setPdfBusy(false);
