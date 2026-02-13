@@ -65,6 +65,7 @@ export default function ProjectList() {
   const authUser = useProjectStore((state) => state.authUser);
   const [planOpen, setPlanOpen] = useState(false);
   const [betaOpen, setBetaOpen] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [name, setName] = useState("");
   const [homeKit, setHomeKit] = useState({
     shirt: "#e24a3b",
@@ -227,6 +228,17 @@ export default function ProjectList() {
       window.removeEventListener("online", update);
       window.removeEventListener("offline", update);
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const query = window.matchMedia("(max-width: 900px)");
+    const update = () => setIsSmallScreen(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
   }, []);
 
   const sharedSeenKey = authUser
@@ -799,6 +811,12 @@ export default function ProjectList() {
               </div>
             </div>
           )}
+          {isSmallScreen && (
+            <div className="mt-3 rounded-2xl border border-[var(--line)] bg-black/20 p-3 text-xs text-[var(--ink-1)]">
+              This site is designed for larger screens. For the best experience,
+              use a tablet or desktop.
+            </div>
+          )}
         </header>
 
         <div className="flex flex-wrap gap-2">
@@ -907,7 +925,7 @@ export default function ProjectList() {
                 index.map((project) => (
                   <div
                     key={project.id}
-                    className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-4 py-3"
+                    className="flex flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
                       <p className="text-sm font-semibold text-[var(--ink-0)]">
@@ -917,7 +935,7 @@ export default function ProjectList() {
                         Updated {new Date(project.updatedAt).toLocaleString()}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
                       <button
                         className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                         onClick={() => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useProjectStore } from "@/state/useProjectStore";
 
 type ScreenSizeNoticeProps = {
   minWidth?: number;
@@ -11,6 +12,7 @@ export default function ScreenSizeNotice({
   minWidth = 900,
 }: ScreenSizeNoticeProps) {
   const pathname = usePathname();
+  const project = useProjectStore((state) => state.project);
   const [isSmall, setIsSmall] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [remember, setRemember] = useState(false);
@@ -47,6 +49,10 @@ export default function ScreenSizeNotice({
   }, [dismissed, isSmall, remember]);
 
   if (pathname?.startsWith("/share")) {
+    return null;
+  }
+
+  if (pathname === "/" && !project) {
     return null;
   }
 
