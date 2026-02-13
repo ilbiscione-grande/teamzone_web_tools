@@ -341,55 +341,60 @@ export default function TopBar() {
     const boardText = board.notes?.trim() ?? "";
     const dateText = toText(scopedSessionFields.dateTime) || "";
 
-    const value = (key: string) => toText(scopedBoardFields[key]) || "-";
+    const value = (key: string) => toText(scopedBoardFields[key]);
+    const makeBlock = (title: string, text: string) =>
+      text ? { title, text } : null;
+    const compactBlocks = (
+      items: Array<{ title: string; text: string } | null>
+    ) => items.filter((item): item is { title: string; text: string } => Boolean(item));
 
     if (templateKey === "training") {
       return {
         dateText,
-        left: [
-          { title: "Main Focus", text: value("mainFocus") },
-          { title: "Organisation", text: value("organisation") },
-          { title: "Equipment", text: value("equipment") },
-        ],
-        right: [
-          { title: "Part Goals", text: value("partGoals") },
-          { title: "Key Behaviours", text: value("keyBehaviours") },
-          { title: "Instructions", text: value("coachInstructions") },
-        ],
-        description: boardText || "-",
+        left: compactBlocks([
+          makeBlock("Main Focus", value("mainFocus")),
+          makeBlock("Organisation", value("organisation")),
+          makeBlock("Equipment", value("equipment")),
+        ]),
+        right: compactBlocks([
+          makeBlock("Part Goals", value("partGoals")),
+          makeBlock("Key Behaviours", value("keyBehaviours")),
+          makeBlock("Instructions", value("coachInstructions")),
+        ]),
+        description: boardText,
       };
     }
 
     if (templateKey === "match") {
       return {
         dateText,
-        left: [
-          { title: "Opposition", text: value("opposition") },
-          { title: "With Ball", text: value("ourGameWithBall") },
-          { title: "Without Ball", text: value("ourGameWithoutBall") },
-        ],
-        right: [
-          { title: "Counters", text: value("counters") },
-          { title: "Key Roles", text: value("keyRoles") },
-          { title: "Reminders", text: value("importantReminders") },
-        ],
-        description: boardText || value("matchMessage") || "-",
+        left: compactBlocks([
+          makeBlock("Opposition", value("opposition")),
+          makeBlock("With Ball", value("ourGameWithBall")),
+          makeBlock("Without Ball", value("ourGameWithoutBall")),
+        ]),
+        right: compactBlocks([
+          makeBlock("Counters", value("counters")),
+          makeBlock("Key Roles", value("keyRoles")),
+          makeBlock("Reminders", value("importantReminders")),
+        ]),
+        description: boardText || value("matchMessage"),
       };
     }
 
     return {
       dateText,
-      left: [
-        { title: "Tema", text: value("tema") },
-        { title: "Grundprincip", text: value("grundprincip") },
-        { title: "What to See", text: value("whatToSee") },
-      ],
-      right: [
-        { title: "What to Do", text: value("whatToDo") },
-        { title: "Usual Errors", text: value("usualErrors") },
-        { title: "Match Connection", text: value("matchConnection") },
-      ],
-      description: boardText || value("reflections") || "-",
+      left: compactBlocks([
+        makeBlock("Tema", value("tema")),
+        makeBlock("Grundprincip", value("grundprincip")),
+        makeBlock("What to See", value("whatToSee")),
+      ]),
+      right: compactBlocks([
+        makeBlock("What to Do", value("whatToDo")),
+        makeBlock("Usual Errors", value("usualErrors")),
+        makeBlock("Match Connection", value("matchConnection")),
+      ]),
+      description: boardText || value("reflections"),
     };
   };
 
@@ -635,8 +640,10 @@ export default function TopBar() {
       const rightY = bodyTop;
       const rightHeight = bodyBottom - bodyTop;
 
-      doc.setLineWidth(0.6);
-      doc.roundedRect(rightX, rightY, rightBoxWidth, rightHeight, 8, 8, "S");
+      if (layout.right.length > 0) {
+        doc.setLineWidth(0.6);
+        doc.roundedRect(rightX, rightY, rightBoxWidth, rightHeight, 8, 8, "S");
+      }
 
       let yLeft = bodyTop + 4;
       const leftLineHeight = 4;
@@ -647,36 +654,38 @@ export default function TopBar() {
         yLeft += leftLineHeight;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
-        const lines = doc.splitTextToSize(block.text || "-", leftWidth);
+        const lines = doc.splitTextToSize(block.text, leftWidth);
         doc.text(lines, margin, yLeft);
         yLeft += lines.length * 3.8 + 2.6;
       });
 
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.8);
-      doc.text("Description", margin, yLeft);
-      yLeft += leftLineHeight;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      const descriptionLines = doc.splitTextToSize(layout.description || "-", leftWidth);
-      const maxDescriptionLinesOnFirstPage = Math.max(
-        1,
-        Math.floor((bodyBottom - yLeft) / 3.8)
-      );
-      const firstDescriptionChunk = descriptionLines.slice(
-        0,
-        maxDescriptionLinesOnFirstPage
-      );
-      const remainingDescription = descriptionLines.slice(
-        maxDescriptionLinesOnFirstPage
-      );
-      doc.text(firstDescriptionChunk, margin, yLeft);
+      if (layout.description) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.8);
+        doc.text("Description", margin, yLeft);
+        yLeft += leftLineHeight;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        const descriptionLines = doc.splitTextToSize(layout.description, leftWidth);
+        const maxDescriptionLinesOnFirstPage = Math.max(
+          1,
+          Math.floor((bodyBottom - yLeft) / 3.8)
+        );
+        const firstDescriptionChunk = descriptionLines.slice(
+          0,
+          maxDescriptionLinesOnFirstPage
+        );
+        const remainingDescription = descriptionLines.slice(
+          maxDescriptionLinesOnFirstPage
+        );
+        doc.text(firstDescriptionChunk, margin, yLeft);
 
-      if (remainingDescription.length > 0) {
-        descriptionChunks.push({
-          dateText: layout.dateText,
-          lines: remainingDescription,
-        });
+        if (remainingDescription.length > 0) {
+          descriptionChunks.push({
+            dateText: layout.dateText,
+            lines: remainingDescription,
+          });
+        }
       }
 
       let yRight = bodyTop + 8;
@@ -687,10 +696,7 @@ export default function TopBar() {
         yRight += 4.2;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
-        const lines = doc.splitTextToSize(
-          block.text || "-",
-          rightBoxWidth - 7
-        );
+        const lines = doc.splitTextToSize(block.text, rightBoxWidth - 7);
         doc.text(lines, rightX + 3.5, yRight);
         yRight += lines.length * 3.8 + 2.8;
       });

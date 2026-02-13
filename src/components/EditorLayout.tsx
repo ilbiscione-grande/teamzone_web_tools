@@ -305,10 +305,23 @@ export default function EditorLayout() {
     const sessionDateText = formatDateTimeSv(sessionTraining.dateTime);
     const sessionNotesText = (project.sessionNotes ?? "").trim();
     const boardNotesText = (board.notes ?? "").trim();
-    const boardEquipmentText =
-      (boardTraining.equipment ?? []).length > 0
-        ? (boardTraining.equipment ?? []).join(", ")
-        : "-";
+    const boardEquipmentText = (boardTraining.equipment ?? []).join(", ").trim();
+    const sessionRows = [
+      { label: "Session focus", value: (sessionTraining.mainFocus ?? "").trim() },
+      { label: "Notes", value: sessionNotesText },
+    ].filter((row) => row.value.length > 0);
+    const boardRows = [
+      { label: "Main focus", value: (boardTraining.mainFocus ?? "").trim() },
+      { label: "Part goals", value: (boardTraining.partGoals ?? "").trim() },
+      { label: "Organisation", value: (boardTraining.organisation ?? "").trim() },
+      { label: "Key behaviours", value: (boardTraining.keyBehaviours ?? "").trim() },
+      {
+        label: "Coach instructions",
+        value: (boardTraining.coachInstructions ?? "").trim(),
+      },
+      { label: "Equipment", value: boardEquipmentText },
+      { label: "Board notes", value: boardNotesText },
+    ].filter((row) => row.value.length > 0);
     const viewportAspect = viewport.width / Math.max(1, viewport.height);
     const notesWidthRatio =
       viewportAspect >= 1.75
@@ -475,14 +488,18 @@ export default function EditorLayout() {
               <div className="space-y-2">
                 <section className="rounded-2xl border border-[var(--line)] p-2">
                   <div className="space-y-2 text-[11px] text-[var(--ink-1)]">
-                    <p className="text-[10px] uppercase tracking-wide">Session focus</p>
-                    <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                      {sessionTraining.mainFocus || "-"}
-                    </p>
-                    <p className="pt-1 text-[10px] uppercase tracking-wide">Notes</p>
-                    <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                      {sessionNotesText || "-"}
-                    </p>
+                    {sessionRows.length === 0 ? (
+                      <p className="text-xs text-[var(--ink-1)]">No session notes.</p>
+                    ) : (
+                      sessionRows.map((row) => (
+                        <div key={row.label} className="space-y-1">
+                          <p className="text-[10px] uppercase tracking-wide">{row.label}</p>
+                          <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
+                            {row.value}
+                          </p>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </section>
                 <section className="rounded-2xl border border-[var(--line)] p-2">
@@ -504,34 +521,18 @@ export default function EditorLayout() {
                     </select>
                   </div>
                   <div className="space-y-2 text-[11px] text-[var(--ink-1)]">
-                    <p className="text-[10px] uppercase tracking-wide">Main focus</p>
-                    <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                      {boardTraining.mainFocus || "-"}
-                    </p>
-                    <p className="pt-1 text-[10px] uppercase tracking-wide">Part goals</p>
-                    <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                      {boardTraining.partGoals || "-"}
-                    </p>
-                    <p className="pt-1 text-[10px] uppercase tracking-wide">Organisation</p>
-                    <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                      {boardTraining.organisation || "-"}
-                    </p>
-                    <p className="pt-1 text-[10px] uppercase tracking-wide">Key behaviours</p>
-                    <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                      {boardTraining.keyBehaviours || "-"}
-                    </p>
-                    <p className="pt-1 text-[10px] uppercase tracking-wide">Coach instructions</p>
-                    <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                      {boardTraining.coachInstructions || "-"}
-                    </p>
-                    <p className="pt-1 text-[10px] uppercase tracking-wide">Equipment</p>
-                    <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                      {boardEquipmentText}
-                    </p>
-                    <p className="pt-1 text-[10px] uppercase tracking-wide">Board notes</p>
-                    <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                      {boardNotesText || "-"}
-                    </p>
+                    {boardRows.length === 0 ? (
+                      <p className="text-xs text-[var(--ink-1)]">No board notes.</p>
+                    ) : (
+                      boardRows.map((row) => (
+                        <div key={row.label} className="space-y-1">
+                          <p className="text-[10px] uppercase tracking-wide">{row.label}</p>
+                          <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
+                            {row.value}
+                          </p>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </section>
               </div>
