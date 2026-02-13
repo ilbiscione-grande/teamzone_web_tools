@@ -103,6 +103,7 @@ export default function TopBar() {
   const [hideBetaBanner, setHideBetaBanner] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [boardActionsOpen, setBoardActionsOpen] = useState(false);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
   const showAds = plan === "FREE";
@@ -145,7 +146,7 @@ export default function TopBar() {
     };
   }, []);
   useEffect(() => {
-    if (!actionsOpen) {
+    if (!actionsOpen && !boardActionsOpen) {
       return;
     }
     const handleClick = (event: MouseEvent) => {
@@ -157,12 +158,13 @@ export default function TopBar() {
         return;
       }
       setActionsOpen(false);
+      setBoardActionsOpen(false);
     };
     window.addEventListener("mousedown", handleClick);
     return () => {
       window.removeEventListener("mousedown", handleClick);
     };
-  }, [actionsOpen]);
+  }, [actionsOpen, boardActionsOpen]);
 
   useEffect(() => {
     if (!titleRef.current) {
@@ -289,6 +291,52 @@ export default function TopBar() {
     }
     saveProject(result.project, authUser?.id ?? null);
     openProject(result.project.id);
+  };
+
+  const onRenameBoard = () => {
+    if (!activeBoard) {
+      return;
+    }
+    const nextName = window.prompt("Board name", activeBoard.name);
+    if (nextName && nextName.trim()) {
+      updateBoard(activeBoard.id, { name: nextName.trim() });
+    }
+  };
+
+  const onDeleteBoard = () => {
+    if (!activeBoard) {
+      return;
+    }
+    if (!window.confirm("Delete this board?")) {
+      return;
+    }
+    deleteBoard(activeBoard.id);
+  };
+
+  const onDuplicateBoard = () => {
+    if (!activeBoard) {
+      return;
+    }
+    const nextName =
+      window.prompt("Duplicate board name", `${activeBoard.name} Copy`) ?? "";
+    if (nextName.trim()) {
+      if (boardLimitReached) {
+        window.alert("Board limit reached for this plan.");
+        return;
+      }
+      duplicateBoard(activeBoard.id, nextName.trim());
+    }
+  };
+
+  const onAddBoard = () => {
+    const name = window.prompt("Board name") ?? "";
+    if (name.trim()) {
+      if (getPlanLimits(plan).maxBoards <= (project.boards?.length ?? 0)) {
+        window.alert("Board limit reached for this plan.");
+        return;
+      }
+      addBoard(name.trim());
+    }
   };
 
   const waitForPaint = async () => {
@@ -815,31 +863,31 @@ export default function TopBar() {
           <span className="block w-full -translate-x-2 text-center">Beta</span>
         </button>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-2 overflow-x-auto">
+        <div className="flex min-w-0 items-center gap-2">
           <div className="flex flex-col">
             <span
-              className="display-font text-[12px] uppercase tracking-[0.4em] text-[var(--accent-0)]"
+              className="display-font hidden text-[10px] uppercase tracking-[0.25em] text-[var(--accent-0)] sm:block"
               style={titleWidth ? { width: `${titleWidth}px` } : undefined}
             >
               Teamzone Web Tools
             </span>
             <h1
               ref={titleRef}
-              className="display-font text-2xl text-[var(--ink-0)]"
+              className="display-font text-xl leading-none text-[var(--ink-0)] sm:text-2xl"
             >
               Tactics Board
             </h1>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-transparent px-3 py-1">
+          <div className="flex min-w-0 items-center gap-1 rounded-full border border-[var(--line)] bg-transparent px-2 py-1">
             <input
-              className="h-7 bg-transparent text-sm text-[var(--ink-0)] focus:outline-none"
+              className="h-6 min-w-0 bg-transparent text-xs text-[var(--ink-0)] focus:outline-none sm:h-7 sm:text-sm"
               value={project.name}
               onChange={(event) =>
                 updateProjectMeta({ name: event.target.value })
               }
             />
-            <div className="h-6 w-px bg-[var(--line)]" />
+            <div className="h-5 w-px bg-[var(--line)]" />
             <button
               className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
               onClick={() => {
@@ -896,10 +944,13 @@ export default function TopBar() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--ink-1)]">
-          <div className="flex items-center gap-3 rounded-full border border-[var(--line)] bg-transparent px-2 py-1">
+        <div className="flex shrink-0 items-center gap-2 text-xs text-[var(--ink-1)]">
+          <div
+            className="relative flex items-center gap-2 rounded-full border border-[var(--line)] bg-transparent px-2 py-1"
+            data-actions-menu
+          >
             <select
-              className="h-7 rounded-full bg-[var(--panel-2)] px-2 text-sm text-[var(--ink-0)] focus:outline-none"
+              className="h-7 max-w-[180px] rounded-full bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)] focus:outline-none sm:max-w-none sm:text-sm"
               value={activeBoardId}
               onChange={(event) => {
                 setActiveBoard(event.target.value);
@@ -916,160 +967,76 @@ export default function TopBar() {
                 </option>
               ))}
             </select>
-            <div className="flex items-start gap-2">
-              <div className="flex flex-col items-center gap-1">
+            <button
+              className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={() => setBoardActionsOpen((prev) => !prev)}
+              title="Board actions"
+              aria-label="Board actions"
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="6" cy="12" r="1.5" />
+                <circle cx="12" cy="12" r="1.5" />
+                <circle cx="18" cy="12" r="1.5" />
+              </svg>
+            </button>
+            {boardActionsOpen && (
+              <div className="absolute right-0 top-10 z-30 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30">
                 <button
-                  className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                   onClick={() => {
-                    if (!activeBoard) {
-                      return;
-                    }
-                    const nextName = window.prompt(
-                      "Board name",
-                      activeBoard.name
-                    );
-                    if (nextName && nextName.trim()) {
-                      updateBoard(activeBoard.id, { name: nextName.trim() });
-                    }
+                    setBoardActionsOpen(false);
+                    onRenameBoard();
                   }}
-                  title="Rename board"
-                  aria-label="Rename board"
                 >
-                  <svg
-                    aria-hidden
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5l4 4L7 21l-4 1 1-4 12.5-14.5z" />
-                  </svg>
+                  Edit board name
                 </button>
-              </div>
-              <div className="flex flex-col items-center gap-1">
                 <button
-                  className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                   onClick={() => {
-                    if (!activeBoard) {
-                      return;
-                    }
-                    if (!window.confirm("Delete this board?")) {
-                      return;
-                    }
-                    deleteBoard(activeBoard.id);
+                    setBoardActionsOpen(false);
+                    onDuplicateBoard();
                   }}
-                  title="Delete board"
-                  aria-label="Delete board"
+                  disabled={boardLimitReached}
+                  data-locked={boardLimitReached}
+                >
+                  Duplicate board
+                </button>
+                <button
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                  onClick={() => {
+                    setBoardActionsOpen(false);
+                    onAddBoard();
+                  }}
+                  disabled={boardLimitReached}
+                  data-locked={boardLimitReached}
+                >
+                  New board
+                </button>
+                <button
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                  onClick={() => {
+                    setBoardActionsOpen(false);
+                    onDeleteBoard();
+                  }}
                   disabled={project.boards.length <= 1}
                   data-locked={project.boards.length <= 1}
                 >
-                  <svg
-                    aria-hidden
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M4 7h16" />
-                    <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                    <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
-                    <path d="M10 11v6M14 11v6" />
-                  </svg>
+                  Delete board
                 </button>
               </div>
-              <div className="flex flex-col items-center gap-1">
-                <button
-                  className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                  onClick={() => {
-                    if (!activeBoard) {
-                      return;
-                    }
-                    const nextName =
-                      window.prompt(
-                        "Duplicate board name",
-                        `${activeBoard.name} Copy`
-                      ) ?? "";
-                    if (nextName.trim()) {
-                      if (boardLimitReached) {
-                        window.alert("Board limit reached for this plan.");
-                        return;
-                      }
-                      duplicateBoard(activeBoard.id, nextName.trim());
-                    }
-                  }}
-                  title={
-                    boardLimitReached
-                      ? "Board limit reached for this plan."
-                      : "Duplicate board"
-                  }
-                  aria-label="Duplicate board"
-                  disabled={boardLimitReached}
-                  data-locked={boardLimitReached}
-                >
-                  <svg
-                    aria-hidden
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="8" y="8" width="12" height="12" rx="2" />
-                    <path d="M4 16V6a2 2 0 0 1 2-2h10" />
-                  </svg>
-                </button>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <button
-                  className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                  onClick={() => {
-                    const name = window.prompt("Board name") ?? "";
-                    if (name.trim()) {
-                      if (
-                        getPlanLimits(plan).maxBoards <=
-                        (project.boards?.length ?? 0)
-                      ) {
-                        window.alert("Board limit reached for this plan.");
-                        return;
-                      }
-                      addBoard(name.trim());
-                    }
-                  }}
-                  title={
-                    boardLimitReached
-                      ? "Board limit reached for this plan."
-                      : "Add board"
-                  }
-                  aria-label="Add board"
-                  disabled={boardLimitReached}
-                  data-locked={boardLimitReached}
-                >
-                  <svg
-                    aria-hidden
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  >
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                </button>
-              </div>
-            </div>
+            )}
           </div>
           <select
-            className="h-9 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-sm text-[var(--ink-0)]"
+            className="hidden h-9 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-sm text-[var(--ink-0)] md:block"
             value={activeBoard?.mode ?? "STATIC"}
             onChange={(event) =>
               activeBoard &&
@@ -1089,7 +1056,7 @@ export default function TopBar() {
               DYNAMIC
             </option>
           </select>
-          <div className="flex flex-col items-center gap-1">
+          <div className="hidden md:block">
             <FormationMenu />
           </div>
           {isOffline && (
@@ -1216,11 +1183,30 @@ export default function TopBar() {
                   <path d="M4 7h16M4 12h16M4 17h16" />
                 </svg>
               </button>
-              <span className="text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+              <span className="hidden text-[9px] uppercase tracking-widest text-[var(--ink-1)] sm:block">
                 Actions
               </span>
               {actionsOpen && (
                 <div className="absolute right-0 top-10 z-30 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30">
+                  <div className="space-y-2 px-3 py-2 md:hidden">
+                    <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                      Board mode
+                    </p>
+                    <select
+                      className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                      value={activeBoard?.mode ?? "STATIC"}
+                      onChange={(event) =>
+                        activeBoard &&
+                        setBoardMode(activeBoard.id, event.target.value as BoardMode)
+                      }
+                    >
+                      <option value="STATIC">STATIC</option>
+                      <option value="DYNAMIC">DYNAMIC</option>
+                    </select>
+                    <div className="pt-1">
+                      <FormationMenu />
+                    </div>
+                  </div>
                   <button
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                     onClick={() => {
