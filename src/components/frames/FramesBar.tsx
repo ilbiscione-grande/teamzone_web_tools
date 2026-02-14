@@ -783,11 +783,11 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     >
       <div className="relative flex flex-col gap-2 text-xs text-[var(--ink-1)] md:flex-row md:items-center md:gap-3">
         <div
-          className="no-scrollbar flex w-full flex-wrap items-center gap-0.5 overflow-hidden pb-0.5 pr-0 md:w-auto md:shrink-0 md:flex-nowrap md:gap-2 md:overflow-visible md:pb-0"
+          className="no-scrollbar flex w-full min-w-0 flex-wrap items-center gap-1 overflow-hidden pb-1 pr-0 md:w-auto md:shrink-0 md:flex-nowrap md:gap-2 md:overflow-visible md:pb-0"
           style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
         >
           <button
-            className="rounded-full border border-[var(--line)] p-[3px] text-[9px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:p-[6px] md:text-[11px]"
+            className="rounded-full border border-[var(--line)] p-[5px] text-[10px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:p-[6px] md:text-[11px]"
             onClick={() => setMinimized(true)}
             title="Minimize"
             aria-label="Minimize"
@@ -795,7 +795,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             <svg
               aria-hidden
               viewBox="0 0 24 24"
-              className="h-2.5 w-2.5 md:h-3.5 md:w-3.5"
+              className="h-3 w-3 md:h-3.5 md:w-3.5"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -805,7 +805,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </svg>
           </button>
           <button
-            className="rounded-full border border-[var(--line)] p-[3px] text-[9px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:p-[6px] md:text-[11px]"
+            className="rounded-full border border-[var(--line)] p-[5px] text-[10px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:p-[6px] md:text-[11px]"
             onClick={() => addFrame(board.id)}
             title="Add frame"
             aria-label="Add frame"
@@ -813,7 +813,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             <svg
               aria-hidden
               viewBox="0 0 24 24"
-              className="h-2.5 w-2.5 md:h-3.5 md:w-3.5"
+              className="h-3 w-3 md:h-3.5 md:w-3.5"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -823,7 +823,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </svg>
           </button>
           <button
-            className="rounded-full border border-[var(--line)] p-[3px] text-[9px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)] md:p-[6px] md:text-[11px]"
+            className="rounded-full border border-[var(--line)] p-[5px] text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)] md:p-[6px] md:text-[11px]"
             onClick={() =>
               deleteFrame(board.id, board.frames[board.activeFrameIndex].id)
             }
@@ -833,7 +833,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             <svg
               aria-hidden
               viewBox="0 0 24 24"
-              className="h-2.5 w-2.5 md:h-3.5 md:w-3.5"
+              className="h-3 w-3 md:h-3.5 md:w-3.5"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -847,7 +847,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </svg>
           </button>
           <button
-            className="rounded-full border border-[var(--line)] p-[3px] text-[9px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:p-[6px] md:text-[11px]"
+            className="rounded-full border border-[var(--line)] p-[5px] text-[10px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:p-[6px] md:text-[11px]"
             onClick={() =>
               duplicateFrame(board.id, board.frames[board.activeFrameIndex].id)
             }
@@ -857,7 +857,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             <svg
               aria-hidden
               viewBox="0 0 24 24"
-              className="h-2.5 w-2.5 md:h-3.5 md:w-3.5"
+              className="h-3 w-3 md:h-3.5 md:w-3.5"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -869,7 +869,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </svg>
           </button>
           <button
-            className="rounded-full border border-[var(--line)] p-[3px] text-[9px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:p-[6px] md:text-[11px]"
+            className="rounded-full border border-[var(--line)] p-[5px] text-[10px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:p-[6px] md:text-[11px]"
             onClick={() => setPlaying(!isPlaying)}
             disabled={board.mode !== "DYNAMIC"}
             title={isPlaying ? "Pause" : "Play"}
@@ -879,7 +879,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               <svg
                 aria-hidden
                 viewBox="0 0 24 24"
-                className="h-2.5 w-2.5 md:h-3.5 md:w-3.5"
+                className="h-3 w-3 md:h-3.5 md:w-3.5"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -891,7 +891,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               <svg
                 aria-hidden
                 viewBox="0 0 24 24"
-                className="h-2.5 w-2.5 md:h-3.5 md:w-3.5"
+                className="h-3 w-3 md:h-3.5 md:w-3.5"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -903,7 +903,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             )}
           </button>
           <button
-            className={`rounded-full border p-[3px] text-[9px] md:p-[6px] md:text-[11px] ${
+            className={`rounded-full border p-[5px] text-[10px] md:p-[6px] md:text-[11px] ${
               recording
                 ? "border-[var(--accent-1)] text-[var(--accent-1)]"
                 : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
@@ -918,7 +918,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               <svg
                 aria-hidden
                 viewBox="0 0 24 24"
-                className="h-2.5 w-2.5 md:h-3.5 md:w-3.5"
+                className="h-3 w-3 md:h-3.5 md:w-3.5"
                 fill="currentColor"
               >
                 <rect x="7" y="7" width="10" height="10" rx="2" />
@@ -927,7 +927,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               <svg
                 aria-hidden
                 viewBox="0 0 24 24"
-                className="h-2.5 w-2.5 md:h-3.5 md:w-3.5"
+                className="h-3 w-3 md:h-3.5 md:w-3.5"
                 fill="currentColor"
               >
                 <circle cx="12" cy="12" r="6" />
@@ -946,7 +946,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </span>
           )}
           <button
-            className="rounded-full border border-[var(--line)] p-[3px] text-[9px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:p-[6px] md:text-[11px]"
+            className="rounded-full border border-[var(--line)] p-[5px] text-[10px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:p-[6px] md:text-[11px]"
             onClick={() =>
               setActiveFrameIndex(
                 board.id,
@@ -959,7 +959,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             <svg
               aria-hidden
               viewBox="0 0 24 24"
-              className="h-2.5 w-2.5 md:h-3.5 md:w-3.5"
+              className="h-3 w-3 md:h-3.5 md:w-3.5"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -971,7 +971,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </svg>
           </button>
           <button
-            className="rounded-full border border-[var(--line)] p-[3px] text-[9px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:p-[6px] md:text-[11px]"
+            className="rounded-full border border-[var(--line)] p-[5px] text-[10px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:p-[6px] md:text-[11px]"
             onClick={() =>
               setActiveFrameIndex(
                 board.id,
@@ -984,7 +984,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             <svg
               aria-hidden
               viewBox="0 0 24 24"
-              className="h-2.5 w-2.5 md:h-3.5 md:w-3.5"
+              className="h-3 w-3 md:h-3.5 md:w-3.5"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -995,9 +995,9 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               <path d="M18 6v12" />
             </svg>
           </button>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <select
-              className="h-6 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-1.5 text-[11px] text-[var(--ink-0)] md:h-8 md:px-2 md:text-xs"
+              className="h-7 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)] md:h-8"
               value={frameDurationMs}
               onChange={(event) =>
                 setFrameDurationMs(Number(event.target.value))
@@ -1020,7 +1020,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               </option>
             </select>
             <button
-              className={`rounded-full border p-[3px] text-[9px] md:p-[6px] md:text-[11px] ${
+              className={`rounded-full border p-[5px] text-[10px] md:p-[6px] md:text-[11px] ${
                 loopPlayback
                   ? "border-[var(--accent-0)] text-[var(--accent-0)]"
                   : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
@@ -1032,7 +1032,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               <svg
                 aria-hidden
                 viewBox="0 0 24 24"
-                className="h-2.5 w-2.5 md:h-3.5 md:w-3.5"
+                className="h-3 w-3 md:h-3.5 md:w-3.5"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
