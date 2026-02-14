@@ -750,10 +750,10 @@ export default function EditorLayout() {
   if (isMobileLayout) {
     return (
       <div className="grid h-[100dvh] w-screen max-w-[100vw] grid-rows-[auto_1fr_auto] overflow-x-hidden overflow-y-hidden">
-        <div className="min-w-0 overflow-x-hidden px-2 pt-2">
+        <div className="relative z-[210] min-w-0 overflow-x-hidden px-2 pt-2">
           <TopBar />
         </div>
-        <div className="min-h-0 min-w-0 overflow-x-hidden px-2 pb-2">
+        <div className="relative z-0 min-h-0 min-w-0 overflow-x-hidden px-2 pb-2">
           <div className="relative h-full w-full min-w-0 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] shadow-xl shadow-black/30">
             <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-2 py-1 text-[9px] uppercase tracking-widest text-[var(--accent-2)]">
               {modeText}
