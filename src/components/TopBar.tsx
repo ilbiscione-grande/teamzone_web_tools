@@ -104,6 +104,7 @@ export default function TopBar() {
   const [isOffline, setIsOffline] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [boardActionsOpen, setBoardActionsOpen] = useState(false);
+  const [projectActionsOpen, setProjectActionsOpen] = useState(false);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
   const showAds = plan === "FREE";
@@ -146,7 +147,7 @@ export default function TopBar() {
     };
   }, []);
   useEffect(() => {
-    if (!actionsOpen && !boardActionsOpen) {
+    if (!actionsOpen && !boardActionsOpen && !projectActionsOpen) {
       return;
     }
     const handleClick = (event: MouseEvent) => {
@@ -159,12 +160,13 @@ export default function TopBar() {
       }
       setActionsOpen(false);
       setBoardActionsOpen(false);
+      setProjectActionsOpen(false);
     };
     window.addEventListener("mousedown", handleClick);
     return () => {
       window.removeEventListener("mousedown", handleClick);
     };
-  }, [actionsOpen, boardActionsOpen]);
+  }, [actionsOpen, boardActionsOpen, projectActionsOpen]);
 
   useEffect(() => {
     if (!titleRef.current) {
@@ -866,7 +868,7 @@ export default function TopBar() {
         </button>
       )}
       <div className="flex min-w-0 items-center justify-between gap-2 overflow-visible">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <div className="flex flex-col">
             <span
               className="display-font hidden text-[10px] uppercase tracking-[0.25em] text-[var(--accent-0)] md:block"
@@ -876,12 +878,15 @@ export default function TopBar() {
             </span>
             <h1
               ref={titleRef}
-              className="display-font text-lg leading-none text-[var(--ink-0)] sm:text-2xl"
+              className="display-font text-base leading-none text-[var(--ink-0)] sm:text-2xl"
             >
               Tactics Board
             </h1>
           </div>
-          <div className="flex min-w-0 max-w-[70vw] items-center gap-1 rounded-full border border-[var(--line)] bg-transparent px-2 py-1 sm:max-w-none">
+          <div
+            className="relative flex min-w-0 max-w-[52vw] items-center gap-1 rounded-full border border-[var(--line)] bg-transparent px-2 py-1 md:max-w-none"
+            data-actions-menu
+          >
             <input
               className="h-6 min-w-0 bg-transparent text-xs text-[var(--ink-0)] focus:outline-none sm:h-7 sm:text-sm"
               value={project.name}
@@ -891,7 +896,7 @@ export default function TopBar() {
             />
             <div className="h-5 w-px bg-[var(--line)]" />
             <button
-              className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              className="hidden rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:inline-flex"
               onClick={() => {
                 const name = window.prompt("New project name") ?? "";
                 if (name.trim()) {
@@ -925,6 +930,27 @@ export default function TopBar() {
               </svg>
             </button>
             <button
+              className="inline-flex rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:hidden"
+              onClick={() => setProjectActionsOpen((prev) => !prev)}
+              title="Project actions"
+              aria-label="Project actions"
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="6" cy="12" r="1.5" />
+                <circle cx="12" cy="12" r="1.5" />
+                <circle cx="18" cy="12" r="1.5" />
+              </svg>
+            </button>
+            <button
               className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
               onClick={closeProject}
               title="Back to list"
@@ -943,16 +969,39 @@ export default function TopBar() {
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
+            {projectActionsOpen && (
+              <div className="absolute right-0 top-10 z-[90] w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:hidden">
+                <button
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                  onClick={() => {
+                    setProjectActionsOpen(false);
+                    const name = window.prompt("New project name") ?? "";
+                    if (name.trim()) {
+                      createProject(name.trim(), {
+                        homeKit: project.settings?.homeKit,
+                        awayKit: project.settings?.awayKit,
+                        attachBallToPlayer:
+                          project.settings?.attachBallToPlayer ?? false,
+                      });
+                    }
+                  }}
+                  disabled={projectLimitReached}
+                  data-locked={projectLimitReached}
+                >
+                  New project
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex min-w-0 items-center gap-2 text-xs text-[var(--ink-1)]">
+        <div className="flex shrink-0 items-center gap-2 text-xs text-[var(--ink-1)]">
           <div
             className="relative flex items-center gap-2 rounded-full border border-[var(--line)] bg-transparent px-2 py-1"
             data-actions-menu
           >
             <select
-              className="h-7 max-w-[180px] rounded-full bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)] focus:outline-none sm:max-w-none sm:text-sm"
+              className="hidden h-7 max-w-[180px] rounded-full bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)] focus:outline-none sm:max-w-none sm:text-sm md:block"
               value={activeBoardId}
               onChange={(event) => {
                 setActiveBoard(event.target.value);
@@ -970,7 +1019,28 @@ export default function TopBar() {
               ))}
             </select>
             <button
-              className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:hidden"
+              onClick={() => setBoardActionsOpen((prev) => !prev)}
+              title="Boards"
+              aria-label="Boards"
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="4" rx="1" />
+                <rect x="3" y="10" width="18" height="4" rx="1" />
+                <rect x="3" y="16" width="18" height="4" rx="1" />
+              </svg>
+            </button>
+            <button
+              className="hidden rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:inline-flex"
               onClick={() => setBoardActionsOpen((prev) => !prev)}
               title="Board actions"
               aria-label="Board actions"
@@ -991,7 +1061,27 @@ export default function TopBar() {
               </svg>
             </button>
             {boardActionsOpen && (
-              <div className="absolute right-0 top-10 z-[90] w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30">
+              <div className="absolute right-0 top-10 z-[90] w-56 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30">
+                <div className="mb-2 space-y-1 border-b border-[var(--line)] pb-2 md:hidden">
+                  {project.boards.map((item) => (
+                    <button
+                      key={item.id}
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)] ${
+                        item.id === activeBoardId
+                          ? "text-[var(--accent-2)]"
+                          : "text-[var(--ink-0)]"
+                      }`}
+                      onClick={() => {
+                        setBoardActionsOpen(false);
+                        setActiveBoard(item.id);
+                        setTool("player");
+                      }}
+                    >
+                      <span className="truncate">{item.name}</span>
+                      {item.id === activeBoardId && <span>•</span>}
+                    </button>
+                  ))}
+                </div>
                 <button
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                   onClick={() => {
