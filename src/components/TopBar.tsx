@@ -970,7 +970,7 @@ export default function TopBar() {
               </svg>
             </button>
             {projectActionsOpen && (
-              <div className="absolute right-0 top-10 z-[320] w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:hidden">
+              <div className="fixed left-3 right-3 top-28 z-[420] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:hidden">
                 <button
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                   onClick={() => {
@@ -1061,7 +1061,7 @@ export default function TopBar() {
               </svg>
             </button>
             {boardActionsOpen && (
-              <div className="absolute right-0 top-10 z-[320] w-56 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30">
+              <div className="fixed left-3 right-3 top-28 z-[420] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:absolute md:left-auto md:right-0 md:top-10 md:z-[320] md:w-56">
                 <div className="mb-2 space-y-1 border-b border-[var(--line)] pb-2 md:hidden">
                   {project.boards.map((item) => (
                     <button
@@ -1279,7 +1279,7 @@ export default function TopBar() {
                 Actions
               </span>
               {actionsOpen && (
-                <div className="absolute right-0 top-10 z-[320] w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30">
+                <div className="fixed left-3 right-3 top-28 z-[420] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:absolute md:left-auto md:right-0 md:top-10 md:z-[320] md:w-44">
                   <div className="space-y-2 px-3 py-2 md:hidden">
                     <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                       Board mode
