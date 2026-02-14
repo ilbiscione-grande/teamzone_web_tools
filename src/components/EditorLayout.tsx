@@ -742,7 +742,7 @@ export default function EditorLayout() {
 
   if (isMobileLayout) {
     return (
-      <div className="grid h-[100dvh] grid-rows-[auto_1fr_auto] overflow-hidden">
+      <div className="grid h-[100dvh] w-screen max-w-[100vw] grid-rows-[auto_1fr_auto] overflow-x-hidden overflow-y-hidden">
         <div className="px-2 pt-2">
           <TopBar />
         </div>

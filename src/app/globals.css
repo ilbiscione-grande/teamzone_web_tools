@@ -29,6 +29,11 @@ body {
   font-family: var(--font-body), "Segoe UI", system-ui, sans-serif;
   min-height: 100vh;
   overflow: hidden;
+  overflow-x: hidden;
+}
+
+html {
+  overflow-x: hidden;
 }
 
 * {

@@ -849,7 +849,7 @@ export default function TopBar() {
 
   return (
     <div
-      className={`relative grid items-center gap-3 rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-3 py-3 shadow-2xl shadow-black/40 sm:px-5 sm:py-4 ${
+      className={`relative grid w-full max-w-full items-center gap-3 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-3 py-3 shadow-2xl shadow-black/40 sm:px-5 sm:py-4 ${
         showAds
           ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
           : "grid-cols-1"
@@ -865,7 +865,7 @@ export default function TopBar() {
           <span className="block w-full -translate-x-2 text-center">Beta</span>
         </button>
       )}
-      <div className="flex items-center justify-between gap-2 overflow-x-auto">
+      <div className="flex min-w-0 items-center justify-between gap-2 overflow-hidden">
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex flex-col">
             <span
@@ -946,7 +946,7 @@ export default function TopBar() {
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 text-xs text-[var(--ink-1)]">
+        <div className="flex min-w-0 shrink-0 items-center gap-2 text-xs text-[var(--ink-1)]">
           <div
             className="relative flex items-center gap-2 rounded-full border border-[var(--line)] bg-transparent px-2 py-1"
             data-actions-menu
