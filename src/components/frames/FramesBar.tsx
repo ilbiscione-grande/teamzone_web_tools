@@ -754,12 +754,12 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
 
   return (
     <div
-      className="mt-2 w-full cursor-grab rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2 shadow-xl shadow-black/30"
+      className="mt-2 w-full cursor-default rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 shadow-xl shadow-black/30 md:cursor-grab md:px-4"
       style={{ transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }}
       onMouseDown={handleDragStart}
     >
-      <div className="relative flex items-center gap-3 text-xs text-[var(--ink-1)]">
-        <div className="flex shrink-0 items-center gap-2">
+      <div className="relative flex flex-col gap-2 text-xs text-[var(--ink-1)] md:flex-row md:items-center md:gap-3">
+        <div className="flex w-full items-center gap-1 overflow-x-auto pb-1 pr-1 md:w-auto md:shrink-0 md:gap-2 md:overflow-visible md:pb-0">
           <button
             className="rounded-full border border-[var(--line)] p-[6px] text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={() => setMinimized(true)}
@@ -910,7 +910,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
           </button>
           {recordStatus && (
             <span
-              className={`text-[10px] ${
+              className={`hidden text-[10px] md:inline ${
                 recordStatus.type === "success"
                   ? "text-[var(--accent-0)]"
                   : "text-[var(--accent-1)]"
@@ -971,7 +971,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
           </button>
           <div className="flex items-center gap-2">
             <select
-              className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)]"
+              className="h-7 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)] md:h-8"
               value={frameDurationMs}
               onChange={(event) =>
                 setFrameDurationMs(Number(event.target.value))
@@ -1022,7 +1022,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
           </div>
         </div>
         <div
-          className="relative ml-4 h-8 flex-1"
+          className="relative h-7 w-full md:ml-4 md:h-8 md:flex-1"
           ref={scrubRef}
           data-scrub
           onPointerDown={(event) => {
@@ -1048,7 +1048,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
               style={{ left: `${tick.left}%` }}
             >
               <div
-                className={`absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border ${
+                className={`absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border md:h-3 md:w-3 ${
                   tick.index === board.activeFrameIndex
                     ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
                     : "border-[var(--accent-0)] bg-transparent"
@@ -1057,7 +1057,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
             </div>
           ))}
           <div
-            className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--accent-0)]"
+            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--accent-0)] md:h-5 md:w-5"
             style={{
               left:
                 board.frames.length > 1

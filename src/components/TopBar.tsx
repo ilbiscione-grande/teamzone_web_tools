@@ -887,8 +887,16 @@ export default function TopBar() {
             className="relative flex min-w-0 max-w-[52vw] items-center gap-1 rounded-full border border-[var(--line)] bg-transparent px-2 py-1 md:max-w-none"
             data-actions-menu
           >
+            <button
+              className="h-6 min-w-0 truncate bg-transparent text-left text-xs text-[var(--ink-0)] focus:outline-none sm:h-7 sm:text-sm md:hidden"
+              onClick={() => setProjectActionsOpen((prev) => !prev)}
+              title="Project menu"
+              aria-label="Project menu"
+            >
+              {project.name}
+            </button>
             <input
-              className="h-6 min-w-0 bg-transparent text-xs text-[var(--ink-0)] focus:outline-none sm:h-7 sm:text-sm"
+              className="hidden h-6 min-w-0 bg-transparent text-xs text-[var(--ink-0)] focus:outline-none sm:h-7 sm:text-sm md:block"
               value={project.name}
               onChange={(event) =>
                 updateProjectMeta({ name: event.target.value })
@@ -930,27 +938,6 @@ export default function TopBar() {
               </svg>
             </button>
             <button
-              className="inline-flex rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:hidden"
-              onClick={() => setProjectActionsOpen((prev) => !prev)}
-              title="Project actions"
-              aria-label="Project actions"
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="6" cy="12" r="1.5" />
-                <circle cx="12" cy="12" r="1.5" />
-                <circle cx="18" cy="12" r="1.5" />
-              </svg>
-            </button>
-            <button
               className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
               onClick={closeProject}
               title="Back to list"
@@ -971,6 +958,18 @@ export default function TopBar() {
             </button>
             {projectActionsOpen && (
               <div className="fixed left-3 right-3 top-28 z-[420] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:hidden">
+                <button
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                  onClick={() => {
+                    setProjectActionsOpen(false);
+                    const name = window.prompt("Project name", project.name) ?? "";
+                    if (name.trim()) {
+                      updateProjectMeta({ name: name.trim() });
+                    }
+                  }}
+                >
+                  Edit name
+                </button>
                 <button
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                   onClick={() => {
