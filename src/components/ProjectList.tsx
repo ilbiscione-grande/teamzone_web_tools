@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { deserializeProject } from "@/persistence/serialize";
-import { loadProject, saveProject } from "@/persistence/storage";
+import { loadProject } from "@/persistence/storage";
 import type {
   BoardShare,
   BoardSharePermission,
@@ -547,10 +547,7 @@ export default function ProjectList() {
       return;
     }
     const project = result.project as Project;
-    if (can(plan, "project.save")) {
-      saveProject(project, authUser?.id ?? null);
-    }
-    openProject(project.id);
+    openProjectFromData(project);
     setError(null);
   };
 
@@ -904,6 +901,7 @@ export default function ProjectList() {
                   if (file) {
                     onImport(file);
                   }
+                  event.currentTarget.value = "";
                 }}
               />
             </div>
