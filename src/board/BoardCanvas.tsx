@@ -331,9 +331,8 @@ export default function BoardCanvas({
     [board.pitchView]
   );
   const isPortraitFull =
-    readOnly &&
     board.pitchView === "FULL" &&
-    (forcePortrait || size.height > size.width);
+    (forcePortrait || (readOnly && size.height > size.width));
   const viewRotation = useMemo(() => {
     let rotation = 0;
     if (board.pitchView === "DEF_HALF") {
