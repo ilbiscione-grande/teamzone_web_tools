@@ -64,6 +64,18 @@ html {
   background: color-mix(in srgb, var(--accent-2) 85%, transparent);
 }
 
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
+}
+
 
 .display-font {
   font-family: var(--font-display), "Segoe UI", system-ui, sans-serif;
