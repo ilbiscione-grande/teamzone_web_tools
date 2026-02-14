@@ -330,19 +330,19 @@ export default function BoardCanvas({
     () => getPitchViewBounds(board.pitchView),
     [board.pitchView]
   );
+  const isForcedPortrait = !!forcePortrait;
   const isPortraitFull =
     board.pitchView === "FULL" &&
-    (forcePortrait || (readOnly && size.height > size.width));
+    (isForcedPortrait || (readOnly && size.height > size.width));
   const lockedViewport = forcePortrait ? { zoom: 1, offsetX: 0, offsetY: 0 } : viewport;
   const setViewportSafe = forcePortrait
     ? (_value: Partial<typeof viewport>) => {}
     : setViewport;
   const viewRotation = useMemo(() => {
     let rotation = 0;
-    if (board.pitchView === "DEF_HALF") {
-      rotation = -90;
-    } else if (board.pitchView === "OFF_HALF") {
-      rotation = -90;
+    if (board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF") {
+      // Half-pitch is already vertical enough; do not force landscape on mobile portrait.
+      rotation = isForcedPortrait ? 0 : -90;
     } else if (isPortraitFull) {
       rotation = 90;
     }
@@ -350,7 +350,7 @@ export default function BoardCanvas({
       rotation += 180;
     }
     return rotation;
-  }, [board.pitchRotation, board.pitchView, isPortraitFull]);
+  }, [board.pitchRotation, board.pitchView, isForcedPortrait, isPortraitFull]);
   const labelRotation = viewRotation === 0 ? 0 : -viewRotation;
   const rotationPivot = useMemo(
     () => ({
