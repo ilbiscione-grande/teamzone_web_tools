@@ -849,8 +849,10 @@ export default function TopBar() {
 
   return (
     <div
-      className={`relative grid items-center gap-4 rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-5 py-4 shadow-2xl shadow-black/40 ${
-        showAds ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" : "grid-cols-1"
+      className={`relative grid items-center gap-3 rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-3 py-3 shadow-2xl shadow-black/40 sm:px-5 sm:py-4 ${
+        showAds
+          ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+          : "grid-cols-1"
       }`}
     >
       {!hideBetaBanner && (
@@ -867,19 +869,19 @@ export default function TopBar() {
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex flex-col">
             <span
-              className="display-font hidden text-[10px] uppercase tracking-[0.25em] text-[var(--accent-0)] sm:block"
+              className="display-font hidden text-[10px] uppercase tracking-[0.25em] text-[var(--accent-0)] md:block"
               style={titleWidth ? { width: `${titleWidth}px` } : undefined}
             >
               Teamzone Web Tools
             </span>
             <h1
               ref={titleRef}
-              className="display-font text-xl leading-none text-[var(--ink-0)] sm:text-2xl"
+              className="display-font text-lg leading-none text-[var(--ink-0)] sm:text-2xl"
             >
               Tactics Board
             </h1>
           </div>
-          <div className="flex min-w-0 items-center gap-1 rounded-full border border-[var(--line)] bg-transparent px-2 py-1">
+          <div className="flex min-w-0 max-w-[70vw] items-center gap-1 rounded-full border border-[var(--line)] bg-transparent px-2 py-1 sm:max-w-none">
             <input
               className="h-6 min-w-0 bg-transparent text-xs text-[var(--ink-0)] focus:outline-none sm:h-7 sm:text-sm"
               value={project.name}

@@ -23,6 +23,7 @@ export default function EditorLayout() {
     project?.settings?.mode ?? ("match" as "training" | "match" | "education");
   const modeText = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
   const selection = useEditorStore((state) => state.selection);
+  const resetCanvasViewport = useEditorStore((state) => state.setViewport);
   const setAttachBallToPlayer = useEditorStore(
     (state) => state.setAttachBallToPlayer
   );
@@ -39,6 +40,7 @@ export default function EditorLayout() {
   const [isMaximizedPenMode, setIsMaximizedPenMode] = useState(false);
   const [mobileToolboxOpen, setMobileToolboxOpen] = useState(false);
   const [viewport, setViewport] = useState({ width: 1366, height: 768 });
+  const [isCoarsePointer, setIsCoarsePointer] = useState(false);
   const [notesWidthBonus, setNotesWidthBonus] = useState(0);
   const [manualNotesWidth, setManualNotesWidth] = useState<number | null>(null);
   const [isResizingNotes, setIsResizingNotes] = useState(false);
@@ -89,6 +91,16 @@ export default function EditorLayout() {
     updateViewport();
     window.addEventListener("resize", updateViewport);
     return () => window.removeEventListener("resize", updateViewport);
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) {
+      return;
+    }
+    const media = window.matchMedia("(pointer: coarse)");
+    const update = () => setIsCoarsePointer(media.matches);
+    update();
+    media.addEventListener?.("change", update);
+    return () => media.removeEventListener?.("change", update);
   }, []);
   useEffect(() => {
     if (!isMaximized || !showMaximizedNotes) {
@@ -208,7 +220,14 @@ export default function EditorLayout() {
     "Poles",
   ];
   const compactVertical = viewport.height <= 860;
-  const isMobileLayout = viewport.width <= 900;
+  const isMobileLayout =
+    viewport.width <= 1024 && (isCoarsePointer || viewport.height <= 860);
+  useEffect(() => {
+    if (!isMobileLayout || !board) {
+      return;
+    }
+    resetCanvasViewport({ zoom: 1, offsetX: 0, offsetY: 0 });
+  }, [isMobileLayout, board?.id, resetCanvasViewport]);
   if (!project || !board) {
     return null;
   }
