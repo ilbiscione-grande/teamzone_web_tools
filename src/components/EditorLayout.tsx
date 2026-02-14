@@ -777,7 +777,9 @@ export default function EditorLayout() {
           <FramesBar board={board} stage={stage} />
         </div>
         <button
-          className="fixed bottom-16 right-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--panel)]/95 text-[var(--ink-0)] shadow-lg shadow-black/40"
+          className={`fixed right-3 z-[460] flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--panel)]/95 text-[var(--ink-0)] shadow-lg shadow-black/40 ${
+            board.mode === "DYNAMIC" ? "bottom-32" : "bottom-16"
+          }`}
           onClick={() => setMobileToolboxOpen((prev) => !prev)}
           aria-label={mobileToolboxOpen ? "Close toolbox" : "Open toolbox"}
           title={mobileToolboxOpen ? "Close toolbox" : "Open toolbox"}

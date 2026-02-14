@@ -782,7 +782,10 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       onMouseDown={handleDragStart}
     >
       <div className="relative flex flex-col gap-2 text-xs text-[var(--ink-1)] md:flex-row md:items-center md:gap-3">
-        <div className="flex w-full items-center gap-1 overflow-x-auto pb-1 pr-1 md:w-auto md:shrink-0 md:gap-2 md:overflow-visible md:pb-0">
+        <div
+          className="flex w-full items-center gap-1 overflow-x-auto pb-1 pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:w-auto md:shrink-0 md:gap-2 md:overflow-visible md:pb-0"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           <button
             className="rounded-full border border-[var(--line)] p-[6px] text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
             onClick={() => setMinimized(true)}
