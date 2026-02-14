@@ -316,6 +316,34 @@ export default function BoardCanvas({
     observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
+  useEffect(() => {
+    if (!containerRef.current) {
+      return;
+    }
+    const measure = () => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) {
+        return;
+      }
+      const width = Math.max(1, Math.round(rect.width));
+      const height = Math.max(1, Math.round(rect.height));
+      setSize((prev) =>
+        prev.width === width && prev.height === height
+          ? prev
+          : { width, height }
+      );
+    };
+    // Run a couple of frames later as well to catch mobile URL-bar/layout shifts.
+    const raf1 = requestAnimationFrame(measure);
+    const raf2 = requestAnimationFrame(measure);
+    const timeout = window.setTimeout(measure, 120);
+    measure();
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      window.clearTimeout(timeout);
+    };
+  }, [board.id, board.pitchView, forcePortrait, isMaximized, readOnly]);
 
   useEffect(() => {
     if (onStageReady) {
