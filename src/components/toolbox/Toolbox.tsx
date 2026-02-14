@@ -201,9 +201,13 @@ const LinkIcon = () => (
 
 type ToolboxProps = {
   collapsed?: boolean;
+  mobileCompact?: boolean;
 };
 
-export default function Toolbox({ collapsed = false }: ToolboxProps) {
+export default function Toolbox({
+  collapsed = false,
+  mobileCompact = false,
+}: ToolboxProps) {
   const activeTool = useEditorStore((state) => state.activeTool);
   const setTool = useEditorStore((state) => state.setTool);
   const undo = useEditorStore((state) => state.undo);
@@ -816,7 +820,11 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+    <div
+      className={`flex min-h-0 flex-1 flex-col overflow-hidden ${
+        mobileCompact ? "gap-2" : "gap-4"
+      }`}
+    >
       <div className="flex items-center justify-between">
         <span className="display-font text-sm text-[var(--accent-0)]">
           Toolbox
@@ -838,7 +846,7 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
       </div>
 
       {!collapsed && (
-      <div className="grid grid-cols-8 gap-2">
+      <div className={`grid ${mobileCompact ? "grid-cols-6 gap-1.5" : "grid-cols-8 gap-2"}`}>
         {[
           { id: "items", label: "Items", icon: <PlayerIcon /> },
           { id: "draw", label: "Forms", icon: <LineIcon /> },
@@ -859,7 +867,9 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
             className={`relative flex flex-col items-center justify-center rounded-2xl border px-2 py-2 text-[11px] uppercase tracking-wide ${
-              isActive ? "col-span-3 h-14 border-[var(--accent-0)] text-[var(--ink-0)]" : "col-span-1 h-11"
+              isActive
+                ? `${mobileCompact ? "col-span-2 h-12" : "col-span-3 h-14"} border-[var(--accent-0)] text-[var(--ink-0)]`
+                : `${mobileCompact ? "col-span-1 h-10" : "col-span-1 h-11"}`
             } ${
               !isActive && hasShared
                 ? "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
@@ -879,7 +889,7 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
             >
               {tab.icon}
             </div>
-            {isActive && <span>{tab.label}</span>}
+            {isActive && !mobileCompact && <span>{tab.label}</span>}
           </button>
         );
         })}
@@ -890,9 +900,11 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
       <div className="min-h-0 flex-1 overflow-y-auto pr-1" data-scrollable>
       {activeTab === "items" && (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
+          <div className={`grid ${mobileCompact ? "grid-cols-3 gap-1.5" : "grid-cols-2 gap-2"}`}>
             <button
-              className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition ${
+              className={`flex flex-col items-center rounded-2xl border px-2 text-center transition ${
+                mobileCompact ? "gap-1 py-2" : "gap-2 py-3"
+              } ${
                 isHighlighting
                   ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
                   : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
@@ -903,12 +915,14 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                 <HighlightIcon />
               </span>
               <span className="text-xs font-semibold">Highlight</span>
-              <span className="text-[10px] text-[var(--ink-1)]">
+              <span className={`text-[10px] text-[var(--ink-1)] ${mobileCompact ? "hidden" : ""}`}>
                 {isHighlighting ? "Click players to toggle" : "Enable highlight"}
               </span>
             </button>
             <button
-              className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition ${
+              className={`flex flex-col items-center rounded-2xl border px-2 text-center transition ${
+                mobileCompact ? "gap-1 py-2" : "gap-2 py-3"
+              } ${
                 isLinkingPlayers
                   ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
                   : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
@@ -919,17 +933,19 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
                 <LinkIcon />
               </span>
               <span className="text-xs font-semibold">Link line</span>
-              <span className="text-[10px] text-[var(--ink-1)]">
+              <span className={`text-[10px] text-[var(--ink-1)] ${mobileCompact ? "hidden" : ""}`}>
                 {isLinkingPlayers ? "Click players, press again" : "Start linking"}
               </span>
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className={`grid ${mobileCompact ? "grid-cols-3 gap-1.5" : "grid-cols-2 gap-2"}`}>
           {itemTools.map((tool) => (
             <button
               key={tool.id}
               onClick={() => setTool(tool.id)}
-              className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition ${
+              className={`flex flex-col items-center rounded-2xl border px-2 text-center transition ${
+                mobileCompact ? "gap-1 py-2" : "gap-2 py-3"
+              } ${
                 activeTool === tool.id
                   ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
                   : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
@@ -937,7 +953,7 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
             >
               <span className="mt-1">{tool.icon}</span>
               <span className="text-xs font-semibold">{tool.label}</span>
-              <span className="text-[10px] text-[var(--ink-1)]">{tool.hint}</span>
+              <span className={`text-[10px] text-[var(--ink-1)] ${mobileCompact ? "hidden" : ""}`}>{tool.hint}</span>
             </button>
           ))}
           </div>
@@ -946,12 +962,14 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
 
       {activeTab === "draw" && (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
+          <div className={`grid ${mobileCompact ? "grid-cols-3 gap-1.5" : "grid-cols-2 gap-2"}`}>
             {lineTools.map((tool) => (
               <button
                 key={tool.id}
                 onClick={() => setTool(tool.id)}
-                className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition ${
+                className={`flex flex-col items-center rounded-2xl border px-2 text-center transition ${
+                  mobileCompact ? "gap-1 py-2" : "gap-2 py-3"
+                } ${
                   activeTool === tool.id
                     ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
                     : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
@@ -959,16 +977,18 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
               >
                 <span className="mt-1">{tool.icon}</span>
                 <span className="text-xs font-semibold">{tool.label}</span>
-                <span className="text-[10px] text-[var(--ink-1)]">{tool.hint}</span>
+                <span className={`text-[10px] text-[var(--ink-1)] ${mobileCompact ? "hidden" : ""}`}>{tool.hint}</span>
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className={`grid ${mobileCompact ? "grid-cols-3 gap-1.5" : "grid-cols-2 gap-2"}`}>
             {formTools.map((tool) => (
               <button
                 key={tool.id}
                 onClick={() => setTool(tool.id)}
-                className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-center transition ${
+                className={`flex flex-col items-center rounded-2xl border px-2 text-center transition ${
+                  mobileCompact ? "gap-1 py-2" : "gap-2 py-3"
+                } ${
                   activeTool === tool.id
                     ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
                     : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
@@ -976,7 +996,7 @@ export default function Toolbox({ collapsed = false }: ToolboxProps) {
               >
                 <span className="mt-1">{tool.icon}</span>
                 <span className="text-xs font-semibold">{tool.label}</span>
-                <span className="text-[10px] text-[var(--ink-1)]">{tool.hint}</span>
+                <span className={`text-[10px] text-[var(--ink-1)] ${mobileCompact ? "hidden" : ""}`}>{tool.hint}</span>
               </button>
             ))}
           </div>

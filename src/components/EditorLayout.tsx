@@ -37,6 +37,7 @@ export default function EditorLayout() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showMaximizedNotes, setShowMaximizedNotes] = useState(true);
   const [isMaximizedPenMode, setIsMaximizedPenMode] = useState(false);
+  const [mobileToolboxOpen, setMobileToolboxOpen] = useState(false);
   const [viewport, setViewport] = useState({ width: 1366, height: 768 });
   const [notesWidthBonus, setNotesWidthBonus] = useState(0);
   const [manualNotesWidth, setManualNotesWidth] = useState<number | null>(null);
@@ -207,6 +208,7 @@ export default function EditorLayout() {
     "Poles",
   ];
   const compactVertical = viewport.height <= 860;
+  const isMobileLayout = viewport.width <= 900;
   if (!project || !board) {
     return null;
   }
@@ -711,6 +713,118 @@ export default function EditorLayout() {
         {board.mode === "DYNAMIC" && (
           <div className={compactVertical ? "px-2 pb-2" : "px-4 pb-4"}>
             <FramesBar board={board} stage={stage} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (isMobileLayout) {
+    return (
+      <div className="grid h-[100dvh] grid-rows-[auto_1fr_auto] overflow-hidden">
+        <div className="px-2 pt-2">
+          <TopBar />
+        </div>
+        <div className="min-h-0 px-2 pb-2">
+          <div className="relative h-full overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] shadow-xl shadow-black/30">
+            <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-2 py-1 text-[9px] uppercase tracking-widest text-[var(--accent-2)]">
+              {modeText}
+            </div>
+            <BoardCanvas
+              board={board}
+              onStageReady={(nextStage) => {
+                setStage(nextStage);
+                setStageRef(nextStage);
+              }}
+              isMaximized={isMaximized}
+              onToggleMaximize={() => {
+                setShowMaximizedNotes(true);
+                setIsMaximized(true);
+              }}
+            />
+          </div>
+        </div>
+        <div className="px-2 pb-2">
+          <FramesBar board={board} stage={stage} />
+        </div>
+        <button
+          className="fixed bottom-16 right-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--panel)]/95 text-[var(--ink-0)] shadow-lg shadow-black/40"
+          onClick={() => setMobileToolboxOpen((prev) => !prev)}
+          aria-label={mobileToolboxOpen ? "Close toolbox" : "Open toolbox"}
+          title={mobileToolboxOpen ? "Close toolbox" : "Open toolbox"}
+        >
+          {mobileToolboxOpen ? (
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          )}
+        </button>
+        {mobileToolboxOpen && (
+          <div
+            className="fixed inset-0 z-50 bg-black/40"
+            onClick={() => setMobileToolboxOpen(false)}
+          >
+            <div
+              className="absolute inset-x-0 bottom-0 top-[20dvh] flex flex-col rounded-t-3xl border border-[var(--line)] bg-[var(--panel)] p-3 shadow-2xl shadow-black/40"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <span className="display-font text-sm text-[var(--accent-0)]">
+                  Tools
+                </span>
+                <button
+                  className="rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)]"
+                  onClick={() => setMobileToolboxOpen(false)}
+                  aria-label="Close toolbox panel"
+                >
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]/95 p-2">
+                <Toolbox mobileCompact />
+              </div>
+              {selection.length > 0 && (
+                <div className="mt-2 max-h-[35dvh] overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)]/95 p-3">
+                  <PropertiesPanel
+                    floating={false}
+                    onToggleFloating={() => {}}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
