@@ -380,6 +380,8 @@ export default function EditorLayout() {
             )
           )
         : autoNotesWidth);
+    const useNotesSplitLayout = showMaximizedNotes && !isMobileLayout;
+    const showOverlayNotesMobile = showMaximizedNotes && isMobileLayout;
     const appendInkPoint = (event: {
       currentTarget: HTMLDivElement;
       clientX: number;
@@ -402,17 +404,17 @@ export default function EditorLayout() {
       <div className="fixed inset-0 z-50 flex h-[100dvh] flex-col bg-[var(--panel)]">
         <div
           className={`relative flex-1 overflow-hidden ${
-            showMaximizedNotes
+            useNotesSplitLayout
               ? `grid ${compactVertical ? "gap-2 p-2" : "gap-3 p-3"}`
               : ""
           }`}
           style={
-            showMaximizedNotes
+            useNotesSplitLayout
               ? { gridTemplateColumns: `minmax(0,1fr) 10px ${notesWidth}px` }
               : undefined
           }
         >
-          {showMaximizedNotes && (
+          {useNotesSplitLayout && (
             <div className="relative min-h-0 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)]">
               <BoardCanvas
                 board={board}
@@ -484,14 +486,16 @@ export default function EditorLayout() {
             <div
               className="pointer-events-none absolute top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] text-[var(--ink-1)]"
               style={{
-                right: `${notesWidth + (compactVertical ? 30 : 38)}px`,
+                right: useNotesSplitLayout
+                  ? `${notesWidth + (compactVertical ? 30 : 38)}px`
+                  : "16px",
                 top: compactVertical ? "10px" : "16px",
               }}
             >
               {sessionDateText}
             </div>
           )}
-          {showMaximizedNotes && (
+          {useNotesSplitLayout && (
             <button
               type="button"
               className={`relative z-20 h-full cursor-col-resize rounded-full border transition ${
@@ -519,7 +523,7 @@ export default function EditorLayout() {
               <span className="absolute left-1/2 top-1/2 h-10 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--line)]" />
             </button>
           )}
-          {showMaximizedNotes && (
+          {useNotesSplitLayout && (
             <div
               ref={maximizedNotesRef}
               className="min-h-0 overflow-y-auto rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-2"
@@ -577,7 +581,7 @@ export default function EditorLayout() {
               </div>
             </div>
           )}
-          {!showMaximizedNotes && (
+          {!useNotesSplitLayout && (
             <>
               <div className="pointer-events-none absolute left-4 top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
                 {modeText}
@@ -647,6 +651,64 @@ export default function EditorLayout() {
                 </svg>
               </div>
             </>
+          )}
+          {showOverlayNotesMobile && (
+            <div
+              ref={maximizedNotesRef}
+              className="absolute inset-x-2 bottom-2 top-14 z-[25] overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)]/92 p-2 backdrop-blur-sm"
+            >
+              <div className="space-y-2">
+                <section className="rounded-2xl border border-[var(--line)] p-2">
+                  <div className="space-y-2 text-[11px] text-[var(--ink-1)]">
+                    {sessionRows.length === 0 ? (
+                      <p className="text-xs text-[var(--ink-1)]">No session notes.</p>
+                    ) : (
+                      sessionRows.map((row) => (
+                        <div key={row.label} className="space-y-1">
+                          <p className="text-[10px] uppercase tracking-wide">{row.label}</p>
+                          <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
+                            {row.value}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+                <section className="rounded-2xl border border-[var(--line)] p-2">
+                  <div className="mb-2">
+                    <select
+                      className="h-8 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)]"
+                      value={board.id}
+                      onChange={(event) => setActiveBoard(event.target.value)}
+                    >
+                      {project.boards.map((item) => (
+                        <option
+                          key={item.id}
+                          value={item.id}
+                          className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                        >
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2 text-[11px] text-[var(--ink-1)]">
+                    {boardRows.length === 0 ? (
+                      <p className="text-xs text-[var(--ink-1)]">No board notes.</p>
+                    ) : (
+                      boardRows.map((row) => (
+                        <div key={row.label} className="space-y-1">
+                          <p className="text-[10px] uppercase tracking-wide">{row.label}</p>
+                          <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
+                            {row.value}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+              </div>
+            </div>
           )}
           <div className="absolute right-4 top-4 z-30 flex gap-2">
             <button
