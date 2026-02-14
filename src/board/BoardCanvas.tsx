@@ -501,8 +501,10 @@ export default function BoardCanvas({
     size.height / effectiveHeight
   );
   const stageScale = baseScale * lockedViewport.zoom;
-  const baseOffsetX =
-    (size.width - effectiveWidth * baseScale) / 2 - rotatedBounds.minX * baseScale;
+  const baseOffsetX = forcePortrait
+    ? -rotatedBounds.minX * baseScale
+    : (size.width - effectiveWidth * baseScale) / 2 -
+      rotatedBounds.minX * baseScale;
   const baseOffsetY =
     (size.height - effectiveHeight * baseScale) / 2 - rotatedBounds.minY * baseScale;
 

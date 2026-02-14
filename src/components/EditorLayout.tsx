@@ -230,6 +230,13 @@ export default function EditorLayout() {
     }
     resetCanvasViewport({ zoom: 1, offsetX: 0, offsetY: 0 });
   }, [isMobileLayout, board?.id, resetCanvasViewport]);
+  useEffect(() => {
+    if (!isMobileLayout || typeof window === "undefined") {
+      return;
+    }
+    // Keep mobile editor hard-anchored to the left edge to avoid horizontal drift.
+    window.scrollTo({ left: 0, top: window.scrollY, behavior: "auto" });
+  }, [isMobileLayout, board?.id, board?.pitchView]);
   if (!project || !board) {
     return null;
   }
@@ -743,11 +750,11 @@ export default function EditorLayout() {
   if (isMobileLayout) {
     return (
       <div className="grid h-[100dvh] w-screen max-w-[100vw] grid-rows-[auto_1fr_auto] overflow-x-hidden overflow-y-hidden">
-        <div className="px-2 pt-2">
+        <div className="min-w-0 overflow-x-hidden px-2 pt-2">
           <TopBar />
         </div>
-        <div className="min-h-0 px-2 pb-2">
-          <div className="relative h-full overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] shadow-xl shadow-black/30">
+        <div className="min-h-0 min-w-0 overflow-x-hidden px-2 pb-2">
+          <div className="relative h-full w-full min-w-0 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] shadow-xl shadow-black/30">
             <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-2 py-1 text-[9px] uppercase tracking-widest text-[var(--accent-2)]">
               {modeText}
             </div>

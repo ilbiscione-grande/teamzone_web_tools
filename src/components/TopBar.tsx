@@ -849,7 +849,7 @@ export default function TopBar() {
 
   return (
     <div
-      className={`relative grid w-full max-w-full items-center gap-3 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-3 py-3 shadow-2xl shadow-black/40 sm:px-5 sm:py-4 ${
+      className={`relative z-40 grid w-full min-w-0 max-w-full items-center gap-3 overflow-visible rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-3 py-3 shadow-2xl shadow-black/40 sm:px-5 sm:py-4 ${
         showAds
           ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
           : "grid-cols-1"
@@ -865,7 +865,7 @@ export default function TopBar() {
           <span className="block w-full -translate-x-2 text-center">Beta</span>
         </button>
       )}
-      <div className="flex min-w-0 items-center justify-between gap-2 overflow-hidden">
+      <div className="flex min-w-0 items-center justify-between gap-2 overflow-visible">
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex flex-col">
             <span
@@ -946,7 +946,7 @@ export default function TopBar() {
           </div>
         </div>
 
-        <div className="flex min-w-0 shrink-0 items-center gap-2 text-xs text-[var(--ink-1)]">
+        <div className="flex min-w-0 items-center gap-2 text-xs text-[var(--ink-1)]">
           <div
             className="relative flex items-center gap-2 rounded-full border border-[var(--line)] bg-transparent px-2 py-1"
             data-actions-menu
@@ -991,7 +991,7 @@ export default function TopBar() {
               </svg>
             </button>
             {boardActionsOpen && (
-              <div className="absolute right-0 top-10 z-30 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30">
+              <div className="absolute right-0 top-10 z-[90] w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30">
                 <button
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                   onClick={() => {
@@ -1189,7 +1189,7 @@ export default function TopBar() {
                 Actions
               </span>
               {actionsOpen && (
-                <div className="absolute right-0 top-10 z-30 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30">
+                <div className="absolute right-0 top-10 z-[90] w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30">
                   <div className="space-y-2 px-3 py-2 md:hidden">
                     <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                       Board mode
