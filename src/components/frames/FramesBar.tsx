@@ -773,7 +773,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
 
   return (
     <div
-      className="mt-2 w-full max-w-full overflow-hidden cursor-default rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 shadow-xl shadow-black/30 md:cursor-grab md:px-4"
+      className="mt-2 mx-auto w-[calc(100vw-1rem)] min-w-0 max-w-[calc(100vw-1rem)] overflow-hidden cursor-default rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 shadow-xl shadow-black/30 md:w-full md:max-w-full md:cursor-grab md:px-4"
       style={
         isMobileViewport
           ? undefined
