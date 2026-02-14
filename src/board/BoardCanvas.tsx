@@ -541,6 +541,7 @@ export default function BoardCanvas({
     },
     pushHistory,
     addObject,
+    disablePanZoom: !!forcePortrait,
   });
 
   const updatePosition = (id: string, position: { x: number; y: number }) => {
@@ -767,6 +768,7 @@ export default function BoardCanvas({
         </div>
       )}
       <Stage
+        key={`${board.id}:${board.pitchView}:${forcePortrait ? "portrait" : "default"}`}
         ref={stageRef}
         width={size.width}
         height={size.height}
@@ -774,7 +776,7 @@ export default function BoardCanvas({
         scaleY={stageScale}
         x={baseOffsetX + lockedViewport.offsetX}
         y={baseOffsetY + lockedViewport.offsetY}
-        draggable={isPanning}
+        draggable={isPanning && !forcePortrait}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}

@@ -46,6 +46,7 @@ type UseBoardInteractionsProps = {
   clearSelection: () => void;
   pushHistory: (snapshot: DrawableObject[]) => void;
   addObject: (boardId: string, frameIndex: number, object: DrawableObject) => void;
+  disablePanZoom?: boolean;
 };
 
 export const useBoardInteractions = ({
@@ -67,6 +68,7 @@ export const useBoardInteractions = ({
   clearSelection,
   pushHistory,
   addObject,
+  disablePanZoom = false,
 }: UseBoardInteractionsProps) => {
   const [draft, setDraft] = useState<DraftShape | null>(null);
   const [isPanning, setIsPanning] = useState(false);
@@ -157,7 +159,7 @@ export const useBoardInteractions = ({
 
   const handleWheel = (event: Konva.KonvaEventObject<WheelEvent>) => {
     event.evt.preventDefault();
-    if (readOnly) {
+    if (readOnly || disablePanZoom) {
       return;
     }
     const stage = stageRef.current;
@@ -207,6 +209,9 @@ export const useBoardInteractions = ({
         return;
       }
       if (!isShapeTool) {
+        if (disablePanZoom) {
+          return;
+        }
         setIsPanning(true);
         return;
       }
@@ -460,6 +465,9 @@ export const useBoardInteractions = ({
         return;
       }
       if (!isShapeTool) {
+        if (disablePanZoom) {
+          return;
+        }
         setIsPanning(true);
         return;
       }
