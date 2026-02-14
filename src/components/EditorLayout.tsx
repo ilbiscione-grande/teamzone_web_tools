@@ -223,7 +223,7 @@ export default function EditorLayout() {
   const isMobileLayout =
     viewport.width <= 1024 && (isCoarsePointer || viewport.height <= 860);
   const isPortraitMobile = isMobileLayout && viewport.height > viewport.width;
-  const forcePortraitPitch = isPortraitMobile && board?.pitchView === "FULL";
+  const forcePortraitPitch = isPortraitMobile;
   useEffect(() => {
     if (!isMobileLayout || !board) {
       return;
