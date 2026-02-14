@@ -53,7 +53,9 @@ export default function BoardCanvas({
   const stageRef = useRef<Konva.Stage | null>(null);
   const shapeRefs = useRef<Record<string, Konva.Node>>({});
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const controlsMenuRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 800, height: 500 });
+  const [controlsMenuOpen, setControlsMenuOpen] = useState(false);
 
   const activeTool = useEditorStore((state) => state.activeTool);
   const playerTokenSize = useEditorStore((state) => state.playerTokenSize);
@@ -637,6 +639,31 @@ export default function BoardCanvas({
     setViewport({ zoom: 1, offsetX: 0, offsetY: 0 });
   };
 
+  const handleClearPitch = () => {
+    if (!window.confirm("Clear all objects from this frame?")) {
+      return;
+    }
+    pushHistory(clone(objects));
+    setFrameObjects(board.id, frameIndex, []);
+    setControlsMenuOpen(false);
+  };
+
+  useEffect(() => {
+    if (!controlsMenuOpen) {
+      return;
+    }
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!controlsMenuRef.current) {
+        return;
+      }
+      if (!controlsMenuRef.current.contains(event.target as Node)) {
+        setControlsMenuOpen(false);
+      }
+    };
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [controlsMenuOpen]);
+
   const getDeleteAnchor = (item: DrawableObject) => {
     const fallback = { x: item.position.x, y: item.position.y };
     if (item.type === "arrow" || item.type === "path") {
@@ -695,78 +722,96 @@ export default function BoardCanvas({
       data-disable-pull
     >
       {!readOnly && !isMaximized && (
-        <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
+        <div ref={controlsMenuRef} className="absolute right-4 top-4 z-10">
           <button
             className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={handleResetView}
-            title="Reset view"
-            aria-label="Reset view"
-        >
-          <svg
-            aria-hidden
-            viewBox="0 0 24 24"
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            onClick={() => setControlsMenuOpen((prev) => !prev)}
+            title={controlsMenuOpen ? "Close pitch menu" : "Open pitch menu"}
+            aria-label={controlsMenuOpen ? "Close pitch menu" : "Open pitch menu"}
           >
-            <path d="M20 6v6h-6" />
-            <path d="M4 18v-6h6" />
-            <path d="M20 12a8 8 0 0 0-14-5" />
-            <path d="M4 12a8 8 0 0 0 14 5" />
-          </svg>
-        </button>
-          {!isMaximized && (
-            <button
-              className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-              onClick={() => {
-                if (!window.confirm("Clear all objects from this frame?")) {
-                  return;
-                }
-                pushHistory(clone(objects));
-                setFrameObjects(board.id, frameIndex, []);
-              }}
-              title="Clear pitch"
-              aria-label="Clear pitch"
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+          {controlsMenuOpen && (
+            <div className="absolute right-0 top-12 flex w-44 flex-col gap-1 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/95 p-2 shadow-xl shadow-black/40">
+              <button
+                className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 text-left text-xs text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => {
+                  handleResetView();
+                  setControlsMenuOpen(false);
+                }}
               >
-                <path d="M4 7h16" />
-                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
-                <path d="M10 11v6M14 11v6" />
-              </svg>
-            </button>
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20 6v6h-6" />
+                  <path d="M4 18v-6h6" />
+                  <path d="M20 12a8 8 0 0 0-14-5" />
+                  <path d="M4 12a8 8 0 0 0 14 5" />
+                </svg>
+                <span>Reset view</span>
+              </button>
+              <button
+                className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 text-left text-xs text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                onClick={handleClearPitch}
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 7h16" />
+                  <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                  <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
+                  <path d="M10 11v6M14 11v6" />
+                </svg>
+                <span>Clear pitch</span>
+              </button>
+              <button
+                className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 text-left text-xs text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => {
+                  onToggleMaximize?.();
+                  setControlsMenuOpen(false);
+                }}
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5" />
+                </svg>
+                <span>Full screen</span>
+              </button>
+            </div>
           )}
-          <button
-            className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-            onClick={onToggleMaximize}
-            title={isMaximized ? "Exit full screen" : "Full screen"}
-            aria-label="Toggle full screen"
-          >
-          <svg
-            aria-hidden
-            viewBox="0 0 24 24"
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5" />
-          </svg>
-        </button>
         </div>
       )}
       <Stage
