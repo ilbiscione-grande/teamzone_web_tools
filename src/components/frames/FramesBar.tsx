@@ -59,6 +59,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     type: "success" | "error";
     message: string;
   } | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const canRecord = can(plan, "video.export");
   const showWatermark =
     plan !== "PAID" || board.watermarkEnabled === undefined
@@ -434,6 +435,24 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
   }, [isPlaying, board.mode]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const media = window.matchMedia("(max-width: 1024px)");
+    const update = () => setIsMobileViewport(media.matches);
+    update();
+    media.addEventListener?.("change", update);
+    return () => media.removeEventListener?.("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileViewport) {
+      return;
+    }
+    setDragOffset({ x: 0, y: 0 });
+  }, [isMobileViewport]);
+
+  useEffect(() => {
     const handleMove = (event: MouseEvent) => {
       if (!dragStartRef.current) {
         return;
@@ -754,8 +773,12 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
 
   return (
     <div
-      className="mt-2 w-full cursor-default rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 shadow-xl shadow-black/30 md:cursor-grab md:px-4"
-      style={{ transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }}
+      className="mt-2 w-full max-w-full overflow-hidden cursor-default rounded-3xl border border-[var(--line)] bg-[var(--panel)] px-2 py-2 shadow-xl shadow-black/30 md:cursor-grab md:px-4"
+      style={
+        isMobileViewport
+          ? undefined
+          : { transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }
+      }
       onMouseDown={handleDragStart}
     >
       <div className="relative flex flex-col gap-2 text-xs text-[var(--ink-1)] md:flex-row md:items-center md:gap-3">
