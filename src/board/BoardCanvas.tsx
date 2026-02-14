@@ -359,6 +359,39 @@ export default function BoardCanvas({
     }),
     [bounds]
   );
+  const rotatedBounds = useMemo(() => {
+    if (viewRotation === 0) {
+      return {
+        minX: bounds.x,
+        maxX: bounds.x + bounds.width,
+        minY: bounds.y,
+        maxY: bounds.y + bounds.height,
+      };
+    }
+    const rad = (viewRotation * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    const rotate = (x: number, y: number) => {
+      const dx = x - rotationPivot.x;
+      const dy = y - rotationPivot.y;
+      return {
+        x: rotationPivot.x + dx * cos - dy * sin,
+        y: rotationPivot.y + dx * sin + dy * cos,
+      };
+    };
+    const p1 = rotate(bounds.x, bounds.y);
+    const p2 = rotate(bounds.x + bounds.width, bounds.y);
+    const p3 = rotate(bounds.x + bounds.width, bounds.y + bounds.height);
+    const p4 = rotate(bounds.x, bounds.y + bounds.height);
+    const xs = [p1.x, p2.x, p3.x, p4.x];
+    const ys = [p1.y, p2.y, p3.y, p4.y];
+    return {
+      minX: Math.min(...xs),
+      maxX: Math.max(...xs),
+      minY: Math.min(...ys),
+      maxY: Math.max(...ys),
+    };
+  }, [bounds, rotationPivot.x, rotationPivot.y, viewRotation]);
   const boardSquads = useMemo(
     () => getBoardSquads(project, board),
     [project, board]
@@ -433,17 +466,17 @@ export default function BoardCanvas({
     });
     return map;
   }, [renderObjects]);
-  const effectiveWidth = viewRotation !== 0 ? bounds.height : bounds.width;
-  const effectiveHeight = viewRotation !== 0 ? bounds.width : bounds.height;
+  const effectiveWidth = Math.max(1, rotatedBounds.maxX - rotatedBounds.minX);
+  const effectiveHeight = Math.max(1, rotatedBounds.maxY - rotatedBounds.minY);
   const baseScale = Math.min(
     size.width / effectiveWidth,
     size.height / effectiveHeight
   );
   const stageScale = baseScale * lockedViewport.zoom;
   const baseOffsetX =
-    size.width / 2 - (bounds.x + bounds.width / 2) * baseScale;
+    (size.width - effectiveWidth * baseScale) / 2 - rotatedBounds.minX * baseScale;
   const baseOffsetY =
-    size.height / 2 - (bounds.y + bounds.height / 2) * baseScale;
+    (size.height - effectiveHeight * baseScale) / 2 - rotatedBounds.minY * baseScale;
 
   const {
     draft,
