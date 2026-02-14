@@ -370,7 +370,16 @@ export default function EditorLayout() {
         Math.max(420, baseNotesWidth + notesWidthBonus)
       )
     );
-    const notesWidth = manualNotesWidth ?? autoNotesWidth;
+    const notesWidth =
+      manualNotesWidth ??
+      (isMobileLayout
+        ? Math.round(
+            Math.min(
+              Math.max(220, viewport.width * 0.46),
+              Math.max(220, viewport.width - 220)
+            )
+          )
+        : autoNotesWidth);
     const appendInkPoint = (event: {
       currentTarget: HTMLDivElement;
       clientX: number;
@@ -808,7 +817,10 @@ export default function EditorLayout() {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M4 7h16M4 12h16M4 17h16" />
+              <path d="M3 9h18v10H3z" />
+              <path d="M8 9V6h8v3" />
+              <path d="M10 14h4" />
+              <path d="M12 12v4" />
             </svg>
           )}
         </button>
