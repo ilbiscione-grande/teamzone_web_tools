@@ -333,6 +333,10 @@ export default function BoardCanvas({
   const isPortraitFull =
     board.pitchView === "FULL" &&
     (forcePortrait || (readOnly && size.height > size.width));
+  const lockedViewport = forcePortrait ? { zoom: 1, offsetX: 0, offsetY: 0 } : viewport;
+  const setViewportSafe = forcePortrait
+    ? (_value: Partial<typeof viewport>) => {}
+    : setViewport;
   const viewRotation = useMemo(() => {
     let rotation = 0;
     if (board.pitchView === "DEF_HALF") {
@@ -435,7 +439,7 @@ export default function BoardCanvas({
     size.width / effectiveWidth,
     size.height / effectiveHeight
   );
-  const stageScale = baseScale * viewport.zoom;
+  const stageScale = baseScale * lockedViewport.zoom;
   const baseOffsetX =
     size.width / 2 - (bounds.x + bounds.width / 2) * baseScale;
   const baseOffsetY =
@@ -465,11 +469,11 @@ export default function BoardCanvas({
     baseOffsetX,
     baseOffsetY,
     baseScale,
-    viewport,
+    viewport: lockedViewport,
     rotation: viewRotation,
     rotationPivot,
     stageRef,
-    setViewport,
+    setViewport: setViewportSafe,
     clearSelection: () => {
       setSelection([]);
       setSelectedLinkId(null);
@@ -707,8 +711,8 @@ export default function BoardCanvas({
         height={size.height}
         scaleX={stageScale}
         scaleY={stageScale}
-        x={baseOffsetX + viewport.offsetX}
-        y={baseOffsetY + viewport.offsetY}
+        x={baseOffsetX + lockedViewport.offsetX}
+        y={baseOffsetY + lockedViewport.offsetY}
         draggable={isPanning}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
