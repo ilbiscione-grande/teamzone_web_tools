@@ -535,20 +535,32 @@ export default function ProjectList() {
 
   const createTemplateOptions = getBoardTemplates(createMode, plan);
 
+  const readJsonFile = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(new Error("Could not read file."));
+      reader.readAsText(file);
+    });
+
   const onImport = async (file: File) => {
     if (!can(plan, "project.import")) {
       setError("Import is not available on this plan.");
       return;
     }
-    const text = await file.text();
-    const result = deserializeProject(text);
-    if (!result.ok) {
-      setError(result.error);
-      return;
+    try {
+      const text = await readJsonFile(file);
+      const result = deserializeProject(text);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      const project = result.project as Project;
+      openProjectFromData(project);
+      setError(null);
+    } catch {
+      setError("Could not import file. Check that it is a valid JSON export.");
     }
-    const project = result.project as Project;
-    openProjectFromData(project);
-    setError(null);
   };
 
   const onContactSubmit = async () => {
@@ -899,7 +911,7 @@ export default function ProjectList() {
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) {
-                    onImport(file);
+                    void onImport(file);
                   }
                   event.currentTarget.value = "";
                 }}

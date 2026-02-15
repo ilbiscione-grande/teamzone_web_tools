@@ -333,7 +333,7 @@ export const createCoreActions: StateCreator<
     if (can(get().plan, "project.save")) {
       saveProject(project, get().authUser?.id ?? null);
       if (get().authUser && get().plan === "PAID") {
-        saveProjectCloud(project);
+        void saveProjectCloud(project).catch(() => undefined);
       }
     }
     set((state) => {

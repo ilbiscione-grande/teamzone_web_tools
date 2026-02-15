@@ -1525,7 +1525,7 @@ export default function TopBar() {
       <PlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
       {squadPresetsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-          <div className="max-h-[80vh] w-full max-w-3xl overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
+          <div className="max-h-[84vh] w-full max-w-5xl overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
             <div className="flex items-center justify-between p-6 pb-0">
               <div>
                 <h2 className="display-font text-xl text-[var(--accent-0)]">
@@ -1547,11 +1547,27 @@ export default function TopBar() {
                 Squad presets are available for paid plans only.
               </p>
             ) : (
-              <div className="mt-4 max-h-[calc(80vh-96px)] space-y-4 overflow-y-auto p-6 pt-0 text-xs text-[var(--ink-1)]" data-scrollable>
-                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+              <div className="mt-4 max-h-[calc(84vh-96px)] space-y-4 overflow-y-auto p-6 pt-0 text-xs text-[var(--ink-1)]" data-scrollable>
+                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3 md:grid md:grid-cols-[120px_minmax(0,1fr)] md:gap-3 md:space-y-0">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                     Edit squad
                   </p>
+                  <button
+                    className="mb-2 flex h-28 w-full items-center justify-center overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] text-[11px] text-[var(--ink-1)] md:mb-0"
+                    onClick={() => manageLogoRef.current?.click()}
+                    title="Upload club logo"
+                  >
+                    {editableSquad?.clubLogo ? (
+                      <img
+                        src={editableSquad.clubLogo}
+                        alt="Club logo"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span>Club Logo</span>
+                    )}
+                  </button>
+                  <div className="space-y-2">
                   <label className="space-y-1">
                     <span className="text-[11px] uppercase text-[var(--ink-1)]">
                       Preset squad
@@ -1859,18 +1875,19 @@ export default function TopBar() {
                           Add player
                         </button>
                       </div>
-                      <div className="grid grid-cols-[28px_minmax(0,1fr)_50px_44px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                      <div className="grid grid-cols-[28px_minmax(0,1fr)_150px_58px_78px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                         <span>#</span>
                         <span>Name</span>
-                        <span>Pos</span>
-                        <span className="text-center">C/S</span>
+                        <span>Position</span>
+                        <span className="text-center">Captain</span>
+                        <span className="text-center">Substitute</span>
                         <span />
                       </div>
                       <div className="max-h-56 space-y-2 overflow-auto pr-1" data-scrollable>
                         {(managePresetSquad ?? manageSquad)?.players.map((player) => (
                           <div
                             key={player.id}
-                            className="grid grid-cols-[28px_minmax(0,1fr)_50px_44px_20px] items-center gap-2"
+                            className="grid grid-cols-[28px_minmax(0,1fr)_150px_58px_78px_20px] items-center gap-2"
                           >
                             <input
                               className="h-7 rounded-md border border-[var(--line)] bg-transparent px-1 text-center text-[11px] text-[var(--ink-0)]"
@@ -1922,7 +1939,7 @@ export default function TopBar() {
                               }
                             />
                             <select
-                              className="h-7 w-full rounded-md border border-[var(--line)] bg-[var(--panel-2)] px-1 text-[10px] text-[var(--ink-0)]"
+                              className="h-7 w-full rounded-md border border-[var(--line)] bg-[var(--panel-2)] px-2 text-[10px] text-[var(--ink-0)]"
                               value={player.positionLabel}
                               onChange={(event) =>
                                 managePresetSquad
@@ -1949,26 +1966,26 @@ export default function TopBar() {
                                 
                               </option>
                               {[
-                                "GK",
-                                "RB",
-                                "RCB",
-                                "CB",
-                                "LCB",
-                                "LB",
-                                "RWB",
-                                "LWB",
-                                "DM",
-                                "CDM",
-                                "CM",
-                                "AM",
-                                "CAM",
-                                "RM",
-                                "LM",
-                                "RW",
-                                "LW",
-                                "ST",
-                                "CF",
-                                "SS",
+                                "Goalkeeper (GK)",
+                                "Right Back (RB)",
+                                "Right Center Back (RCB)",
+                                "Center Back (CB)",
+                                "Left Center Back (LCB)",
+                                "Left Back (LB)",
+                                "Right Wing Back (RWB)",
+                                "Left Wing Back (LWB)",
+                                "Defensive Midfielder (DM)",
+                                "Central Defensive Midfielder (CDM)",
+                                "Central Midfielder (CM)",
+                                "Attacking Midfielder (AM)",
+                                "Central Attacking Midfielder (CAM)",
+                                "Right Midfielder (RM)",
+                                "Left Midfielder (LM)",
+                                "Right Winger (RW)",
+                                "Left Winger (LW)",
+                                "Striker (ST)",
+                                "Center Forward (CF)",
+                                "Second Striker (SS)",
                               ].map((pos) => (
                                 <option
                                   key={pos}
@@ -1984,12 +2001,13 @@ export default function TopBar() {
                               const isCaptain = editableSquad?.captainId === player.id;
                               const isSub = substitutes.includes(player.id);
                               return (
-                                <div className="flex items-center justify-center gap-2">
+                                <>
+                                <div className="flex items-center justify-center">
                                   <button
-                                    className={`h-4 w-4 rounded-full border text-[9px] uppercase ${
+                                    className={`h-4 w-4 rounded-full border ${
                                       isCaptain
-                                        ? "border-[var(--accent-0)] text-[var(--accent-0)]"
-                                        : "border-[var(--line)] text-[var(--ink-1)]"
+                                        ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
+                                        : "border-[var(--line)]"
                                     }`}
                                     onClick={() =>
                                       updateEditableSquad({
@@ -1998,14 +2016,14 @@ export default function TopBar() {
                                     }
                                     title="Captain"
                                     aria-label="Captain"
-                                  >
-                                    C
-                                  </button>
+                                  />
+                                </div>
+                                <div className="flex items-center justify-center">
                                   <button
-                                    className={`h-4 w-4 rounded-full border text-[9px] uppercase ${
+                                    className={`h-4 w-4 rounded-full border ${
                                       isSub
-                                        ? "border-[var(--accent-0)] text-[var(--accent-0)]"
-                                        : "border-[var(--line)] text-[var(--ink-1)]"
+                                        ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
+                                        : "border-[var(--line)]"
                                     }`}
                                     onClick={() => {
                                       const next = isSub
@@ -2015,10 +2033,9 @@ export default function TopBar() {
                                     }}
                                     title="Substitute"
                                     aria-label="Substitute"
-                                  >
-                                    S
-                                  </button>
+                                  />
                                 </div>
+                                </>
                               );
                             })()}
                             <button
@@ -2064,126 +2081,19 @@ export default function TopBar() {
                       No squad data available.
                     </p>
                   )}
-                </div>
-                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
-                  <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                    Create preset
-                  </p>
-                  <input
-                    className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                    placeholder="Preset name"
-                    value={presetName}
-                    onChange={(event) => setPresetName(event.target.value)}
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: "home", label: "Home squad" },
-                      { id: "away", label: "Away squad" },
-                    ].map((side) => (
-                      <button
-                        key={side.id}
-                        className={`rounded-2xl border px-3 py-2 text-[11px] uppercase tracking-wide ${
-                          presetSide === side.id
-                            ? "border-[var(--accent-0)] text-[var(--ink-0)]"
-                            : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-                        }`}
-                        onClick={() => setPresetSide(side.id as "home" | "away")}
-                      >
-                        {side.label}
-                      </button>
-                    ))}
                   </div>
-                  <button
-                    className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                    onClick={async () => {
-                      if (!presetName.trim()) {
-                        setPresetStatus("Enter a preset name.");
-                        return;
-                      }
-                      const sourceSquad =
-                        presetSide === "home"
-                          ? boardSquads.home
-                          : boardSquads.away;
-                      if (!sourceSquad) {
-                        setPresetStatus("No squad data available.");
-                        return;
-                      }
-                      setPresetStatus(null);
-                      const result = await createSquadPreset({
-                        name: presetName.trim(),
-                        squad: sourceSquad,
-                      });
-                      if (!result.ok) {
-                        setPresetStatus(result.error);
-                        return;
-                      }
-                      setSquadPresets((prev) => [result.preset, ...prev]);
-                      setPresetName("");
-                      setPresetStatus("Preset saved.");
-                    }}
-                  >
-                    Save preset
-                  </button>
-                  {presetStatus ? (
-                    <p className="text-xs text-[var(--accent-1)]">
-                      {presetStatus}
-                    </p>
-                  ) : null}
                 </div>
-                <div className="space-y-2">
-                  <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                    Your presets
+                {squadPresetsLoading ? (
+                  <p className="text-xs text-[var(--ink-1)]">Loading presets...</p>
+                ) : null}
+                {squadPresetsError ? (
+                  <p className="text-xs text-[var(--accent-1)]">
+                    {squadPresetsError}
                   </p>
-                  {squadPresetsLoading ? (
-                    <p className="text-xs text-[var(--ink-1)]">
-                      Loading presets...
-                    </p>
-                  ) : squadPresetsError ? (
-                    <p className="text-xs text-[var(--accent-1)]">
-                      {squadPresetsError}
-                    </p>
-                  ) : squadPresets.length === 0 ? (
-                    <p className="text-xs text-[var(--ink-1)]">
-                      No presets yet.
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {squadPresets.map((preset) => (
-                        <div
-                          key={preset.id}
-                          className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2"
-                        >
-                          <div>
-                            <p className="text-xs text-[var(--ink-0)]">
-                              {preset.name}
-                            </p>
-                            <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                              {preset.squad.name}
-                            </p>
-                          </div>
-                          <button
-                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                            onClick={async () => {
-                              if (!window.confirm("Delete this preset?")) {
-                                return;
-                              }
-                              const result = await deleteSquadPreset(preset.id);
-                              if (!result.ok) {
-                                setSquadPresetsError(result.error);
-                                return;
-                              }
-                              setSquadPresets((prev) =>
-                                prev.filter((item) => item.id !== preset.id)
-                              );
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                ) : null}
+                {presetStatus ? (
+                  <p className="text-xs text-[var(--accent-1)]">{presetStatus}</p>
+                ) : null}
               </div>
             )}
           </div>

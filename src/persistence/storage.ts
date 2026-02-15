@@ -32,7 +32,11 @@ export const saveProjectIndex = (
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.setItem(getIndexKey(userId), JSON.stringify(index));
+  try {
+    window.localStorage.setItem(getIndexKey(userId), JSON.stringify(index));
+  } catch (error) {
+    console.warn("Could not persist project index to local storage.", error);
+  }
 };
 
 export const loadProject = (id: string, userId?: string | null): Project | null => {
@@ -54,10 +58,14 @@ export const saveProject = (project: Project, userId?: string | null) => {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.setItem(
-    getProjectKey(project.id, userId),
-    serializeProject(project)
-  );
+  try {
+    window.localStorage.setItem(
+      getProjectKey(project.id, userId),
+      serializeProject(project)
+    );
+  } catch (error) {
+    console.warn("Could not persist project to local storage.", error);
+  }
 };
 
 export const deleteProject = (id: string, userId?: string | null) => {
