@@ -9,6 +9,7 @@ export type SquadPlayer = {
 
 export type SquadKit = {
   shirt: string;
+  shirtSecondary?: string;
   shorts: string;
   socks: string;
   vest?: string;

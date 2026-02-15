@@ -1808,10 +1808,13 @@ export default function TopBar() {
                               <input
                                 type="color"
                                 className="h-7 w-full rounded-lg border border-[var(--line)] bg-transparent"
-                                value={editableSquad.kit.shorts}
+                                value={editableSquad.kit.shirtSecondary ?? editableSquad.kit.shirt}
                                 onChange={(event) =>
                                   updateEditableSquad({
-                                    kit: { ...editableSquad.kit, shorts: event.target.value },
+                                    kit: {
+                                      ...editableSquad.kit,
+                                      shirtSecondary: event.target.value,
+                                    },
                                   })
                                 }
                               />
@@ -1862,7 +1865,7 @@ export default function TopBar() {
                                 {renderShirtIcon(
                                   item.id,
                                   editableSquad.kit.shirt,
-                                  editableSquad.kit.shorts,
+                                  editableSquad.kit.shirtSecondary ?? editableSquad.kit.shirt,
                                   "h-5 w-5"
                                 )}
                               </button>
@@ -1871,19 +1874,15 @@ export default function TopBar() {
                         </>
                       ) : null}
                     </div>
-                    <div className="flex h-56 flex-col rounded-xl bg-[var(--panel-2)]/35 p-3">
-                      <div className="flex flex-1 items-center justify-center">
-                        {editableSquad
-                          ? renderShirtIcon(
-                              jerseyType,
-                              editableSquad.kit.shirt,
-                              editableSquad.kit.shorts,
-                              "h-28 w-28"
-                            )
-                          : null}
-                      </div>
+                    <div className="flex h-56 flex-col items-center justify-center rounded-xl bg-[var(--panel-2)]/35 p-3">
                       {editableSquad ? (
-                        <div className="mt-1 flex flex-col items-center gap-1.5">
+                        <div className="flex flex-col items-center gap-1">
+                          {renderShirtIcon(
+                            jerseyType,
+                            editableSquad.kit.shirt,
+                            editableSquad.kit.shirtSecondary ?? editableSquad.kit.shirt,
+                            "h-24 w-24"
+                          )}
                           <svg viewBox="0 0 64 40" className="h-7 w-11" aria-hidden>
                             <path
                               d="M6 6h52l-4 28H36V22H28v12H10z"
