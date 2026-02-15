@@ -194,6 +194,9 @@ export default function TopBar() {
     if (!authUser || plan !== "PAID") {
       setSquadPresets([]);
       setSquadPresetsError(null);
+      setManagePresetId("");
+      setManagePresetName("");
+      setManagePresetSquad(null);
       return;
     }
     setSquadPresetsLoading(true);
@@ -256,6 +259,7 @@ export default function TopBar() {
   const modeLabel =
     project?.settings?.mode ?? ("match" as "training" | "match" | "education");
   const modeText = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
+  const canUsePresetStorage = plan === "PAID" && Boolean(authUser);
   const shirtTypes: Array<{
     id: "solid" | "split" | "stripe" | "sash" | "pinstripe";
     label: string;
@@ -1485,8 +1489,6 @@ export default function TopBar() {
                       setActionsOpen(false);
                       setSquadPresetsOpen(true);
                     }}
-                    disabled={plan !== "PAID" || !authUser}
-                    data-locked={plan !== "PAID" || !authUser}
                   >
                     <svg
                       aria-hidden
@@ -1593,12 +1595,12 @@ export default function TopBar() {
                 Close
               </button>
             </div>
-            {plan !== "PAID" || !authUser ? (
-              <p className="mt-4 p-6 pt-0 text-xs text-[var(--ink-1)]">
-                Squad presets are available for paid plans only.
-              </p>
-            ) : (
-              <div className="mt-4 max-h-[calc(84vh-96px)] space-y-4 overflow-y-auto p-6 pt-0 text-xs text-[var(--ink-1)]" data-scrollable>
+            <div className="mt-4 max-h-[calc(84vh-96px)] space-y-4 overflow-y-auto p-6 pt-0 text-xs text-[var(--ink-1)]" data-scrollable>
+                {!canUsePresetStorage ? (
+                  <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/50 px-3 py-2 text-xs text-[var(--ink-1)]">
+                    Free/Auth plans can edit squads locally in this project. Presets are available on paid plans.
+                  </p>
+                ) : null}
                 <div className="space-y-2">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                     Edit squad
@@ -1693,10 +1695,34 @@ export default function TopBar() {
                               />
                             </label>
                           </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] text-[var(--ink-1)]">Type of jersey</span>
+                            {shirtTypes.map((item) => (
+                              <button
+                                key={item.id}
+                                className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border ${
+                                  jerseyType === item.id
+                                    ? "border-[var(--accent-0)]"
+                                    : "border-[var(--line)]"
+                                }`}
+                                onClick={() => setJerseyType(item.id)}
+                                title={item.label}
+                                aria-label={item.label}
+                              >
+                                {renderShirtIcon(
+                                  item.id,
+                                  editableSquad.kit.shirt,
+                                  editableSquad.kit.shorts,
+                                  "h-5 w-5"
+                                )}
+                              </button>
+                            ))}
+                          </div>
                         </>
                       ) : null}
                     </div>
                     <div className="flex h-52 flex-col p-1">
+                      {canUsePresetStorage ? (
                       <div className="mb-2 flex items-center justify-end gap-2">
                         <button
                           className="rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
@@ -1780,6 +1806,7 @@ export default function TopBar() {
                           </svg>
                         </button>
                       </div>
+                      ) : null}
                       <div className="flex flex-1 items-center justify-center">
                         {editableSquad
                           ? renderShirtIcon(
@@ -1791,31 +1818,6 @@ export default function TopBar() {
                           : null}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] text-[var(--ink-1)]">Type of jersey</span>
-                    {editableSquad
-                      ? shirtTypes.map((item) => (
-                          <button
-                            key={item.id}
-                            className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border ${
-                              jerseyType === item.id
-                                ? "border-[var(--accent-0)]"
-                                : "border-[var(--line)]"
-                            }`}
-                            onClick={() => setJerseyType(item.id)}
-                            title={item.label}
-                            aria-label={item.label}
-                          >
-                            {renderShirtIcon(
-                              item.id,
-                              editableSquad.kit.shirt,
-                              editableSquad.kit.shorts,
-                              "h-6 w-6"
-                            )}
-                          </button>
-                        ))
-                      : null}
                   </div>
                   <input
                     ref={manageLogoRef}
@@ -2020,7 +2022,7 @@ export default function TopBar() {
                               const isSub = substitutes.includes(player.id);
                               return (
                                 <>
-                                <div className="flex items-center justify-center">
+                                <div className="flex h-full w-full items-center justify-center">
                                   <button
                                     className={`h-4 w-4 rounded-full border ${
                                       isCaptain
@@ -2036,7 +2038,7 @@ export default function TopBar() {
                                     aria-label="Captain"
                                   />
                                 </div>
-                                <div className="flex items-center justify-center">
+                                <div className="flex h-full w-full items-center justify-center">
                                   <button
                                     className={`h-4 w-4 rounded-full border ${
                                       isSub
@@ -2100,32 +2102,34 @@ export default function TopBar() {
                     </p>
                   )}
                 </div>
-                <label className="space-y-1">
-                  <span className="text-[10px] text-[var(--ink-1)]">Preset squad</span>
-                  <select
-                    className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-xs text-[var(--ink-0)]"
-                    value={managePresetId}
-                    onChange={(event) => {
-                      const nextId = event.target.value;
-                      setManagePresetId(nextId);
-                      const preset = squadPresets.find((item) => item.id === nextId);
-                      if (preset) {
-                        setManagePresetName(preset.name);
-                        setManagePresetSquad(preset.squad);
-                      } else {
-                        setManagePresetName("");
-                        setManagePresetSquad(null);
-                      }
-                    }}
-                  >
-                    <option value="">Current squad</option>
-                    {squadPresets.map((preset) => (
-                      <option key={preset.id} value={preset.id}>
-                        {preset.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {canUsePresetStorage ? (
+                  <label className="space-y-1">
+                    <span className="text-[10px] text-[var(--ink-1)]">Preset squad</span>
+                    <select
+                      className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-xs text-[var(--ink-0)]"
+                      value={managePresetId}
+                      onChange={(event) => {
+                        const nextId = event.target.value;
+                        setManagePresetId(nextId);
+                        const preset = squadPresets.find((item) => item.id === nextId);
+                        if (preset) {
+                          setManagePresetName(preset.name);
+                          setManagePresetSquad(preset.squad);
+                        } else {
+                          setManagePresetName("");
+                          setManagePresetSquad(null);
+                        }
+                      }}
+                    >
+                      <option value="">Current squad</option>
+                      {squadPresets.map((preset) => (
+                        <option key={preset.id} value={preset.id}>
+                          {preset.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
                 {squadPresetsLoading ? (
                   <p className="text-xs text-[var(--ink-1)]">Loading presets...</p>
                 ) : null}
@@ -2138,7 +2142,6 @@ export default function TopBar() {
                   <p className="text-xs text-[var(--accent-1)]">{presetStatus}</p>
                 ) : null}
               </div>
-            )}
           </div>
         </div>
       )}
