@@ -91,6 +91,7 @@ export default function TopBar() {
   const [managePresetStatus, setManagePresetStatus] = useState<string | null>(
     null
   );
+  const [managePresetBaseline, setManagePresetBaseline] = useState("");
   const [jerseyType, setJerseyType] = useState<
     "solid" | "split" | "stripe" | "sash" | "pinstripe"
   >("solid");
@@ -197,6 +198,7 @@ export default function TopBar() {
       setManagePresetId("");
       setManagePresetName("");
       setManagePresetSquad(null);
+      setManagePresetBaseline("");
       return;
     }
     setSquadPresetsLoading(true);
@@ -215,10 +217,17 @@ export default function TopBar() {
         if (matchPreset) {
           setManagePresetName(matchPreset.name);
           setManagePresetSquad(matchPreset.squad);
+          setManagePresetBaseline(
+            presetDraftFingerprint(
+              matchPreset.id,
+              matchPreset.name,
+              matchPreset.squad
+            )
+          );
         }
       })
       .finally(() => setSquadPresetsLoading(false));
-  }, [squadPresetsOpen, authUser, plan]);
+  }, [squadPresetsOpen, authUser, plan, managePresetId]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -260,6 +269,38 @@ export default function TopBar() {
     project?.settings?.mode ?? ("match" as "training" | "match" | "education");
   const modeText = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
   const canUsePresetStorage = plan === "PAID" && Boolean(authUser);
+  const presetDraftFingerprint = (
+    id: string,
+    name: string,
+    squad: SquadPreset["squad"] | null
+  ) => {
+    if (!id || !squad) {
+      return "";
+    }
+    return JSON.stringify({ id, name: name.trim(), squad });
+  };
+  const managePresetDirty =
+    canUsePresetStorage &&
+    Boolean(managePresetId && managePresetSquad) &&
+    presetDraftFingerprint(
+      managePresetId,
+      managePresetName || managePresetSquad?.name || "",
+      managePresetSquad
+    ) !== managePresetBaseline;
+  const confirmDiscardPresetChanges = () => {
+    if (!managePresetDirty) {
+      return true;
+    }
+    return window.confirm(
+      "You have unsaved preset changes. Discard changes and continue?"
+    );
+  };
+  const closeSquadPresetsModal = () => {
+    if (!confirmDiscardPresetChanges()) {
+      return;
+    }
+    setSquadPresetsOpen(false);
+  };
   const shirtTypes: Array<{
     id: "solid" | "split" | "stripe" | "sash" | "pinstripe";
     label: string;
@@ -1590,7 +1631,7 @@ export default function TopBar() {
               </div>
               <button
                 className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                onClick={() => setSquadPresetsOpen(false)}
+                onClick={closeSquadPresetsModal}
               >
                 Close
               </button>
@@ -1603,7 +1644,7 @@ export default function TopBar() {
                 ) : null}
                 <div className="space-y-2">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                    Edit squad
+                    Squad details
                   </p>
                   <div className="grid gap-3 lg:grid-cols-[180px_minmax(0,1fr)_200px]">
                     <button
@@ -1615,7 +1656,7 @@ export default function TopBar() {
                         <img
                           src={editableSquad.clubLogo}
                           alt="Club logo"
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-contain p-2"
                         />
                       ) : (
                         <span>Club Logo</span>
@@ -1623,7 +1664,7 @@ export default function TopBar() {
                     </button>
                     <div className="flex h-52 flex-col gap-2 p-1">
                       <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                        Squad details
+                        Squad name
                       </span>
                       <input
                         className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
@@ -1639,6 +1680,9 @@ export default function TopBar() {
                       />
                       {editableSquad ? (
                         <>
+                          <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                            Team colors
+                          </span>
                           <div className="grid gap-2 md:grid-cols-2">
                             <label className="space-y-1">
                               <span className="text-[10px] text-[var(--ink-1)]">Shirt Base</span>
@@ -1752,6 +1796,13 @@ export default function TopBar() {
                               setSquadPresets((prev) =>
                                 prev.map((item) => (item.id === result.preset.id ? result.preset : item))
                               );
+                              setManagePresetBaseline(
+                                presetDraftFingerprint(
+                                  result.preset.id,
+                                  result.preset.name,
+                                  result.preset.squad
+                                )
+                              );
                               setManagePresetStatus("Preset updated.");
                               return;
                             }
@@ -1767,6 +1818,13 @@ export default function TopBar() {
                             setManagePresetId(result.preset.id);
                             setManagePresetName(result.preset.name);
                             setManagePresetSquad(result.preset.squad);
+                            setManagePresetBaseline(
+                              presetDraftFingerprint(
+                                result.preset.id,
+                                result.preset.name,
+                                result.preset.squad
+                              )
+                            );
                             setManagePresetStatus("Preset saved.");
                           }}
                         >
@@ -1817,6 +1875,41 @@ export default function TopBar() {
                             )
                           : null}
                       </div>
+                      {editableSquad ? (
+                        <div className="mt-1 grid grid-cols-2 gap-2">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-[10px] text-[var(--ink-1)]">Shorts</span>
+                            <svg viewBox="0 0 64 40" className="h-8 w-12" aria-hidden>
+                              <path
+                                d="M6 6h52l-4 28H36V22H28v12H10z"
+                                fill={editableSquad.kit.shorts}
+                                stroke="rgba(255,255,255,0.25)"
+                                strokeWidth="2"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </div>
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-[10px] text-[var(--ink-1)]">Socks</span>
+                            <svg viewBox="0 0 64 40" className="h-8 w-12" aria-hidden>
+                              <path
+                                d="M16 5h12v14l8 6v8H16z"
+                                fill={editableSquad.kit.socks}
+                                stroke="rgba(255,255,255,0.25)"
+                                strokeWidth="2"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M36 5h12v14l8 6v8H36z"
+                                fill={editableSquad.kit.socks}
+                                stroke="rgba(255,255,255,0.25)"
+                                strokeWidth="2"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                   <input
@@ -2108,19 +2201,30 @@ export default function TopBar() {
                     <select
                       className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-xs text-[var(--ink-0)]"
                       value={managePresetId}
-                      onChange={(event) => {
-                        const nextId = event.target.value;
-                        setManagePresetId(nextId);
-                        const preset = squadPresets.find((item) => item.id === nextId);
-                        if (preset) {
-                          setManagePresetName(preset.name);
-                          setManagePresetSquad(preset.squad);
-                        } else {
-                          setManagePresetName("");
-                          setManagePresetSquad(null);
-                        }
-                      }}
-                    >
+                    onChange={(event) => {
+                      const nextId = event.target.value;
+                      if (!confirmDiscardPresetChanges()) {
+                        return;
+                      }
+                      setManagePresetId(nextId);
+                      const preset = squadPresets.find((item) => item.id === nextId);
+                      if (preset) {
+                        setManagePresetName(preset.name);
+                        setManagePresetSquad(preset.squad);
+                        setManagePresetBaseline(
+                          presetDraftFingerprint(
+                            preset.id,
+                            preset.name,
+                            preset.squad
+                          )
+                        );
+                      } else {
+                        setManagePresetName("");
+                        setManagePresetSquad(null);
+                        setManagePresetBaseline("");
+                      }
+                    }}
+                  >
                       <option value="">Current squad</option>
                       {squadPresets.map((preset) => (
                         <option key={preset.id} value={preset.id}>
