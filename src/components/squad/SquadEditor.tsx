@@ -83,8 +83,7 @@ export default function SquadEditor() {
       </div>
 
       <div className="mt-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3">
-        <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Current squad</p>
-        <p className="mt-1 text-sm text-[var(--ink-0)]">{activeSquad.name}</p>
+        <p className="text-sm text-[var(--ink-0)]">{activeSquad.name}</p>
         <p className="mt-1 text-[11px] text-[var(--ink-1)]">
           {activeSquad.players.length} players
         </p>

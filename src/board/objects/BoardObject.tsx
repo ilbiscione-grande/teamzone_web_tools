@@ -39,6 +39,44 @@ const getArrowHeadSize = (strokeWidth: number) => {
   };
 };
 
+const toPositionAbbreviation = (value?: string) => {
+  if (!value) {
+    return "";
+  }
+  const trimmed = value.trim();
+  const parenMatch = trimmed.match(/\(([A-Za-z0-9/]+)\)\s*$/);
+  if (parenMatch?.[1]) {
+    return parenMatch[1].toUpperCase();
+  }
+  const compact = trimmed.toUpperCase();
+  const known = new Set([
+    "GK",
+    "RB",
+    "RCB",
+    "CB",
+    "LCB",
+    "LB",
+    "RWB",
+    "LWB",
+    "DM",
+    "CDM",
+    "CM",
+    "AM",
+    "CAM",
+    "RM",
+    "LM",
+    "RW",
+    "LW",
+    "ST",
+    "CF",
+    "SS",
+  ]);
+  if (known.has(compact)) {
+    return compact;
+  }
+  return compact.slice(0, 3);
+};
+
 type BoardObjectProps = {
   object: DrawableObject;
   objects: DrawableObject[];
@@ -190,9 +228,7 @@ export default function BoardObject({
           .join("")
           .slice(0, 2)
       : "PL";
-    const positionLabel = squadPlayer?.positionLabel
-      ? squadPlayer.positionLabel.slice(0, 3).toUpperCase()
-      : "";
+    const positionLabel = toPositionAbbreviation(squadPlayer?.positionLabel);
     const hasLabel = showPlayerName || showPlayerPosition || showPlayerNumber;
     const circleText = !hasLabel
       ? ""
