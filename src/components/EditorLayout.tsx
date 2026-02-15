@@ -11,6 +11,7 @@ import PropertiesPanel from "@/components/panels/PropertiesPanel";
 import FramesBar from "@/components/frames/FramesBar";
 import TopBar from "@/components/TopBar";
 import AdBanner from "@/components/AdBanner";
+import NotesMarkdown from "@/components/notes/NotesMarkdown";
 
 export default function EditorLayout() {
   const project = useProjectStore((state) => state.project);
@@ -537,9 +538,10 @@ export default function EditorLayout() {
                       sessionRows.map((row) => (
                         <div key={row.label} className="space-y-1">
                           <p className="text-[10px] uppercase tracking-wide">{row.label}</p>
-                          <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                            {row.value}
-                          </p>
+                          <NotesMarkdown
+                            text={row.value}
+                            className="text-xs text-[var(--ink-0)]"
+                          />
                         </div>
                       ))
                     )}
@@ -570,9 +572,10 @@ export default function EditorLayout() {
                       boardRows.map((row) => (
                         <div key={row.label} className="space-y-1">
                           <p className="text-[10px] uppercase tracking-wide">{row.label}</p>
-                          <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                            {row.value}
-                          </p>
+                          <NotesMarkdown
+                            text={row.value}
+                            className="text-xs text-[var(--ink-0)]"
+                          />
                         </div>
                       ))
                     )}
@@ -666,9 +669,10 @@ export default function EditorLayout() {
                       sessionRows.map((row) => (
                         <div key={row.label} className="space-y-1">
                           <p className="text-[10px] uppercase tracking-wide">{row.label}</p>
-                          <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                            {row.value}
-                          </p>
+                          <NotesMarkdown
+                            text={row.value}
+                            className="text-xs text-[var(--ink-0)]"
+                          />
                         </div>
                       ))
                     )}
@@ -699,9 +703,10 @@ export default function EditorLayout() {
                       boardRows.map((row) => (
                         <div key={row.label} className="space-y-1">
                           <p className="text-[10px] uppercase tracking-wide">{row.label}</p>
-                          <p className="whitespace-pre-wrap text-xs text-[var(--ink-0)]">
-                            {row.value}
-                          </p>
+                          <NotesMarkdown
+                            text={row.value}
+                            className="text-xs text-[var(--ink-0)]"
+                          />
                         </div>
                       ))
                     )}

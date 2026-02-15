@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkBreaks from "remark-breaks";
-import remarkGfm from "remark-gfm";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useEditorStore, type Tool } from "@/state/useEditorStore";
 import SquadEditor from "@/components/squad/SquadEditor";
+import NotesMarkdown from "@/components/notes/NotesMarkdown";
 import { useProjectStore } from "@/state/useProjectStore";
 import { clone } from "@/utils/clone";
 import { getActiveBoard, getBoardSquads } from "@/utils/board";
@@ -275,20 +273,6 @@ export default function Toolbox({
   const scopedNotes = notesScope === "project" ? project?.sessionNotes : board?.notes;
   const scopedFields =
     notesScope === "project" ? project?.sessionNotesFields : board?.notesFields;
-  const previewNotes = useMemo(() => {
-    const raw = scopedNotes ?? "";
-    if (!raw) {
-      return "";
-    }
-    return raw.replace(/\n{3,}/g, (match) => {
-      const extra = match.length - 2;
-      let next = "\n\n";
-      for (let i = 0; i < extra; i += 1) {
-        next += "\u00A0\n\n";
-      }
-      return next;
-    });
-  }, [scopedNotes]);
   const frameIndex = board?.activeFrameIndex ?? 0;
   const objects = board?.frames[frameIndex]?.objects ?? [];
   const activeFrame = board?.frames[frameIndex];
@@ -1290,30 +1274,7 @@ export default function Toolbox({
                     });
                   }}
                 >
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm, remarkBreaks]}
-                    components={{
-                      h1: (props) => (
-                        <h1 className="mb-2 text-lg font-semibold" {...props} />
-                      ),
-                      h2: (props) => (
-                        <h2 className="mb-2 text-base font-semibold" {...props} />
-                      ),
-                      h3: (props) => (
-                        <h3 className="mb-2 text-sm font-semibold" {...props} />
-                      ),
-                      p: (props) => <p className="mb-2" {...props} />,
-                      ul: (props) => (
-                        <ul className="mb-2 list-disc pl-4" {...props} />
-                      ),
-                      ol: (props) => (
-                        <ol className="mb-2 list-decimal pl-4" {...props} />
-                      ),
-                      li: (props) => <li className="mb-1" {...props} />,
-                    }}
-                  >
-                    {previewNotes}
-                  </ReactMarkdown>
+                  <NotesMarkdown text={scopedNotes ?? ""} />
                 </div>
               )}
             </div>
@@ -1578,18 +1539,15 @@ export default function Toolbox({
             <span className="font-semibold">##</span> Subheading
           </p>
           <p className="mb-1">
-            <span className="font-semibold">-</span> Bullet list,{" "}
-            <span className="font-semibold">1.</span> Numbered list
+            <span className="font-semibold">---</span> Divider line
           </p>
           <p className="mb-1">
             <span className="font-semibold">**bold**</span>,{" "}
-            <span className="font-semibold">*italic*</span>
-          </p>
-          <p className="mb-1">
-            <span className="font-semibold">`code`</span> for inline code
+            <span className="font-semibold">*italic*</span>,{" "}
+            <span className="underline">__underline__</span>
           </p>
           <p>
-            New lines are respected; leave a blank line for a new paragraph.
+            Blank line = new paragraph.
           </p>
         </div>
       )}

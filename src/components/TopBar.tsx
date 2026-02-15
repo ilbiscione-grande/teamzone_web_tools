@@ -10,6 +10,7 @@ import type {
   BoardMode,
   PitchOverlay,
   PitchView,
+  ProjectMode,
   SquadPreset,
 } from "@/models";
 import FormationMenu from "@/components/FormationMenu";
@@ -300,6 +301,72 @@ export default function TopBar() {
       return;
     }
     setSquadPresetsOpen(false);
+  };
+  const saveManagePreset = async () => {
+    if (!editableSquad) {
+      setManagePresetStatus("No squad data available.");
+      return;
+    }
+    const nextName = (
+      managePresetId ? managePresetName : editableSquad.name
+    ).trim();
+    if (!nextName) {
+      setManagePresetStatus("Enter a preset name.");
+      return;
+    }
+    setManagePresetStatus(null);
+    if (managePresetId && managePresetSquad) {
+      const result = await updateSquadPreset({
+        id: managePresetId,
+        name: nextName,
+        squad: managePresetSquad,
+      });
+      if (!result.ok) {
+        setManagePresetStatus(result.error);
+        return;
+      }
+      setSquadPresets((prev) =>
+        prev.map((item) => (item.id === result.preset.id ? result.preset : item))
+      );
+      setManagePresetBaseline(
+        presetDraftFingerprint(result.preset.id, result.preset.name, result.preset.squad)
+      );
+      setManagePresetStatus("Preset updated.");
+      return;
+    }
+    const result = await createSquadPreset({
+      name: nextName,
+      squad: editableSquad,
+    });
+    if (!result.ok) {
+      setManagePresetStatus(result.error);
+      return;
+    }
+    setSquadPresets((prev) => [result.preset, ...prev]);
+    setManagePresetId(result.preset.id);
+    setManagePresetName(result.preset.name);
+    setManagePresetSquad(result.preset.squad);
+    setManagePresetBaseline(
+      presetDraftFingerprint(result.preset.id, result.preset.name, result.preset.squad)
+    );
+    setManagePresetStatus("Preset saved.");
+  };
+  const loadManagePreset = () => {
+    if (!managePresetSquad || !manageSquad) {
+      return;
+    }
+    updateSquad(manageSquad.id, {
+      name: managePresetSquad.name,
+      clubLogo: managePresetSquad.clubLogo,
+      kit: managePresetSquad.kit,
+      captainId: managePresetSquad.captainId,
+      substituteIds: managePresetSquad.substituteIds,
+      players: managePresetSquad.players.map((player) => ({
+        ...player,
+        id: createId(),
+      })),
+    });
+    setManagePresetStatus("Preset loaded.");
   };
   const shirtTypes: Array<{
     id: "solid" | "split" | "stripe" | "sash" | "pinstripe";
@@ -1620,7 +1687,7 @@ export default function TopBar() {
       {squadPresetsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
           <div className="max-h-[84vh] w-full max-w-5xl overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
-            <div className="flex items-center justify-between p-6 pb-0">
+            <div className="flex items-start justify-between p-6 pb-0">
               <div>
                 <h2 className="display-font text-xl text-[var(--accent-0)]">
                   Match squad presets
@@ -1629,12 +1696,51 @@ export default function TopBar() {
                   Save full match squads for new projects.
                 </p>
               </div>
-              <button
-                className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                onClick={closeSquadPresetsModal}
-              >
-                Close
-              </button>
+              <div className="flex items-start gap-2">
+                {canUsePresetStorage ? (
+                  <>
+                    <button
+                      className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      title="Save preset"
+                      aria-label="Save preset"
+                      onClick={saveManagePreset}
+                    >
+                      <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 4h13l3 3v13H4z" />
+                        <path d="M8 4v6h8V4" />
+                        <path d="M8 20v-6h8v6" />
+                      </svg>
+                      <span className="text-[9px] uppercase tracking-wide">Save</span>
+                    </button>
+                    <button
+                      className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] disabled:opacity-50"
+                      title="Load preset"
+                      aria-label="Load preset"
+                      disabled={!managePresetSquad || !manageSquad}
+                      onClick={loadManagePreset}
+                    >
+                      <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 3v12" />
+                        <path d="m7 10 5 5 5-5" />
+                        <path d="M4 21h16" />
+                      </svg>
+                      <span className="text-[9px] uppercase tracking-wide">Load</span>
+                    </button>
+                  </>
+                ) : null}
+                <button
+                  className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                  onClick={closeSquadPresetsModal}
+                  aria-label="Close"
+                  title="Close"
+                >
+                  <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 6l12 12" />
+                    <path d="M18 6l-12 12" />
+                  </svg>
+                  <span className="text-[9px] uppercase tracking-wide">Close</span>
+                </button>
+              </div>
             </div>
             <div className="mt-4 max-h-[calc(84vh-96px)] space-y-4 overflow-y-auto p-6 pt-0 text-xs text-[var(--ink-1)]" data-scrollable>
                 {!canUsePresetStorage ? (
@@ -1646,9 +1752,9 @@ export default function TopBar() {
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                     Squad details
                   </p>
-                  <div className="grid gap-3 lg:grid-cols-[180px_minmax(0,1fr)_200px]">
+                  <div className="grid gap-3 lg:grid-cols-[200px_minmax(0,1fr)_220px]">
                     <button
-                      className="flex h-52 w-full items-center justify-center overflow-hidden rounded-xl bg-[var(--panel-2)]/70 text-[11px] text-[var(--ink-1)]"
+                      className="flex h-56 w-full items-center justify-center overflow-hidden rounded-xl bg-[var(--panel-2)]/55 text-[11px] text-[var(--ink-1)]"
                       onClick={() => manageLogoRef.current?.click()}
                       title="Change club logo"
                     >
@@ -1662,7 +1768,7 @@ export default function TopBar() {
                         <span>Club Logo</span>
                       )}
                     </button>
-                    <div className="flex h-52 flex-col gap-2 p-1">
+                    <div className="flex h-56 flex-col gap-2 rounded-xl bg-[var(--panel-2)]/35 p-3">
                       <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                         Squad name
                       </span>
@@ -1765,106 +1871,7 @@ export default function TopBar() {
                         </>
                       ) : null}
                     </div>
-                    <div className="flex h-52 flex-col p-1">
-                      {canUsePresetStorage ? (
-                      <div className="mb-2 flex items-center justify-end gap-2">
-                        <button
-                          className="rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                          title="Save preset"
-                          aria-label="Save preset"
-                          onClick={async () => {
-                            if (!editableSquad) {
-                              setManagePresetStatus("No squad data available.");
-                              return;
-                            }
-                            const nextName = (managePresetId ? managePresetName : editableSquad.name).trim();
-                            if (!nextName) {
-                              setManagePresetStatus("Enter a preset name.");
-                              return;
-                            }
-                            setManagePresetStatus(null);
-                            if (managePresetId && managePresetSquad) {
-                              const result = await updateSquadPreset({
-                                id: managePresetId,
-                                name: nextName,
-                                squad: managePresetSquad,
-                              });
-                              if (!result.ok) {
-                                setManagePresetStatus(result.error);
-                                return;
-                              }
-                              setSquadPresets((prev) =>
-                                prev.map((item) => (item.id === result.preset.id ? result.preset : item))
-                              );
-                              setManagePresetBaseline(
-                                presetDraftFingerprint(
-                                  result.preset.id,
-                                  result.preset.name,
-                                  result.preset.squad
-                                )
-                              );
-                              setManagePresetStatus("Preset updated.");
-                              return;
-                            }
-                            const result = await createSquadPreset({
-                              name: nextName,
-                              squad: editableSquad,
-                            });
-                            if (!result.ok) {
-                              setManagePresetStatus(result.error);
-                              return;
-                            }
-                            setSquadPresets((prev) => [result.preset, ...prev]);
-                            setManagePresetId(result.preset.id);
-                            setManagePresetName(result.preset.name);
-                            setManagePresetSquad(result.preset.squad);
-                            setManagePresetBaseline(
-                              presetDraftFingerprint(
-                                result.preset.id,
-                                result.preset.name,
-                                result.preset.squad
-                              )
-                            );
-                            setManagePresetStatus("Preset saved.");
-                          }}
-                        >
-                          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M4 4h13l3 3v13H4z" />
-                            <path d="M8 4v6h8V4" />
-                            <path d="M8 20v-6h8v6" />
-                          </svg>
-                        </button>
-                        <button
-                          className="rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] disabled:opacity-50"
-                          title="Load preset"
-                          aria-label="Load preset"
-                          disabled={!managePresetSquad || !manageSquad}
-                          onClick={() => {
-                            if (!managePresetSquad || !manageSquad) {
-                              return;
-                            }
-                            updateSquad(manageSquad.id, {
-                              name: managePresetSquad.name,
-                              clubLogo: managePresetSquad.clubLogo,
-                              kit: managePresetSquad.kit,
-                              captainId: managePresetSquad.captainId,
-                              substituteIds: managePresetSquad.substituteIds,
-                              players: managePresetSquad.players.map((player) => ({
-                                ...player,
-                                id: createId(),
-                              })),
-                            });
-                            setManagePresetStatus("Preset loaded.");
-                          }}
-                        >
-                          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 3v12" />
-                            <path d="m7 10 5 5 5-5" />
-                            <path d="M4 21h16" />
-                          </svg>
-                        </button>
-                      </div>
-                      ) : null}
+                    <div className="flex h-56 flex-col rounded-xl bg-[var(--panel-2)]/35 p-3">
                       <div className="flex flex-1 items-center justify-center">
                         {editableSquad
                           ? renderShirtIcon(
@@ -1876,38 +1883,32 @@ export default function TopBar() {
                           : null}
                       </div>
                       {editableSquad ? (
-                        <div className="mt-1 grid grid-cols-2 gap-2">
-                          <div className="flex flex-col items-center gap-1">
-                            <span className="text-[10px] text-[var(--ink-1)]">Shorts</span>
-                            <svg viewBox="0 0 64 40" className="h-8 w-12" aria-hidden>
-                              <path
-                                d="M6 6h52l-4 28H36V22H28v12H10z"
-                                fill={editableSquad.kit.shorts}
-                                stroke="rgba(255,255,255,0.25)"
-                                strokeWidth="2"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </div>
-                          <div className="flex flex-col items-center gap-1">
-                            <span className="text-[10px] text-[var(--ink-1)]">Socks</span>
-                            <svg viewBox="0 0 64 40" className="h-8 w-12" aria-hidden>
-                              <path
-                                d="M16 5h12v14l8 6v8H16z"
-                                fill={editableSquad.kit.socks}
-                                stroke="rgba(255,255,255,0.25)"
-                                strokeWidth="2"
-                                strokeLinejoin="round"
-                              />
-                              <path
-                                d="M36 5h12v14l8 6v8H36z"
-                                fill={editableSquad.kit.socks}
-                                stroke="rgba(255,255,255,0.25)"
-                                strokeWidth="2"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </div>
+                        <div className="mt-1 flex flex-col items-center gap-1.5">
+                          <svg viewBox="0 0 64 40" className="h-7 w-11" aria-hidden>
+                            <path
+                              d="M6 6h52l-4 28H36V22H28v12H10z"
+                              fill={editableSquad.kit.shorts}
+                              stroke="rgba(255,255,255,0.25)"
+                              strokeWidth="2"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          <svg viewBox="0 0 64 40" className="h-7 w-11" aria-hidden>
+                            <path
+                              d="M16 5h12v14l8 6v8H16z"
+                              fill={editableSquad.kit.socks}
+                              stroke="rgba(255,255,255,0.25)"
+                              strokeWidth="2"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d="M36 5h12v14l8 6v8H36z"
+                              fill={editableSquad.kit.socks}
+                              stroke="rgba(255,255,255,0.25)"
+                              strokeWidth="2"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
                         </div>
                       ) : null}
                     </div>
@@ -1931,24 +1932,6 @@ export default function TopBar() {
                       reader.readAsDataURL(file);
                     }}
                   />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: "home", label: "Home squad" },
-                    { id: "away", label: "Away squad" },
-                  ].map((side) => (
-                    <button
-                      key={side.id}
-                      className={`rounded-full border px-3 py-2 text-[11px] uppercase tracking-wide ${
-                        manageSide === side.id
-                          ? "border-[var(--accent-0)] text-[var(--ink-0)]"
-                          : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-                      }`}
-                      onClick={() => setManageSide(side.id as "home" | "away")}
-                    >
-                      {side.label}
-                    </button>
-                  ))}
                 </div>
                 <div className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3">
                   {(managePresetSquad || manageSquad) ? (
@@ -2194,6 +2177,24 @@ export default function TopBar() {
                       No squad data available.
                     </p>
                   )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "home", label: "Home squad" },
+                    { id: "away", label: "Away squad" },
+                  ].map((side) => (
+                    <button
+                      key={side.id}
+                      className={`rounded-full border px-3 py-2 text-[11px] uppercase tracking-wide ${
+                        manageSide === side.id
+                          ? "border-[var(--accent-0)] text-[var(--ink-0)]"
+                          : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                      }`}
+                      onClick={() => setManageSide(side.id as "home" | "away")}
+                    >
+                      {side.label}
+                    </button>
+                  ))}
                 </div>
                 {canUsePresetStorage ? (
                   <label className="space-y-1">
@@ -2488,6 +2489,35 @@ export default function TopBar() {
               </button>
             </div>
             <div className="mt-4 space-y-4 text-xs text-[var(--ink-1)]">
+              <div>
+                <p className="mb-2 text-[11px] uppercase">Project mode</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: "match", label: "Match" },
+                    { value: "training", label: "Training" },
+                    { value: "education", label: "Education" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      className={`rounded-2xl border px-3 py-2 text-xs ${
+                        (project.settings?.mode ?? "match") === option.value
+                          ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                          : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                      }`}
+                      onClick={() =>
+                        updateProjectMeta({
+                          settings: {
+                            ...project.settings,
+                            mode: option.value as ProjectMode,
+                          },
+                        })
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div>
                 <p className="mb-2 text-[11px] uppercase">Pitch view</p>
                 <div className="grid grid-cols-2 gap-2">
