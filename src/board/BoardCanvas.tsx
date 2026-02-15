@@ -86,7 +86,7 @@ export default function BoardCanvas({
   const isSharedReadOnly = readOnly || (project?.isShared ?? false);
   const isThreeDView = board.threeDView ?? false;
   const threeDStrength = Math.max(0, Math.min(100, board.threeDStrength ?? 55));
-  const isCanvasReadOnly = isSharedReadOnly || isThreeDView;
+  const isCanvasReadOnly = isSharedReadOnly;
   const addObject = useProjectStore((state) => state.addObject);
   const updateObject = useProjectStore((state) => state.updateObject);
   const removeObject = useProjectStore((state) => state.removeObject);
