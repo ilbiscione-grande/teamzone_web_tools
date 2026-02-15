@@ -1603,11 +1603,11 @@ export default function TopBar() {
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                     Edit squad
                   </p>
-                  <div className="grid gap-3 lg:grid-cols-[160px_minmax(0,1fr)_180px]">
+                  <div className="grid gap-3 lg:grid-cols-[180px_minmax(0,1fr)_200px]">
                     <button
-                      className="flex h-44 w-full items-center justify-center overflow-hidden rounded-xl bg-[var(--panel-2)]/70 text-[11px] text-[var(--ink-1)]"
+                      className="flex h-52 w-full items-center justify-center overflow-hidden rounded-xl bg-[var(--panel-2)]/70 text-[11px] text-[var(--ink-1)]"
                       onClick={() => manageLogoRef.current?.click()}
-                      title="Upload club logo"
+                      title="Change club logo"
                     >
                       {editableSquad?.clubLogo ? (
                         <img
@@ -1619,7 +1619,7 @@ export default function TopBar() {
                         <span>Club Logo</span>
                       )}
                     </button>
-                    <div className="flex h-44 flex-col gap-2 rounded-xl bg-[var(--panel-2)]/70 p-3">
+                    <div className="flex h-52 flex-col gap-2 p-1">
                       <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                         Squad details
                       </span>
@@ -1696,7 +1696,7 @@ export default function TopBar() {
                         </>
                       ) : null}
                     </div>
-                    <div className="flex h-44 flex-col rounded-xl bg-[var(--panel-2)]/70 p-3">
+                    <div className="flex h-52 flex-col p-1">
                       <div className="mb-2 flex items-center justify-end gap-2">
                         <button
                           className="rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
@@ -1816,15 +1816,6 @@ export default function TopBar() {
                           </button>
                         ))
                       : null}
-                    <button
-                      className="ml-2 rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      onClick={() => manageLogoRef.current?.click()}
-                    >
-                      Upload logo
-                    </button>
-                    <span className="text-[11px] text-[var(--ink-1)]">
-                      {editableSquad?.clubLogo ? "Logo selected" : "No logo"}
-                    </span>
                   </div>
                   <input
                     ref={manageLogoRef}
@@ -1902,7 +1893,7 @@ export default function TopBar() {
                           Add player
                         </button>
                       </div>
-                      <div className="grid grid-cols-[28px_minmax(0,1fr)_150px_58px_78px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                      <div className="grid grid-cols-[28px_minmax(0,1fr)_190px_72px_72px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                         <span>#</span>
                         <span>Name</span>
                         <span>Position</span>
@@ -1914,7 +1905,7 @@ export default function TopBar() {
                         {(managePresetSquad ?? manageSquad)?.players.map((player) => (
                           <div
                             key={player.id}
-                            className="grid grid-cols-[28px_minmax(0,1fr)_150px_58px_78px_20px] items-center gap-2"
+                            className="grid grid-cols-[28px_minmax(0,1fr)_190px_72px_72px_20px] items-center gap-2"
                           >
                             <input
                               className="h-7 rounded-md border border-[var(--line)] bg-transparent px-1 text-center text-[11px] text-[var(--ink-0)]"
