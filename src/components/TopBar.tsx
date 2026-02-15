@@ -2490,8 +2490,8 @@ export default function TopBar() {
       )}
 
       {settingsOpen && activeBoard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="w-full max-w-md rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="flex max-h-[84vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
             <div className="flex items-center justify-between">
               <h2 className="display-font text-xl text-[var(--accent-0)]">
                 Board Settings
@@ -2503,7 +2503,7 @@ export default function TopBar() {
                 Close
               </button>
             </div>
-            <div className="mt-4 space-y-4 text-xs text-[var(--ink-1)]">
+            <div className="mt-4 space-y-4 overflow-y-auto pr-1 text-xs text-[var(--ink-1)]" data-scrollable>
               <div>
                 <p className="mb-2 text-[11px] uppercase">Project mode</p>
                 <div className="grid grid-cols-3 gap-2">

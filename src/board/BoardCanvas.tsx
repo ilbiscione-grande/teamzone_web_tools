@@ -505,6 +505,7 @@ export default function BoardCanvas({
     size.height / effectiveHeight
   );
   const stageScale = baseScale * lockedViewport.zoom;
+  const effectiveStageScale = stageScale * (isThreeDView ? 0.93 : 1);
   const baseOffsetX = forcePortrait
     ? -rotatedBounds.minX * baseScale
     : (size.width - effectiveWidth * baseScale) / 2 -
@@ -827,7 +828,7 @@ export default function BoardCanvas({
           isThreeDView
             ? {
                 transform:
-                  "perspective(1200px) rotateX(36deg) scale(0.98) translateY(-5%)",
+                  "perspective(1200px) rotateX(32deg) scale(0.94) translateY(2%)",
                 transformOrigin: "50% 10%",
               }
             : undefined
@@ -838,8 +839,8 @@ export default function BoardCanvas({
           ref={stageRef}
           width={size.width}
           height={size.height}
-          scaleX={stageScale}
-          scaleY={stageScale}
+          scaleX={effectiveStageScale}
+          scaleY={effectiveStageScale}
           x={baseOffsetX + lockedViewport.offsetX}
           y={baseOffsetY + lockedViewport.offsetY}
           draggable={isPanning && !forcePortrait && !isCanvasReadOnly}
@@ -887,6 +888,7 @@ export default function BoardCanvas({
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
                 labelRotation={labelRotation}
+                isThreeDView={isThreeDView}
                 readOnly={isCanvasReadOnly}
                 onSelect={handleSelect}
                 onDragStart={() => pushHistory(clone(objects))}
@@ -975,6 +977,7 @@ export default function BoardCanvas({
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
                 labelRotation={labelRotation}
+                isThreeDView={isThreeDView}
                 readOnly={isCanvasReadOnly}
                 onSelect={handleSelect}
                 onDragStart={() => pushHistory(clone(objects))}

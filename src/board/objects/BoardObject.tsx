@@ -57,6 +57,7 @@ type BoardObjectProps = {
   showPlayerPosition: boolean;
   showPlayerNumber: boolean;
   labelRotation: number;
+  isThreeDView?: boolean;
   readOnly?: boolean;
   onSelect: (id: string, multi: boolean) => void;
   onDragStart: () => void;
@@ -83,6 +84,7 @@ export default function BoardObject({
   showPlayerPosition,
   showPlayerNumber,
   labelRotation,
+  isThreeDView,
   readOnly,
   onSelect,
   onDragStart,
@@ -265,7 +267,32 @@ export default function BoardObject({
           fill={fillColor}
           stroke={player.style.stroke}
           strokeWidth={player.style.strokeWidth}
+          shadowEnabled={!!isThreeDView}
+          shadowColor="#000000"
+          shadowOpacity={isThreeDView ? 0.28 : 0}
+          shadowBlur={isThreeDView ? 0.8 : 0}
+          shadowOffsetY={isThreeDView ? 0.35 : 0}
         />
+        {isThreeDView && (
+          <>
+            <Circle
+              x={-playerTokenSize * 0.28}
+              y={-playerTokenSize * 0.3}
+              radius={playerTokenSize * 0.55}
+              fill="#ffffff"
+              opacity={0.18}
+              listening={false}
+            />
+            <Circle
+              x={playerTokenSize * 0.24}
+              y={playerTokenSize * 0.28}
+              radius={playerTokenSize * 0.7}
+              fill="#000000"
+              opacity={0.09}
+              listening={false}
+            />
+          </>
+        )}
         {vestColor && (
           <Group>
             <Rect
