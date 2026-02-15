@@ -294,7 +294,7 @@ export default function TopBar() {
       return true;
     }
     return window.confirm(
-      "You have unsaved preset changes. Discard changes and continue?"
+      "You have unsaved team changes. Discard changes and continue?"
     );
   };
   const closeSquadPresetsModal = () => {
@@ -305,14 +305,14 @@ export default function TopBar() {
   };
   const saveManagePreset = async () => {
     if (!editableSquad) {
-      setManagePresetStatus("No squad data available.");
+      setManagePresetStatus("No team data available.");
       return;
     }
     const nextName = (
       managePresetId ? managePresetName : editableSquad.name
     ).trim();
     if (!nextName) {
-      setManagePresetStatus("Enter a preset name.");
+      setManagePresetStatus("Enter a team name.");
       return;
     }
     setManagePresetStatus(null);
@@ -332,7 +332,7 @@ export default function TopBar() {
       setManagePresetBaseline(
         presetDraftFingerprint(result.preset.id, result.preset.name, result.preset.squad)
       );
-      setManagePresetStatus("Preset updated.");
+      setManagePresetStatus("Team updated.");
       return;
     }
     const result = await createSquadPreset({
@@ -350,7 +350,7 @@ export default function TopBar() {
     setManagePresetBaseline(
       presetDraftFingerprint(result.preset.id, result.preset.name, result.preset.squad)
     );
-    setManagePresetStatus("Preset saved.");
+    setManagePresetStatus("Team saved.");
   };
   const loadManagePreset = () => {
     if (!managePresetSquad || !manageSquad) {
@@ -367,7 +367,7 @@ export default function TopBar() {
         id: createId(),
       })),
     });
-    setManagePresetStatus("Preset loaded.");
+    setManagePresetStatus("Team loaded.");
   };
   const shirtTypes: Array<{
     id: "solid" | "split" | "stripe" | "sash" | "pinstripe";
@@ -1614,7 +1614,7 @@ export default function TopBar() {
                       <circle cx="12" cy="7" r="3" />
                       <path d="M5 12h.01M19 12h.01" />
                     </svg>
-                    Manage squads
+                    Manage teams
                   </button>
                   <button
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
@@ -1692,10 +1692,10 @@ export default function TopBar() {
             <div className="flex items-start justify-between p-6 pb-0">
               <div>
                 <h2 className="display-font text-xl text-[var(--accent-0)]">
-                  Match squad presets
+                  Team manager
                 </h2>
                 <p className="text-xs text-[var(--ink-1)]">
-                  Save full match squads for new projects.
+                  Manage teams and team squads for new projects.
                 </p>
               </div>
               <div className="flex items-start gap-2">
@@ -1703,8 +1703,8 @@ export default function TopBar() {
                   <>
                     <button
                       className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      title="Save preset"
-                      aria-label="Save preset"
+                      title="Save team"
+                      aria-label="Save team"
                       onClick={saveManagePreset}
                     >
                       <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1716,8 +1716,8 @@ export default function TopBar() {
                     </button>
                     <button
                       className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] disabled:opacity-50"
-                      title="Load preset"
-                      aria-label="Load preset"
+                      title="Load team"
+                      aria-label="Load team"
                       disabled={!managePresetSquad || !manageSquad}
                       onClick={loadManagePreset}
                     >
@@ -1747,12 +1747,12 @@ export default function TopBar() {
             <div className="mt-4 max-h-[calc(84vh-96px)] space-y-4 overflow-y-auto p-6 pt-0 text-xs text-[var(--ink-1)]" data-scrollable>
                 {!canUsePresetStorage ? (
                   <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/50 px-3 py-2 text-xs text-[var(--ink-1)]">
-                    Free/Auth plans can edit squads locally in this project. Presets are available on paid plans.
+                    Free/Auth plans can edit teams locally in this project. Team presets are available on paid plans.
                   </p>
                 ) : null}
                 <div className="space-y-2">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                    Squad details
+                    Team details
                   </p>
                   <div className="grid gap-3 lg:grid-cols-[200px_minmax(0,1fr)_220px]">
                     <button
@@ -1784,7 +1784,7 @@ export default function TopBar() {
                           }
                           updateEditableSquad({ name: event.target.value });
                         }}
-                        placeholder="Squad name"
+                        placeholder="Team name"
                       />
                       {editableSquad ? (
                         <>
@@ -2175,14 +2175,14 @@ export default function TopBar() {
                     </>
                   ) : (
                     <p className="text-xs text-[var(--ink-1)]">
-                      No squad data available.
+                      No team data available.
                     </p>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: "home", label: "Home squad" },
-                    { id: "away", label: "Away squad" },
+                    { id: "home", label: "Home team" },
+                    { id: "away", label: "Away team" },
                   ].map((side) => (
                     <button
                       key={side.id}
@@ -2199,7 +2199,7 @@ export default function TopBar() {
                 </div>
                 {canUsePresetStorage ? (
                   <label className="space-y-1">
-                    <span className="text-[10px] text-[var(--ink-1)]">Preset squad</span>
+                    <span className="text-[10px] text-[var(--ink-1)]">Preset team</span>
                     <select
                       className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-xs text-[var(--ink-0)]"
                       value={managePresetId}
@@ -2227,7 +2227,7 @@ export default function TopBar() {
                       }
                     }}
                   >
-                      <option value="">Current squad</option>
+                      <option value="">Current team</option>
                       {squadPresets.map((preset) => (
                         <option key={preset.id} value={preset.id}>
                           {preset.name}
@@ -2237,7 +2237,7 @@ export default function TopBar() {
                   </label>
                 ) : null}
                 {squadPresetsLoading ? (
-                  <p className="text-xs text-[var(--ink-1)]">Loading presets...</p>
+                  <p className="text-xs text-[var(--ink-1)]">Loading teams...</p>
                 ) : null}
                 {squadPresetsError ? (
                   <p className="text-xs text-[var(--accent-1)]">
