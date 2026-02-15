@@ -552,7 +552,7 @@ export default function BoardCanvas({
     },
     pushHistory,
     addObject,
-    disablePanZoom: !!forcePortrait,
+    disablePanZoom: !!forcePortrait || isThreeDView,
   });
 
   const updatePosition = (id: string, position: { x: number; y: number }) => {
@@ -891,7 +891,12 @@ export default function BoardCanvas({
           scaleY={effectiveStageScale}
           x={baseOffsetX + threeDOffsetX + lockedViewport.offsetX}
           y={baseOffsetY + lockedViewport.offsetY}
-          draggable={isPanning && !forcePortrait && !isCanvasReadOnly}
+          draggable={
+            isPanning &&
+            !forcePortrait &&
+            !isCanvasReadOnly &&
+            !isThreeDView
+          }
           onWheel={isCanvasReadOnly ? undefined : handleWheel}
           onMouseDown={isCanvasReadOnly ? undefined : handleMouseDown}
           onMouseMove={isCanvasReadOnly ? undefined : handleMouseMove}
