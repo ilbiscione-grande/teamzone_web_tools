@@ -5,6 +5,35 @@ import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { getActiveBoard, getBoardSquads } from "@/utils/board";
 
+const toPositionAbbreviation = (value?: string) => {
+  if (!value) {
+    return "-";
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "-";
+  }
+  const match = trimmed.match(/\(([A-Za-z0-9/ -]{1,10})\)\s*$/);
+  if (match?.[1]) {
+    return match[1].toUpperCase();
+  }
+  const compact = trimmed.toUpperCase();
+  if (/^[A-Z0-9/ -]{1,6}$/.test(compact)) {
+    return compact;
+  }
+  const letters = trimmed.match(/[A-Za-z0-9]+/g);
+  if (!letters || letters.length === 0) {
+    return trimmed.slice(0, 3).toUpperCase();
+  }
+  if (letters.length === 1) {
+    return letters[0].slice(0, 3).toUpperCase();
+  }
+  return letters
+    .slice(0, 3)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+};
+
 export default function SquadEditor() {
   const project = useProjectStore((state) => state.project);
   const setPlayerSide = useEditorStore((state) => state.setPlayerSide);
@@ -103,7 +132,9 @@ export default function SquadEditor() {
             >
               <span className="text-center text-[11px] text-[var(--ink-1)]">{player.number ?? ""}</span>
               <span className="truncate text-[11px] text-[var(--ink-0)]">{player.name}</span>
-              <span className="truncate text-[10px] text-[var(--ink-1)]">{player.positionLabel || "-"}</span>
+              <span className="truncate text-[10px] text-[var(--ink-1)]">
+                {toPositionAbbreviation(player.positionLabel)}
+              </span>
             </div>
           ))}
         </div>

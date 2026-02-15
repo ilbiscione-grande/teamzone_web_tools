@@ -592,12 +592,6 @@ on teams
 for select
 using (
   owner_id = auth.uid()
-  or exists (
-    select 1
-    from team_members tm
-    where tm.team_id = teams.id
-      and tm.user_id = auth.uid()
-  )
 );
 
 create policy "Users can insert their teams"
