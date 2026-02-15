@@ -1548,12 +1548,13 @@ export default function TopBar() {
               </p>
             ) : (
               <div className="mt-4 max-h-[calc(84vh-96px)] space-y-4 overflow-y-auto p-6 pt-0 text-xs text-[var(--ink-1)]" data-scrollable>
-                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3 md:grid md:grid-cols-[120px_minmax(0,1fr)] md:gap-3 md:space-y-0">
+                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                     Edit squad
                   </p>
+                  <div className="mt-2 grid gap-3 md:grid-cols-[120px_minmax(0,1fr)]">
                   <button
-                    className="mb-2 flex h-28 w-full items-center justify-center overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] text-[11px] text-[var(--ink-1)] md:mb-0"
+                    className="flex h-28 w-full items-center justify-center overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] text-[11px] text-[var(--ink-1)]"
                     onClick={() => manageLogoRef.current?.click()}
                     title="Upload club logo"
                   >
@@ -1838,6 +1839,8 @@ export default function TopBar() {
                       </button>
                     ))}
                   </div>
+                  </div>
+                  </div>
                   {(managePresetSquad || manageSquad) ? (
                     <>
                       <div className="flex items-center justify-between">
@@ -2081,7 +2084,6 @@ export default function TopBar() {
                       No squad data available.
                     </p>
                   )}
-                  </div>
                 </div>
                 {squadPresetsLoading ? (
                   <p className="text-xs text-[var(--ink-1)]">Loading presets...</p>
