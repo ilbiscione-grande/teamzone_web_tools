@@ -27,7 +27,7 @@ import {
   unpublishPublicProject,
   reportPublicProject,
 } from "@/persistence/publicProjects";
-import { fetchSquadPresets } from "@/persistence/squadPresets";
+import { fetchTeamsWithSquad } from "@/persistence/teamSquads";
 import {
   createBoardShare,
   fetchLatestCommentsForShares,
@@ -513,14 +513,14 @@ export default function ProjectList() {
     }
     setSquadPresetsLoading(true);
     setSquadPresetsError(null);
-    fetchSquadPresets()
+    fetchTeamsWithSquad()
       .then((result) => {
         if (!result.ok) {
           setSquadPresetsError(result.error);
           setSquadPresets([]);
           return;
         }
-        setSquadPresets(result.presets);
+        setSquadPresets(result.teams);
       })
       .finally(() => setSquadPresetsLoading(false));
   }, [authUser, plan]);

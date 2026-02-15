@@ -24,11 +24,10 @@ import CommentsModal from "@/components/CommentsModal";
 import { getBoardSquads } from "@/utils/board";
 import { createId } from "@/utils/id";
 import {
-  createSquadPreset,
-  deleteSquadPreset,
-  fetchSquadPresets,
-  updateSquadPreset,
-} from "@/persistence/squadPresets";
+  createTeamWithSquad,
+  fetchTeamsWithSquad,
+  updateTeamWithSquad,
+} from "@/persistence/teamSquads";
 import { createProjectShareLink } from "@/persistence/projectShareLinks";
 import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { getStageRef } from "@/utils/stageRef";
@@ -80,19 +79,10 @@ export default function TopBar() {
   const [squadPresets, setSquadPresets] = useState<SquadPreset[]>([]);
   const [squadPresetsLoading, setSquadPresetsLoading] = useState(false);
   const [squadPresetsError, setSquadPresetsError] = useState<string | null>(null);
-  const [presetName, setPresetName] = useState("");
-  const [presetSide, setPresetSide] = useState<"home" | "away">("home");
-  const [presetStatus, setPresetStatus] = useState<string | null>(null);
   const [manageSide, setManageSide] = useState<"home" | "away">("home");
-  const [managePresetId, setManagePresetId] = useState("");
-  const [managePresetName, setManagePresetName] = useState("");
-  const [managePresetSquad, setManagePresetSquad] = useState<
-    SquadPreset["squad"] | null
-  >(null);
   const [managePresetStatus, setManagePresetStatus] = useState<string | null>(
     null
   );
-  const [managePresetBaseline, setManagePresetBaseline] = useState("");
   const [jerseyType, setJerseyType] = useState<
     "solid" | "split" | "stripe" | "sash" | "pinstripe"
   >("solid");
@@ -152,6 +142,23 @@ export default function TopBar() {
       window.removeEventListener("offline", update);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const onOpenManageTeams = () => setSquadPresetsOpen(true);
+    window.addEventListener(
+      "tacticsboard:open-manage-teams",
+      onOpenManageTeams as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        "tacticsboard:open-manage-teams",
+        onOpenManageTeams as EventListener
+      );
+    };
+  }, []);
   useEffect(() => {
     if (!actionsOpen && !boardActionsOpen && !projectActionsOpen) {
       return;
@@ -197,39 +204,21 @@ export default function TopBar() {
     if (!authUser || plan !== "PAID") {
       setSquadPresets([]);
       setSquadPresetsError(null);
-      setManagePresetId("");
-      setManagePresetName("");
-      setManagePresetSquad(null);
-      setManagePresetBaseline("");
       return;
     }
     setSquadPresetsLoading(true);
     setSquadPresetsError(null);
-    fetchSquadPresets()
+    fetchTeamsWithSquad()
       .then((result) => {
         if (!result.ok) {
           setSquadPresetsError(result.error);
           setSquadPresets([]);
           return;
         }
-        setSquadPresets(result.presets);
-        const matchPreset = result.presets.find(
-          (preset) => preset.id === managePresetId
-        );
-        if (matchPreset) {
-          setManagePresetName(matchPreset.name);
-          setManagePresetSquad(matchPreset.squad);
-          setManagePresetBaseline(
-            presetDraftFingerprint(
-              matchPreset.id,
-              matchPreset.name,
-              matchPreset.squad
-            )
-          );
-        }
+        setSquadPresets(result.teams);
       })
       .finally(() => setSquadPresetsLoading(false));
-  }, [squadPresetsOpen, authUser, plan, managePresetId]);
+  }, [squadPresetsOpen, authUser, plan]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -245,14 +234,10 @@ export default function TopBar() {
   );
   const boardSquads = getBoardSquads(project, activeBoard ?? null);
   const manageSquad = manageSide === "home" ? boardSquads.home : boardSquads.away;
-  const editableSquad = managePresetSquad ?? manageSquad;
+  const editableSquad = manageSquad;
   const updateEditableSquad = (
     payload: Partial<SquadPreset["squad"]>
   ) => {
-    if (managePresetSquad) {
-      setManagePresetSquad({ ...managePresetSquad, ...payload });
-      return;
-    }
     if (manageSquad) {
       updateSquad(manageSquad.id, payload);
     }
@@ -271,36 +256,7 @@ export default function TopBar() {
     project?.settings?.mode ?? ("match" as "training" | "match" | "education");
   const modeText = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
   const canUsePresetStorage = plan === "PAID" && Boolean(authUser);
-  const presetDraftFingerprint = (
-    id: string,
-    name: string,
-    squad: SquadPreset["squad"] | null
-  ) => {
-    if (!id || !squad) {
-      return "";
-    }
-    return JSON.stringify({ id, name: name.trim(), squad });
-  };
-  const managePresetDirty =
-    canUsePresetStorage &&
-    Boolean(managePresetId && managePresetSquad) &&
-    presetDraftFingerprint(
-      managePresetId,
-      managePresetName || managePresetSquad?.name || "",
-      managePresetSquad
-    ) !== managePresetBaseline;
-  const confirmDiscardPresetChanges = () => {
-    if (!managePresetDirty) {
-      return true;
-    }
-    return window.confirm(
-      "You have unsaved team changes. Discard changes and continue?"
-    );
-  };
   const closeSquadPresetsModal = () => {
-    if (!confirmDiscardPresetChanges()) {
-      return;
-    }
     setSquadPresetsOpen(false);
   };
   const saveManagePreset = async () => {
@@ -308,34 +264,32 @@ export default function TopBar() {
       setManagePresetStatus("No team data available.");
       return;
     }
-    const nextName = (
-      managePresetId ? managePresetName : editableSquad.name
-    ).trim();
+    const nextName = editableSquad.name.trim();
     if (!nextName) {
       setManagePresetStatus("Enter a team name.");
       return;
     }
     setManagePresetStatus(null);
-    if (managePresetId && managePresetSquad) {
-      const result = await updateSquadPreset({
-        id: managePresetId,
+    const existingTeam = squadPresets.find(
+      (item) => item.name.trim().toLowerCase() === nextName.toLowerCase()
+    );
+    if (existingTeam) {
+      const result = await updateTeamWithSquad({
+        id: existingTeam.id,
         name: nextName,
-        squad: managePresetSquad,
+        squad: editableSquad,
       });
       if (!result.ok) {
         setManagePresetStatus(result.error);
         return;
       }
       setSquadPresets((prev) =>
-        prev.map((item) => (item.id === result.preset.id ? result.preset : item))
-      );
-      setManagePresetBaseline(
-        presetDraftFingerprint(result.preset.id, result.preset.name, result.preset.squad)
+        prev.map((item) => (item.id === result.team.id ? result.team : item))
       );
       setManagePresetStatus("Team updated.");
       return;
     }
-    const result = await createSquadPreset({
+    const result = await createTeamWithSquad({
       name: nextName,
       squad: editableSquad,
     });
@@ -343,31 +297,32 @@ export default function TopBar() {
       setManagePresetStatus(result.error);
       return;
     }
-    setSquadPresets((prev) => [result.preset, ...prev]);
-    setManagePresetId(result.preset.id);
-    setManagePresetName(result.preset.name);
-    setManagePresetSquad(result.preset.squad);
-    setManagePresetBaseline(
-      presetDraftFingerprint(result.preset.id, result.preset.name, result.preset.squad)
-    );
+    setSquadPresets((prev) => [result.team, ...prev]);
     setManagePresetStatus("Team saved.");
   };
-  const loadManagePreset = () => {
-    if (!managePresetSquad || !manageSquad) {
+
+  const setManagedTeamToSide = (side: "home" | "away") => {
+    if (!manageSquad) {
+      setManagePresetStatus("No team data available.");
       return;
     }
-    updateSquad(manageSquad.id, {
-      name: managePresetSquad.name,
-      clubLogo: managePresetSquad.clubLogo,
-      kit: managePresetSquad.kit,
-      captainId: managePresetSquad.captainId,
-      substituteIds: managePresetSquad.substituteIds,
-      players: managePresetSquad.players.map((player) => ({
-        ...player,
-        id: createId(),
-      })),
+    const targetSquad = side === "home" ? boardSquads.home : boardSquads.away;
+    if (!targetSquad) {
+      setManagePresetStatus("No target squad available on this board.");
+      return;
+    }
+    updateSquad(targetSquad.id, {
+      name: manageSquad.name,
+      clubLogo: manageSquad.clubLogo,
+      kit: { ...manageSquad.kit },
+      captainId: manageSquad.captainId,
+      substituteIds: [...(manageSquad.substituteIds ?? [])],
+      players: manageSquad.players.map((player) => ({ ...player })),
     });
-    setManagePresetStatus("Team loaded.");
+    setManageSide(side);
+    setManagePresetStatus(
+      side === "home" ? "Set as Home team." : "Set as Away team."
+    );
   };
   const shirtTypes: Array<{
     id: "solid" | "split" | "stripe" | "sash" | "pinstripe";
@@ -1714,20 +1669,6 @@ export default function TopBar() {
                       </svg>
                       <span className="text-[9px] uppercase tracking-wide">Save</span>
                     </button>
-                    <button
-                      className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] disabled:opacity-50"
-                      title="Load team"
-                      aria-label="Load team"
-                      disabled={!managePresetSquad || !manageSquad}
-                      onClick={loadManagePreset}
-                    >
-                      <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 3v12" />
-                        <path d="m7 10 5 5 5-5" />
-                        <path d="M4 21h16" />
-                      </svg>
-                      <span className="text-[9px] uppercase tracking-wide">Load</span>
-                    </button>
                   </>
                 ) : null}
                 <button
@@ -1776,12 +1717,8 @@ export default function TopBar() {
                       </span>
                       <input
                         className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                        value={managePresetId ? managePresetName : editableSquad?.name ?? ""}
+                        value={editableSquad?.name ?? ""}
                         onChange={(event) => {
-                          if (managePresetId) {
-                            setManagePresetName(event.target.value);
-                            return;
-                          }
                           updateEditableSquad({ name: event.target.value });
                         }}
                         placeholder="Team name"
@@ -1935,7 +1872,7 @@ export default function TopBar() {
                   />
                 </div>
                 <div className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3">
-                  {(managePresetSquad || manageSquad) ? (
+                  {manageSquad ? (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] uppercase text-[var(--ink-1)]">
@@ -1944,29 +1881,13 @@ export default function TopBar() {
                         <button
                           className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                           onClick={() =>
-                            managePresetSquad
-                              ? setManagePresetSquad({
-                                  ...managePresetSquad,
-                                  players: [
-                                    ...managePresetSquad.players,
-                                    {
-                                      id: createId(),
-                                      name: "New Player",
-                                      positionLabel: "",
-                                      number: undefined,
-                                      vestColor: undefined,
-                                    },
-                                  ],
-                                })
-                              : manageSquad
-                              ? addSquadPlayer(manageSquad.id, {
-                                  id: createId(),
-                                  name: "New Player",
-                                  positionLabel: "",
-                                  number: undefined,
-                                  vestColor: undefined,
-                                })
-                              : undefined
+                            addSquadPlayer(manageSquad.id, {
+                              id: createId(),
+                              name: "New Player",
+                              positionLabel: "",
+                              number: undefined,
+                              vestColor: undefined,
+                            })
                           }
                         >
                           Add player
@@ -1981,7 +1902,7 @@ export default function TopBar() {
                         <span />
                       </div>
                       <div className="max-h-56 space-y-2 overflow-auto pr-1" data-scrollable>
-                        {(managePresetSquad ?? manageSquad)?.players.map((player) => (
+                        {manageSquad.players.map((player) => (
                           <div
                             key={player.id}
                             className="grid grid-cols-[28px_minmax(0,1fr)_190px_72px_72px_20px] items-center gap-2"
@@ -1990,73 +1911,29 @@ export default function TopBar() {
                               className="h-7 rounded-md border border-[var(--line)] bg-transparent px-1 text-center text-[11px] text-[var(--ink-0)]"
                               value={player.number ?? ""}
                               onChange={(event) =>
-                                managePresetSquad
-                                  ? setManagePresetSquad({
-                                      ...managePresetSquad,
-                                      players: managePresetSquad.players.map(
-                                        (item) =>
-                                          item.id === player.id
-                                            ? {
-                                                ...item,
-                                                number: event.target.value
-                                                  ? Number(event.target.value)
-                                                  : undefined,
-                                              }
-                                            : item
-                                      ),
-                                    })
-                                  : manageSquad
-                                  ? updateSquadPlayer(manageSquad.id, player.id, {
-                                      number: event.target.value
-                                        ? Number(event.target.value)
-                                        : undefined,
-                                    })
-                                  : undefined
+                                updateSquadPlayer(manageSquad.id, player.id, {
+                                  number: event.target.value
+                                    ? Number(event.target.value)
+                                    : undefined,
+                                })
                               }
                             />
                             <input
                               className="h-7 w-full rounded-md border border-[var(--line)] bg-transparent px-1 text-[11px] text-[var(--ink-0)]"
                               value={player.name}
                               onChange={(event) =>
-                                managePresetSquad
-                                  ? setManagePresetSquad({
-                                      ...managePresetSquad,
-                                      players: managePresetSquad.players.map(
-                                        (item) =>
-                                          item.id === player.id
-                                            ? { ...item, name: event.target.value }
-                                            : item
-                                      ),
-                                    })
-                                  : manageSquad
-                                  ? updateSquadPlayer(manageSquad.id, player.id, {
-                                      name: event.target.value,
-                                    })
-                                  : undefined
+                                updateSquadPlayer(manageSquad.id, player.id, {
+                                  name: event.target.value,
+                                })
                               }
                             />
                             <select
                               className="h-7 w-full rounded-md border border-[var(--line)] bg-[var(--panel-2)] px-2 text-[10px] text-[var(--ink-0)]"
                               value={player.positionLabel}
                               onChange={(event) =>
-                                managePresetSquad
-                                  ? setManagePresetSquad({
-                                      ...managePresetSquad,
-                                      players: managePresetSquad.players.map(
-                                        (item) =>
-                                          item.id === player.id
-                                            ? {
-                                                ...item,
-                                                positionLabel: event.target.value,
-                                              }
-                                            : item
-                                      ),
-                                    })
-                                  : manageSquad
-                                  ? updateSquadPlayer(manageSquad.id, player.id, {
-                                      positionLabel: event.target.value,
-                                    })
-                                  : undefined
+                                updateSquadPlayer(manageSquad.id, player.id, {
+                                  positionLabel: event.target.value,
+                                })
                               }
                             >
                               <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
@@ -2137,20 +2014,7 @@ export default function TopBar() {
                             })()}
                             <button
                               className="rounded-full border border-[var(--line)] p-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                              onClick={() => {
-                                if (managePresetSquad) {
-                                  setManagePresetSquad({
-                                    ...managePresetSquad,
-                                    players: managePresetSquad.players.filter(
-                                      (item) => item.id !== player.id
-                                    ),
-                                  });
-                                  return;
-                                }
-                                if (manageSquad) {
-                                  removeSquadPlayer(manageSquad.id, player.id);
-                                }
-                              }}
+                              onClick={() => removeSquadPlayer(manageSquad.id, player.id)}
                               title="Delete"
                               aria-label="Delete"
                             >
@@ -2197,45 +2061,20 @@ export default function TopBar() {
                     </button>
                   ))}
                 </div>
-                {canUsePresetStorage ? (
-                  <label className="space-y-1">
-                    <span className="text-[10px] text-[var(--ink-1)]">Preset team</span>
-                    <select
-                      className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-xs text-[var(--ink-0)]"
-                      value={managePresetId}
-                    onChange={(event) => {
-                      const nextId = event.target.value;
-                      if (!confirmDiscardPresetChanges()) {
-                        return;
-                      }
-                      setManagePresetId(nextId);
-                      const preset = squadPresets.find((item) => item.id === nextId);
-                      if (preset) {
-                        setManagePresetName(preset.name);
-                        setManagePresetSquad(preset.squad);
-                        setManagePresetBaseline(
-                          presetDraftFingerprint(
-                            preset.id,
-                            preset.name,
-                            preset.squad
-                          )
-                        );
-                      } else {
-                        setManagePresetName("");
-                        setManagePresetSquad(null);
-                        setManagePresetBaseline("");
-                      }
-                    }}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                    onClick={() => setManagedTeamToSide("home")}
                   >
-                      <option value="">Current team</option>
-                      {squadPresets.map((preset) => (
-                        <option key={preset.id} value={preset.id}>
-                          {preset.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
+                    Set as Home team
+                  </button>
+                  <button
+                    className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                    onClick={() => setManagedTeamToSide("away")}
+                  >
+                    Set as Away team
+                  </button>
+                </div>
                 {squadPresetsLoading ? (
                   <p className="text-xs text-[var(--ink-1)]">Loading teams...</p>
                 ) : null}
@@ -2244,8 +2083,8 @@ export default function TopBar() {
                     {squadPresetsError}
                   </p>
                 ) : null}
-                {presetStatus ? (
-                  <p className="text-xs text-[var(--accent-1)]">{presetStatus}</p>
+                {managePresetStatus ? (
+                  <p className="text-xs text-[var(--accent-1)]">{managePresetStatus}</p>
                 ) : null}
               </div>
           </div>
