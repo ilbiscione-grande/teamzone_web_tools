@@ -1568,279 +1568,241 @@ export default function TopBar() {
                       <span>Club Logo</span>
                     )}
                   </button>
-                  <div className="space-y-2">
-                  <label className="space-y-1">
-                    <span className="text-[11px] uppercase text-[var(--ink-1)]">
-                      Preset squad
-                    </span>
-                    <select
-                      className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-                      value={managePresetId}
-                      onChange={(event) => {
-                        const nextId = event.target.value;
-                        setManagePresetId(nextId);
-                        const preset = squadPresets.find(
-                          (item) => item.id === nextId
-                        );
-                        if (preset) {
-                          setManagePresetName(preset.name);
-                          setManagePresetSquad(preset.squad);
-                        } else {
-                          setManagePresetName("");
-                          setManagePresetSquad(null);
-                        }
-                      }}
-                    >
-                      <option value="">Current squad</option>
-                      {squadPresets.map((preset) => (
-                        <option key={preset.id} value={preset.id}>
-                          {preset.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {managePresetId && managePresetSquad && (
-                    <div className="grid gap-2 md:grid-cols-[1fr_auto]">
-                      <input
-                        className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                        value={managePresetName}
-                        onChange={(event) =>
-                          setManagePresetName(event.target.value)
-                        }
-                        placeholder="Preset name"
-                      />
-                      <button
-                        className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                        onClick={async () => {
-                          if (!managePresetSquad || !managePresetId) {
-                            return;
-                          }
-                          if (!managePresetName.trim()) {
-                            setManagePresetStatus("Enter a preset name.");
-                            return;
-                          }
-                          setManagePresetStatus(null);
-                          const result = await updateSquadPreset({
-                            id: managePresetId,
-                            name: managePresetName.trim(),
-                            squad: managePresetSquad,
-                          });
-                          if (!result.ok) {
-                            setManagePresetStatus(result.error);
-                            return;
-                          }
-                          setSquadPresets((prev) =>
-                            prev.map((item) =>
-                              item.id === result.preset.id
-                                ? result.preset
-                                : item
-                            )
-                          );
-                          setManagePresetStatus("Preset updated.");
-                        }}
-                      >
-                        Save changes
-                      </button>
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <label className="space-y-1">
+                          <span className="text-[10px] text-[var(--ink-1)]">Preset squad</span>
+                          <select
+                            className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-xs text-[var(--ink-0)]"
+                            value={managePresetId}
+                            onChange={(event) => {
+                              const nextId = event.target.value;
+                              setManagePresetId(nextId);
+                              const preset = squadPresets.find((item) => item.id === nextId);
+                              if (preset) {
+                                setManagePresetName(preset.name);
+                                setManagePresetSquad(preset.squad);
+                              } else {
+                                setManagePresetName("");
+                                setManagePresetSquad(null);
+                              }
+                            }}
+                          >
+                            <option value="">Current squad</option>
+                            {squadPresets.map((preset) => (
+                              <option key={preset.id} value={preset.id}>
+                                {preset.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          className="rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                          title="Save preset"
+                          aria-label="Save preset"
+                          onClick={async () => {
+                            if (!editableSquad) {
+                              setManagePresetStatus("No squad data available.");
+                              return;
+                            }
+                            const nextName = (managePresetId ? managePresetName : editableSquad.name).trim();
+                            if (!nextName) {
+                              setManagePresetStatus("Enter a preset name.");
+                              return;
+                            }
+                            setManagePresetStatus(null);
+                            if (managePresetId && managePresetSquad) {
+                              const result = await updateSquadPreset({
+                                id: managePresetId,
+                                name: nextName,
+                                squad: managePresetSquad,
+                              });
+                              if (!result.ok) {
+                                setManagePresetStatus(result.error);
+                                return;
+                              }
+                              setSquadPresets((prev) =>
+                                prev.map((item) => (item.id === result.preset.id ? result.preset : item))
+                              );
+                              setManagePresetStatus("Preset updated.");
+                              return;
+                            }
+                            const result = await createSquadPreset({
+                              name: nextName,
+                              squad: editableSquad,
+                            });
+                            if (!result.ok) {
+                              setManagePresetStatus(result.error);
+                              return;
+                            }
+                            setSquadPresets((prev) => [result.preset, ...prev]);
+                            setManagePresetId(result.preset.id);
+                            setManagePresetName(result.preset.name);
+                            setManagePresetSquad(result.preset.squad);
+                            setManagePresetStatus("Preset saved.");
+                          }}
+                        >
+                          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M4 4h13l3 3v13H4z" />
+                            <path d="M8 4v6h8V4" />
+                            <path d="M8 20v-6h8v6" />
+                          </svg>
+                        </button>
+                        <button
+                          className="rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] disabled:opacity-50"
+                          title="Load preset"
+                          aria-label="Load preset"
+                          disabled={!managePresetSquad || !manageSquad}
+                          onClick={() => {
+                            if (!managePresetSquad || !manageSquad) {
+                              return;
+                            }
+                            updateSquad(manageSquad.id, {
+                              name: managePresetSquad.name,
+                              clubLogo: managePresetSquad.clubLogo,
+                              kit: managePresetSquad.kit,
+                              captainId: managePresetSquad.captainId,
+                              substituteIds: managePresetSquad.substituteIds,
+                              players: managePresetSquad.players.map((player) => ({
+                                ...player,
+                                id: createId(),
+                              })),
+                            });
+                            setManagePresetStatus("Preset loaded.");
+                          }}
+                        >
+                          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 3v12" />
+                            <path d="m7 10 5 5 5-5" />
+                            <path d="M4 21h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                  )}
-                  {managePresetId && managePresetSquad && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                        onClick={() => {
-                          if (!boardSquads.home) {
-                            return;
-                          }
-                          updateSquad(boardSquads.home.id, {
-                            name: managePresetSquad.name,
-                            clubLogo: managePresetSquad.clubLogo,
-                            kit: managePresetSquad.kit,
-                            players: managePresetSquad.players.map((player) => ({
-                              ...player,
-                              id: createId(),
-                            })),
-                          });
-                        }}
-                        disabled={!boardSquads.home}
-                      >
-                        Load to Home
-                      </button>
-                      <button
-                        className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                        onClick={() => {
-                          if (!boardSquads.away) {
-                            return;
-                          }
-                          updateSquad(boardSquads.away.id, {
-                            name: managePresetSquad.name,
-                            clubLogo: managePresetSquad.clubLogo,
-                            kit: managePresetSquad.kit,
-                            players: managePresetSquad.players.map((player) => ({
-                              ...player,
-                              id: createId(),
-                            })),
-                          });
-                        }}
-                        disabled={!boardSquads.away}
-                      >
-                        Load to Away
-                      </button>
-                      <button
-                        className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                        onClick={async () => {
-                          if (!window.confirm("Delete this preset?")) {
-                            return;
-                          }
-                          const result = await deleteSquadPreset(managePresetId);
-                          if (!result.ok) {
-                            setManagePresetStatus(result.error);
-                            return;
-                          }
-                          setSquadPresets((prev) =>
-                            prev.filter((item) => item.id !== managePresetId)
-                          );
-                          setManagePresetId("");
-                          setManagePresetName("");
-                          setManagePresetSquad(null);
-                          setManagePresetStatus("Preset deleted.");
-                        }}
-                      >
-                        Delete preset
-                      </button>
-                    </div>
-                  )}
-                  {managePresetStatus ? (
-                    <p className="text-xs text-[var(--accent-1)]">
-                      {managePresetStatus}
-                    </p>
-                  ) : null}
-                  {editableSquad ? (
-                    <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                        Squad details
-                      </p>
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-[var(--ink-1)]">Squad Name</span>
                       <input
-                        className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                        value={editableSquad.name}
-                        onChange={(event) =>
-                          updateEditableSquad({ name: event.target.value })
-                        }
+                        className="h-8 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                        value={managePresetId ? managePresetName : editableSquad?.name ?? ""}
+                        onChange={(event) => {
+                          if (managePresetId) {
+                            setManagePresetName(event.target.value);
+                            return;
+                          }
+                          updateEditableSquad({ name: event.target.value });
+                        }}
                         placeholder="Squad name"
                       />
-                      <div className="grid grid-cols-3 gap-2">
+                    </div>
+                    {editableSquad ? (
+                      <div className="grid gap-2 md:grid-cols-4">
                         <label className="space-y-1">
-                          <span className="text-[11px]">Shirt</span>
+                          <span className="text-[10px] text-[var(--ink-1)]">Shirt Base</span>
                           <input
                             type="color"
                             className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
                             value={editableSquad.kit.shirt}
                             onChange={(event) =>
                               updateEditableSquad({
-                                kit: {
-                                  ...editableSquad.kit,
-                                  shirt: event.target.value,
-                                },
+                                kit: { ...editableSquad.kit, shirt: event.target.value },
                               })
                             }
                           />
                         </label>
                         <label className="space-y-1">
-                          <span className="text-[11px]">Shorts</span>
+                          <span className="text-[10px] text-[var(--ink-1)]">Shirt Secondary</span>
                           <input
                             type="color"
                             className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
                             value={editableSquad.kit.shorts}
                             onChange={(event) =>
                               updateEditableSquad({
-                                kit: {
-                                  ...editableSquad.kit,
-                                  shorts: event.target.value,
-                                },
+                                kit: { ...editableSquad.kit, shorts: event.target.value },
                               })
                             }
                           />
                         </label>
                         <label className="space-y-1">
-                          <span className="text-[11px]">Socks</span>
+                          <span className="text-[10px] text-[var(--ink-1)]">Shorts</span>
+                          <input
+                            type="color"
+                            className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                            value={editableSquad.kit.shorts}
+                            onChange={(event) =>
+                              updateEditableSquad({
+                                kit: { ...editableSquad.kit, shorts: event.target.value },
+                              })
+                            }
+                          />
+                        </label>
+                        <label className="space-y-1">
+                          <span className="text-[10px] text-[var(--ink-1)]">Socks</span>
                           <input
                             type="color"
                             className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
                             value={editableSquad.kit.socks}
                             onChange={(event) =>
                               updateEditableSquad({
-                                kit: {
-                                  ...editableSquad.kit,
-                                  socks: event.target.value,
-                                },
+                                kit: { ...editableSquad.kit, socks: event.target.value },
                               })
                             }
                           />
                         </label>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <button
-                          className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                          onClick={() => manageLogoRef.current?.click()}
+                    ) : null}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-[var(--ink-1)]">Type of jersey</span>
+                      {["A", "B", "C", "D", "E"].map((item) => (
+                        <span
+                          key={item}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[10px] text-[var(--ink-1)]"
                         >
-                          Upload logo
-                        </button>
-                        {editableSquad.clubLogo ? (
-                          <img
-                            src={editableSquad.clubLogo}
-                            alt="Club logo"
-                            className="h-8 w-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-[11px] text-[var(--ink-1)]">
-                            None
-                          </span>
-                        )}
-                      </div>
-                      <input
-                        ref={manageLogoRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          if (!file) {
-                            return;
-                          }
-                          const reader = new FileReader();
-                          reader.onload = () => {
-                            if (typeof reader.result === "string") {
-                              updateEditableSquad({
-                                clubLogo: reader.result,
-                              });
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        }}
-                      />
+                          {item}
+                        </span>
+                      ))}
                     </div>
-                  ) : null}
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: "home", label: "Home squad" },
-                      { id: "away", label: "Away squad" },
-                    ].map((side) => (
-                      <button
-                        key={side.id}
-                        className={`rounded-2xl border px-3 py-2 text-[11px] uppercase tracking-wide ${
-                          manageSide === side.id
-                            ? "border-[var(--accent-0)] text-[var(--ink-0)]"
-                            : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-                        }`}
-                        onClick={() =>
-                          setManageSide(side.id as "home" | "away")
+                    <input
+                      ref={manageLogoRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) {
+                          return;
                         }
-                      >
-                        {side.label}
-                      </button>
-                    ))}
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          if (typeof reader.result === "string") {
+                            updateEditableSquad({ clubLogo: reader.result });
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
                   </div>
-                  </div>
-                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "home", label: "Home squad" },
+                    { id: "away", label: "Away squad" },
+                  ].map((side) => (
+                    <button
+                      key={side.id}
+                      className={`rounded-full border px-3 py-2 text-[11px] uppercase tracking-wide ${
+                        manageSide === side.id
+                          ? "border-[var(--accent-0)] text-[var(--ink-0)]"
+                          : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                      }`}
+                      onClick={() => setManageSide(side.id as "home" | "away")}
+                    >
+                      {side.label}
+                    </button>
+                  ))}
+                </div>
                   {(managePresetSquad || manageSquad) ? (
                     <>
                       <div className="flex items-center justify-between">
