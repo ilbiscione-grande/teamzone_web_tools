@@ -91,6 +91,9 @@ export default function TopBar() {
   const [managePresetStatus, setManagePresetStatus] = useState<string | null>(
     null
   );
+  const [jerseyType, setJerseyType] = useState<
+    "solid" | "split" | "stripe" | "sash" | "pinstripe"
+  >("solid");
   const [shareLinkOpen, setShareLinkOpen] = useState(false);
   const [shareLinkStatus, setShareLinkStatus] = useState<string | null>(null);
   const [shareLinkUrl, setShareLinkUrl] = useState<string | null>(null);
@@ -253,6 +256,54 @@ export default function TopBar() {
   const modeLabel =
     project?.settings?.mode ?? ("match" as "training" | "match" | "education");
   const modeText = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
+  const shirtTypes: Array<{
+    id: "solid" | "split" | "stripe" | "sash" | "pinstripe";
+    label: string;
+  }> = [
+    { id: "solid", label: "Solid" },
+    { id: "split", label: "Split" },
+    { id: "stripe", label: "Stripe" },
+    { id: "sash", label: "Sash" },
+    { id: "pinstripe", label: "Pinstripe" },
+  ];
+  const renderShirtIcon = (
+    type: "solid" | "split" | "stripe" | "sash" | "pinstripe",
+    primary: string,
+    secondary: string,
+    className: string
+  ) => (
+    <svg viewBox="0 0 100 100" className={className} aria-hidden>
+      <defs>
+        <clipPath id={`shirt-clip-${type}`}>
+          <path d="M25 18h50l13 13-10 11-8-7v47H30V35l-8 7-10-11z" />
+        </clipPath>
+      </defs>
+      <path
+        d="M25 18h50l13 13-10 11-8-7v47H30V35l-8 7-10-11z"
+        fill="#0b1c1d"
+        stroke="rgba(255,255,255,0.2)"
+        strokeWidth="2"
+      />
+      <g clipPath={`url(#shirt-clip-${type})`}>
+        <rect x="20" y="14" width="60" height="72" fill={primary} />
+        {type === "split" ? (
+          <rect x="50" y="14" width="30" height="72" fill={secondary} />
+        ) : null}
+        {type === "stripe" ? (
+          <rect x="42" y="14" width="16" height="72" fill={secondary} />
+        ) : null}
+        {type === "sash" ? (
+          <path d="M16 70L78 8l10 10-62 62z" fill={secondary} opacity="0.95" />
+        ) : null}
+        {type === "pinstripe"
+          ? [26, 34, 42, 50, 58, 66, 74].map((x) => (
+              <rect key={x} x={x} y="14" width="3" height="72" fill={secondary} />
+            ))
+          : null}
+      </g>
+      <rect x="42" y="18" width="16" height="10" rx="4" fill="#0b1c1d" />
+    </svg>
+  );
 
   useEffect(() => {
     if (!pdfOpen) {
@@ -1548,57 +1599,105 @@ export default function TopBar() {
               </p>
             ) : (
               <div className="mt-4 max-h-[calc(84vh-96px)] space-y-4 overflow-y-auto p-6 pt-0 text-xs text-[var(--ink-1)]" data-scrollable>
-                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                <div className="space-y-2">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                     Edit squad
                   </p>
-                  <div className="mt-2 grid gap-3 md:grid-cols-[120px_minmax(0,1fr)]">
-                  <button
-                    className="flex h-28 w-full items-center justify-center overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)] text-[11px] text-[var(--ink-1)]"
-                    onClick={() => manageLogoRef.current?.click()}
-                    title="Upload club logo"
-                  >
-                    {editableSquad?.clubLogo ? (
-                      <img
-                        src={editableSquad.clubLogo}
-                        alt="Club logo"
-                        className="h-full w-full object-cover"
+                  <div className="grid gap-3 lg:grid-cols-[160px_minmax(0,1fr)_180px]">
+                    <button
+                      className="flex h-44 w-full items-center justify-center overflow-hidden rounded-xl bg-[var(--panel-2)]/70 text-[11px] text-[var(--ink-1)]"
+                      onClick={() => manageLogoRef.current?.click()}
+                      title="Upload club logo"
+                    >
+                      {editableSquad?.clubLogo ? (
+                        <img
+                          src={editableSquad.clubLogo}
+                          alt="Club logo"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span>Club Logo</span>
+                      )}
+                    </button>
+                    <div className="flex h-44 flex-col gap-2 rounded-xl bg-[var(--panel-2)]/70 p-3">
+                      <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                        Squad details
+                      </span>
+                      <input
+                        className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                        value={managePresetId ? managePresetName : editableSquad?.name ?? ""}
+                        onChange={(event) => {
+                          if (managePresetId) {
+                            setManagePresetName(event.target.value);
+                            return;
+                          }
+                          updateEditableSquad({ name: event.target.value });
+                        }}
+                        placeholder="Squad name"
                       />
-                    ) : (
-                      <span>Club Logo</span>
-                    )}
-                  </button>
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <label className="space-y-1">
-                          <span className="text-[10px] text-[var(--ink-1)]">Preset squad</span>
-                          <select
-                            className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-xs text-[var(--ink-0)]"
-                            value={managePresetId}
-                            onChange={(event) => {
-                              const nextId = event.target.value;
-                              setManagePresetId(nextId);
-                              const preset = squadPresets.find((item) => item.id === nextId);
-                              if (preset) {
-                                setManagePresetName(preset.name);
-                                setManagePresetSquad(preset.squad);
-                              } else {
-                                setManagePresetName("");
-                                setManagePresetSquad(null);
-                              }
-                            }}
-                          >
-                            <option value="">Current squad</option>
-                            {squadPresets.map((preset) => (
-                              <option key={preset.id} value={preset.id}>
-                                {preset.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                      <div className="flex items-center gap-2 pt-1">
+                      {editableSquad ? (
+                        <>
+                          <div className="grid gap-2 md:grid-cols-2">
+                            <label className="space-y-1">
+                              <span className="text-[10px] text-[var(--ink-1)]">Shirt Base</span>
+                              <input
+                                type="color"
+                                className="h-7 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                                value={editableSquad.kit.shirt}
+                                onChange={(event) =>
+                                  updateEditableSquad({
+                                    kit: { ...editableSquad.kit, shirt: event.target.value },
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="space-y-1">
+                              <span className="text-[10px] text-[var(--ink-1)]">Shirt Secondary</span>
+                              <input
+                                type="color"
+                                className="h-7 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                                value={editableSquad.kit.shorts}
+                                onChange={(event) =>
+                                  updateEditableSquad({
+                                    kit: { ...editableSquad.kit, shorts: event.target.value },
+                                  })
+                                }
+                              />
+                            </label>
+                          </div>
+                          <div className="grid gap-2 md:grid-cols-2">
+                            <label className="space-y-1">
+                              <span className="text-[10px] text-[var(--ink-1)]">Shorts</span>
+                              <input
+                                type="color"
+                                className="h-7 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                                value={editableSquad.kit.shorts}
+                                onChange={(event) =>
+                                  updateEditableSquad({
+                                    kit: { ...editableSquad.kit, shorts: event.target.value },
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="space-y-1">
+                              <span className="text-[10px] text-[var(--ink-1)]">Socks</span>
+                              <input
+                                type="color"
+                                className="h-7 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                                value={editableSquad.kit.socks}
+                                onChange={(event) =>
+                                  updateEditableSquad({
+                                    kit: { ...editableSquad.kit, socks: event.target.value },
+                                  })
+                                }
+                              />
+                            </label>
+                          </div>
+                        </>
+                      ) : null}
+                    </div>
+                    <div className="flex h-44 flex-col rounded-xl bg-[var(--panel-2)]/70 p-3">
+                      <div className="mb-2 flex items-center justify-end gap-2">
                         <button
                           className="rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                           title="Save preset"
@@ -1681,109 +1780,71 @@ export default function TopBar() {
                           </svg>
                         </button>
                       </div>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] text-[var(--ink-1)]">Squad Name</span>
-                      <input
-                        className="h-8 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                        value={managePresetId ? managePresetName : editableSquad?.name ?? ""}
-                        onChange={(event) => {
-                          if (managePresetId) {
-                            setManagePresetName(event.target.value);
-                            return;
-                          }
-                          updateEditableSquad({ name: event.target.value });
-                        }}
-                        placeholder="Squad name"
-                      />
-                    </div>
-                    {editableSquad ? (
-                      <div className="grid gap-2 md:grid-cols-4">
-                        <label className="space-y-1">
-                          <span className="text-[10px] text-[var(--ink-1)]">Shirt Base</span>
-                          <input
-                            type="color"
-                            className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
-                            value={editableSquad.kit.shirt}
-                            onChange={(event) =>
-                              updateEditableSquad({
-                                kit: { ...editableSquad.kit, shirt: event.target.value },
-                              })
-                            }
-                          />
-                        </label>
-                        <label className="space-y-1">
-                          <span className="text-[10px] text-[var(--ink-1)]">Shirt Secondary</span>
-                          <input
-                            type="color"
-                            className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
-                            value={editableSquad.kit.shorts}
-                            onChange={(event) =>
-                              updateEditableSquad({
-                                kit: { ...editableSquad.kit, shorts: event.target.value },
-                              })
-                            }
-                          />
-                        </label>
-                        <label className="space-y-1">
-                          <span className="text-[10px] text-[var(--ink-1)]">Shorts</span>
-                          <input
-                            type="color"
-                            className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
-                            value={editableSquad.kit.shorts}
-                            onChange={(event) =>
-                              updateEditableSquad({
-                                kit: { ...editableSquad.kit, shorts: event.target.value },
-                              })
-                            }
-                          />
-                        </label>
-                        <label className="space-y-1">
-                          <span className="text-[10px] text-[var(--ink-1)]">Socks</span>
-                          <input
-                            type="color"
-                            className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
-                            value={editableSquad.kit.socks}
-                            onChange={(event) =>
-                              updateEditableSquad({
-                                kit: { ...editableSquad.kit, socks: event.target.value },
-                              })
-                            }
-                          />
-                        </label>
+                      <div className="flex flex-1 items-center justify-center">
+                        {editableSquad
+                          ? renderShirtIcon(
+                              jerseyType,
+                              editableSquad.kit.shirt,
+                              editableSquad.kit.shorts,
+                              "h-28 w-28"
+                            )
+                          : null}
                       </div>
-                    ) : null}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-[var(--ink-1)]">Type of jersey</span>
-                      {["A", "B", "C", "D", "E"].map((item) => (
-                        <span
-                          key={item}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[10px] text-[var(--ink-1)]"
-                        >
-                          {item}
-                        </span>
-                      ))}
                     </div>
-                    <input
-                      ref={manageLogoRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (!file) {
-                          return;
-                        }
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          if (typeof reader.result === "string") {
-                            updateEditableSquad({ clubLogo: reader.result });
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      }}
-                    />
                   </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] text-[var(--ink-1)]">Type of jersey</span>
+                    {editableSquad
+                      ? shirtTypes.map((item) => (
+                          <button
+                            key={item.id}
+                            className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border ${
+                              jerseyType === item.id
+                                ? "border-[var(--accent-0)]"
+                                : "border-[var(--line)]"
+                            }`}
+                            onClick={() => setJerseyType(item.id)}
+                            title={item.label}
+                            aria-label={item.label}
+                          >
+                            {renderShirtIcon(
+                              item.id,
+                              editableSquad.kit.shirt,
+                              editableSquad.kit.shorts,
+                              "h-6 w-6"
+                            )}
+                          </button>
+                        ))
+                      : null}
+                    <button
+                      className="ml-2 rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={() => manageLogoRef.current?.click()}
+                    >
+                      Upload logo
+                    </button>
+                    <span className="text-[11px] text-[var(--ink-1)]">
+                      {editableSquad?.clubLogo ? "Logo selected" : "No logo"}
+                    </span>
+                  </div>
+                  <input
+                    ref={manageLogoRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) {
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        if (typeof reader.result === "string") {
+                          updateEditableSquad({ clubLogo: reader.result });
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
@@ -1803,6 +1864,7 @@ export default function TopBar() {
                     </button>
                   ))}
                 </div>
+                <div className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3">
                   {(managePresetSquad || manageSquad) ? (
                     <>
                       <div className="flex items-center justify-between">
@@ -2047,6 +2109,32 @@ export default function TopBar() {
                     </p>
                   )}
                 </div>
+                <label className="space-y-1">
+                  <span className="text-[10px] text-[var(--ink-1)]">Preset squad</span>
+                  <select
+                    className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-xs text-[var(--ink-0)]"
+                    value={managePresetId}
+                    onChange={(event) => {
+                      const nextId = event.target.value;
+                      setManagePresetId(nextId);
+                      const preset = squadPresets.find((item) => item.id === nextId);
+                      if (preset) {
+                        setManagePresetName(preset.name);
+                        setManagePresetSquad(preset.squad);
+                      } else {
+                        setManagePresetName("");
+                        setManagePresetSquad(null);
+                      }
+                    }}
+                  >
+                    <option value="">Current squad</option>
+                    {squadPresets.map((preset) => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 {squadPresetsLoading ? (
                   <p className="text-xs text-[var(--ink-1)]">Loading presets...</p>
                 ) : null}
