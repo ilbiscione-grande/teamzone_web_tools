@@ -5,6 +5,9 @@ export type SquadPlayer = {
   number?: number;
   vestColor?: string;
   photoUrl?: string;
+  sourceTeamId?: string;
+  sourceTeamName?: string;
+  sourcePlayerId?: string;
 };
 
 export type SquadKit = {
@@ -28,6 +31,8 @@ export type Squad = {
 export type SquadPreset = {
   id: string;
   userId: string;
+  teamId?: string;
+  teamName?: string;
   name: string;
   squad: Squad;
   createdAt: string;

@@ -507,3 +507,423 @@ create policy "Authors can delete their comments"
 on board_comments
 for delete
 using (auth.uid() = author_id);
+
+-- Team + Squad model (one squad per team, with loaned players support)
+create table if not exists teams (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  club_logo text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists teams_owner_id_idx on teams(owner_id);
+
+create table if not exists team_members (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references teams(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null default 'member',
+  created_at timestamptz not null default now(),
+  unique(team_id, user_id)
+);
+
+create index if not exists team_members_user_id_idx on team_members(user_id);
+
+create table if not exists team_squads (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null unique references teams(id) on delete cascade,
+  name text not null,
+  kit_data jsonb not null,
+  captain_player_id uuid,
+  substitute_player_ids uuid[] not null default '{}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists team_players (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references teams(id) on delete cascade,
+  name text not null,
+  position_label text not null default 'POS',
+  number integer,
+  vest_color text,
+  photo_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists team_players_team_id_idx on team_players(team_id);
+
+create table if not exists team_squad_players (
+  id uuid primary key default gen_random_uuid(),
+  squad_id uuid not null references team_squads(id) on delete cascade,
+  player_id uuid not null references team_players(id) on delete cascade,
+  order_index integer not null default 0,
+  is_captain boolean not null default false,
+  is_substitute boolean not null default false,
+  source_team_id uuid references teams(id) on delete set null,
+  source_player_id uuid references team_players(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(squad_id, player_id)
+);
+
+create index if not exists team_squad_players_squad_id_idx
+on team_squad_players(squad_id);
+
+create index if not exists team_squad_players_source_team_id_idx
+on team_squad_players(source_team_id);
+
+alter table teams enable row level security;
+alter table team_members enable row level security;
+alter table team_squads enable row level security;
+alter table team_players enable row level security;
+alter table team_squad_players enable row level security;
+
+drop policy if exists "Users can view their teams" on teams;
+drop policy if exists "Users can insert their teams" on teams;
+drop policy if exists "Users can update owned teams" on teams;
+drop policy if exists "Users can delete owned teams" on teams;
+
+create policy "Users can view their teams"
+on teams
+for select
+using (
+  owner_id = auth.uid()
+  or exists (
+    select 1
+    from team_members tm
+    where tm.team_id = teams.id
+      and tm.user_id = auth.uid()
+  )
+);
+
+create policy "Users can insert their teams"
+on teams
+for insert
+with check (owner_id = auth.uid());
+
+create policy "Users can update owned teams"
+on teams
+for update
+using (owner_id = auth.uid());
+
+create policy "Users can delete owned teams"
+on teams
+for delete
+using (owner_id = auth.uid());
+
+drop policy if exists "Users can view team memberships" on team_members;
+drop policy if exists "Owners can insert team memberships" on team_members;
+drop policy if exists "Owners can update team memberships" on team_members;
+drop policy if exists "Owners can delete team memberships" on team_members;
+
+create policy "Users can view team memberships"
+on team_members
+for select
+using (
+  user_id = auth.uid()
+  or exists (
+    select 1
+    from teams t
+    where t.id = team_members.team_id
+      and t.owner_id = auth.uid()
+  )
+);
+
+create policy "Owners can insert team memberships"
+on team_members
+for insert
+with check (
+  exists (
+    select 1
+    from teams t
+    where t.id = team_members.team_id
+      and t.owner_id = auth.uid()
+  )
+);
+
+create policy "Owners can update team memberships"
+on team_members
+for update
+using (
+  exists (
+    select 1
+    from teams t
+    where t.id = team_members.team_id
+      and t.owner_id = auth.uid()
+  )
+);
+
+create policy "Owners can delete team memberships"
+on team_members
+for delete
+using (
+  exists (
+    select 1
+    from teams t
+    where t.id = team_members.team_id
+      and t.owner_id = auth.uid()
+  )
+);
+
+drop policy if exists "Users can view team squads" on team_squads;
+drop policy if exists "Users can insert team squads" on team_squads;
+drop policy if exists "Users can update team squads" on team_squads;
+drop policy if exists "Users can delete team squads" on team_squads;
+
+create policy "Users can view team squads"
+on team_squads
+for select
+using (
+  exists (
+    select 1
+    from teams t
+    where t.id = team_squads.team_id
+      and (
+        t.owner_id = auth.uid()
+        or exists (
+          select 1
+          from team_members tm
+          where tm.team_id = t.id
+            and tm.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+create policy "Users can insert team squads"
+on team_squads
+for insert
+with check (
+  exists (
+    select 1
+    from teams t
+    where t.id = team_squads.team_id
+      and (
+        t.owner_id = auth.uid()
+        or exists (
+          select 1
+          from team_members tm
+          where tm.team_id = t.id
+            and tm.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+create policy "Users can update team squads"
+on team_squads
+for update
+using (
+  exists (
+    select 1
+    from teams t
+    where t.id = team_squads.team_id
+      and (
+        t.owner_id = auth.uid()
+        or exists (
+          select 1
+          from team_members tm
+          where tm.team_id = t.id
+            and tm.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+create policy "Users can delete team squads"
+on team_squads
+for delete
+using (
+  exists (
+    select 1
+    from teams t
+    where t.id = team_squads.team_id
+      and (
+        t.owner_id = auth.uid()
+        or exists (
+          select 1
+          from team_members tm
+          where tm.team_id = t.id
+            and tm.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+drop policy if exists "Users can view team players" on team_players;
+drop policy if exists "Users can insert team players" on team_players;
+drop policy if exists "Users can update team players" on team_players;
+drop policy if exists "Users can delete team players" on team_players;
+
+create policy "Users can view team players"
+on team_players
+for select
+using (
+  exists (
+    select 1
+    from teams t
+    where t.id = team_players.team_id
+      and (
+        t.owner_id = auth.uid()
+        or exists (
+          select 1
+          from team_members tm
+          where tm.team_id = t.id
+            and tm.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+create policy "Users can insert team players"
+on team_players
+for insert
+with check (
+  exists (
+    select 1
+    from teams t
+    where t.id = team_players.team_id
+      and (
+        t.owner_id = auth.uid()
+        or exists (
+          select 1
+          from team_members tm
+          where tm.team_id = t.id
+            and tm.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+create policy "Users can update team players"
+on team_players
+for update
+using (
+  exists (
+    select 1
+    from teams t
+    where t.id = team_players.team_id
+      and (
+        t.owner_id = auth.uid()
+        or exists (
+          select 1
+          from team_members tm
+          where tm.team_id = t.id
+            and tm.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+create policy "Users can delete team players"
+on team_players
+for delete
+using (
+  exists (
+    select 1
+    from teams t
+    where t.id = team_players.team_id
+      and (
+        t.owner_id = auth.uid()
+        or exists (
+          select 1
+          from team_members tm
+          where tm.team_id = t.id
+            and tm.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+drop policy if exists "Users can view team squad players" on team_squad_players;
+drop policy if exists "Users can insert team squad players" on team_squad_players;
+drop policy if exists "Users can update team squad players" on team_squad_players;
+drop policy if exists "Users can delete team squad players" on team_squad_players;
+
+create policy "Users can view team squad players"
+on team_squad_players
+for select
+using (
+  exists (
+    select 1
+    from team_squads ts
+    join teams t on t.id = ts.team_id
+    where ts.id = team_squad_players.squad_id
+      and (
+        t.owner_id = auth.uid()
+        or exists (
+          select 1
+          from team_members tm
+          where tm.team_id = t.id
+            and tm.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+create policy "Users can insert team squad players"
+on team_squad_players
+for insert
+with check (
+  exists (
+    select 1
+    from team_squads ts
+    join teams t on t.id = ts.team_id
+    where ts.id = team_squad_players.squad_id
+      and (
+        t.owner_id = auth.uid()
+        or exists (
+          select 1
+          from team_members tm
+          where tm.team_id = t.id
+            and tm.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+create policy "Users can update team squad players"
+on team_squad_players
+for update
+using (
+  exists (
+    select 1
+    from team_squads ts
+    join teams t on t.id = ts.team_id
+    where ts.id = team_squad_players.squad_id
+      and (
+        t.owner_id = auth.uid()
+        or exists (
+          select 1
+          from team_members tm
+          where tm.team_id = t.id
+            and tm.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+create policy "Users can delete team squad players"
+on team_squad_players
+for delete
+using (
+  exists (
+    select 1
+    from team_squads ts
+    join teams t on t.id = ts.team_id
+    where ts.id = team_squad_players.squad_id
+      and (
+        t.owner_id = auth.uid()
+        or exists (
+          select 1
+          from team_members tm
+          where tm.team_id = t.id
+            and tm.user_id = auth.uid()
+        )
+      )
+  )
+);
