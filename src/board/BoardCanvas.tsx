@@ -86,7 +86,7 @@ export default function BoardCanvas({
   const isSharedReadOnly = readOnly || (project?.isShared ?? false);
   const isThreeDView = board.threeDView ?? false;
   const threeDStrength = Math.max(0, Math.min(100, board.threeDStrength ?? 55));
-  const isCanvasReadOnly = isSharedReadOnly;
+  const isCanvasReadOnly = isSharedReadOnly || isThreeDView;
   const addObject = useProjectStore((state) => state.addObject);
   const updateObject = useProjectStore((state) => state.updateObject);
   const removeObject = useProjectStore((state) => state.removeObject);
@@ -730,7 +730,7 @@ export default function BoardCanvas({
     >
       {isThreeDView && (
         <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full border border-[var(--line)] bg-[var(--panel)]/75 px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-0)]">
-          3D preview
+          3D preview (edit in 2D)
         </div>
       )}
       {!readOnly && !isMaximized && (
