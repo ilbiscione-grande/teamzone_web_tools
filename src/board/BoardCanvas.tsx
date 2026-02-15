@@ -84,6 +84,8 @@ export default function BoardCanvas({
 
   const project = useProjectStore((state) => state.project);
   const isSharedReadOnly = readOnly || (project?.isShared ?? false);
+  const isThreeDView = board.threeDView ?? false;
+  const isCanvasReadOnly = isSharedReadOnly || isThreeDView;
   const addObject = useProjectStore((state) => state.addObject);
   const updateObject = useProjectStore((state) => state.updateObject);
   const removeObject = useProjectStore((state) => state.removeObject);
@@ -530,7 +532,7 @@ export default function BoardCanvas({
     activeTool,
     playerTokenSize,
     playerFill: defaultPlayerFill,
-    readOnly: isSharedReadOnly,
+    readOnly: isCanvasReadOnly,
     baseOffsetX,
     baseOffsetY,
     baseScale,
@@ -609,7 +611,7 @@ export default function BoardCanvas({
 
 
   const handleSelect = (id: string, multi: boolean) => {
-    if (isSharedReadOnly) {
+    if (isCanvasReadOnly) {
       return;
     }
     setSelectedLinkId(null);
@@ -721,7 +723,12 @@ export default function BoardCanvas({
       className="relative h-full w-full"
       data-disable-pull
     >
-      {!readOnly && !isMaximized && (
+      {isThreeDView && (
+        <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full border border-[var(--line)] bg-[var(--panel)]/75 px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-0)]">
+          3D preview
+        </div>
+      )}
+      {!isCanvasReadOnly && !isMaximized && (
         <div ref={controlsMenuRef} className="absolute right-4 top-4 z-10">
           <button
             className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
@@ -814,27 +821,39 @@ export default function BoardCanvas({
           )}
         </div>
       )}
-      <Stage
-        key={`${board.id}:${board.pitchView}:${forcePortrait ? "portrait" : "default"}`}
-        ref={stageRef}
-        width={size.width}
-        height={size.height}
-        scaleX={stageScale}
-        scaleY={stageScale}
-        x={baseOffsetX + lockedViewport.offsetX}
-        y={baseOffsetY + lockedViewport.offsetY}
-        draggable={isPanning && !forcePortrait}
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onDblClick={handleDoubleClick}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTap={handleTap}
-        onClick={handleClick}
+      <div
+        className="h-full w-full"
+        style={
+          isThreeDView
+            ? {
+                transform:
+                  "perspective(1200px) rotateX(36deg) scale(0.98) translateY(-5%)",
+                transformOrigin: "50% 10%",
+              }
+            : undefined
+        }
       >
+        <Stage
+          key={`${board.id}:${board.pitchView}:${forcePortrait ? "portrait" : "default"}:${isThreeDView ? "3d" : "2d"}`}
+          ref={stageRef}
+          width={size.width}
+          height={size.height}
+          scaleX={stageScale}
+          scaleY={stageScale}
+          x={baseOffsetX + lockedViewport.offsetX}
+          y={baseOffsetY + lockedViewport.offsetY}
+          draggable={isPanning && !forcePortrait && !isCanvasReadOnly}
+          onWheel={isCanvasReadOnly ? undefined : handleWheel}
+          onMouseDown={isCanvasReadOnly ? undefined : handleMouseDown}
+          onMouseMove={isCanvasReadOnly ? undefined : handleMouseMove}
+          onMouseUp={isCanvasReadOnly ? undefined : handleMouseUp}
+          onDblClick={isCanvasReadOnly ? undefined : handleDoubleClick}
+          onTouchStart={isCanvasReadOnly ? undefined : handleTouchStart}
+          onTouchMove={isCanvasReadOnly ? undefined : handleTouchMove}
+          onTouchEnd={isCanvasReadOnly ? undefined : handleTouchEnd}
+          onTap={isCanvasReadOnly ? undefined : handleTap}
+          onClick={isCanvasReadOnly ? undefined : handleClick}
+        >
         <Layer>
           <Group
             rotation={viewRotation}
@@ -868,7 +887,7 @@ export default function BoardCanvas({
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
                 labelRotation={labelRotation}
-                readOnly={isSharedReadOnly}
+                readOnly={isCanvasReadOnly}
                 onSelect={handleSelect}
                 onDragStart={() => pushHistory(clone(objects))}
                 onDragEnd={updatePosition}
@@ -956,7 +975,7 @@ export default function BoardCanvas({
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
                 labelRotation={labelRotation}
-                readOnly={isSharedReadOnly}
+                readOnly={isCanvasReadOnly}
                 onSelect={handleSelect}
                 onDragStart={() => pushHistory(clone(objects))}
                 onDragEnd={updatePosition}
@@ -1896,7 +1915,8 @@ export default function BoardCanvas({
             )}
           </Group>
         </Layer>
-      </Stage>
+        </Stage>
+      </div>
     </div>
   );
 }

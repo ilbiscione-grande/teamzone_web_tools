@@ -99,6 +99,7 @@ export default function TopBar() {
   const [shareLinkOpen, setShareLinkOpen] = useState(false);
   const [shareLinkStatus, setShareLinkStatus] = useState<string | null>(null);
   const [shareLinkUrl, setShareLinkUrl] = useState<string | null>(null);
+  const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [pdfScope, setPdfScope] = useState<"board" | "project">("board");
   const [pdfSelectedBoardIds, setPdfSelectedBoardIds] = useState<string[]>([]);
@@ -1567,12 +1568,13 @@ export default function TopBar() {
                   )}
                   <button
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
-                    onClick={() => {
-                      setActionsOpen(false);
-                      setShareLinkOpen(true);
-                      setShareLinkStatus(null);
-                      setShareLinkUrl(null);
-                    }}
+                      onClick={() => {
+                        setActionsOpen(false);
+                        setShareLinkOpen(true);
+                        setShareLinkStatus(null);
+                        setShareLinkUrl(null);
+                        setShareLinkCopied(false);
+                      }}
                     disabled={plan !== "PAID" || !authUser}
                     data-locked={plan !== "PAID" || !authUser}
                   >
@@ -2263,7 +2265,10 @@ export default function TopBar() {
               </div>
               <button
                 className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                onClick={() => setShareLinkOpen(false)}
+                onClick={() => {
+                  setShareLinkOpen(false);
+                  setShareLinkCopied(false);
+                }}
               >
                 Close
               </button>
@@ -2274,6 +2279,7 @@ export default function TopBar() {
                 onClick={async () => {
                   setShareLinkStatus(null);
                   setShareLinkUrl(null);
+                  setShareLinkCopied(false);
                   const result = await createProjectShareLink(project);
                   if (!result.ok) {
                     setShareLinkStatus(result.error);
@@ -2306,10 +2312,20 @@ export default function TopBar() {
                     <button
                       className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                       onClick={async () => {
-                        await navigator.clipboard.writeText(shareLinkUrl);
+                        try {
+                          await navigator.clipboard.writeText(shareLinkUrl);
+                          setShareLinkCopied(true);
+                          setShareLinkStatus("Link copied.");
+                          window.setTimeout(() => setShareLinkCopied(false), 1600);
+                        } catch {
+                          setShareLinkCopied(false);
+                          setShareLinkStatus(
+                            "Could not copy automatically. Copy from the field above."
+                          );
+                        }
                       }}
                     >
-                      Copy
+                      {shareLinkCopied ? "Copied" : "Copy"}
                     </button>
                   </div>
                 </div>
@@ -2569,6 +2585,21 @@ export default function TopBar() {
                   </div>
                 </div>
               )}
+              <div>
+                <p className="mb-2 text-[11px] uppercase">View mode</p>
+                <label className="flex items-center gap-2 rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px]">
+                  <input
+                    type="checkbox"
+                    checked={activeBoard.threeDView ?? false}
+                    onChange={(event) =>
+                      updateBoard(activeBoard.id, {
+                        threeDView: event.target.checked,
+                      })
+                    }
+                  />
+                  Enable 3D preview (read-only)
+                </label>
+              </div>
               <div>
                 <p className="mb-2 text-[11px] uppercase">Pitch overlay</p>
                 <div className="grid grid-cols-2 gap-2">
