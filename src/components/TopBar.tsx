@@ -1885,6 +1885,7 @@ export default function TopBar() {
                               id: createId(),
                               name: "New Player",
                               positionLabel: "",
+                              active: true,
                               number: undefined,
                               vestColor: undefined,
                             })
@@ -1893,10 +1894,11 @@ export default function TopBar() {
                           Add player
                         </button>
                       </div>
-                      <div className="grid grid-cols-[28px_minmax(0,1fr)_190px_72px_72px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                      <div className="grid grid-cols-[28px_minmax(0,1fr)_190px_64px_72px_72px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                         <span>#</span>
                         <span>Name</span>
                         <span>Position</span>
+                        <span className="text-center">Active</span>
                         <span className="text-center">Captain</span>
                         <span className="text-center">Substitute</span>
                         <span />
@@ -1905,7 +1907,7 @@ export default function TopBar() {
                         {manageSquad.players.map((player) => (
                           <div
                             key={player.id}
-                            className="grid grid-cols-[28px_minmax(0,1fr)_190px_72px_72px_20px] items-center gap-2"
+                            className="grid grid-cols-[28px_minmax(0,1fr)_190px_64px_72px_72px_20px] items-center gap-2"
                           >
                             <input
                               className="h-7 rounded-md border border-[var(--line)] bg-transparent px-1 text-center text-[11px] text-[var(--ink-0)]"
@@ -1970,6 +1972,19 @@ export default function TopBar() {
                                 </option>
                               ))}
                             </select>
+                            <div className="flex h-full w-full items-center justify-center">
+                              <input
+                                type="checkbox"
+                                checked={player.active !== false}
+                                onChange={(event) =>
+                                  updateSquadPlayer(manageSquad.id, player.id, {
+                                    active: event.target.checked,
+                                  })
+                                }
+                                title="Active"
+                                aria-label="Active"
+                              />
+                            </div>
                             {(() => {
                               const substitutes = editableSquad?.substituteIds ?? [];
                               const isCaptain = editableSquad?.captainId === player.id;

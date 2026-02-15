@@ -547,12 +547,16 @@ create table if not exists team_players (
   team_id uuid not null references teams(id) on delete cascade,
   name text not null,
   position_label text not null default 'POS',
+  is_active boolean not null default true,
   number integer,
   vest_color text,
   photo_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table team_players
+add column if not exists is_active boolean not null default true;
 
 create index if not exists team_players_team_id_idx on team_players(team_id);
 

@@ -46,6 +46,10 @@ export default function SquadEditor() {
   );
 
   const activeSquad = activeSide === "home" ? boardSquads.home : boardSquads.away;
+  const visiblePlayers = useMemo(
+    () => (activeSquad?.players ?? []).filter((player) => player.active !== false),
+    [activeSquad]
+  );
 
   if (!activeSquad) {
     return (
@@ -114,7 +118,7 @@ export default function SquadEditor() {
       <div className="mt-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3">
         <p className="text-sm text-[var(--ink-0)]">{activeSquad.name}</p>
         <p className="mt-1 text-[11px] text-[var(--ink-1)]">
-          {activeSquad.players.length} players
+          {visiblePlayers.length} players
         </p>
       </div>
 
@@ -125,7 +129,7 @@ export default function SquadEditor() {
           <span>Pos</span>
         </div>
         <div className="space-y-1">
-          {activeSquad.players.map((player) => (
+          {visiblePlayers.map((player) => (
             <div
               key={player.id}
               className="grid grid-cols-[28px_minmax(0,1fr)_70px] items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5"

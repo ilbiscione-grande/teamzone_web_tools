@@ -26,6 +26,7 @@ type TeamPlayerRow = {
   team_id: string;
   name: string;
   position_label: string;
+  is_active: boolean | null;
   number: number | null;
   vest_color: string | null;
   photo_url: string | null;
@@ -67,6 +68,7 @@ const toSquadPlayer = (
   id: player.id,
   name: player.name,
   positionLabel: player.position_label,
+  active: player.is_active ?? true,
   number: player.number ?? undefined,
   vestColor: player.vest_color ?? undefined,
   photoUrl: player.photo_url ?? undefined,
@@ -107,7 +109,7 @@ const buildTeamsFromRows = async (
     supabase
       .from(TEAM_PLAYERS_TABLE)
       .select(
-        "id, team_id, name, position_label, number, vest_color, photo_url"
+        "id, team_id, name, position_label, is_active, number, vest_color, photo_url"
       )
       .in("team_id", teamIds),
   ]);
@@ -267,6 +269,7 @@ const createOrReplaceTeamSquad = async (params: {
     team_id: params.teamId,
     name: player.name,
     position_label: player.positionLabel,
+    is_active: player.active ?? true,
     number: player.number ?? null,
     vest_color: player.vestColor ?? null,
     photo_url: player.photoUrl ?? null,
@@ -279,7 +282,7 @@ const createOrReplaceTeamSquad = async (params: {
           .from(TEAM_PLAYERS_TABLE)
           .insert(insertPlayersPayload)
           .select(
-            "id, team_id, name, position_label, number, vest_color, photo_url"
+            "id, team_id, name, position_label, is_active, number, vest_color, photo_url"
           )
       : ({ data: [] as TeamPlayerRow[], error: null } as const);
 
@@ -552,7 +555,7 @@ export const listTeamPlayerCandidates = async (targetTeamId: string) => {
 
   const { data: playersData, error: playersError } = await supabase
     .from(TEAM_PLAYERS_TABLE)
-    .select("id, team_id, name, position_label, number, vest_color, photo_url")
+    .select("id, team_id, name, position_label, is_active, number, vest_color, photo_url")
     .in(
       "team_id",
       sourceTeams.map((team) => team.id)
@@ -569,6 +572,7 @@ export const listTeamPlayerCandidates = async (targetTeamId: string) => {
     teamName: teamNameById.get(player.team_id) ?? "Other team",
     name: player.name,
     positionLabel: player.position_label,
+    active: player.is_active ?? true,
     number: player.number ?? undefined,
     vestColor: player.vest_color ?? undefined,
     photoUrl: player.photo_url ?? undefined,
