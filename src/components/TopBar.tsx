@@ -2586,21 +2586,6 @@ export default function TopBar() {
                 </div>
               )}
               <div>
-                <p className="mb-2 text-[11px] uppercase">View mode</p>
-                <label className="flex items-center gap-2 rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px]">
-                  <input
-                    type="checkbox"
-                    checked={activeBoard.threeDView ?? false}
-                    onChange={(event) =>
-                      updateBoard(activeBoard.id, {
-                        threeDView: event.target.checked,
-                      })
-                    }
-                  />
-                  Enable 3D preview (read-only)
-                </label>
-              </div>
-              <div>
                 <p className="mb-2 text-[11px] uppercase">Pitch overlay</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[

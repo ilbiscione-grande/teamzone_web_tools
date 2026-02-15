@@ -505,7 +505,8 @@ export default function BoardCanvas({
     size.height / effectiveHeight
   );
   const stageScale = baseScale * lockedViewport.zoom;
-  const effectiveStageScale = stageScale * (isThreeDView ? 0.93 : 1);
+  // In 3D preview we leave extra vertical/headroom so the full pitch stays visible.
+  const effectiveStageScale = stageScale * (isThreeDView ? 0.86 : 1);
   const baseOffsetX = forcePortrait
     ? -rotatedBounds.minX * baseScale
     : (size.width - effectiveWidth * baseScale) / 2 -
@@ -729,7 +730,7 @@ export default function BoardCanvas({
           3D preview
         </div>
       )}
-      {!isCanvasReadOnly && !isMaximized && (
+      {!readOnly && !isMaximized && (
         <div ref={controlsMenuRef} className="absolute right-4 top-4 z-10">
           <button
             className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] p-2 text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
@@ -818,6 +819,32 @@ export default function BoardCanvas({
                 </svg>
                 <span>Full screen</span>
               </button>
+              <button
+                className={`flex items-center gap-2 rounded-xl border bg-[var(--panel-2)] px-3 py-2 text-left text-xs ${
+                  isThreeDView
+                    ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                    : "border-[var(--line)] text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                }`}
+                onClick={() => {
+                  updateBoard(board.id, { threeDView: !isThreeDView });
+                }}
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 7l9-4 9 4-9 4-9-4z" />
+                  <path d="M3 17l9 4 9-4" />
+                  <path d="M3 12l9 4 9-4" />
+                </svg>
+                <span>{isThreeDView ? "3D view: on" : "3D view: off"}</span>
+              </button>
             </div>
           )}
         </div>
@@ -828,8 +855,8 @@ export default function BoardCanvas({
           isThreeDView
             ? {
                 transform:
-                  "perspective(1200px) rotateX(32deg) scale(0.94) translateY(2%)",
-                transformOrigin: "50% 10%",
+                  "perspective(1200px) rotateX(24deg) scale(0.9) translateY(6%)",
+                transformOrigin: "50% 0%",
               }
             : undefined
         }
