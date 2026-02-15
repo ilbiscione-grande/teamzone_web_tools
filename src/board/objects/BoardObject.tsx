@@ -58,6 +58,8 @@ type BoardObjectProps = {
   showPlayerNumber: boolean;
   labelRotation: number;
   isThreeDView?: boolean;
+  threeDStrength?: number;
+  threeDDepthRange?: { minY: number; maxY: number };
   readOnly?: boolean;
   onSelect: (id: string, multi: boolean) => void;
   onDragStart: () => void;
@@ -85,6 +87,8 @@ export default function BoardObject({
   showPlayerNumber,
   labelRotation,
   isThreeDView,
+  threeDStrength,
+  threeDDepthRange,
   readOnly,
   onSelect,
   onDragStart,
@@ -96,12 +100,35 @@ export default function BoardObject({
     return null;
   }
 
+  const depthScale = (() => {
+    if (!isThreeDView || !threeDDepthRange) {
+      return 1;
+    }
+    const range = Math.max(0.001, threeDDepthRange.maxY - threeDDepthRange.minY);
+    const t = Math.max(
+      0,
+      Math.min(1, (object.position.y - threeDDepthRange.minY) / range)
+    );
+    const strength = Math.max(0, Math.min(1, (threeDStrength ?? 55) / 100));
+    // Top of pitch appears farther away.
+    const minScale = 1 - strength * 0.32;
+    return minScale + (1 - minScale) * t;
+  })();
+  const depthStrokeFactor =
+    isThreeDView && threeDDepthRange ? 0.72 + 0.28 * depthScale : 1;
+  const depthStroke = (value: number) =>
+    Math.max(0.05, value * depthStrokeFactor);
+  const textForeshorten =
+    isThreeDView && threeDDepthRange
+      ? 0.9 + 0.1 * depthScale
+      : 1;
+
   const commonProps = {
     x: object.position.x,
     y: object.position.y,
     rotation: object.rotation,
-    scaleX: object.scale.x,
-    scaleY: object.scale.y,
+    scaleX: object.scale.x * depthScale,
+    scaleY: object.scale.y * depthScale,
     opacity: object.style.opacity,
     draggable: !object.locked && !readOnly,
     onClick: (event: Konva.KonvaEventObject<MouseEvent>) => {
@@ -229,13 +256,13 @@ export default function BoardObject({
             <Circle
               radius={playerTokenSize + 1.6}
               stroke="#111111"
-              strokeWidth={0.85}
+              strokeWidth={depthStroke(0.85)}
               dash={[1, 1]}
             />
             <Circle
               radius={playerTokenSize + 1.6}
               stroke="#ffffff"
-              strokeWidth={0.5}
+              strokeWidth={depthStroke(0.5)}
               dash={[1, 1]}
             />
           </>
@@ -244,7 +271,7 @@ export default function BoardObject({
           <Circle
             radius={playerTokenSize + 2.2}
             stroke="var(--accent-1)"
-            strokeWidth={0.3}
+            strokeWidth={depthStroke(0.3)}
             dash={[0.6, 0.6]}
           />
         )}
@@ -252,21 +279,21 @@ export default function BoardObject({
           <Circle
             radius={playerTokenSize + 1.1}
             stroke="var(--accent-2)"
-            strokeWidth={0.35}
+            strokeWidth={depthStroke(0.35)}
           />
         )}
         {player.hasBall && (
           <Circle
             radius={playerTokenSize + 0.8}
             stroke="#f06d4f"
-            strokeWidth={0.3}
+            strokeWidth={depthStroke(0.3)}
           />
         )}
         <Circle
           radius={playerTokenSize}
           fill={fillColor}
           stroke={player.style.stroke}
-          strokeWidth={player.style.strokeWidth}
+          strokeWidth={depthStroke(player.style.strokeWidth)}
           shadowEnabled={!!isThreeDView}
           shadowColor="#000000"
           shadowOpacity={isThreeDView ? 0.28 : 0}
@@ -316,7 +343,7 @@ export default function BoardObject({
           </Group>
         )}
         {hasLabel && (
-          <Group rotation={labelRotation}>
+          <Group rotation={labelRotation} scaleY={textForeshorten}>
             <Text
               text={circleText}
               width={circleTextSize}
@@ -336,6 +363,7 @@ export default function BoardObject({
             rotation={labelRotation}
             x={belowOffset.x}
             y={belowOffset.y}
+            scaleY={textForeshorten}
           >
             <Text
               text={belowText}
@@ -396,7 +424,7 @@ export default function BoardObject({
           radius={Math.max(0.8, playerTokenSize * 0.6)}
           fill={ball.style.fill}
           stroke={ball.style.stroke}
-          strokeWidth={ball.style.strokeWidth}
+          strokeWidth={depthStroke(ball.style.strokeWidth)}
         />
       </Group>
     );
@@ -409,7 +437,7 @@ export default function BoardObject({
         {...commonProps}
         radius={circle.radius}
         stroke={circle.style.stroke}
-        strokeWidth={circle.style.strokeWidth}
+        strokeWidth={depthStroke(circle.style.strokeWidth)}
         fill={circle.style.fill}
         dash={circle.style.dash}
         ref={(node) => {
@@ -458,7 +486,7 @@ export default function BoardObject({
             data={coneSvg.bodyPath}
             fill={cone.style.fill}
             stroke={cone.style.stroke}
-            strokeWidth={cone.style.strokeWidth}
+            strokeWidth={depthStroke(cone.style.strokeWidth)}
             lineJoin="bevel"
           />
           <Ellipse
@@ -468,7 +496,7 @@ export default function BoardObject({
             radiusY={coneSvg.topRy}
             fill="rgba(0,0,0,0.35)"
             stroke={cone.style.stroke}
-            strokeWidth={cone.style.strokeWidth}
+            strokeWidth={depthStroke(cone.style.strokeWidth)}
           />
           <Ellipse
             x={coneSvg.topX}
@@ -477,7 +505,7 @@ export default function BoardObject({
             radiusY={coneSvg.topRy}
             fill="transparent"
             stroke={cone.style.stroke}
-            strokeWidth={cone.style.strokeWidth}
+            strokeWidth={depthStroke(cone.style.strokeWidth)}
           />
         </Group>
       </Group>
@@ -521,7 +549,7 @@ export default function BoardObject({
             data={goalSvg.path}
             fill={goal.style.fill}
             stroke={goal.style.stroke}
-            strokeWidth={goal.style.strokeWidth}
+            strokeWidth={depthStroke(goal.style.strokeWidth)}
             lineJoin="bevel"
           />
         </Group>
@@ -554,7 +582,7 @@ export default function BoardObject({
         height={rect.height}
         cornerRadius={rect.cornerRadius}
         stroke={rect.style.stroke}
-        strokeWidth={rect.style.strokeWidth}
+        strokeWidth={depthStroke(rect.style.strokeWidth)}
         fill={rect.style.fill}
         dash={rect.style.dash}
         ref={(node) => {
@@ -575,7 +603,7 @@ export default function BoardObject({
         points={points}
         closed
         stroke={triangle.style.stroke}
-        strokeWidth={triangle.style.strokeWidth}
+        strokeWidth={depthStroke(triangle.style.strokeWidth)}
         fill={triangle.style.fill}
         dash={triangle.style.dash}
         ref={(node) => {
@@ -608,10 +636,11 @@ export default function BoardObject({
         })()
       : arrow.points;
     const outlineStroke = arrow.style.outlineStroke;
+    const arrowStrokeWidth = depthStroke(arrow.style.strokeWidth);
     const outlineWidth = outlineStroke
-      ? getLineOutlineWidth(arrow.style.strokeWidth)
+      ? getLineOutlineWidth(arrowStrokeWidth)
       : 0;
-    const headSize = getArrowHeadSize(arrow.style.strokeWidth);
+    const headSize = getArrowHeadSize(arrowStrokeWidth);
     return (
       <Group>
         {outlineStroke && outlineWidth > 0 && (
@@ -620,7 +649,7 @@ export default function BoardObject({
             points={points}
             bezier={arrow.curved ?? false}
             stroke={outlineStroke}
-            strokeWidth={arrow.style.strokeWidth + outlineWidth * 2}
+            strokeWidth={arrowStrokeWidth + outlineWidth * 2}
             fill={outlineStroke}
             pointerLength={arrow.head ? headSize.length + outlineWidth * 2 : 0}
             pointerWidth={arrow.head ? headSize.width + outlineWidth * 2 : 0}
@@ -633,7 +662,7 @@ export default function BoardObject({
           points={points}
           bezier={arrow.curved ?? false}
           stroke={arrow.style.stroke}
-          strokeWidth={arrow.style.strokeWidth}
+          strokeWidth={arrowStrokeWidth}
           fill={arrow.style.stroke}
           pointerLength={arrow.head ? headSize.length : 0}
           pointerWidth={arrow.head ? headSize.width : 0}
@@ -657,6 +686,7 @@ export default function BoardObject({
     return (
       <Group
         {...commonProps}
+        scaleY={commonProps.scaleY * textForeshorten}
         ref={(node) => {
           if (node) {
             registerNode(object.id, node);
@@ -689,8 +719,9 @@ export default function BoardObject({
   if (object.type === "path") {
     const path = object as MovementPath;
     const outlineStroke = path.style.outlineStroke;
+    const pathStrokeWidth = depthStroke(path.style.strokeWidth);
     const outlineWidth = outlineStroke
-      ? getLineOutlineWidth(path.style.strokeWidth)
+      ? getLineOutlineWidth(pathStrokeWidth)
       : 0;
     return (
       <Group>
@@ -699,7 +730,7 @@ export default function BoardObject({
             {...commonProps}
             points={path.points}
             stroke={outlineStroke}
-            strokeWidth={path.style.strokeWidth + outlineWidth * 2}
+            strokeWidth={pathStrokeWidth + outlineWidth * 2}
             dash={path.style.dash}
             tension={0.45}
             lineCap="round"
@@ -711,7 +742,7 @@ export default function BoardObject({
           {...commonProps}
           points={path.points}
           stroke={path.style.stroke}
-          strokeWidth={path.style.strokeWidth}
+          strokeWidth={pathStrokeWidth}
           dash={path.style.dash}
           tension={0.45}
           lineCap="round"

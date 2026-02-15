@@ -499,6 +499,16 @@ export default function BoardCanvas({
     });
     return map;
   }, [renderObjects]);
+  const getThreeDDepthFactor = (y: number) => {
+    if (!isThreeDView) {
+      return 1;
+    }
+    const range = Math.max(0.001, bounds.height);
+    const t = Math.max(0, Math.min(1, (y - bounds.y) / range));
+    const strength = Math.max(0, Math.min(1, threeDStrength / 100));
+    const minFactor = 1 - strength * 0.28;
+    return minFactor + (1 - minFactor) * t;
+  };
   const effectiveWidth = Math.max(1, rotatedBounds.maxX - rotatedBounds.minX);
   const effectiveHeight = Math.max(1, rotatedBounds.maxY - rotatedBounds.minY);
   const baseScale = Math.min(
@@ -921,6 +931,27 @@ export default function BoardCanvas({
               overlay={board.pitchOverlay}
               overlayText={board.pitchOverlayText ?? false}
             />
+            {isThreeDView ? (
+              <Rect
+                x={bounds.x}
+                y={bounds.y}
+                width={bounds.width}
+                height={bounds.height}
+                listening={false}
+                fillLinearGradientStartPoint={{ x: 0, y: bounds.y }}
+                fillLinearGradientEndPoint={{ x: 0, y: bounds.y + bounds.height }}
+                fillLinearGradientColorStops={[
+                  0,
+                  "rgba(8,16,18,0.26)",
+                  0.35,
+                  "rgba(6,14,16,0.16)",
+                  0.65,
+                  "rgba(255,255,255,0.03)",
+                  1,
+                  "rgba(255,255,255,0.08)",
+                ]}
+              />
+            ) : null}
             {nonPlayerObjects.map((object) => (
               <BoardObject
                 key={object.id}
@@ -942,6 +973,11 @@ export default function BoardCanvas({
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
                 labelRotation={labelRotation}
                 isThreeDView={isThreeDView}
+                threeDStrength={threeDStrength}
+                threeDDepthRange={{
+                  minY: bounds.y,
+                  maxY: bounds.y + bounds.height,
+                }}
                 readOnly={isCanvasReadOnly}
                 onSelect={handleSelect}
                 onDragStart={() => pushHistory(clone(objects))}
@@ -975,7 +1011,11 @@ export default function BoardCanvas({
                 outlineStroke: "#111111",
               };
               const strokeWidth = style.strokeWidth + (isSelectedLink ? 0.1 : 0);
-              const outlineWidth = getLineOutlineWidth(strokeWidth);
+              const avgY =
+                points.reduce((sum, point) => sum + point.y, 0) / points.length;
+              const depthFactor = getThreeDDepthFactor(avgY);
+              const depthStrokeWidth = Math.max(0.05, strokeWidth * depthFactor);
+              const outlineWidth = getLineOutlineWidth(depthStrokeWidth);
               const outlineStroke = style.outlineStroke;
               return (
                 <Group key={link.id}>
@@ -983,7 +1023,7 @@ export default function BoardCanvas({
                     <Line
                       points={points.flatMap((point) => [point.x, point.y])}
                       stroke={outlineStroke}
-                      strokeWidth={strokeWidth + outlineWidth * 2}
+                      strokeWidth={depthStrokeWidth + outlineWidth * 2}
                       lineCap="round"
                       lineJoin="round"
                       listening={false}
@@ -992,7 +1032,7 @@ export default function BoardCanvas({
                   <Line
                     points={points.flatMap((point) => [point.x, point.y])}
                     stroke={style.stroke}
-                    strokeWidth={strokeWidth}
+                    strokeWidth={depthStrokeWidth}
                     opacity={style.opacity}
                     lineCap="round"
                     lineJoin="round"
@@ -1031,6 +1071,11 @@ export default function BoardCanvas({
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
                 labelRotation={labelRotation}
                 isThreeDView={isThreeDView}
+                threeDStrength={threeDStrength}
+                threeDDepthRange={{
+                  minY: bounds.y,
+                  maxY: bounds.y + bounds.height,
+                }}
                 readOnly={isCanvasReadOnly}
                 onSelect={handleSelect}
                 onDragStart={() => pushHistory(clone(objects))}
