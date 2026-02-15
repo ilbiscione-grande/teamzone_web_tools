@@ -114,6 +114,16 @@ export default function BoardObject({
     const minScale = 1 - strength * 0.32;
     return minScale + (1 - minScale) * t;
   })();
+  const depthT = (() => {
+    if (!isThreeDView || !threeDDepthRange) {
+      return 1;
+    }
+    const range = Math.max(0.001, threeDDepthRange.maxY - threeDDepthRange.minY);
+    return Math.max(
+      0,
+      Math.min(1, (object.position.y - threeDDepthRange.minY) / range)
+    );
+  })();
   const depthStrokeFactor =
     isThreeDView && threeDDepthRange ? 0.72 + 0.28 * depthScale : 1;
   const depthStroke = (value: number) =>
@@ -122,6 +132,11 @@ export default function BoardObject({
     isThreeDView && threeDDepthRange
       ? 0.9 + 0.1 * depthScale
       : 1;
+  const ambientShadowEnabled = !!isThreeDView;
+  const depthEase = depthT * depthT;
+  const ambientShadowBlur = 0.14 + 1.05 * depthEase;
+  const ambientShadowOpacity = 0.04 + 0.2 * depthEase;
+  const ambientShadowOffsetY = 0.03 + 0.32 * depthEase;
 
   const commonProps = {
     x: object.position.x,
@@ -585,6 +600,11 @@ export default function BoardObject({
         strokeWidth={depthStroke(rect.style.strokeWidth)}
         fill={rect.style.fill}
         dash={rect.style.dash}
+        shadowEnabled={ambientShadowEnabled}
+        shadowColor="#000000"
+        shadowBlur={ambientShadowBlur}
+        shadowOpacity={ambientShadowOpacity}
+        shadowOffsetY={ambientShadowOffsetY}
         ref={(node) => {
           if (node) {
             registerNode(object.id, node);
@@ -606,6 +626,11 @@ export default function BoardObject({
         strokeWidth={depthStroke(triangle.style.strokeWidth)}
         fill={triangle.style.fill}
         dash={triangle.style.dash}
+        shadowEnabled={ambientShadowEnabled}
+        shadowColor="#000000"
+        shadowBlur={ambientShadowBlur}
+        shadowOpacity={ambientShadowOpacity}
+        shadowOffsetY={ambientShadowOffsetY}
         ref={(node) => {
           if (node) {
             registerNode(object.id, node);
@@ -667,6 +692,11 @@ export default function BoardObject({
           pointerLength={arrow.head ? headSize.length : 0}
           pointerWidth={arrow.head ? headSize.width : 0}
           dash={arrow.dashed ? [1, 1] : []}
+          shadowEnabled={ambientShadowEnabled}
+          shadowColor="#000000"
+          shadowBlur={ambientShadowBlur}
+          shadowOpacity={ambientShadowOpacity}
+          shadowOffsetY={ambientShadowOffsetY}
           ref={(node) => {
             if (node) {
               registerNode(object.id, node);
@@ -687,6 +717,11 @@ export default function BoardObject({
       <Group
         {...commonProps}
         scaleY={commonProps.scaleY * textForeshorten}
+        shadowEnabled={ambientShadowEnabled}
+        shadowColor="#000000"
+        shadowBlur={ambientShadowBlur}
+        shadowOpacity={ambientShadowOpacity}
+        shadowOffsetY={ambientShadowOffsetY}
         ref={(node) => {
           if (node) {
             registerNode(object.id, node);
@@ -747,6 +782,11 @@ export default function BoardObject({
           tension={0.45}
           lineCap="round"
           lineJoin="round"
+          shadowEnabled={ambientShadowEnabled}
+          shadowColor="#000000"
+          shadowBlur={ambientShadowBlur}
+          shadowOpacity={ambientShadowOpacity}
+          shadowOffsetY={ambientShadowOffsetY}
           ref={(node) => {
             if (node) {
               registerNode(object.id, node);

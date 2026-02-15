@@ -1017,6 +1017,12 @@ export default function BoardCanvas({
               const depthStrokeWidth = Math.max(0.05, strokeWidth * depthFactor);
               const outlineWidth = getLineOutlineWidth(depthStrokeWidth);
               const outlineStroke = style.outlineStroke;
+              const depthRange = Math.max(0.001, bounds.height);
+              const depthT = Math.max(0, Math.min(1, (avgY - bounds.y) / depthRange));
+              const depthEase = depthT * depthT;
+              const linkShadowBlur = 0.14 + 1.05 * depthEase;
+              const linkShadowOpacity = 0.04 + 0.2 * depthEase;
+              const linkShadowOffsetY = 0.03 + 0.32 * depthEase;
               return (
                 <Group key={link.id}>
                   {outlineStroke && outlineWidth > 0 && (
@@ -1036,6 +1042,11 @@ export default function BoardCanvas({
                     opacity={style.opacity}
                     lineCap="round"
                     lineJoin="round"
+                    shadowEnabled={isThreeDView}
+                    shadowColor="#000000"
+                    shadowBlur={isThreeDView ? linkShadowBlur : 0}
+                    shadowOpacity={isThreeDView ? linkShadowOpacity : 0}
+                    shadowOffsetY={isThreeDView ? linkShadowOffsetY : 0}
                     onClick={(event) => {
                       event.cancelBubble = true;
                       setSelection([]);
