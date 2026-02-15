@@ -28,6 +28,7 @@ export type Board = {
   pitchView: PitchView;
   pitchRotation?: 0 | 180;
   threeDView?: boolean;
+  threeDStrength?: number;
   pitchOverlay: PitchOverlay;
   pitchOverlayText: boolean;
   watermarkEnabled?: boolean;

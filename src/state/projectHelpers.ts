@@ -262,6 +262,7 @@ export const createEmptyBoard = (
   pitchView: overrides?.pitchView ?? "FULL",
   pitchRotation: overrides?.pitchRotation ?? 0,
   threeDView: false,
+  threeDStrength: 55,
   pitchOverlay: overrides?.pitchOverlay ?? "NONE",
   pitchOverlayText: false,
   watermarkEnabled: true,

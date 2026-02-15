@@ -85,6 +85,7 @@ export default function BoardCanvas({
   const project = useProjectStore((state) => state.project);
   const isSharedReadOnly = readOnly || (project?.isShared ?? false);
   const isThreeDView = board.threeDView ?? false;
+  const threeDStrength = Math.max(0, Math.min(100, board.threeDStrength ?? 55));
   const isCanvasReadOnly = isSharedReadOnly || isThreeDView;
   const addObject = useProjectStore((state) => state.addObject);
   const updateObject = useProjectStore((state) => state.updateObject);
@@ -505,12 +506,14 @@ export default function BoardCanvas({
     size.height / effectiveHeight
   );
   const stageScale = baseScale * lockedViewport.zoom;
-  // In 3D preview we leave extra vertical/headroom so the full pitch stays visible.
-  const effectiveStageScale = stageScale * (isThreeDView ? 0.86 : 1);
+  // In 3D preview we leave extra headroom so the full pitch stays visible.
+  const threeDScaleFactor = 1 - (threeDStrength / 100) * 0.22;
+  const effectiveStageScale = stageScale * (isThreeDView ? threeDScaleFactor : 1);
   const baseOffsetX = forcePortrait
     ? -rotatedBounds.minX * baseScale
     : (size.width - effectiveWidth * baseScale) / 2 -
       rotatedBounds.minX * baseScale;
+  const threeDOffsetX = isThreeDView ? size.width * 0.015 : 0;
   const baseOffsetY =
     (size.height - effectiveHeight * baseScale) / 2 - rotatedBounds.minY * baseScale;
 
@@ -845,6 +848,25 @@ export default function BoardCanvas({
                 </svg>
                 <span>{isThreeDView ? "3D view: on" : "3D view: off"}</span>
               </button>
+              {isThreeDView ? (
+                <label className="flex flex-col gap-1 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 text-xs text-[var(--ink-1)]">
+                  <span className="flex items-center justify-between text-[10px] uppercase tracking-[0.18em]">
+                    <span>3D strength</span>
+                    <span>{threeDStrength}%</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={threeDStrength}
+                    onChange={(event) => {
+                      const next = Number(event.target.value);
+                      updateBoard(board.id, { threeDStrength: next });
+                    }}
+                  />
+                </label>
+              ) : null}
             </div>
           )}
         </div>
@@ -854,8 +876,7 @@ export default function BoardCanvas({
         style={
           isThreeDView
             ? {
-                transform:
-                  "perspective(1200px) rotateX(24deg) scale(0.9) translateY(6%)",
+                transform: `perspective(1200px) rotateX(${12 + (threeDStrength / 100) * 22}deg) translateX(2.5%) translateY(${2 + (threeDStrength / 100) * 6}%) scale(${1 - (threeDStrength / 100) * 0.12})`,
                 transformOrigin: "50% 0%",
               }
             : undefined
@@ -868,7 +889,7 @@ export default function BoardCanvas({
           height={size.height}
           scaleX={effectiveStageScale}
           scaleY={effectiveStageScale}
-          x={baseOffsetX + lockedViewport.offsetX}
+          x={baseOffsetX + threeDOffsetX + lockedViewport.offsetX}
           y={baseOffsetY + lockedViewport.offsetY}
           draggable={isPanning && !forcePortrait && !isCanvasReadOnly}
           onWheel={isCanvasReadOnly ? undefined : handleWheel}
