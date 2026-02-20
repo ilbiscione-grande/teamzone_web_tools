@@ -483,10 +483,22 @@ export default function BoardObject({
     const attachedPlayer = ball.attachedToId
       ? objects.find((item) => item.id === ball.attachedToId)
       : null;
-    const position = attachedPlayer
+    const normalizedOffset = (() => {
+      if (!attachedPlayer) {
+        return undefined;
+      }
+      const rawX = ball.offset?.x ?? defaultAttachOffset.x;
+      const rawY = ball.offset?.y ?? defaultAttachOffset.y;
+      const length = Math.hypot(rawX, rawY) || 1;
+      return {
+        x: (rawX / length) * defaultAttachDistance,
+        y: (rawY / length) * defaultAttachDistance,
+      };
+    })();
+    const position = attachedPlayer && normalizedOffset
       ? {
-          x: attachedPlayer.position.x + (ball.offset?.x ?? defaultAttachOffset.x),
-          y: attachedPlayer.position.y + (ball.offset?.y ?? defaultAttachOffset.y),
+          x: attachedPlayer.position.x + normalizedOffset.x,
+          y: attachedPlayer.position.y + normalizedOffset.y,
         }
       : ball.position;
     return (

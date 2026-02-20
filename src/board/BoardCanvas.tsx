@@ -603,7 +603,8 @@ export default function BoardCanvas({
       const dx = position.x - player.position.x;
       const dy = position.y - player.position.y;
       const len = Math.hypot(dx, dy) || 1;
-      const offsetLen = playerTokenSize + 1.2;
+      const ballRadius = Math.max(0.7, playerTokenSize * 0.52);
+      const offsetLen = playerTokenSize + ballRadius - 0.3;
       const offset = {
         x: (dx / len) * offsetLen,
         y: (dy / len) * offsetLen,
