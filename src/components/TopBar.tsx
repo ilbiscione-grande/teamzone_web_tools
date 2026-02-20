@@ -224,11 +224,10 @@ export default function TopBar() {
     setHideBetaBanner(stored === "true");
   }, []);
 
-  const activeBoardId = project.activeBoardId ?? project.boards[0]?.id;
-  const activeBoard = project.boards.find(
-    (board) => board.id === activeBoardId
-  );
-  const boardSquads = getBoardSquads(project, activeBoard ?? null);
+  const activeBoardId = project?.activeBoardId ?? project?.boards[0]?.id;
+  const activeBoard =
+    project?.boards.find((board) => board.id === activeBoardId) ?? null;
+  const boardSquads = getBoardSquads(project ?? null, activeBoard ?? null);
   const manageSquad = manageSide === "home" ? boardSquads.home : boardSquads.away;
   const editableSquad = manageSquad;
   const updateEditableSquad = (
@@ -238,16 +237,16 @@ export default function TopBar() {
       updateSquad(manageSquad.id, payload);
     }
   };
-  const isSharedView = project.isShared ?? false;
+  const isSharedView = project?.isShared ?? false;
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
-    [...index.map((item) => item.id), project.id].filter(Boolean)
+    [...index.map((item) => item.id), project?.id].filter(Boolean)
   ).size;
   const projectLimitReached =
     Number.isFinite(limits.maxProjects) && projectCount >= limits.maxProjects;
   const boardLimitReached =
     Number.isFinite(limits.maxBoards) &&
-    project.boards.length >= limits.maxBoards;
+    (project?.boards.length ?? 0) >= limits.maxBoards;
   const modeLabel =
     project?.settings?.mode ?? ("match" as "training" | "match" | "education");
   const modeText = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
@@ -370,6 +369,9 @@ export default function TopBar() {
   );
 
   useEffect(() => {
+    if (!project) {
+      return;
+    }
     if (!pdfOpen) {
       return;
     }
@@ -378,7 +380,7 @@ export default function TopBar() {
       return;
     }
     setPdfSelectedBoardIds(project.boards.map((board) => board.id));
-  }, [pdfOpen, pdfScope, project.boards, activeBoard]);
+  }, [pdfOpen, pdfScope, project, activeBoard]);
 
   if (!project) {
     return null;
