@@ -36,6 +36,7 @@ const toPositionAbbreviation = (value?: string) => {
 
 export default function SquadEditor() {
   const project = useProjectStore((state) => state.project);
+  const updateSquad = useProjectStore((state) => state.updateSquad);
   const setPlayerSide = useEditorStore((state) => state.setPlayerSide);
   const [activeSide, setActiveSide] = useState<"home" | "away">("home");
 
@@ -51,6 +52,26 @@ export default function SquadEditor() {
     () => (activeSquad?.players ?? []).filter((player) => player.active !== false),
     [activeSquad]
   );
+  const substitutes = activeSquad?.substituteIds ?? [];
+
+  const toggleCaptain = (playerId: string) => {
+    if (!activeSquad) {
+      return;
+    }
+    updateSquad(activeSquad.id, {
+      captainId: activeSquad.captainId === playerId ? undefined : playerId,
+    });
+  };
+
+  const toggleSubstitute = (playerId: string) => {
+    if (!activeSquad) {
+      return;
+    }
+    const next = substitutes.includes(playerId)
+      ? substitutes.filter((id) => id !== playerId)
+      : [...substitutes, playerId];
+    updateSquad(activeSquad.id, { substituteIds: next });
+  };
 
   if (!activeSquad) {
     return (
@@ -124,10 +145,12 @@ export default function SquadEditor() {
       </div>
 
       <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/30 p-2" data-scrollable>
-        <div className="grid grid-cols-[28px_minmax(0,1fr)_70px] items-center gap-2 px-2 pb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+        <div className="grid grid-cols-[28px_minmax(0,1fr)_70px_56px_56px] items-center gap-2 px-2 pb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
           <span>#</span>
           <span>Name</span>
           <span>Pos</span>
+          <span className="text-center">C</span>
+          <span className="text-center">Sub</span>
         </div>
         {visiblePlayers.length === 0 ? (
           <p className="px-2 py-3 text-[11px] text-[var(--ink-1)]">
@@ -138,13 +161,37 @@ export default function SquadEditor() {
             {visiblePlayers.map((player) => (
               <div
                 key={player.id}
-                className="grid grid-cols-[28px_minmax(0,1fr)_70px] items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5"
+                className="grid grid-cols-[28px_minmax(0,1fr)_70px_56px_56px] items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5"
               >
                 <span className="text-center text-[11px] text-[var(--ink-1)]">{player.number ?? ""}</span>
                 <span className="truncate text-[11px] text-[var(--ink-0)]">{player.name}</span>
                 <span className="truncate text-[10px] text-[var(--ink-1)]">
                   {toPositionAbbreviation(player.positionLabel)}
                 </span>
+                <div className="flex items-center justify-center">
+                  <button
+                    className={`h-4 w-4 rounded-full border ${
+                      activeSquad.captainId === player.id
+                        ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
+                        : "border-[var(--line)]"
+                    }`}
+                    onClick={() => toggleCaptain(player.id)}
+                    title="Captain"
+                    aria-label="Captain"
+                  />
+                </div>
+                <div className="flex items-center justify-center">
+                  <button
+                    className={`h-4 w-4 rounded-full border ${
+                      substitutes.includes(player.id)
+                        ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
+                        : "border-[var(--line)]"
+                    }`}
+                    onClick={() => toggleSubstitute(player.id)}
+                    title="Substitute"
+                    aria-label="Substitute"
+                  />
+                </div>
               </div>
             ))}
           </div>
