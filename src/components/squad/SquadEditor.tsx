@@ -145,10 +145,10 @@ export default function SquadEditor() {
       </div>
 
       <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/30 p-2" data-scrollable>
-        <div className="grid grid-cols-[28px_minmax(0,1fr)_70px_56px_56px] items-center gap-2 px-2 pb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+        <div className="grid grid-cols-[28px_minmax(0,_1fr)_52px_32px_40px] items-center gap-1 px-2 pb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
           <span>#</span>
-          <span>Name</span>
-          <span>Pos</span>
+          <span className="min-w-0 truncate">Name</span>
+          <span className="min-w-0 truncate">Pos</span>
           <span className="text-center">C</span>
           <span className="text-center">Sub</span>
         </div>
@@ -161,11 +161,11 @@ export default function SquadEditor() {
             {visiblePlayers.map((player) => (
               <div
                 key={player.id}
-                className="grid grid-cols-[28px_minmax(0,1fr)_70px_56px_56px] items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5"
+                className="grid grid-cols-[28px_minmax(0,_1fr)_52px_32px_40px] items-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5"
               >
                 <span className="text-center text-[11px] text-[var(--ink-1)]">{player.number ?? ""}</span>
-                <span className="truncate text-[11px] text-[var(--ink-0)]">{player.name}</span>
-                <span className="truncate text-[10px] text-[var(--ink-1)]">
+                <span className="min-w-0 truncate text-[11px] text-[var(--ink-0)]">{player.name}</span>
+                <span className="min-w-0 truncate text-[10px] text-[var(--ink-1)]">
                   {toPositionAbbreviation(player.positionLabel)}
                 </span>
                 <div className="flex items-center justify-center">
