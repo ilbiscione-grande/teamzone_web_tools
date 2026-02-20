@@ -529,6 +529,7 @@ export default function BoardCanvas({
 
   const {
     draft,
+    marquee,
     isPanning,
     handleWheel,
     handleMouseDown,
@@ -562,6 +563,7 @@ export default function BoardCanvas({
     },
     pushHistory,
     addObject,
+    selectByMarquee: (ids) => setSelection(ids),
     disablePanZoom: !!forcePortrait || isThreeDView,
   });
 
@@ -2023,6 +2025,18 @@ export default function BoardCanvas({
                 stroke="#ffffff"
                 dash={[1, 1]}
                 strokeWidth={0.3}
+              />
+            )}
+            {marquee && (
+              <Rect
+                x={Math.min(marquee.start.x, marquee.current.x)}
+                y={Math.min(marquee.start.y, marquee.current.y)}
+                width={Math.abs(marquee.current.x - marquee.start.x)}
+                height={Math.abs(marquee.current.y - marquee.start.y)}
+                stroke="#f9bf4a"
+                dash={[1, 1]}
+                strokeWidth={0.3}
+                fill="rgba(249,191,74,0.08)"
               />
             )}
           </Group>

@@ -46,6 +46,7 @@ type UseBoardInteractionsProps = {
   clearSelection: () => void;
   pushHistory: (snapshot: DrawableObject[]) => void;
   addObject: (boardId: string, frameIndex: number, object: DrawableObject) => void;
+  selectByMarquee: (ids: string[]) => void;
   disablePanZoom?: boolean;
 };
 
@@ -68,9 +69,14 @@ export const useBoardInteractions = ({
   clearSelection,
   pushHistory,
   addObject,
+  selectByMarquee,
   disablePanZoom = false,
 }: UseBoardInteractionsProps) => {
   const [draft, setDraft] = useState<DraftShape | null>(null);
+  const [marquee, setMarquee] = useState<{
+    start: { x: number; y: number };
+    current: { x: number; y: number };
+  } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const circleSnapTolerance = 0.08;
   const smoothPathPoints = (points: number[]) => {
@@ -208,66 +214,89 @@ export const useBoardInteractions = ({
       if (readOnly) {
         return;
       }
+      const pointer = stage.getPointerPosition();
+      if (!pointer) {
+        return;
+      }
+      const world = stageToWorld(pointer);
       if (!isShapeTool) {
+        if (activeTool === "player") {
+          setMarquee({
+            start: world,
+            current: world,
+          });
+          return;
+        }
         if (disablePanZoom) {
           return;
         }
         setIsPanning(true);
         return;
       }
-    } else {
+      if (activeTool === "circle") {
+        setDraft({
+          type: "circle",
+          start: world,
+          current: world,
+          constrain: event.evt.shiftKey,
+        });
+      }
+      if (activeTool === "rect") {
+        setDraft({
+          type: "rect",
+          start: world,
+          current: world,
+          constrain: event.evt.shiftKey,
+        });
+      }
+      if (activeTool === "triangle") {
+        setDraft({
+          type: "triangle",
+          start: world,
+          current: world,
+          constrain: event.evt.shiftKey,
+        });
+      }
+      if (isLineTool) {
+        setDraft({
+          type: "arrow",
+          start: world,
+          current: world,
+          constrain: event.evt.shiftKey,
+        });
+      }
+      if (isFreehandTool) {
+        setDraft({
+          type: "path",
+          start: world,
+          current: world,
+          points: [0, 0],
+          constrain: false,
+        });
+      }
       return;
     }
-    const pointer = stage.getPointerPosition();
-    if (!pointer) {
-      return;
-    }
-    const world = stageToWorld(pointer);
 
-    if (activeTool === "circle") {
-      setDraft({
-        type: "circle",
-        start: world,
-        current: world,
-        constrain: event.evt.shiftKey,
-      });
-    }
-    if (activeTool === "rect") {
-      setDraft({
-        type: "rect",
-        start: world,
-        current: world,
-        constrain: event.evt.shiftKey,
-      });
-    }
-    if (activeTool === "triangle") {
-      setDraft({
-        type: "triangle",
-        start: world,
-        current: world,
-        constrain: event.evt.shiftKey,
-      });
-    }
-    if (isLineTool) {
-      setDraft({
-        type: "arrow",
-        start: world,
-        current: world,
-        constrain: event.evt.shiftKey,
-      });
-    }
-    if (isFreehandTool) {
-      setDraft({
-        type: "path",
-        start: world,
-        current: world,
-        points: [0, 0],
-        constrain: false,
-      });
-    }
+    return;
   };
 
   const handleMouseMove = (event: Konva.KonvaEventObject<MouseEvent>) => {
+    if (marquee) {
+      const stage = stageRef.current;
+      if (!stage) {
+        return;
+      }
+      const pointer = stage.getPointerPosition();
+      if (!pointer) {
+        return;
+      }
+      const world = stageToWorld(pointer);
+      setMarquee({
+        ...marquee,
+        current: world,
+      });
+      return;
+    }
     if (!draft) {
       return;
     }
@@ -438,6 +467,30 @@ export const useBoardInteractions = ({
   };
 
   const handleMouseUp = () => {
+    if (marquee) {
+      const minX = Math.min(marquee.start.x, marquee.current.x);
+      const maxX = Math.max(marquee.start.x, marquee.current.x);
+      const minY = Math.min(marquee.start.y, marquee.current.y);
+      const maxY = Math.max(marquee.start.y, marquee.current.y);
+      const width = maxX - minX;
+      const height = maxY - minY;
+      const isDragSelection = width > 0.8 || height > 0.8;
+      if (isDragSelection) {
+        const selectedIds = objects
+          .filter((item) => item.type === "player")
+          .filter(
+            (item) =>
+              item.position.x >= minX &&
+              item.position.x <= maxX &&
+              item.position.y >= minY &&
+              item.position.y <= maxY
+          )
+          .map((item) => item.id);
+        selectByMarquee(selectedIds);
+      }
+      setMarquee(null);
+      return;
+    }
     if (draft) {
       commitDraft();
     }
@@ -650,6 +703,7 @@ export const useBoardInteractions = ({
 
   return {
     draft,
+    marquee,
     isPanning,
     handleWheel,
     handleMouseDown,

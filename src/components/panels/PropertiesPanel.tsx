@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { DrawableObject, TextLabel } from "@/models";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
@@ -72,6 +73,10 @@ export default function PropertiesPanel({
   const canCopyAcrossFrames =
     board?.mode === "DYNAMIC" && (board?.frames.length ?? 0) > 1;
   const selected = objects.filter((item) => selection.includes(item.id));
+  const selectedPlayers = selected.filter(
+    (item): item is Extract<DrawableObject, { type: "player" }> =>
+      item.type === "player"
+  );
   const target = selected[0];
   const lockableSelected = selected.filter((item) =>
     ["cone", "goal", "circle", "rect", "triangle", "arrow", "text"].includes(
@@ -135,6 +140,15 @@ export default function PropertiesPanel({
       label: `Away: ${player.name} (${player.positionLabel})`,
     })) ?? []),
   ];
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [copyTargetMode, setCopyTargetMode] = useState<"same" | "other">(
+    "same"
+  );
+  const [copyTargetFrameIndex, setCopyTargetFrameIndex] = useState("0");
+  const [copyTargetBoardId, setCopyTargetBoardId] = useState("");
+  const otherBoards = (project?.boards ?? []).filter(
+    (item) => item.id !== board?.id
+  );
 
   if (!board) {
     return null;
@@ -293,6 +307,52 @@ export default function PropertiesPanel({
         addObject(board.id, targetIndex, clone(item));
       }
     });
+  };
+  const copyPlayersToTarget = (targetBoardId: string, targetFrameIndex: number) => {
+    if (!project || selectedPlayers.length === 0) {
+      return;
+    }
+    const targetBoard = project.boards.find((item) => item.id === targetBoardId);
+    if (!targetBoard) {
+      return;
+    }
+    if (targetFrameIndex < 0 || targetFrameIndex >= targetBoard.frames.length) {
+      return;
+    }
+    const targetObjects = targetBoard.frames[targetFrameIndex]?.objects ?? [];
+    pushHistory(clone(targetObjects));
+    selectedPlayers.forEach((player) => {
+      const existing = targetObjects.find((item) => item.id === player.id);
+      const { id, ...payload } = clone(player);
+      if (existing) {
+        updateObject(targetBoardId, targetFrameIndex, player.id, payload);
+      } else {
+        addObject(targetBoardId, targetFrameIndex, clone(player));
+      }
+    });
+  };
+  const openCopyDialog = () => {
+    setCopyTargetMode("same");
+    const fallbackFrame = Math.min(frameIndex + 1, board.frames.length - 1);
+    setCopyTargetFrameIndex(String(fallbackFrame));
+    setCopyTargetBoardId(otherBoards[0]?.id ?? "");
+    setCopyDialogOpen(true);
+  };
+  const handleCopyToTarget = () => {
+    if (copyTargetMode === "same") {
+      const targetFrameIndex = Number(copyTargetFrameIndex);
+      if (Number.isNaN(targetFrameIndex) || targetFrameIndex === frameIndex) {
+        return;
+      }
+      copyPlayersToTarget(board.id, targetFrameIndex);
+      setCopyDialogOpen(false);
+      return;
+    }
+    if (!copyTargetBoardId) {
+      return;
+    }
+    copyPlayersToTarget(copyTargetBoardId, 0);
+    setCopyDialogOpen(false);
   };
 
   return (
@@ -559,6 +619,108 @@ export default function PropertiesPanel({
                   Copy to next frame
                 </button>
               </div>
+            </div>
+          )}
+          {selectedPlayers.length > 0 && (
+            <div className="rounded-2xl border border-[var(--line)] p-3">
+              <p className="text-[11px] uppercase text-[var(--ink-1)]">
+                Players
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={openCopyDialog}
+                >
+                  Kopiera till...
+                </button>
+              </div>
+              {copyDialogOpen && (
+                <div className="mt-3 space-y-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/60 p-2">
+                  <label className="flex items-center gap-2 text-[11px]">
+                    <input
+                      type="radio"
+                      name="copy-target-mode"
+                      checked={copyTargetMode === "same"}
+                      onChange={() => setCopyTargetMode("same")}
+                    />
+                    Annan frame i samma board
+                  </label>
+                  {copyTargetMode === "same" && (
+                    <select
+                      className="h-8 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)]"
+                      value={copyTargetFrameIndex}
+                      onChange={(event) =>
+                        setCopyTargetFrameIndex(event.target.value)
+                      }
+                    >
+                      {board.frames.map((frame, index) => (
+                        <option
+                          key={frame.id}
+                          value={String(index)}
+                          disabled={index === frameIndex}
+                          className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                        >
+                          {frame.name} {index === frameIndex ? "(current)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <label className="flex items-center gap-2 text-[11px]">
+                    <input
+                      type="radio"
+                      name="copy-target-mode"
+                      checked={copyTargetMode === "other"}
+                      onChange={() => setCopyTargetMode("other")}
+                    />
+                    Första frame i annan board
+                  </label>
+                  {copyTargetMode === "other" && (
+                    <select
+                      className="h-8 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)]"
+                      value={copyTargetBoardId}
+                      onChange={(event) => setCopyTargetBoardId(event.target.value)}
+                    >
+                      {otherBoards.length === 0 ? (
+                        <option
+                          value=""
+                          className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                        >
+                          Inga andra boards
+                        </option>
+                      ) : (
+                        otherBoards.map((item) => (
+                          <option
+                            key={item.id}
+                            value={item.id}
+                            className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                          >
+                            {item.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={handleCopyToTarget}
+                      disabled={
+                        (copyTargetMode === "same" &&
+                          Number(copyTargetFrameIndex) === frameIndex) ||
+                        (copyTargetMode === "other" && !copyTargetBoardId)
+                      }
+                    >
+                      Copy players
+                    </button>
+                    <button
+                      className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                      onClick={() => setCopyDialogOpen(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
