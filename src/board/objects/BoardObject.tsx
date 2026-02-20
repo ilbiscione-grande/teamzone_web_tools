@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Arc,
   Arrow,
   Circle,
   Ellipse,
@@ -455,11 +454,10 @@ export default function BoardObject({
         }
       : ball.position;
     const ballRadius = Math.max(0.8, playerTokenSize * 0.6);
-    const borderWidth = Math.max(0.03, ballRadius * 0.045);
-    const centerPentagonRadius = ballRadius * 0.31;
-    const ringPentagonRadius = ballRadius * 0.245;
-    const ringDistance = ballRadius * 0.62;
-    const seamWidth = Math.max(0.03, ballRadius * 0.075);
+    const borderWidth = Math.max(0.02, ballRadius * 0.03);
+    const centerPentagonRadius = ballRadius * 0.3;
+    const ringPentagonRadius = ballRadius * 0.2;
+    const ringDistance = ballRadius * 0.69;
     const centerPentagon = regularPolygonPoints(5, centerPentagonRadius);
     const ringPentagon = regularPolygonPoints(5, ringPentagonRadius);
     return (
@@ -511,41 +509,10 @@ export default function BoardObject({
                 x={Math.cos(angle) * ringDistance}
                 y={Math.sin(angle) * ringDistance}
                 points={ringPentagon}
+                rotation={(angle * 180) / Math.PI + 90}
                 closed
                 fill="#111111"
                 strokeEnabled={false}
-              />
-            );
-          })}
-          {[0, 1, 2, 3, 4].map((index) => {
-            const angle = -Math.PI / 2 + (index * Math.PI * 2) / 5;
-            return (
-              <Line
-                key={`ball-seam-${index}`}
-                points={[
-                  Math.cos(angle) * centerPentagonRadius,
-                  Math.sin(angle) * centerPentagonRadius,
-                  Math.cos(angle) * (ballRadius * 0.92),
-                  Math.sin(angle) * (ballRadius * 0.92),
-                ]}
-                stroke="#111111"
-                strokeWidth={seamWidth}
-                lineCap="round"
-                listening={false}
-              />
-            );
-          })}
-          {[0, 1, 2, 3, 4].map((index) => {
-            const startAngle = -72 + index * 72;
-            return (
-              <Arc
-                key={`ball-arc-${index}`}
-                innerRadius={ballRadius * 0.88}
-                outerRadius={ballRadius * 0.95}
-                angle={20}
-                rotation={startAngle}
-                fill="#111111"
-                listening={false}
               />
             );
           })}
