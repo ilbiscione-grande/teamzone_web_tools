@@ -46,6 +46,7 @@ export default function SquadEditor() {
   );
 
   const activeSquad = activeSide === "home" ? boardSquads.home : boardSquads.away;
+  const totalPlayers = activeSquad?.players.length ?? 0;
   const visiblePlayers = useMemo(
     () => (activeSquad?.players ?? []).filter((player) => player.active !== false),
     [activeSquad]
@@ -118,7 +119,7 @@ export default function SquadEditor() {
       <div className="mt-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3">
         <p className="text-sm text-[var(--ink-0)]">{activeSquad.name}</p>
         <p className="mt-1 text-[11px] text-[var(--ink-1)]">
-          {visiblePlayers.length} players
+          {visiblePlayers.length} of {totalPlayers} players shown
         </p>
       </div>
 
@@ -128,20 +129,26 @@ export default function SquadEditor() {
           <span>Name</span>
           <span>Pos</span>
         </div>
-        <div className="space-y-1">
-          {visiblePlayers.map((player) => (
-            <div
-              key={player.id}
-              className="grid grid-cols-[28px_minmax(0,1fr)_70px] items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5"
-            >
-              <span className="text-center text-[11px] text-[var(--ink-1)]">{player.number ?? ""}</span>
-              <span className="truncate text-[11px] text-[var(--ink-0)]">{player.name}</span>
-              <span className="truncate text-[10px] text-[var(--ink-1)]">
-                {toPositionAbbreviation(player.positionLabel)}
-              </span>
-            </div>
-          ))}
-        </div>
+        {visiblePlayers.length === 0 ? (
+          <p className="px-2 py-3 text-[11px] text-[var(--ink-1)]">
+            No players selected for Squad view. Enable &quot;Show in Squad&quot; in Manage teams.
+          </p>
+        ) : (
+          <div className="space-y-1">
+            {visiblePlayers.map((player) => (
+              <div
+                key={player.id}
+                className="grid grid-cols-[28px_minmax(0,1fr)_70px] items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5"
+              >
+                <span className="text-center text-[11px] text-[var(--ink-1)]">{player.number ?? ""}</span>
+                <span className="truncate text-[11px] text-[var(--ink-0)]">{player.name}</span>
+                <span className="truncate text-[10px] text-[var(--ink-1)]">
+                  {toPositionAbbreviation(player.positionLabel)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
