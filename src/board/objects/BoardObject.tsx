@@ -475,7 +475,7 @@ export default function BoardObject({
     const ball = object as BallToken;
     const ballRadius = Math.max(0.7, playerTokenSize * 0.52);
     // Keep a slight overlap so the ball visually touches the player ring.
-    const defaultAttachDistance = playerTokenSize + ballRadius - 0.18;
+    const defaultAttachDistance = playerTokenSize + ballRadius - 0.3;
     const defaultAttachOffset = {
       x: defaultAttachDistance / Math.sqrt(2),
       y: -defaultAttachDistance / Math.sqrt(2),
