@@ -58,10 +58,14 @@ export default function NotesMarkdown({ text, className }: NotesMarkdownProps) {
     if (paragraphLines.length === 0) {
       return;
     }
-    const content = paragraphLines.join(" ");
     blocks.push(
       <p key={`p-${paragraphIndex}`} className="mb-2">
-        {parseInline(content, `p-${paragraphIndex}`)}
+        {paragraphLines.map((line, lineIndex) => (
+          <span key={`p-${paragraphIndex}-l-${lineIndex}`}>
+            {lineIndex > 0 ? <br /> : null}
+            {parseInline(line, `p-${paragraphIndex}-l-${lineIndex}`)}
+          </span>
+        ))}
       </p>
     );
     paragraphLines = [];
