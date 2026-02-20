@@ -111,7 +111,6 @@ function BallSprite({ radius }: { radius: number }) {
       y={-radius}
       width={radius * 2}
       height={radius * 2}
-      listening={false}
     />
   );
 }
@@ -483,7 +482,7 @@ export default function BoardObject({
           y: attachedPlayer.position.y + (ball.offset?.y ?? -1.5),
         }
       : ball.position;
-    const ballRadius = Math.max(0.8, playerTokenSize * 0.6);
+    const ballRadius = Math.max(0.7, playerTokenSize * 0.52);
     return (
       <Group
         {...commonProps}
