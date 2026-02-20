@@ -315,7 +315,7 @@ export default function BoardObject({
     };
     const belowOffset = rotateOffset(
       0,
-      playerTokenSize + 0.6 + belowTextHeight / 2,
+      playerTokenSize + 0.28 + belowTextHeight / 2,
       labelRotation
     );
     const hasAttachedBall = objects.some(
@@ -473,16 +473,21 @@ export default function BoardObject({
 
   if (object.type === "ball") {
     const ball = object as BallToken;
+    const ballRadius = Math.max(0.7, playerTokenSize * 0.52);
+    const defaultAttachDistance = playerTokenSize + ballRadius - 0.04;
+    const defaultAttachOffset = {
+      x: defaultAttachDistance / Math.sqrt(2),
+      y: -defaultAttachDistance / Math.sqrt(2),
+    };
     const attachedPlayer = ball.attachedToId
       ? objects.find((item) => item.id === ball.attachedToId)
       : null;
     const position = attachedPlayer
       ? {
-          x: attachedPlayer.position.x + (ball.offset?.x ?? 1.5),
-          y: attachedPlayer.position.y + (ball.offset?.y ?? -1.5),
+          x: attachedPlayer.position.x + (ball.offset?.x ?? defaultAttachOffset.x),
+          y: attachedPlayer.position.y + (ball.offset?.y ?? defaultAttachOffset.y),
         }
       : ball.position;
-    const ballRadius = Math.max(0.7, playerTokenSize * 0.52);
     return (
       <Group
         {...commonProps}
