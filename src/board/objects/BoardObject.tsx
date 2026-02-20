@@ -455,10 +455,11 @@ export default function BoardObject({
       : ball.position;
     const ballRadius = Math.max(0.8, playerTokenSize * 0.6);
     const borderWidth = Math.max(0.03, ballRadius * 0.05);
-    const centerPentagonRadius = ballRadius * 0.3;
-    const ringPentagonRadius = ballRadius * 0.2;
-    const ringDistance = ballRadius * 0.69;
+    const centerPentagonRadius = ballRadius * 0.29;
+    const ringPentagonRadius = ballRadius * 0.245;
+    const ringDistance = ballRadius * 0.79;
     const seamWidth = Math.max(0.03, ballRadius * 0.07);
+    const rimRadius = ballRadius - borderWidth * 0.9;
     const centerPentagon = regularPolygonPoints(5, centerPentagonRadius);
     const ringPentagon = regularPolygonPoints(5, ringPentagonRadius);
     return (
@@ -493,15 +494,35 @@ export default function BoardObject({
           fill="#ffffff"
           stroke="#111111"
           strokeWidth={borderWidth}
+          shadowColor="#000000"
+          shadowBlur={Math.max(0.08, ballRadius * 0.32)}
+          shadowOpacity={0.26}
+          shadowOffsetY={Math.max(0.03, ballRadius * 0.08)}
+        />
+        <Circle
+          radius={rimRadius}
+          fillRadialGradientStartPoint={{ x: -ballRadius * 0.22, y: -ballRadius * 0.26 }}
+          fillRadialGradientStartRadius={Math.max(0.02, ballRadius * 0.08)}
+          fillRadialGradientEndPoint={{ x: 0, y: 0 }}
+          fillRadialGradientEndRadius={rimRadius}
+          fillRadialGradientColorStops={[
+            0,
+            "rgba(255,255,255,0.28)",
+            0.58,
+            "rgba(255,255,255,0.06)",
+            1,
+            "rgba(0,0,0,0.28)",
+          ]}
+          listening={false}
         />
         <Group
           clipFunc={(ctx) => {
             ctx.beginPath();
-            ctx.arc(0, 0, ballRadius - borderWidth * 0.9, 0, Math.PI * 2);
+            ctx.arc(0, 0, rimRadius, 0, Math.PI * 2);
             ctx.closePath();
           }}
         >
-          <Line points={centerPentagon} closed fill="#111111" strokeEnabled={false} />
+          <Line points={centerPentagon} closed fill="#101010" strokeEnabled={false} />
           {[0, 1, 2, 3, 4].map((index) => {
             const angle = -Math.PI / 2 + (index * Math.PI * 2) / 5;
             return (
@@ -512,30 +533,47 @@ export default function BoardObject({
                 points={ringPentagon}
                 rotation={(angle * 180) / Math.PI + 90}
                 closed
-                fill="#111111"
+                fill="#101010"
                 strokeEnabled={false}
               />
             );
           })}
           {[0, 1, 2, 3, 4].map((index) => {
             const angle = -Math.PI / 2 + (index * Math.PI * 2) / 5;
+            const controlAngle = angle + (index % 2 === 0 ? 0.22 : -0.22);
             return (
               <Line
                 key={`ball-seam-${index}`}
                 points={[
                   Math.cos(angle) * centerPentagonRadius,
                   Math.sin(angle) * centerPentagonRadius,
-                  Math.cos(angle) * (ballRadius * 0.86),
-                  Math.sin(angle) * (ballRadius * 0.86),
+                  Math.cos(controlAngle) * (ballRadius * 0.58),
+                  Math.sin(controlAngle) * (ballRadius * 0.58),
+                  Math.cos(angle) * (ballRadius * 0.9),
+                  Math.sin(angle) * (ballRadius * 0.9),
                 ]}
                 stroke="#111111"
                 strokeWidth={seamWidth}
                 lineCap="round"
+                tension={0.55}
                 listening={false}
               />
             );
           })}
         </Group>
+        <Ellipse
+          x={-ballRadius * 0.26}
+          y={-ballRadius * 26 / 100}
+          radiusX={ballRadius * 0.36}
+          radiusY={ballRadius * 0.23}
+          rotation={-25}
+          fillRadialGradientStartPoint={{ x: 0, y: 0 }}
+          fillRadialGradientStartRadius={0}
+          fillRadialGradientEndPoint={{ x: 0, y: 0 }}
+          fillRadialGradientEndRadius={ballRadius * 0.42}
+          fillRadialGradientColorStops={[0, "rgba(255,255,255,0.28)", 1, "rgba(255,255,255,0)"]}
+          listening={false}
+        />
       </Group>
     );
   }
