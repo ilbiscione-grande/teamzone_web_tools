@@ -455,11 +455,11 @@ export default function BoardObject({
         }
       : ball.position;
     const ballRadius = Math.max(0.8, playerTokenSize * 0.6);
-    const borderWidth = Math.max(0.08, depthStroke(ball.style.strokeWidth));
+    const borderWidth = Math.max(0.03, ballRadius * 0.045);
     const centerPentagonRadius = ballRadius * 0.31;
     const ringPentagonRadius = ballRadius * 0.245;
     const ringDistance = ballRadius * 0.62;
-    const seamWidth = Math.max(0.05, ballRadius * 0.1);
+    const seamWidth = Math.max(0.03, ballRadius * 0.075);
     const centerPentagon = regularPolygonPoints(5, centerPentagonRadius);
     const ringPentagon = regularPolygonPoints(5, ringPentagonRadius);
     return (
@@ -498,7 +498,7 @@ export default function BoardObject({
         <Group
           clipFunc={(ctx) => {
             ctx.beginPath();
-            ctx.arc(0, 0, ballRadius - borderWidth * 0.45, 0, Math.PI * 2);
+            ctx.arc(0, 0, ballRadius - borderWidth * 0.9, 0, Math.PI * 2);
             ctx.closePath();
           }}
         >
@@ -540,9 +540,9 @@ export default function BoardObject({
             return (
               <Arc
                 key={`ball-arc-${index}`}
-                innerRadius={ballRadius * 0.82}
-                outerRadius={ballRadius * 0.97}
-                angle={28}
+                innerRadius={ballRadius * 0.88}
+                outerRadius={ballRadius * 0.95}
+                angle={20}
                 rotation={startAngle}
                 fill="#111111"
                 listening={false}
