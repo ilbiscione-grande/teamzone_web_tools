@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import type { DrawableObject, TextLabel } from "@/models";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
@@ -72,10 +71,7 @@ export default function PropertiesPanel({
   const objects = board?.frames[frameIndex]?.objects ?? [];
   const canCopyAcrossFrames =
     board?.mode === "DYNAMIC" && (board?.frames.length ?? 0) > 1;
-  const selected = useMemo(
-    () => objects.filter((item) => selection.includes(item.id)),
-    [objects, selection]
-  );
+  const selected = objects.filter((item) => selection.includes(item.id));
   const target = selected[0];
   const lockableSelected = selected.filter((item) =>
     ["cone", "goal", "circle", "rect", "triangle", "arrow", "text"].includes(
@@ -88,11 +84,8 @@ export default function PropertiesPanel({
   const selectedLink = activeFrame?.playerLinks?.find(
     (link) => link.id === selectedLinkId
   );
-  const memoBoardSquads = useMemo(
-    () => getBoardSquads(project ?? null, board ?? null),
-    [project, board]
-  );
-  const playerNameById = useMemo(() => {
+  const memoBoardSquads = getBoardSquads(project ?? null, board ?? null);
+  const playerNameById = (() => {
     const map = new Map<string, string>();
     const squads = [memoBoardSquads.home, memoBoardSquads.away].filter(Boolean);
     squads.forEach((squad) => {
@@ -102,7 +95,7 @@ export default function PropertiesPanel({
       });
     });
     return map;
-  }, [memoBoardSquads]);
+  })();
   const selectedLinkStyle = selectedLink?.style ?? {
     stroke: "#f9bf4a",
     strokeWidth: 0.65,
@@ -111,6 +104,37 @@ export default function PropertiesPanel({
     opacity: 1,
     outlineStroke: "#111111",
   };
+  const squadPlayerById = (() => {
+    const map = new Map<
+      string,
+      typeof memoBoardSquads.all[number]["players"][number]
+    >();
+    memoBoardSquads.all.forEach((squad) => {
+      squad.players.forEach((player) => {
+        map.set(player.id, player);
+      });
+    });
+    return map;
+  })();
+  const squadIdByPlayerId = (() => {
+    const map = new Map<string, string>();
+    memoBoardSquads.all.forEach((squad) => {
+      squad.players.forEach((player) => {
+        map.set(player.id, squad.id);
+      });
+    });
+    return map;
+  })();
+  const playerOptions = [
+    ...(memoBoardSquads.home?.players.map((player) => ({
+      id: player.id,
+      label: `Home: ${player.name} (${player.positionLabel})`,
+    })) ?? []),
+    ...(memoBoardSquads.away?.players.map((player) => ({
+      id: player.id,
+      label: `Away: ${player.name} (${player.positionLabel})`,
+    })) ?? []),
+  ];
 
   if (!board) {
     return null;
@@ -270,38 +294,6 @@ export default function PropertiesPanel({
       }
     });
   };
-
-  const squadPlayerById = useMemo(() => {
-    const map = new Map<
-      string,
-      typeof memoBoardSquads.all[number]["players"][number]
-    >();
-    memoBoardSquads.all.forEach((squad) => {
-      squad.players.forEach((player) => {
-        map.set(player.id, player);
-      });
-    });
-    return map;
-  }, [memoBoardSquads]);
-  const squadIdByPlayerId = useMemo(() => {
-    const map = new Map<string, string>();
-    memoBoardSquads.all.forEach((squad) => {
-      squad.players.forEach((player) => {
-        map.set(player.id, squad.id);
-      });
-    });
-    return map;
-  }, [memoBoardSquads]);
-  const playerOptions = [
-    ...(memoBoardSquads.home?.players.map((player) => ({
-      id: player.id,
-      label: `Home: ${player.name} (${player.positionLabel})`,
-    })) ?? []),
-    ...(memoBoardSquads.away?.players.map((player) => ({
-      id: player.id,
-      label: `Away: ${player.name} (${player.positionLabel})`,
-    })) ?? []),
-  ];
 
   return (
     <div className="space-y-4 text-xs text-[var(--ink-1)]">

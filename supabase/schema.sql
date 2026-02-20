@@ -206,13 +206,14 @@ create index if not exists project_share_links_token_idx on project_share_links(
 alter table project_share_links enable row level security;
 
 drop policy if exists "Public can view project share links" on project_share_links;
+drop policy if exists "Users can view own project share links" on project_share_links;
 drop policy if exists "Users can insert project share links" on project_share_links;
 drop policy if exists "Users can delete project share links" on project_share_links;
 
-create policy "Public can view project share links"
+create policy "Users can view own project share links"
 on project_share_links
 for select
-using (true);
+using (auth.uid() = user_id);
 
 create policy "Users can insert project share links"
 on project_share_links
@@ -223,6 +224,34 @@ create policy "Users can delete project share links"
 on project_share_links
 for delete
 using (auth.uid() = user_id);
+
+create or replace function public.get_project_share_link(p_token text)
+returns table (
+  id uuid,
+  token text,
+  project_id text,
+  project_name text,
+  project_data jsonb,
+  created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    l.id,
+    l.token,
+    l.project_id,
+    l.project_name,
+    l.project_data,
+    l.created_at
+  from public.project_share_links l
+  where l.token = p_token
+  limit 1;
+$$;
+
+revoke all on function public.get_project_share_link(text) from public;
+grant execute on function public.get_project_share_link(text) to anon, authenticated;
 
 create table if not exists public_boards (
   id uuid primary key default gen_random_uuid(),

@@ -125,10 +125,6 @@ export default function TopBar() {
     2.6,
   ];
 
-  if (!project) {
-    return null;
-  }
-
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -383,6 +379,10 @@ export default function TopBar() {
     }
     setPdfSelectedBoardIds(project.boards.map((board) => board.id));
   }, [pdfOpen, pdfScope, project.boards, activeBoard]);
+
+  if (!project) {
+    return null;
+  }
 
   const onExport = () => {
     if (!can(plan, "project.export")) {

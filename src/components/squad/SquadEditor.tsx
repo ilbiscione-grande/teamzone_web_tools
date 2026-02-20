@@ -143,10 +143,6 @@ export default function SquadEditor() {
           ))}
         </div>
       </div>
-
-      <p className="mt-2 text-[10px] text-[var(--ink-1)]">
-        Squad editing is managed in Manage teams.
-      </p>
     </div>
   );
 }

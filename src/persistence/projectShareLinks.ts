@@ -7,7 +7,6 @@ const TABLE = "project_share_links";
 type ProjectShareRow = {
   id: string;
   token: string;
-  user_id: string;
   project_id: string;
   project_name: string;
   project_data: Project;
@@ -86,9 +85,7 @@ export const fetchProjectShareLink = async (token: string) => {
     return { ok: false as const, error: "Supabase not configured." };
   }
   const { data, error } = await supabase
-    .from(TABLE)
-    .select("id, token, project_id, project_name, project_data, created_at")
-    .eq("token", token)
+    .rpc("get_project_share_link", { p_token: token })
     .maybeSingle<ProjectShareRow>();
   if (error) {
     return {

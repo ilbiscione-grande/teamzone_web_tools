@@ -9,7 +9,32 @@ import { supabase } from "@/utils/supabaseClient";
 const PUBLIC_TABLE = "public_projects";
 const REPORT_TABLE = "public_project_reports";
 
-const mapPublicProject = (row: any): PublicProject => ({
+type PublicProjectRow = {
+  id: string;
+  owner_id: string;
+  owner_email: string;
+  project_id: string;
+  project_name: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  tags: string[] | null;
+  status: PublicProjectStatus;
+  created_at: string;
+  updated_at: string;
+  project_data: Project;
+};
+
+type PublicProjectReportRow = {
+  id: string;
+  project_id: string;
+  reporter_id: string;
+  reporter_email: string;
+  reason: string;
+  created_at: string;
+};
+
+const mapPublicProject = (row: PublicProjectRow): PublicProject => ({
   id: row.id,
   ownerId: row.owner_id,
   ownerEmail: row.owner_email,
@@ -22,10 +47,10 @@ const mapPublicProject = (row: any): PublicProject => ({
   status: row.status as PublicProjectStatus,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
-  projectData: row.project_data as Project,
+  projectData: row.project_data,
 });
 
-const mapReport = (row: any): PublicProjectReport => ({
+const mapReport = (row: PublicProjectReportRow): PublicProjectReport => ({
   id: row.id,
   projectId: row.project_id,
   reporterId: row.reporter_id,

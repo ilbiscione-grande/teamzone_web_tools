@@ -143,9 +143,10 @@ export default function ShareBoardModal({
     ctx.fillStyle = "#1f5f3f";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     stage.getLayers().forEach((layer) => {
-      const layerCanvas = (layer.getCanvas() as any)?._canvas as
-        | HTMLCanvasElement
-        | undefined;
+      const layerCanvasWrapper = layer.getCanvas() as {
+        _canvas?: HTMLCanvasElement;
+      };
+      const layerCanvas = layerCanvasWrapper?._canvas;
       if (!layerCanvas) {
         return;
       }

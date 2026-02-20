@@ -11,7 +11,35 @@ import { supabase } from "@/utils/supabaseClient";
 const PUBLIC_TABLE = "public_boards";
 const REPORT_TABLE = "public_board_reports";
 
-const mapPublicBoard = (row: any): PublicBoard => ({
+type PublicBoardRow = {
+  id: string;
+  owner_id: string;
+  owner_email: string;
+  board_id: string;
+  board_name: string;
+  project_name: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  tags: string[] | null;
+  formation: string | null;
+  thumbnail: string | null;
+  status: PublicBoardStatus;
+  created_at: string;
+  updated_at: string;
+  board_data: SharedBoardSnapshot;
+};
+
+type PublicBoardReportRow = {
+  id: string;
+  board_id: string;
+  reporter_id: string;
+  reporter_email: string;
+  reason: string;
+  created_at: string;
+};
+
+const mapPublicBoard = (row: PublicBoardRow): PublicBoard => ({
   id: row.id,
   ownerId: row.owner_id,
   ownerEmail: row.owner_email,
@@ -27,10 +55,10 @@ const mapPublicBoard = (row: any): PublicBoard => ({
   status: row.status as PublicBoardStatus,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
-  boardData: row.board_data as SharedBoardSnapshot,
+  boardData: row.board_data,
 });
 
-const mapReport = (row: any): PublicBoardReport => ({
+const mapReport = (row: PublicBoardReportRow): PublicBoardReport => ({
   id: row.id,
   boardId: row.board_id,
   reporterId: row.reporter_id,

@@ -1344,7 +1344,15 @@ export default function ProjectList() {
                     <select
                       className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
                       value={createPitchShape}
-                      onChange={(event) => setCreatePitchShape(event.target.value as any)}
+                      onChange={(event) =>
+                        setCreatePitchShape(
+                          event.target.value as
+                            | "none"
+                            | "circle"
+                            | "square"
+                            | "rect"
+                        )
+                      }
                     >
                       <option value="none">No shape</option>
                       <option value="circle">Circle</option>
@@ -1355,7 +1363,15 @@ export default function ProjectList() {
                   <select
                     className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
                     value={createPitchOverlay}
-                    onChange={(event) => setCreatePitchOverlay(event.target.value as any)}
+                    onChange={(event) =>
+                      setCreatePitchOverlay(
+                        event.target.value as
+                          | "NONE"
+                          | "THIRDS"
+                          | "ZONES_18"
+                          | "CORRIDORS"
+                      )
+                    }
                   >
                     <option value="NONE">No overlay</option>
                     <option value="THIRDS">Thirds</option>

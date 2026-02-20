@@ -290,9 +290,10 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       ctx.fillStyle = "#1f5f3f";
       ctx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
       layers.forEach((layer) => {
-        const canvas = (layer.getCanvas() as any)?._canvas as
-          | HTMLCanvasElement
-          | undefined;
+        const layerCanvasWrapper = layer.getCanvas() as {
+          _canvas?: HTMLCanvasElement;
+        };
+        const canvas = layerCanvasWrapper?._canvas;
         if (canvas) {
             ctx.drawImage(
               canvas,

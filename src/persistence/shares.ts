@@ -11,7 +11,33 @@ import { supabase } from "@/utils/supabaseClient";
 const SHARE_TABLE = "board_shares";
 const COMMENT_TABLE = "board_comments";
 
-const mapShare = (row: any): BoardShare => ({
+type BoardShareRow = {
+  id: string;
+  owner_id: string;
+  owner_email: string;
+  recipient_email: string;
+  board_id: string;
+  board_name: string;
+  project_name: string;
+  permission: BoardSharePermission;
+  created_at: string;
+  updated_at: string;
+  board_data: SharedBoardSnapshot;
+};
+
+type BoardCommentRow = {
+  id: string;
+  share_id: string;
+  board_id: string;
+  frame_id: string | null;
+  object_id: string | null;
+  author_id: string;
+  author_email: string;
+  body: string;
+  created_at: string;
+};
+
+const mapShare = (row: BoardShareRow): BoardShare => ({
   id: row.id,
   ownerId: row.owner_id,
   ownerEmail: row.owner_email,
@@ -22,10 +48,10 @@ const mapShare = (row: any): BoardShare => ({
   permission: row.permission,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
-  boardData: row.board_data as SharedBoardSnapshot,
+  boardData: row.board_data,
 });
 
-const mapComment = (row: any): BoardComment => ({
+const mapComment = (row: BoardCommentRow): BoardComment => ({
   id: row.id,
   shareId: row.share_id,
   boardId: row.board_id,

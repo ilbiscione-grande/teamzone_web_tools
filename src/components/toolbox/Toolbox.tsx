@@ -263,6 +263,14 @@ export default function Toolbox({
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentsBusy, setCommentsBusy] = useState(false);
   const [sharedUnreadCount, setSharedUnreadCount] = useState(0);
+  const activeSharedId = project?.sharedMeta?.shareId ?? activeShareId;
+  const commentsList = activeSharedId ? comments : [];
+  const visibleSharedUnreadCount =
+    commentsSeenKey &&
+    authUser &&
+    (project?.sharedMeta?.shareId ? true : ownerShares.length > 0)
+      ? sharedUnreadCount
+      : 0;
   type NotesFields = NonNullable<NonNullable<typeof board>["notesFields"]>;
   const notesTemplate =
     project?.settings.mode === "training"
@@ -582,14 +590,7 @@ export default function Toolbox({
   };
 
   useEffect(() => {
-    setOwnerShares([]);
-    setActiveShareId(null);
-    setComments([]);
-  }, [board?.id]);
-
-  useEffect(() => {
     if (!board || !authUser || !can(plan, "board.share")) {
-      setOwnerShares([]);
       return;
     }
     fetchBoardSharesForOwner(board.id).then((result) => {
@@ -608,7 +609,7 @@ export default function Toolbox({
         setActiveShareId(next[0]?.id ?? null);
       }
     });
-  }, [authUser, board?.id, plan, project?.sharedMeta]);
+  }, [authUser, board, plan, project?.sharedMeta]);
 
   useEffect(() => {
     if (!board || !authUser || !can(plan, "board.share") || project?.sharedMeta) {
@@ -640,15 +641,14 @@ export default function Toolbox({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [authUser, board?.id, plan, project?.sharedMeta]);
+  }, [authUser, board, plan, project?.sharedMeta]);
 
   useEffect(() => {
     if (activeTab !== "shared") {
       return;
     }
-    const shareId = project?.sharedMeta?.shareId ?? activeShareId;
+    const shareId = activeSharedId;
     if (!shareId) {
-      setComments([]);
       return;
     }
     if (commentsSeenKey && typeof window !== "undefined") {
@@ -664,26 +664,34 @@ export default function Toolbox({
       nextMap[shareId] = Date.now();
       window.localStorage.setItem(commentsSeenKey, JSON.stringify(nextMap));
     }
-    setCommentsBusy(true);
-    setCommentStatus(null);
-    fetchBoardComments(shareId)
-      .then((result) => {
-        if (!result.ok) {
-          setCommentStatus(result.error);
-          setComments([]);
-          return;
-        }
-        setComments(result.comments);
-      })
-      .finally(() => setCommentsBusy(false));
-  }, [activeTab, project?.sharedMeta?.shareId, activeShareId]);
+    let cancelled = false;
+    const loadComments = async () => {
+      setCommentsBusy(true);
+      setCommentStatus(null);
+      const result = await fetchBoardComments(shareId);
+      if (cancelled) {
+        return;
+      }
+      if (!result.ok) {
+        setCommentStatus(result.error);
+        setComments([]);
+        setCommentsBusy(false);
+        return;
+      }
+      setComments(result.comments);
+      setCommentsBusy(false);
+    };
+    loadComments();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, activeSharedId, commentsSeenKey]);
 
   useEffect(() => {
     const shareIds = project?.sharedMeta?.shareId
       ? [project.sharedMeta.shareId]
       : ownerShares.map((share) => share.id);
     if (shareIds.length === 0 || !commentsSeenKey || !authUser) {
-      setSharedUnreadCount(0);
       return;
     }
     const sharedSeenKey = `tacticsboard:sharedSeenAt:${authUser.id}`;
@@ -771,7 +779,7 @@ export default function Toolbox({
   }, [activeTab, authUser, ownerShares.length, project?.sharedMeta]);
 
   const handleAddComment = async () => {
-    const shareId = project?.sharedMeta?.shareId ?? activeShareId;
+    const shareId = activeSharedId;
     if (!shareId || !commentBody.trim()) {
       return;
     }
@@ -844,7 +852,7 @@ export default function Toolbox({
               ? true
               : !!project?.sharedMeta || ownerShares.length > 0;
           const showBadge =
-            tab.id === "shared" && sharedUnreadCount > 0 && hasShared;
+            tab.id === "shared" && visibleSharedUnreadCount > 0 && hasShared;
           const isActive = activeTab === tab.id;
           return (
             <button
@@ -1306,7 +1314,9 @@ export default function Toolbox({
                   )}
                 </div>
                 <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                  {comments.length === 1 ? "1 comment" : `${comments.length} comments`}
+                  {commentsList.length === 1
+                    ? "1 comment"
+                    : `${commentsList.length} comments`}
                 </span>
               </div>
               {!project?.sharedMeta && ownerShares.length > 0 && (
@@ -1333,13 +1343,13 @@ export default function Toolbox({
                   <p className="text-xs text-[var(--ink-1)]">
                     Loading comments...
                   </p>
-                ) : comments.length === 0 ? (
+                ) : commentsList.length === 0 ? (
                   <p className="text-xs text-[var(--ink-1)]">
                     No comments yet.
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {comments.map((comment) => (
+                    {commentsList.map((comment) => (
                       <div
                         key={comment.id}
                         className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-xs"
