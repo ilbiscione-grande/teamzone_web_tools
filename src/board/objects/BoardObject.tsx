@@ -77,6 +77,16 @@ const toPositionAbbreviation = (value?: string) => {
   return compact.slice(0, 3);
 };
 
+const regularPolygonPoints = (sides: number, radius: number, rotationDeg = -90) => {
+  const points: number[] = [];
+  const rotationRad = (rotationDeg * Math.PI) / 180;
+  for (let index = 0; index < sides; index += 1) {
+    const angle = rotationRad + (index * Math.PI * 2) / sides;
+    points.push(Math.cos(angle) * radius, Math.sin(angle) * radius);
+  }
+  return points;
+};
+
 type BoardObjectProps = {
   object: DrawableObject;
   objects: DrawableObject[];
@@ -444,6 +454,14 @@ export default function BoardObject({
           y: attachedPlayer.position.y + (ball.offset?.y ?? -1.5),
         }
       : ball.position;
+    const ballRadius = Math.max(0.8, playerTokenSize * 0.6);
+    const borderWidth = Math.max(0.08, depthStroke(ball.style.strokeWidth));
+    const centerPentagonRadius = ballRadius * 0.31;
+    const ringPentagonRadius = ballRadius * 0.245;
+    const ringDistance = ballRadius * 0.62;
+    const seamWidth = Math.max(0.05, ballRadius * 0.1);
+    const centerPentagon = regularPolygonPoints(5, centerPentagonRadius);
+    const ringPentagon = regularPolygonPoints(5, ringPentagonRadius);
     return (
       <Group
         {...commonProps}
@@ -472,11 +490,66 @@ export default function BoardObject({
           />
         )}
         <Circle
-          radius={Math.max(0.8, playerTokenSize * 0.6)}
-          fill={ball.style.fill}
-          stroke={ball.style.stroke}
-          strokeWidth={depthStroke(ball.style.strokeWidth)}
+          radius={ballRadius}
+          fill="#ffffff"
+          stroke="#111111"
+          strokeWidth={borderWidth}
         />
+        <Group
+          clipFunc={(ctx) => {
+            ctx.beginPath();
+            ctx.arc(0, 0, ballRadius - borderWidth * 0.45, 0, Math.PI * 2);
+            ctx.closePath();
+          }}
+        >
+          <Line points={centerPentagon} closed fill="#111111" strokeEnabled={false} />
+          {[0, 1, 2, 3, 4].map((index) => {
+            const angle = -Math.PI / 2 + (index * Math.PI * 2) / 5;
+            return (
+              <Line
+                key={`ball-panel-${index}`}
+                x={Math.cos(angle) * ringDistance}
+                y={Math.sin(angle) * ringDistance}
+                points={ringPentagon}
+                closed
+                fill="#111111"
+                strokeEnabled={false}
+              />
+            );
+          })}
+          {[0, 1, 2, 3, 4].map((index) => {
+            const angle = -Math.PI / 2 + (index * Math.PI * 2) / 5;
+            return (
+              <Line
+                key={`ball-seam-${index}`}
+                points={[
+                  Math.cos(angle) * centerPentagonRadius,
+                  Math.sin(angle) * centerPentagonRadius,
+                  Math.cos(angle) * (ballRadius * 0.92),
+                  Math.sin(angle) * (ballRadius * 0.92),
+                ]}
+                stroke="#111111"
+                strokeWidth={seamWidth}
+                lineCap="round"
+                listening={false}
+              />
+            );
+          })}
+          {[0, 1, 2, 3, 4].map((index) => {
+            const startAngle = -72 + index * 72;
+            return (
+              <Arc
+                key={`ball-arc-${index}`}
+                innerRadius={ballRadius * 0.82}
+                outerRadius={ballRadius * 0.97}
+                angle={28}
+                rotation={startAngle}
+                fill="#111111"
+                listening={false}
+              />
+            );
+          })}
+        </Group>
       </Group>
     );
   }
