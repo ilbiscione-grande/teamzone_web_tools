@@ -327,7 +327,7 @@ export default function TopBar() {
         shareLinkUrl
       )}`
     : null;
-  const shareLinkQrDownloadName = `${project.name
+  const shareLinkQrDownloadName = `${(project?.name ?? "project")
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
