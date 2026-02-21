@@ -73,6 +73,7 @@ export default function EditorLayout() {
   const updateProjectMeta = useProjectStore((state) => state.updateProjectMeta);
   const updateBoard = useProjectStore((state) => state.updateBoard);
   const setActiveBoard = useProjectStore((state) => state.setActiveBoard);
+  const addBoard = useProjectStore((state) => state.addBoard);
   const [stage, setStage] = useState<Konva.Stage | null>(null);
   const [propertiesFloating, setPropertiesFloating] = useState(false);
   const [propertiesPos, setPropertiesPos] = useState({ x: 24, y: 140 });
@@ -96,6 +97,7 @@ export default function EditorLayout() {
     []
   );
   const drawingStrokeIndexRef = useRef<number | null>(null);
+  const boardRecoveryAttemptRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (project?.settings) {
@@ -103,20 +105,35 @@ export default function EditorLayout() {
     }
   }, [project?.id, project?.settings?.attachBallToPlayer, setAttachBallToPlayer]);
   useEffect(() => {
+    boardRecoveryAttemptRef.current = null;
+  }, [project?.id]);
+  useEffect(() => {
     if (!project) {
-      return;
-    }
-    if (project.boards.length === 0) {
       return;
     }
     if (board) {
       return;
     }
-    const fallbackBoardId = project.boards[0]?.id;
-    if (fallbackBoardId) {
-      setActiveBoard(fallbackBoardId);
+    const fallbackBoard = project.boards.find(
+      (item) =>
+        item &&
+        typeof item.id === "string" &&
+        item.id.length > 0 &&
+        Array.isArray(item.frames)
+    );
+    if (fallbackBoard?.id) {
+      setActiveBoard(fallbackBoard.id);
+      return;
     }
-  }, [board, project, setActiveBoard]);
+    if (project.isShared) {
+      return;
+    }
+    if (boardRecoveryAttemptRef.current === project.id) {
+      return;
+    }
+    boardRecoveryAttemptRef.current = project.id;
+    addBoard("Recovery board");
+  }, [addBoard, board, project, setActiveBoard]);
   useEffect(() => {
     if (!propertiesFloating || typeof window === "undefined") {
       return;
