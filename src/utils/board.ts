@@ -5,7 +5,7 @@ export const getActiveBoard = (project: Project | null): Board | null => {
     return null;
   }
   const id = project.activeBoardId ?? project.boards[0]?.id;
-  return project.boards.find((board) => board.id === id) ?? null;
+  return project.boards.find((board) => board.id === id) ?? project.boards[0] ?? null;
 };
 
 export const getBoardSquads = (

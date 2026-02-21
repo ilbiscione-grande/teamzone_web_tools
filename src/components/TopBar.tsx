@@ -21,7 +21,7 @@ import PlanModal from "@/components/PlanModal";
 import BetaNoticeModal from "@/components/BetaNoticeModal";
 import ShareBoardModal from "@/components/ShareBoardModal";
 import CommentsModal from "@/components/CommentsModal";
-import { getBoardSquads } from "@/utils/board";
+import { getActiveBoard, getBoardSquads } from "@/utils/board";
 import { createId } from "@/utils/id";
 import {
   createTeamWithSquad,
@@ -231,9 +231,8 @@ export default function TopBar() {
     setHideBetaBanner(stored === "true");
   }, []);
 
-  const activeBoardId = project?.activeBoardId ?? project?.boards[0]?.id;
-  const activeBoard =
-    project?.boards.find((board) => board.id === activeBoardId) ?? null;
+  const activeBoard = useMemo(() => getActiveBoard(project ?? null), [project]);
+  const activeBoardId = activeBoard?.id ?? project?.activeBoardId ?? project?.boards[0]?.id;
   const boardSquads = getBoardSquads(project ?? null, activeBoard ?? null);
   const manageSquad = manageSide === "home" ? boardSquads.home : boardSquads.away;
   const editableSquad = manageSquad;

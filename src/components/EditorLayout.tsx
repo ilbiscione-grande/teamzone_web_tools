@@ -6,6 +6,7 @@ import type Konva from "konva";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { setStageRef } from "@/utils/stageRef";
+import { getActiveBoard } from "@/utils/board";
 import BoardCanvas from "@/board/BoardCanvas";
 import Toolbox from "@/components/toolbox/Toolbox";
 import PropertiesPanel from "@/components/panels/PropertiesPanel";
@@ -60,11 +61,7 @@ class CanvasErrorBoundary extends Component<
 
 export default function EditorLayout() {
   const project = useProjectStore((state) => state.project);
-  const activeBoardId = project?.activeBoardId ?? project?.boards[0]?.id;
-  const board = useMemo(
-    () => project?.boards.find((item) => item.id === activeBoardId),
-    [project, activeBoardId]
-  );
+  const board = useMemo(() => getActiveBoard(project ?? null), [project]);
   const modeLabel =
     project?.settings?.mode ?? ("match" as "training" | "match" | "education");
   const modeText = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
