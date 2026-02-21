@@ -106,6 +106,21 @@ export default function EditorLayout() {
     }
   }, [project?.id, project?.settings?.attachBallToPlayer, setAttachBallToPlayer]);
   useEffect(() => {
+    if (!project) {
+      return;
+    }
+    if (project.boards.length === 0) {
+      return;
+    }
+    if (board) {
+      return;
+    }
+    const fallbackBoardId = project.boards[0]?.id;
+    if (fallbackBoardId) {
+      setActiveBoard(fallbackBoardId);
+    }
+  }, [board, project, setActiveBoard]);
+  useEffect(() => {
     if (!propertiesFloating || typeof window === "undefined") {
       return;
     }
@@ -283,8 +298,22 @@ export default function EditorLayout() {
     // Keep mobile editor hard-anchored to the left edge to avoid horizontal drift.
     window.scrollTo({ left: 0, top: window.scrollY, behavior: "auto" });
   }, [isMobileLayout, board?.id, board?.pitchView]);
-  if (!project || !board) {
+  if (!project) {
     return null;
+  }
+  if (!board) {
+    return (
+      <div className="grid h-[100dvh] grid-rows-[auto_1fr] overflow-hidden">
+        <div className={compactVertical ? "px-3 pt-2" : "px-6 pt-4"}>
+          <TopBar />
+        </div>
+        <div className="flex items-center justify-center px-4">
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 text-sm text-[var(--ink-1)]">
+            Could not load active board. Recovering...
+          </div>
+        </div>
+      </div>
+    );
   }
   const canvasResetKey = `${board.id}:${board.threeDView ? "3d" : "2d"}:${isMaximized ? "max" : "normal"}:${forcePortraitPitch ? "portrait" : "default"}`;
   const handleCanvasError = () => {
