@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Component, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type Konva from "konva";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
@@ -12,6 +13,50 @@ import FramesBar from "@/components/frames/FramesBar";
 import TopBar from "@/components/TopBar";
 import AdBanner from "@/components/AdBanner";
 import NotesMarkdown from "@/components/notes/NotesMarkdown";
+
+type CanvasErrorBoundaryProps = {
+  children: ReactNode;
+  resetKey: string;
+  onError?: () => void;
+};
+
+type CanvasErrorBoundaryState = {
+  hasError: boolean;
+};
+
+class CanvasErrorBoundary extends Component<
+  CanvasErrorBoundaryProps,
+  CanvasErrorBoundaryState
+> {
+  state: CanvasErrorBoundaryState = {
+    hasError: false,
+  };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch() {
+    this.props.onError?.();
+  }
+
+  componentDidUpdate(prevProps: CanvasErrorBoundaryProps) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex h-full w-full items-center justify-center bg-[var(--panel)] text-xs text-[var(--ink-1)]">
+          Canvas failed to render. Switching to safe mode...
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function EditorLayout() {
   const project = useProjectStore((state) => state.project);
@@ -241,6 +286,13 @@ export default function EditorLayout() {
   if (!project || !board) {
     return null;
   }
+  const canvasResetKey = `${board.id}:${board.threeDView ? "3d" : "2d"}:${isMaximized ? "max" : "normal"}:${forcePortraitPitch ? "portrait" : "default"}`;
+  const handleCanvasError = () => {
+    if (board.threeDView) {
+      updateBoard(board.id, { threeDView: false });
+    }
+    resetCanvasViewport({ zoom: 1, offsetX: 0, offsetY: 0 });
+  };
 
   const sessionTraining = project.sessionNotesFields?.training ?? {};
   const boardTraining = board.notesFields?.training ?? {};
@@ -417,15 +469,20 @@ export default function EditorLayout() {
         >
           {useNotesSplitLayout && (
             <div className="relative min-h-0 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)]">
-              <BoardCanvas
-                board={board}
-                onStageReady={(nextStage) => {
-                  setStage(nextStage);
-                  setStageRef(nextStage);
-                }}
-                isMaximized={isMaximized}
-                onToggleMaximize={() => setIsMaximized(false)}
-              />
+              <CanvasErrorBoundary
+                resetKey={canvasResetKey}
+                onError={handleCanvasError}
+              >
+                <BoardCanvas
+                  board={board}
+                  onStageReady={(nextStage) => {
+                    setStage(nextStage);
+                    setStageRef(nextStage);
+                  }}
+                  isMaximized={isMaximized}
+                  onToggleMaximize={() => setIsMaximized(false)}
+                />
+              </CanvasErrorBoundary>
               <div
                 className={`absolute inset-0 z-40 ${
                   isMaximizedPenMode ? "pointer-events-auto" : "pointer-events-none"
@@ -589,15 +646,20 @@ export default function EditorLayout() {
               <div className="pointer-events-none absolute left-4 top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
                 {modeText}
               </div>
-              <BoardCanvas
-                board={board}
-                onStageReady={(nextStage) => {
-                  setStage(nextStage);
-                  setStageRef(nextStage);
-                }}
-                isMaximized={isMaximized}
-                onToggleMaximize={() => setIsMaximized(false)}
-              />
+              <CanvasErrorBoundary
+                resetKey={canvasResetKey}
+                onError={handleCanvasError}
+              >
+                <BoardCanvas
+                  board={board}
+                  onStageReady={(nextStage) => {
+                    setStage(nextStage);
+                    setStageRef(nextStage);
+                  }}
+                  isMaximized={isMaximized}
+                  onToggleMaximize={() => setIsMaximized(false)}
+                />
+              </CanvasErrorBoundary>
               <div
                 className={`absolute inset-0 z-40 ${
                   isMaximizedPenMode ? "pointer-events-auto" : "pointer-events-none"
@@ -834,19 +896,24 @@ export default function EditorLayout() {
             <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-2 py-1 text-[9px] uppercase tracking-widest text-[var(--accent-2)]">
               {modeText}
             </div>
-            <BoardCanvas
-              board={board}
-              forcePortrait={forcePortraitPitch}
-              onStageReady={(nextStage) => {
-                setStage(nextStage);
-                setStageRef(nextStage);
-              }}
-              isMaximized={isMaximized}
-              onToggleMaximize={() => {
-                setShowMaximizedNotes(true);
-                setIsMaximized(true);
-              }}
-            />
+            <CanvasErrorBoundary
+              resetKey={canvasResetKey}
+              onError={handleCanvasError}
+            >
+              <BoardCanvas
+                board={board}
+                forcePortrait={forcePortraitPitch}
+                onStageReady={(nextStage) => {
+                  setStage(nextStage);
+                  setStageRef(nextStage);
+                }}
+                isMaximized={isMaximized}
+                onToggleMaximize={() => {
+                  setShowMaximizedNotes(true);
+                  setIsMaximized(true);
+                }}
+              />
+            </CanvasErrorBoundary>
           </div>
         </div>
         <div className="px-2 pb-2">
@@ -956,19 +1023,24 @@ export default function EditorLayout() {
             <div className="pointer-events-none absolute left-4 top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
               {modeText}
             </div>
-            <BoardCanvas
-              board={board}
-              forcePortrait={forcePortraitPitch}
-              onStageReady={(nextStage) => {
-                setStage(nextStage);
-                setStageRef(nextStage);
-              }}
-              isMaximized={isMaximized}
-              onToggleMaximize={() => {
-                setShowMaximizedNotes(true);
-                setIsMaximized(true);
-              }}
-            />
+            <CanvasErrorBoundary
+              resetKey={canvasResetKey}
+              onError={handleCanvasError}
+            >
+              <BoardCanvas
+                board={board}
+                forcePortrait={forcePortraitPitch}
+                onStageReady={(nextStage) => {
+                  setStage(nextStage);
+                  setStageRef(nextStage);
+                }}
+                isMaximized={isMaximized}
+                onToggleMaximize={() => {
+                  setShowMaximizedNotes(true);
+                  setIsMaximized(true);
+                }}
+              />
+            </CanvasErrorBoundary>
           </div>
           <FramesBar board={board} stage={stage} />
         </div>
