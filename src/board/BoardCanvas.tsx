@@ -87,7 +87,11 @@ export default function BoardCanvas({
   const useCompactPlayerLabels =
     isSharedReadOnly && (!!forcePortrait || size.width <= 700);
   const isThreeDView = board.threeDView ?? false;
-  const threeDStrength = Math.max(0, Math.min(100, board.threeDStrength ?? 55));
+  const rawThreeDStrength =
+    typeof board.threeDStrength === "number" && Number.isFinite(board.threeDStrength)
+      ? board.threeDStrength
+      : 55;
+  const threeDStrength = Math.max(0, Math.min(100, rawThreeDStrength));
   const isCanvasReadOnly = isSharedReadOnly || isThreeDView;
   const addObject = useProjectStore((state) => state.addObject);
   const updateObject = useProjectStore((state) => state.updateObject);

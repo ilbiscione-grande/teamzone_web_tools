@@ -721,11 +721,17 @@ export default function BoardObject({
       if (!isThreeDView || depthScale === 1) {
         return { x: 0, y: 0 };
       }
-      const dx = (rect.width * (1 - depthScale)) / 2;
-      const dy = (rect.height * (1 - depthScale)) / 2;
-      const radians = (object.rotation * Math.PI) / 180;
+      const safeWidth = Number.isFinite(rect.width) ? rect.width : 0;
+      const safeHeight = Number.isFinite(rect.height) ? rect.height : 0;
+      const safeRotation = Number.isFinite(object.rotation) ? object.rotation : 0;
+      const dx = (safeWidth * (1 - depthScale)) / 2;
+      const dy = (safeHeight * (1 - depthScale)) / 2;
+      const radians = (safeRotation * Math.PI) / 180;
       const cos = Math.cos(radians);
       const sin = Math.sin(radians);
+      if (!Number.isFinite(cos) || !Number.isFinite(sin)) {
+        return { x: 0, y: 0 };
+      }
       return {
         x: dx * cos - dy * sin,
         y: dx * sin + dy * cos,
