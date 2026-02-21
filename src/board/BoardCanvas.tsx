@@ -84,6 +84,8 @@ export default function BoardCanvas({
 
   const project = useProjectStore((state) => state.project);
   const isSharedReadOnly = readOnly || (project?.isShared ?? false);
+  const useCompactPlayerLabels =
+    isSharedReadOnly && (!!forcePortrait || size.width <= 700);
   const isThreeDView = board.threeDView ?? false;
   const threeDStrength = Math.max(0, Math.min(100, board.threeDStrength ?? 55));
   const isCanvasReadOnly = isSharedReadOnly || isThreeDView;
@@ -974,6 +976,7 @@ export default function BoardCanvas({
                 showPlayerName={board.playerLabel?.showName ?? true}
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
+                compactPlayerLabels={useCompactPlayerLabels}
                 labelRotation={labelRotation}
                 isThreeDView={isThreeDView}
                 threeDStrength={threeDStrength}
@@ -1083,6 +1086,7 @@ export default function BoardCanvas({
                 showPlayerName={board.playerLabel?.showName ?? true}
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
+                compactPlayerLabels={useCompactPlayerLabels}
                 labelRotation={labelRotation}
                 isThreeDView={isThreeDView}
                 threeDStrength={threeDStrength}

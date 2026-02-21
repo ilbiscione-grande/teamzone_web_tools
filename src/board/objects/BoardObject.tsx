@@ -132,6 +132,7 @@ type BoardObjectProps = {
   showPlayerName: boolean;
   showPlayerPosition: boolean;
   showPlayerNumber: boolean;
+  compactPlayerLabels?: boolean;
   labelRotation: number;
   isThreeDView?: boolean;
   threeDStrength?: number;
@@ -161,6 +162,7 @@ export default function BoardObject({
   showPlayerName,
   showPlayerPosition,
   showPlayerNumber,
+  compactPlayerLabels,
   labelRotation,
   isThreeDView,
   threeDStrength,
@@ -257,6 +259,22 @@ export default function BoardObject({
     const squadPlayer = player.squadPlayerId
       ? squadPlayers.find((item) => item.id === player.squadPlayerId)
       : undefined;
+    const compactName = (() => {
+      const value = squadPlayer?.name?.trim();
+      if (!value) {
+        return "";
+      }
+      if (!compactPlayerLabels) {
+        return value;
+      }
+      const parts = value.split(/\s+/).filter(Boolean);
+      if (parts.length <= 1) {
+        return parts[0]?.slice(0, 12) ?? "";
+      }
+      const first = parts[0] ?? "";
+      const lastInitial = parts[parts.length - 1]?.[0]?.toUpperCase();
+      return `${first.slice(0, 10)} ${lastInitial ?? ""}.`;
+    })();
     const initials = squadPlayer?.name
       ? squadPlayer.name
           .split(" ")
@@ -281,13 +299,13 @@ export default function BoardObject({
       : showPlayerNumber
         ? [
             showPlayerPosition ? positionLabel : "",
-            showPlayerName ? squadPlayer?.name : "",
+            showPlayerName ? compactName : "",
           ]
             .filter(Boolean)
             .join(" • ")
         : showPlayerPosition
-          ? showPlayerName && squadPlayer?.name
-            ? squadPlayer.name
+          ? showPlayerName && compactName
+            ? compactName
             : ""
           : "";
     const textColor = (() => {
@@ -302,8 +320,9 @@ export default function BoardObject({
       return "#0f1b1a";
     })();
     const circleTextSize = playerTokenSize * 2;
-    const belowTextWidth = playerTokenSize * 6;
-    const belowTextHeight = 2.2;
+    const belowTextWidth = compactPlayerLabels ? playerTokenSize * 5.1 : playerTokenSize * 6;
+    const belowTextHeight = compactPlayerLabels ? 2 : 2.2;
+    const belowTextFontSize = compactPlayerLabels ? 1.2 : 1.1;
     const rotateOffset = (x: number, y: number, degrees: number) => {
       const radians = (degrees * Math.PI) / 180;
       const cos = Math.cos(radians);
@@ -462,8 +481,16 @@ export default function BoardObject({
               y={-belowTextHeight / 2}
               align="center"
               verticalAlign="middle"
-              fontSize={1.1}
+              wrap={compactPlayerLabels ? "none" : "word"}
+              ellipsis={!!compactPlayerLabels}
+              fontSize={belowTextFontSize}
               fill="#f2f1e9"
+              stroke="#092019"
+              strokeWidth={compactPlayerLabels ? 0.2 : 0.14}
+              shadowColor="#04140f"
+              shadowOpacity={compactPlayerLabels ? 0.8 : 0.5}
+              shadowBlur={compactPlayerLabels ? 0.16 : 0.08}
+              shadowOffsetY={0.04}
             />
           </Group>
         )}
