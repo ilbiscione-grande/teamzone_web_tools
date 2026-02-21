@@ -290,7 +290,7 @@ export default function BoardObject({
         : showPlayerPosition && positionLabel
           ? positionLabel
           : initials;
-    const circleFontSize = playerTokenSize * 0.9;
+    const circleFontSize = playerTokenSize * 0.76;
     const belowText = !hasLabel
       ? ""
       : showPlayerNumber
@@ -459,6 +459,7 @@ export default function BoardObject({
               y={-circleTextSize / 2}
               align="center"
               verticalAlign="middle"
+              wrap="none"
               fontSize={circleFontSize}
               fill={textColor}
               fontStyle="bold"
@@ -716,9 +717,25 @@ export default function BoardObject({
 
   if (object.type === "rect") {
     const rect = object as ShapeRect;
+    const rectScaleAnchorOffset = (() => {
+      if (!isThreeDView || depthScale === 1) {
+        return { x: 0, y: 0 };
+      }
+      const dx = (rect.width * (1 - depthScale)) / 2;
+      const dy = (rect.height * (1 - depthScale)) / 2;
+      const radians = (object.rotation * Math.PI) / 180;
+      const cos = Math.cos(radians);
+      const sin = Math.sin(radians);
+      return {
+        x: dx * cos - dy * sin,
+        y: dx * sin + dy * cos,
+      };
+    })();
     return (
       <Rect
         {...commonProps}
+        x={object.position.x + rectScaleAnchorOffset.x}
+        y={object.position.y + rectScaleAnchorOffset.y}
         width={rect.width}
         height={rect.height}
         cornerRadius={rect.cornerRadius}
