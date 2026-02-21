@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
 import { Stage, Layer, Rect, Arrow, Group, Circle, Line } from "react-konva";
 import type {
@@ -116,6 +116,47 @@ export default function BoardCanvas({
       ) as PlayerToken[],
     [objects, selection]
   );
+  const applyPlaybackEffect = useCallback((
+    object: DrawableObject,
+    progress: number
+  ): DrawableObject => {
+    const effect = object.animation ?? "none";
+    if (effect === "none") {
+      return object;
+    }
+    const next = {
+      ...object,
+      style: { ...object.style },
+      scale: { ...object.scale },
+    } as DrawableObject;
+
+    if (effect === "fadeIn") {
+      next.style.opacity = object.style.opacity * progress;
+      return next;
+    }
+    if (effect === "fadeOut") {
+      next.style.opacity = object.style.opacity * (1 - progress);
+      return next;
+    }
+    if (effect === "pop") {
+      const factor =
+        progress < 0.5
+          ? 0.85 + (progress / 0.5) * 0.3
+          : 1.15 - ((progress - 0.5) / 0.5) * 0.15;
+      next.scale.x = object.scale.x * factor;
+      next.scale.y = object.scale.y * factor;
+      return next;
+    }
+    if (effect === "pulse") {
+      const wave = Math.sin(progress * Math.PI * 2);
+      const factor = 1 + wave * 0.08;
+      next.scale.x = object.scale.x * factor;
+      next.scale.y = object.scale.y * factor;
+      return next;
+    }
+
+    return next;
+  }, []);
   const renderObjects = useMemo(() => {
     if (board.mode !== "DYNAMIC") {
       return objects;
@@ -264,14 +305,14 @@ export default function BoardCanvas({
             };
           }
         }
-        merged.push(blended);
+        merged.push(applyPlaybackEffect(blended, t));
       } else {
-        merged.push(item);
+        merged.push(applyPlaybackEffect(item, t));
       }
     });
     nextObjects.forEach((item) => {
       if (!baseObjects.find((current) => current.id === item.id)) {
-        merged.push(item);
+        merged.push(applyPlaybackEffect(item, t));
       }
     });
     return merged;
@@ -283,6 +324,7 @@ export default function BoardCanvas({
     loopPlayback,
     objects,
     playheadFrame,
+    applyPlaybackEffect,
   ]);
   const sortedObjects = useMemo(() => {
     const getPriority = (type: string) => {

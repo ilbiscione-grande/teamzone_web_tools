@@ -13,6 +13,13 @@ export type Style = {
   outlineWidth?: number;
 };
 
+export type DrawableAnimation =
+  | "none"
+  | "fadeIn"
+  | "fadeOut"
+  | "pop"
+  | "pulse";
+
 export type BaseDrawable = {
   id: string;
   type:
@@ -33,6 +40,7 @@ export type BaseDrawable = {
   zIndex: number;
   locked: boolean;
   visible: boolean;
+  animation?: DrawableAnimation;
 };
 
 export type PlayerToken = BaseDrawable & {

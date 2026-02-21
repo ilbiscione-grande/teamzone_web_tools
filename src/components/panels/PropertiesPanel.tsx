@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { DrawableObject, TextLabel } from "@/models";
+import type { DrawableAnimation, DrawableObject, TextLabel } from "@/models";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { getActiveBoard, getBoardSquads } from "@/utils/board";
@@ -32,6 +32,17 @@ const lineWidthOptions = [
   { label: "3", value: 0.65 },
   { label: "4", value: 0.85 },
   { label: "5", value: 1.1 },
+];
+
+const drawableAnimationOptions: Array<{
+  value: DrawableAnimation;
+  label: string;
+}> = [
+  { value: "none", label: "None" },
+  { value: "fadeIn", label: "Fade in" },
+  { value: "fadeOut", label: "Fade out" },
+  { value: "pop", label: "Pop" },
+  { value: "pulse", label: "Pulse" },
 ];
 
 const getLineWidthOption = (width: number) => {
@@ -590,10 +601,35 @@ export default function PropertiesPanel({
                 />
                 Dashed
               </label>
+              {board.mode === "DYNAMIC" && (
+                <label className="space-y-1">
+                  <span className="text-[11px]">Frame effect</span>
+                  <select
+                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                    value={target.animation ?? "none"}
+                    onChange={(event) =>
+                      update({
+                        animation: event.target.value as DrawableAnimation,
+                      })
+                    }
+                  >
+                    {drawableAnimationOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
             {target.type === "player" && (
               <p className="mt-2 text-[11px] text-[var(--ink-1)]">
                 Player colors are set in Squad.
+              </p>
+            )}
+            {board.mode === "DYNAMIC" && (
+              <p className="mt-2 text-[11px] text-[var(--ink-1)]">
+                Frame effects animate during playback between frames.
               </p>
             )}
           </div>
