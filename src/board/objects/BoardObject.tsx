@@ -498,13 +498,11 @@ export default function BoardObject({
               ellipsis={!!compactPlayerLabels}
               fontSize={belowTextFontSize}
               fill={compactPlayerLabels ? "#f4f7f2" : "#f2f1e9"}
-              strokeEnabled={!compactPlayerLabels}
-              stroke="#092019"
-              strokeWidth={0.14}
+              strokeEnabled={false}
               shadowEnabled={!compactPlayerLabels}
               shadowColor="#04140f"
-              shadowOpacity={0.5}
-              shadowBlur={0.08}
+              shadowOpacity={0.35}
+              shadowBlur={0.06}
               shadowOffsetY={0.04}
             />
           </Group>
