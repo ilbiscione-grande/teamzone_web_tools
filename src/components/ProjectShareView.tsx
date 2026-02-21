@@ -42,9 +42,6 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [showNotes, setShowNotes] = useState(false);
   const [forcePortrait, setForcePortrait] = useState(false);
-  const [controlsOffset, setControlsOffset] = useState({ x: 0, y: 0 });
-  const [draggingControls, setDraggingControls] = useState(false);
-  const dragPointRef = useRef<{ x: number; y: number } | null>(null);
   const scrubTrackRef = useRef<HTMLDivElement | null>(null);
   const scrubbingRef = useRef(false);
 
@@ -73,36 +70,6 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
       document.body.classList.remove("share-portrait");
     };
   }, [forcePortrait]);
-
-  useEffect(() => {
-    if (!draggingControls) {
-      return;
-    }
-    const onMove = (event: PointerEvent) => {
-      const prev = dragPointRef.current;
-      if (!prev) {
-        dragPointRef.current = { x: event.clientX, y: event.clientY };
-        return;
-      }
-      const dx = event.clientX - prev.x;
-      const dy = event.clientY - prev.y;
-      dragPointRef.current = { x: event.clientX, y: event.clientY };
-      setControlsOffset((prev) => ({
-        x: prev.x + dx,
-        y: prev.y + dy,
-      }));
-    };
-    const onUp = () => {
-      setDraggingControls(false);
-      dragPointRef.current = null;
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    };
-  }, [draggingControls]);
 
   useEffect(() => {
     let cancelled = false;
@@ -165,10 +132,9 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
       return undefined;
     }
     const bounds = getPitchViewBounds(board.pitchView);
-    const rotated =
-      board.pitchView === "DEF_HALF" ||
-      board.pitchView === "OFF_HALF" ||
-      board.pitchView === "FULL";
+    // Must match BoardCanvas rotation rules in portrait mode.
+    // On mobile portrait only FULL is rotated; half-views stay unrotated.
+    const rotated = board.pitchView === "FULL";
     const effectiveWidth = rotated ? bounds.height : bounds.width;
     const effectiveHeight = rotated ? bounds.width : bounds.height;
     return {
@@ -177,6 +143,13 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
       aspectRatio: `${effectiveWidth} / ${effectiveHeight}`,
     } as CSSProperties;
   }, [board, forcePortrait]);
+
+  const controlsDockPaddingClass =
+    board?.mode === "DYNAMIC"
+      ? forcePortrait
+        ? "pb-24"
+        : "pb-28 md:pb-24"
+      : "";
 
   useEffect(() => {
     if (!board) {
@@ -387,7 +360,9 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
       </div>
       <div
         className={
-          forcePortrait ? "flex min-h-0 flex-1 pt-12" : "flex min-h-0 flex-1"
+          forcePortrait
+            ? `flex min-h-0 flex-1 pt-12 ${controlsDockPaddingClass}`
+            : `flex min-h-0 flex-1 ${controlsDockPaddingClass}`
         }
       >
         <div
@@ -433,36 +408,11 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
         <div
           className={
             forcePortrait
-              ? "absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 flex-col gap-1 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/60 px-2 py-1.5 backdrop-blur"
-              : "flex flex-wrap items-center justify-center gap-2 border-t border-[var(--line)] bg-[var(--panel)]/80 px-3 py-3 md:gap-3 md:px-4"
+              ? "fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] left-1/2 z-30 flex -translate-x-1/2 flex-col gap-1 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/75 px-2 py-1.5 backdrop-blur"
+              : "fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/85 px-3 py-3 backdrop-blur md:gap-3 md:px-4"
           }
-          style={
-            forcePortrait
-              ? {
-                  transform: `translate(calc(-50% + ${controlsOffset.x}px), ${controlsOffset.y}px)`,
-                }
-              : undefined
-          }
-          onPointerDown={(event) => {
-            if (!forcePortrait) {
-              return;
-            }
-            const target = event.target as HTMLElement;
-            if (target.closest("button") || target.closest("[data-scrub]")) {
-              return;
-            }
-            dragPointRef.current = { x: event.clientX, y: event.clientY };
-            setDraggingControls(true);
-          }}
         >
           <div className="flex items-center gap-2">
-            {forcePortrait && (
-              <div
-                className="h-6 w-3 cursor-grab rounded-full border border-[var(--line)] bg-[var(--panel-2)]/60 active:cursor-grabbing"
-                title="Move controls"
-                aria-label="Move controls"
-              />
-            )}
             <button
               className={
                 forcePortrait
