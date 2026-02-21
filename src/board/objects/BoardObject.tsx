@@ -320,9 +320,11 @@ export default function BoardObject({
       return "#0f1b1a";
     })();
     const circleTextSize = playerTokenSize * 2;
-    const belowTextWidth = compactPlayerLabels ? playerTokenSize * 5.1 : playerTokenSize * 6;
-    const belowTextHeight = compactPlayerLabels ? 2 : 2.2;
-    const belowTextFontSize = compactPlayerLabels ? 1.2 : 1.1;
+    const belowTextWidth = compactPlayerLabels ? playerTokenSize * 5.8 : playerTokenSize * 6;
+    const belowTextHeight = compactPlayerLabels ? 2.35 : 2.2;
+    const belowTextFontSize = compactPlayerLabels ? 1.28 : 1.1;
+    const belowTextBgPaddingX = compactPlayerLabels ? 0.34 : 0;
+    const belowTextBgHeight = compactPlayerLabels ? belowTextHeight + 0.22 : belowTextHeight;
     const rotateOffset = (x: number, y: number, degrees: number) => {
       const radians = (degrees * Math.PI) / 180;
       const cos = Math.cos(radians);
@@ -473,6 +475,17 @@ export default function BoardObject({
             y={belowOffset.y}
             scaleY={textForeshorten}
           >
+            {compactPlayerLabels && (
+              <Rect
+                x={-(belowTextWidth + belowTextBgPaddingX * 2) / 2}
+                y={-belowTextBgHeight / 2}
+                width={belowTextWidth + belowTextBgPaddingX * 2}
+                height={belowTextBgHeight}
+                fill="rgba(5,20,16,0.62)"
+                cornerRadius={0.42}
+                listening={false}
+              />
+            )}
             <Text
               text={belowText}
               width={belowTextWidth}
@@ -484,12 +497,14 @@ export default function BoardObject({
               wrap={compactPlayerLabels ? "none" : "word"}
               ellipsis={!!compactPlayerLabels}
               fontSize={belowTextFontSize}
-              fill="#f2f1e9"
+              fill={compactPlayerLabels ? "#f4f7f2" : "#f2f1e9"}
+              strokeEnabled={!compactPlayerLabels}
               stroke="#092019"
-              strokeWidth={compactPlayerLabels ? 0.2 : 0.14}
+              strokeWidth={0.14}
+              shadowEnabled={!compactPlayerLabels}
               shadowColor="#04140f"
-              shadowOpacity={compactPlayerLabels ? 0.8 : 0.5}
-              shadowBlur={compactPlayerLabels ? 0.16 : 0.08}
+              shadowOpacity={0.5}
+              shadowBlur={0.08}
               shadowOffsetY={0.04}
             />
           </Group>
