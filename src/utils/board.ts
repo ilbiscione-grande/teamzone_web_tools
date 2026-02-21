@@ -1,11 +1,21 @@
 import type { Board, Project, Squad } from "@/models";
 
 export const getActiveBoard = (project: Project | null): Board | null => {
-  if (!project || project.boards.length === 0) {
+  if (!project || !Array.isArray(project.boards) || project.boards.length === 0) {
+    return null;
+  }
+  const boards = project.boards.filter(
+    (item): item is Board =>
+      Boolean(item) &&
+      typeof item.id === "string" &&
+      item.id.length > 0 &&
+      Array.isArray(item.frames)
+  );
+  if (boards.length === 0) {
     return null;
   }
   const id = project.activeBoardId ?? project.boards[0]?.id;
-  return project.boards.find((board) => board.id === id) ?? project.boards[0] ?? null;
+  return boards.find((board) => board.id === id) ?? boards[0] ?? null;
 };
 
 export const getBoardSquads = (
