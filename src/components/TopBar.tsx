@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { serializeProject, deserializeProject } from "@/persistence/serialize";
 import { saveProject } from "@/persistence/storage";
@@ -31,6 +31,8 @@ import {
 import { createProjectShareLink } from "@/persistence/projectShareLinks";
 import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { getStageRef } from "@/utils/stageRef";
+
+type ManagePlayersSortKey = "default" | "name" | "position" | "number";
 
 export default function TopBar() {
   const project = useProjectStore((state) => state.project);
@@ -80,6 +82,11 @@ export default function TopBar() {
   const [squadPresetsLoading, setSquadPresetsLoading] = useState(false);
   const [squadPresetsError, setSquadPresetsError] = useState<string | null>(null);
   const [manageSide, setManageSide] = useState<"home" | "away">("home");
+  const [managePlayersSortKey, setManagePlayersSortKey] =
+    useState<ManagePlayersSortKey>("default");
+  const [managePlayersSortDir, setManagePlayersSortDir] = useState<"asc" | "desc">(
+    "asc"
+  );
   const [managePresetStatus, setManagePresetStatus] = useState<string | null>(
     null
   );
@@ -230,6 +237,65 @@ export default function TopBar() {
   const boardSquads = getBoardSquads(project ?? null, activeBoard ?? null);
   const manageSquad = manageSide === "home" ? boardSquads.home : boardSquads.away;
   const editableSquad = manageSquad;
+  const sortedManagePlayers = useMemo(() => {
+    if (!manageSquad) {
+      return [];
+    }
+    const substitutes = new Set(editableSquad?.substituteIds ?? []);
+    const withIndex = manageSquad.players.map((player, index) => ({
+      player,
+      index,
+    }));
+    const numberValue = (value: number | undefined): number =>
+      typeof value === "number" && Number.isFinite(value)
+        ? value
+        : Number.POSITIVE_INFINITY;
+    const textValue = (value?: string) => value?.trim().toLowerCase() ?? "";
+    const defaultCompare = (
+      a: (typeof withIndex)[number],
+      b: (typeof withIndex)[number]
+    ) => {
+      const aShown = a.player.active !== false ? 0 : 1;
+      const bShown = b.player.active !== false ? 0 : 1;
+      if (aShown !== bShown) {
+        return aShown - bShown;
+      }
+      const aSub = substitutes.has(a.player.id) ? 1 : 0;
+      const bSub = substitutes.has(b.player.id) ? 1 : 0;
+      if (aSub !== bSub) {
+        return aSub - bSub;
+      }
+      const aNumber = numberValue(a.player.number);
+      const bNumber = numberValue(b.player.number);
+      if (aNumber !== bNumber) {
+        return aNumber - bNumber;
+      }
+      return textValue(a.player.name).localeCompare(textValue(b.player.name), "sv");
+    };
+    const compare = (a: (typeof withIndex)[number], b: (typeof withIndex)[number]) => {
+      if (managePlayersSortKey === "default") {
+        const value = defaultCompare(a, b);
+        return value !== 0 ? value : a.index - b.index;
+      }
+      let value = 0;
+      if (managePlayersSortKey === "name") {
+        value = textValue(a.player.name).localeCompare(textValue(b.player.name), "sv");
+      } else if (managePlayersSortKey === "position") {
+        value = textValue(a.player.positionLabel).localeCompare(
+          textValue(b.player.positionLabel),
+          "sv"
+        );
+      } else if (managePlayersSortKey === "number") {
+        value = numberValue(a.player.number) - numberValue(b.player.number);
+      }
+      if (value === 0) {
+        value = defaultCompare(a, b);
+      }
+      const direction = managePlayersSortDir === "asc" ? 1 : -1;
+      return value * direction || a.index - b.index;
+    };
+    return [...withIndex].sort(compare).map((entry) => entry.player);
+  }, [editableSquad?.substituteIds, managePlayersSortDir, managePlayersSortKey, manageSquad]);
   const updateEditableSquad = (
     payload: Partial<SquadPreset["squad"]>
   ) => {
@@ -318,6 +384,28 @@ export default function TopBar() {
     setManagePresetStatus(
       side === "home" ? "Set as Home team." : "Set as Away team."
     );
+  };
+  const toggleManagePlayersSort = (key: ManagePlayersSortKey) => {
+    if (key === "default") {
+      setManagePlayersSortKey("default");
+      setManagePlayersSortDir("asc");
+      return;
+    }
+    if (managePlayersSortKey === key) {
+      setManagePlayersSortDir((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setManagePlayersSortKey(key);
+    setManagePlayersSortDir("asc");
+  };
+  const manageSortIndicator = (key: ManagePlayersSortKey) => {
+    if (managePlayersSortKey !== key) {
+      return "";
+    }
+    if (key === "default") {
+      return " •";
+    }
+    return managePlayersSortDir === "asc" ? " ↑" : " ↓";
   };
   const shirtTypes: Array<{
     id: "solid" | "split" | "stripe" | "sash" | "pinstripe";
@@ -1897,9 +1985,27 @@ export default function TopBar() {
                         </button>
                       </div>
                       <div className="grid grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                        <span>#</span>
-                        <span>Name</span>
-                        <span>Position</span>
+                        <button
+                          className="text-left hover:text-[var(--accent-2)]"
+                          onClick={() => toggleManagePlayersSort("number")}
+                          title="Sort by number"
+                        >
+                          #{manageSortIndicator("number")}
+                        </button>
+                        <button
+                          className="text-left hover:text-[var(--accent-2)]"
+                          onClick={() => toggleManagePlayersSort("name")}
+                          title="Sort by name"
+                        >
+                          Name{manageSortIndicator("name")}
+                        </button>
+                        <button
+                          className="text-left hover:text-[var(--accent-2)]"
+                          onClick={() => toggleManagePlayersSort("position")}
+                          title="Sort by position"
+                        >
+                          Position{manageSortIndicator("position")}
+                        </button>
                         <span className="text-center">Show in Squad</span>
                         <span className="text-center">Captain</span>
                         <span className="text-center">Substitute</span>
@@ -1908,8 +2014,17 @@ export default function TopBar() {
                       <p className="text-[10px] text-[var(--ink-1)]">
                         All players are listed here. Use &quot;Show in Squad&quot; to control who appears in the Squad tab.
                       </p>
+                      <div className="flex justify-end">
+                        <button
+                          className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                          onClick={() => toggleManagePlayersSort("default")}
+                          title="Reset to default sort"
+                        >
+                          Default sort{manageSortIndicator("default")}
+                        </button>
+                      </div>
                       <div className="max-h-56 space-y-2 overflow-auto pr-1" data-scrollable>
-                        {manageSquad.players.map((player) => (
+                        {sortedManagePlayers.map((player) => (
                           <div
                             key={player.id}
                             className="grid grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2"

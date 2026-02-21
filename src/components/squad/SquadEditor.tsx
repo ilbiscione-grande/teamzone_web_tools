@@ -5,6 +5,8 @@ import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { getActiveBoard, getBoardSquads } from "@/utils/board";
 
+type SquadSortKey = "default" | "name" | "position" | "number";
+
 const toPositionAbbreviation = (value?: string) => {
   if (!value) {
     return "-";
@@ -39,6 +41,8 @@ export default function SquadEditor() {
   const updateSquad = useProjectStore((state) => state.updateSquad);
   const setPlayerSide = useEditorStore((state) => state.setPlayerSide);
   const [activeSide, setActiveSide] = useState<"home" | "away">("home");
+  const [sortKey, setSortKey] = useState<SquadSortKey>("default");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const board = useMemo(() => getActiveBoard(project ?? null), [project]);
   const boardSquads = useMemo(
@@ -48,11 +52,81 @@ export default function SquadEditor() {
 
   const activeSquad = activeSide === "home" ? boardSquads.home : boardSquads.away;
   const totalPlayers = activeSquad?.players.length ?? 0;
-  const visiblePlayers = useMemo(
-    () => (activeSquad?.players ?? []).filter((player) => player.active !== false),
-    [activeSquad]
-  );
   const substitutes = activeSquad?.substituteIds ?? [];
+  const visiblePlayers = useMemo(() => {
+    const source = (activeSquad?.players ?? []).filter(
+      (player) => player.active !== false
+    );
+    const withIndex = source.map((player, index) => ({ player, index }));
+    const subs = new Set(substitutes);
+    const numberValue = (value: number | undefined): number =>
+      typeof value === "number" && Number.isFinite(value)
+        ? value
+        : Number.POSITIVE_INFINITY;
+    const textValue = (value?: string) => value?.trim().toLowerCase() ?? "";
+    const defaultCompare = (
+      a: (typeof withIndex)[number],
+      b: (typeof withIndex)[number]
+    ) => {
+      const aSub = subs.has(a.player.id) ? 1 : 0;
+      const bSub = subs.has(b.player.id) ? 1 : 0;
+      if (aSub !== bSub) {
+        return aSub - bSub;
+      }
+      const aNumber = numberValue(a.player.number);
+      const bNumber = numberValue(b.player.number);
+      if (aNumber !== bNumber) {
+        return aNumber - bNumber;
+      }
+      return textValue(a.player.name).localeCompare(textValue(b.player.name), "sv");
+    };
+    const compare = (a: (typeof withIndex)[number], b: (typeof withIndex)[number]) => {
+      if (sortKey === "default") {
+        const value = defaultCompare(a, b);
+        return value !== 0 ? value : a.index - b.index;
+      }
+      let value = 0;
+      if (sortKey === "name") {
+        value = textValue(a.player.name).localeCompare(textValue(b.player.name), "sv");
+      } else if (sortKey === "position") {
+        value = textValue(a.player.positionLabel).localeCompare(
+          textValue(b.player.positionLabel),
+          "sv"
+        );
+      } else if (sortKey === "number") {
+        value = numberValue(a.player.number) - numberValue(b.player.number);
+      }
+      if (value === 0) {
+        value = defaultCompare(a, b);
+      }
+      const direction = sortDir === "asc" ? 1 : -1;
+      return value * direction || a.index - b.index;
+    };
+    return [...withIndex].sort(compare).map((entry) => entry.player);
+  }, [activeSquad, sortDir, sortKey, substitutes]);
+
+  const toggleSort = (key: SquadSortKey) => {
+    if (key === "default") {
+      setSortKey("default");
+      setSortDir("asc");
+      return;
+    }
+    if (sortKey === key) {
+      setSortDir((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDir("asc");
+  };
+  const sortIndicator = (key: SquadSortKey) => {
+    if (sortKey !== key) {
+      return "";
+    }
+    if (key === "default") {
+      return " •";
+    }
+    return sortDir === "asc" ? " ↑" : " ↓";
+  };
 
   const toggleCaptain = (playerId: string) => {
     if (!activeSquad) {
@@ -146,11 +220,38 @@ export default function SquadEditor() {
 
       <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/30 p-2" data-scrollable>
         <div className="grid grid-cols-[28px_minmax(0,_1fr)_52px_32px_40px] items-center gap-1 px-2 pb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-          <span>#</span>
-          <span className="min-w-0 truncate">Name</span>
-          <span className="min-w-0 truncate">Pos</span>
+          <button
+            className="text-left hover:text-[var(--accent-2)]"
+            onClick={() => toggleSort("number")}
+            title="Sort by number"
+          >
+            #{sortIndicator("number")}
+          </button>
+          <button
+            className="min-w-0 truncate text-left hover:text-[var(--accent-2)]"
+            onClick={() => toggleSort("name")}
+            title="Sort by name"
+          >
+            Name{sortIndicator("name")}
+          </button>
+          <button
+            className="min-w-0 truncate text-left hover:text-[var(--accent-2)]"
+            onClick={() => toggleSort("position")}
+            title="Sort by position"
+          >
+            Pos{sortIndicator("position")}
+          </button>
           <span className="text-center">C</span>
           <span className="text-center">Sub</span>
+        </div>
+        <div className="flex justify-end px-2 pb-2">
+          <button
+            className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            onClick={() => toggleSort("default")}
+            title="Reset to default sort"
+          >
+            Default sort{sortIndicator("default")}
+          </button>
         </div>
         {visiblePlayers.length === 0 ? (
           <p className="px-2 py-3 text-[11px] text-[var(--ink-1)]">
