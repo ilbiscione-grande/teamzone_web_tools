@@ -33,6 +33,7 @@ import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { getStageRef } from "@/utils/stageRef";
 
 type ManagePlayersSortKey = "default" | "name" | "position" | "number";
+const SHARE_LINK_BASE_URL = "https://webtools.teamzoneapp.se";
 
 export default function TopBar() {
   const project = useProjectStore((state) => state.project);
@@ -2326,7 +2327,7 @@ export default function TopBar() {
                     setShareLinkStatus(result.error);
                     return;
                   }
-                  const url = `${window.location.origin}/share/${result.token}`;
+                  const url = `${SHARE_LINK_BASE_URL}/share/${result.token}`;
                   setShareLinkUrl(url);
                   setShareLinkStatus("Link created.");
                 }}
