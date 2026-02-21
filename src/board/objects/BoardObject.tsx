@@ -264,16 +264,13 @@ export default function BoardObject({
       if (!value) {
         return "";
       }
-      if (!compactPlayerLabels) {
-        return value;
-      }
       const parts = value.split(/\s+/).filter(Boolean);
       if (parts.length <= 1) {
-        return parts[0]?.slice(0, 12) ?? "";
+        return parts[0]?.slice(0, 14) ?? "";
       }
       const first = parts[0] ?? "";
       const lastInitial = parts[parts.length - 1]?.[0]?.toUpperCase();
-      return `${first.slice(0, 10)} ${lastInitial ?? ""}.`;
+      return `${first.slice(0, 12)} ${lastInitial ?? ""}`.trim();
     })();
     const initials = squadPlayer?.name
       ? squadPlayer.name
@@ -322,7 +319,7 @@ export default function BoardObject({
     const circleTextSize = playerTokenSize * 2;
     const belowTextWidth = compactPlayerLabels ? playerTokenSize * 5.8 : playerTokenSize * 6;
     const belowTextHeight = compactPlayerLabels ? 2.35 : 2.2;
-    const belowTextFontSize = compactPlayerLabels ? 1.28 : 1.1;
+    const belowTextFontSize = compactPlayerLabels ? 1.34 : 1.24;
     const belowTextBgPaddingX = compactPlayerLabels ? 0.34 : 0;
     const belowTextBgHeight = compactPlayerLabels ? belowTextHeight + 0.22 : belowTextHeight;
     const rotateOffset = (x: number, y: number, degrees: number) => {
@@ -497,6 +494,7 @@ export default function BoardObject({
               wrap={compactPlayerLabels ? "none" : "word"}
               ellipsis={!!compactPlayerLabels}
               fontSize={belowTextFontSize}
+              fontStyle="bold"
               fill={compactPlayerLabels ? "#f4f7f2" : "#f2f1e9"}
               strokeEnabled={false}
               shadowEnabled={!compactPlayerLabels}
