@@ -379,7 +379,8 @@ export default function BoardCanvas({
       // Half-pitch is already vertical enough; do not force landscape on mobile portrait.
       rotation = isForcedPortrait ? 0 : -90;
     } else if (isPortraitFull) {
-      rotation = 90;
+      // Keep home side toward the bottom on full-pitch portrait views.
+      rotation = -90;
     }
     if (isPortraitFull && board.pitchRotation === 180) {
       rotation += 180;
