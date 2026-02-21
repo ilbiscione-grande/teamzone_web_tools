@@ -100,6 +100,7 @@ export default function TopBar() {
   const [shareLinkStatus, setShareLinkStatus] = useState<string | null>(null);
   const [shareLinkUrl, setShareLinkUrl] = useState<string | null>(null);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
+  const [shareLinkQrError, setShareLinkQrError] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [pdfScope, setPdfScope] = useState<"board" | "project">("board");
   const [pdfSelectedBoardIds, setPdfSelectedBoardIds] = useState<string[]>([]);
@@ -321,6 +322,16 @@ export default function TopBar() {
     project?.settings?.mode ?? ("match" as "training" | "match" | "education");
   const modeText = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
   const canUsePresetStorage = plan === "PAID" && Boolean(authUser);
+  const shareLinkQrUrl = shareLinkUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=16&data=${encodeURIComponent(
+        shareLinkUrl
+      )}`
+    : null;
+  const shareLinkQrDownloadName = `${project.name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "project"}-share-qr.png`;
   useEffect(() => {
     if (!squadPresetsOpen) {
       setManageAutoAppliedKey(null);
@@ -2296,6 +2307,7 @@ export default function TopBar() {
                 onClick={() => {
                   setShareLinkOpen(false);
                   setShareLinkCopied(false);
+                  setShareLinkQrError(false);
                 }}
               >
                 Close
@@ -2308,6 +2320,7 @@ export default function TopBar() {
                   setShareLinkStatus(null);
                   setShareLinkUrl(null);
                   setShareLinkCopied(false);
+                  setShareLinkQrError(false);
                   const result = await createProjectShareLink(project);
                   if (!result.ok) {
                     setShareLinkStatus(result.error);
@@ -2355,6 +2368,66 @@ export default function TopBar() {
                     >
                       {shareLinkCopied ? "Copied" : "Copy"}
                     </button>
+                  </div>
+                  <div className="pt-1">
+                    <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                      QR code
+                    </p>
+                    <div className="mt-2 flex flex-col items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                      {!shareLinkQrError && shareLinkQrUrl ? (
+                        <img
+                          src={shareLinkQrUrl}
+                          alt="QR code for project share link"
+                          className="h-44 w-44 rounded-lg border border-[var(--line)] bg-white p-1"
+                          loading="lazy"
+                          onError={() => setShareLinkQrError(true)}
+                        />
+                      ) : (
+                        <p className="text-center text-xs text-[var(--ink-1)]">
+                          Could not load QR code right now.
+                        </p>
+                      )}
+                      {shareLinkQrUrl ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(shareLinkQrUrl);
+                                if (!response.ok) {
+                                  throw new Error("Download failed");
+                                }
+                                const blob = await response.blob();
+                                const downloadUrl = URL.createObjectURL(blob);
+                                const link = document.createElement("a");
+                                link.href = downloadUrl;
+                                link.download = shareLinkQrDownloadName;
+                                document.body.appendChild(link);
+                                link.click();
+                                link.remove();
+                                URL.revokeObjectURL(downloadUrl);
+                                setShareLinkStatus("QR code downloaded.");
+                              } catch {
+                                setShareLinkStatus(
+                                  "Could not download QR automatically. Open QR image and save manually."
+                                );
+                              }
+                            }}
+                          >
+                            Download QR
+                          </button>
+                          <a
+                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                            href={shareLinkQrUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open QR image
+                          </a>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               )}
