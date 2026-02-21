@@ -21,6 +21,17 @@ type BoardSyncSnapshot = {
 const boardCacheByProject = new Map<string, Map<string, BoardSyncSnapshot>>();
 const sessionTouchByUser = new Map<string, number>();
 
+const safeSetLocalStorageItem = (key: string, value: string) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn(`Could not persist local storage key "${key}".`, error);
+  }
+};
+
 const getUserId = async () => {
   if (!supabase) {
     return null;
@@ -71,9 +82,9 @@ const getCurrentSessionKey = async (userId: string) => {
           : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
   const sessionKey = `${userId}:${deviceId}:${nonce}`;
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(SESSION_DEVICE_ID_STORAGE, deviceId);
-    window.localStorage.setItem(SESSION_NONCE_STORAGE, nonce);
-    window.localStorage.setItem(SESSION_KEY_STORAGE, sessionKey);
+    safeSetLocalStorageItem(SESSION_DEVICE_ID_STORAGE, deviceId);
+    safeSetLocalStorageItem(SESSION_NONCE_STORAGE, nonce);
+    safeSetLocalStorageItem(SESSION_KEY_STORAGE, sessionKey);
   }
   return sessionKey;
 };

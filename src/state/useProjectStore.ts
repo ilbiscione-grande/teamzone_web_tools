@@ -148,14 +148,22 @@ export const persistPlan = (plan: Plan) => {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.setItem(PLAN_KEY, plan);
+  try {
+    window.localStorage.setItem(PLAN_KEY, plan);
+  } catch (error) {
+    console.warn("Could not persist plan to local storage.", error);
+  }
 };
 
 export const persistPlanCheck = () => {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.setItem(PLAN_CHECK_KEY, String(Date.now()));
+  try {
+    window.localStorage.setItem(PLAN_CHECK_KEY, String(Date.now()));
+  } catch (error) {
+    console.warn("Could not persist plan check to local storage.", error);
+  }
 };
 
 export const persistAuthUser = (user: AuthUser | null) => {
@@ -166,5 +174,9 @@ export const persistAuthUser = (user: AuthUser | null) => {
     window.localStorage.removeItem(AUTH_USER_KEY);
     return;
   }
-  window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  try {
+    window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  } catch (error) {
+    console.warn("Could not persist auth user to local storage.", error);
+  }
 };

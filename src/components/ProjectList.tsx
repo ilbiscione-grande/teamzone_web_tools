@@ -144,6 +144,9 @@ export default function ProjectList() {
   const [squadPresetsError, setSquadPresetsError] = useState<string | null>(null);
   const [homeSquadPresetId, setHomeSquadPresetId] = useState("");
   const [awaySquadPresetId, setAwaySquadPresetId] = useState("");
+  const autoTeamPresetKey = authUser?.id
+    ? `tacticsboard:autoTeamPreset:${authUser.id}`
+    : "tacticsboard:autoTeamPreset";
   const [consoleTab, setConsoleTab] = useState<
     "projects" | "shared" | "library"
   >("projects");
@@ -521,9 +524,48 @@ export default function ProjectList() {
           return;
         }
         setSquadPresets(result.teams);
+        if (typeof window !== "undefined") {
+          const savedPresetId = window.localStorage.getItem(autoTeamPresetKey);
+          const preferredPreset =
+            result.teams.find((team) => team.id === savedPresetId) ??
+            result.teams[0];
+          if (preferredPreset?.id) {
+            setHomeSquadPresetId((current) => current || preferredPreset.id);
+            setAwaySquadPresetId((current) =>
+              current && current !== preferredPreset.id ? current : ""
+            );
+          }
+        }
       })
       .finally(() => setSquadPresetsLoading(false));
-  }, [authUser, plan]);
+  }, [authUser, autoTeamPresetKey, plan]);
+  useEffect(() => {
+    if (!createOpen || plan !== "PAID" || squadPresets.length === 0) {
+      return;
+    }
+    if (homeSquadPresetId) {
+      return;
+    }
+    const savedPresetId =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem(autoTeamPresetKey)
+        : null;
+    const preferredPreset =
+      squadPresets.find((team) => team.id === savedPresetId) ?? squadPresets[0];
+    if (!preferredPreset?.id) {
+      return;
+    }
+    setHomeSquadPresetId(preferredPreset.id);
+    setAwaySquadPresetId((current) =>
+      current && current !== preferredPreset.id ? current : ""
+    );
+  }, [
+    autoTeamPresetKey,
+    createOpen,
+    homeSquadPresetId,
+    plan,
+    squadPresets,
+  ]);
 
   const onCreate = () => {
     if (!name.trim()) {
@@ -1476,7 +1518,13 @@ export default function ProjectList() {
                       <select
                         className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
                         value={homeSquadPresetId}
-                        onChange={(event) => setHomeSquadPresetId(event.target.value)}
+                        onChange={(event) => {
+                          const nextId = event.target.value;
+                          setHomeSquadPresetId(nextId);
+                          if (typeof window !== "undefined" && nextId) {
+                            window.localStorage.setItem(autoTeamPresetKey, nextId);
+                          }
+                        }}
                         disabled={plan !== "PAID"}
                         data-locked={plan !== "PAID"}
                       >
@@ -1495,7 +1543,13 @@ export default function ProjectList() {
                       <select
                         className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
                         value={awaySquadPresetId}
-                        onChange={(event) => setAwaySquadPresetId(event.target.value)}
+                        onChange={(event) => {
+                          const nextId = event.target.value;
+                          setAwaySquadPresetId(nextId);
+                          if (typeof window !== "undefined" && nextId) {
+                            window.localStorage.setItem(autoTeamPresetKey, nextId);
+                          }
+                        }}
                         disabled={plan !== "PAID"}
                         data-locked={plan !== "PAID"}
                       >
@@ -1509,6 +1563,9 @@ export default function ProjectList() {
                     </label>
                   </div>
                 )}
+                <p className="text-[10px] text-[var(--ink-1)]">
+                  Presets are copied into the new project. Editing squads inside a board does not update Team DB unless saved from Team manager.
+                </p>
               </div>
               <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                 <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Team colors</p>

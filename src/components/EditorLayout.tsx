@@ -73,7 +73,6 @@ export default function EditorLayout() {
   const updateProjectMeta = useProjectStore((state) => state.updateProjectMeta);
   const updateBoard = useProjectStore((state) => state.updateBoard);
   const setActiveBoard = useProjectStore((state) => state.setActiveBoard);
-  const addBoard = useProjectStore((state) => state.addBoard);
   const [stage, setStage] = useState<Konva.Stage | null>(null);
   const [propertiesFloating, setPropertiesFloating] = useState(false);
   const [propertiesPos, setPropertiesPos] = useState({ x: 24, y: 140 });
@@ -97,16 +96,12 @@ export default function EditorLayout() {
     []
   );
   const drawingStrokeIndexRef = useRef<number | null>(null);
-  const boardRecoveryAttemptRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (project?.settings) {
       setAttachBallToPlayer(project.settings.attachBallToPlayer);
     }
   }, [project?.id, project?.settings?.attachBallToPlayer, setAttachBallToPlayer]);
-  useEffect(() => {
-    boardRecoveryAttemptRef.current = null;
-  }, [project?.id]);
   useEffect(() => {
     if (!project) {
       return;
@@ -128,12 +123,7 @@ export default function EditorLayout() {
     if (project.isShared) {
       return;
     }
-    if (boardRecoveryAttemptRef.current === project.id) {
-      return;
-    }
-    boardRecoveryAttemptRef.current = project.id;
-    addBoard("Recovery board");
-  }, [addBoard, board, project, setActiveBoard]);
+  }, [board, project, setActiveBoard]);
   useEffect(() => {
     if (!propertiesFloating || typeof window === "undefined") {
       return;

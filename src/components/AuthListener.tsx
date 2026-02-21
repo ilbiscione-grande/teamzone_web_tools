@@ -23,6 +23,17 @@ const SESSION_NONCE_STORAGE = "tacticsboard:sessionNonce";
 const SESSION_DEVICE_ID_STORAGE = "tacticsboard:deviceId";
 const ACTIVE_SESSION_WINDOW_MS = 5 * 60 * 1000;
 
+const safeSetLocalStorageItem = (key: string, value: string) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn(`Could not persist local storage key "${key}".`, error);
+  }
+};
+
 export default function AuthListener() {
   const setAuthUser = useProjectStore((state) => state.setAuthUser);
   const setPlanFromProfile = useProjectStore(
@@ -52,7 +63,7 @@ export default function AuthListener() {
               ? crypto.randomUUID()
               : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(SESSION_DEVICE_ID_STORAGE, deviceId);
+        safeSetLocalStorageItem(SESSION_DEVICE_ID_STORAGE, deviceId);
       }
       return deviceId;
     };
@@ -78,7 +89,7 @@ export default function AuthListener() {
               ? crypto.randomUUID()
               : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(SESSION_NONCE_STORAGE, nonce);
+        safeSetLocalStorageItem(SESSION_NONCE_STORAGE, nonce);
       }
       // Device-stable key prevents false conflict on reload/login on same device.
       return `${userId}:${deviceId}:${nonce}`;
@@ -110,7 +121,7 @@ export default function AuthListener() {
             { onConflict: "user_id" }
           );
           if (typeof window !== "undefined") {
-            window.localStorage.setItem(SESSION_KEY_STORAGE, sessionKey);
+            safeSetLocalStorageItem(SESSION_KEY_STORAGE, sessionKey);
           }
           return true;
         }
@@ -142,7 +153,7 @@ export default function AuthListener() {
         { onConflict: "user_id" }
       );
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(SESSION_KEY_STORAGE, sessionKey);
+        safeSetLocalStorageItem(SESSION_KEY_STORAGE, sessionKey);
       }
       return true;
     };

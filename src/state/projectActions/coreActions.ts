@@ -245,6 +245,21 @@ export const createCoreActions: StateCreator<
     if (get().authUser && get().plan === "PAID") {
       const localProject = loadProject(id, get().authUser?.id ?? null);
       const legacyLocalProject = loadProject(id, null);
+      const pickPreferredLocal = (a: Project | null, b: Project | null) => {
+        if (a && b) {
+          const aAt = Date.parse(a.updatedAt || a.createdAt || "");
+          const bAt = Date.parse(b.updatedAt || b.createdAt || "");
+          const aNewer =
+            Number.isFinite(aAt) &&
+            Number.isFinite(bAt) &&
+            aAt >= bAt;
+          if (a.boards.length !== b.boards.length) {
+            return a.boards.length > b.boards.length ? a : b;
+          }
+          return aNewer ? a : b;
+        }
+        return a ?? b;
+      };
       const applyOpenedProject = (project: Project) => {
         ensureBoardSquads(project);
         set((state) => {
@@ -258,26 +273,24 @@ export const createCoreActions: StateCreator<
           saveProjectIndex(get().index, get().authUser?.id ?? null);
         }
       };
+      const bestLocal = pickPreferredLocal(localProject, legacyLocalProject);
       // Open immediately from local cache (user-scoped first, then legacy local key)
       // so the Open button always responds even if cloud is slow/unavailable.
-      if (localProject) {
-        applyOpenedProject(localProject);
-      } else if (legacyLocalProject) {
-        applyOpenedProject(legacyLocalProject);
+      if (bestLocal) {
+        applyOpenedProject(bestLocal);
       }
       if (typeof window !== "undefined" && !window.navigator.onLine) {
-        const project = localProject ?? legacyLocalProject;
+        const project = bestLocal;
         if (!project) {
           return;
         }
         return;
       }
       fetchProjectCloud(id).then((project) => {
-        if (!project && !localProject && !legacyLocalProject) {
+        if (!project && !bestLocal) {
           return;
         }
         let opened: Project | null = null;
-        const bestLocal = localProject ?? legacyLocalProject;
         if (project && bestLocal) {
           const cloudAt = Date.parse(project.updatedAt || project.createdAt || "");
           const localAt = Date.parse(

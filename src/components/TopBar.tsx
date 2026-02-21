@@ -90,6 +90,9 @@ export default function TopBar() {
   const [managePresetStatus, setManagePresetStatus] = useState<string | null>(
     null
   );
+  const [manageAutoAppliedKey, setManageAutoAppliedKey] = useState<string | null>(
+    null
+  );
   const [jerseyType, setJerseyType] = useState<
     "solid" | "split" | "stripe" | "sash" | "pinstripe"
   >("solid");
@@ -131,6 +134,9 @@ export default function TopBar() {
     2.4,
     2.6,
   ];
+  const autoTeamPresetKey = authUser?.id
+    ? `tacticsboard:autoTeamPreset:${authUser.id}`
+    : "tacticsboard:autoTeamPreset";
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -222,7 +228,6 @@ export default function TopBar() {
       })
       .finally(() => setSquadPresetsLoading(false));
   }, [squadPresetsOpen, authUser, plan]);
-
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -316,6 +321,53 @@ export default function TopBar() {
     project?.settings?.mode ?? ("match" as "training" | "match" | "education");
   const modeText = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
   const canUsePresetStorage = plan === "PAID" && Boolean(authUser);
+  useEffect(() => {
+    if (!squadPresetsOpen) {
+      setManageAutoAppliedKey(null);
+      return;
+    }
+    if (!canUsePresetStorage || !manageSquad || squadPresets.length === 0) {
+      return;
+    }
+    const savedPresetId =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem(autoTeamPresetKey)
+        : null;
+    const preferredPreset =
+      squadPresets.find((team) => team.id === savedPresetId) ?? squadPresets[0];
+    if (!preferredPreset) {
+      return;
+    }
+    const key = `${project?.id ?? ""}:${manageSide}:${preferredPreset.id}`;
+    if (manageAutoAppliedKey === key) {
+      return;
+    }
+    updateSquad(manageSquad.id, {
+      name: preferredPreset.squad.name,
+      clubLogo: preferredPreset.squad.clubLogo,
+      kit: { ...preferredPreset.squad.kit },
+      captainId: preferredPreset.squad.captainId,
+      substituteIds: [...(preferredPreset.squad.substituteIds ?? [])],
+      players: preferredPreset.squad.players.map((player) => ({ ...player })),
+    });
+    setManageAutoAppliedKey(key);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(autoTeamPresetKey, preferredPreset.id);
+    }
+    setManagePresetStatus(
+      `Loaded team: ${preferredPreset.name} (${manageSide === "home" ? "Home" : "Away"}).`
+    );
+  }, [
+    autoTeamPresetKey,
+    canUsePresetStorage,
+    manageAutoAppliedKey,
+    manageSide,
+    manageSquad,
+    project?.id,
+    squadPresets,
+    squadPresetsOpen,
+    updateSquad,
+  ]);
   const closeSquadPresetsModal = () => {
     setSquadPresetsOpen(false);
   };
@@ -1739,7 +1791,7 @@ export default function TopBar() {
                   Team manager
                 </h2>
                 <p className="text-xs text-[var(--ink-1)]">
-                  Manage teams and team squads for new projects.
+                  Edit the board-local squad here. Database updates only happen when you press Save to Team DB.
                 </p>
               </div>
               <div className="flex items-start gap-2">
@@ -1747,8 +1799,8 @@ export default function TopBar() {
                   <>
                     <button
                       className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      title="Save team"
-                      aria-label="Save team"
+                      title="Save to Team DB"
+                      aria-label="Save to Team DB"
                       onClick={saveManagePreset}
                     >
                       <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1756,7 +1808,7 @@ export default function TopBar() {
                         <path d="M8 4v6h8V4" />
                         <path d="M8 20v-6h8v6" />
                       </svg>
-                      <span className="text-[9px] uppercase tracking-wide">Save</span>
+                      <span className="text-[9px] uppercase tracking-wide">Save to DB</span>
                     </button>
                   </>
                 ) : null}
@@ -1780,6 +1832,9 @@ export default function TopBar() {
                     Free/Auth plans can edit teams locally in this project. Team presets are available on paid plans.
                   </p>
                 ) : null}
+                <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/35 px-3 py-2 text-[11px] text-[var(--ink-1)]">
+                  Local changes affect only this project/board. Use <span className="text-[var(--accent-0)]">Save to DB</span> to update the team database.
+                </p>
                 <div className="space-y-2">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                     Team details
@@ -2200,13 +2255,13 @@ export default function TopBar() {
                     className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                     onClick={() => setManagedTeamToSide("home")}
                   >
-                    Set as Home team
+                    Apply locally as Home
                   </button>
                   <button
                     className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                     onClick={() => setManagedTeamToSide("away")}
                   >
-                    Set as Away team
+                    Apply locally as Away
                   </button>
                 </div>
                 {squadPresetsLoading ? (
