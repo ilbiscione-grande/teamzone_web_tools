@@ -465,6 +465,15 @@ export default function BoardCanvas({
   const playerLinks = activeFrame?.playerLinks ?? board.playerLinks ?? [];
 
   useEffect(() => {
+    if (!isThreeDView) {
+      return;
+    }
+    // 3D mode locks pan/zoom. Ensure the board is centered when opening a board
+    // that was left in 3D, otherwise an old viewport offset can show an empty pitch.
+    setViewport({ zoom: 1, offsetX: 0, offsetY: 0 });
+  }, [board.id, isThreeDView, setViewport]);
+
+  useEffect(() => {
     if (!activeFrame) {
       return;
     }
