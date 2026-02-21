@@ -2816,7 +2816,7 @@ export default function TopBar() {
                           watermarkText: event.target.value.slice(0, 25),
                         });
                       }}
-                      placeholder="Created with Teamzone Web Tools - https://teamzone-web-tools.vercel.app/"
+                      placeholder="Teamzone Webtools - webtools.teamzoneapp.se"
                       readOnly={plan !== "PAID"}
                     />
                   </label>

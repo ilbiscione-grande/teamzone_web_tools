@@ -192,6 +192,9 @@ export default function BoardObject({
     const minScale = 1 - strength * 0.32;
     return minScale + (1 - minScale) * t;
   })();
+  const depthScaleApplies =
+    isThreeDView && (object.type === "player" || object.type === "ball");
+  const effectiveDepthScale = depthScaleApplies ? depthScale : 1;
   const depthT = (() => {
     if (!isThreeDView || !threeDDepthRange) {
       return 1;
@@ -220,8 +223,8 @@ export default function BoardObject({
     x: object.position.x,
     y: object.position.y,
     rotation: object.rotation,
-    scaleX: object.scale.x * depthScale,
-    scaleY: object.scale.y * depthScale,
+    scaleX: object.scale.x * effectiveDepthScale,
+    scaleY: object.scale.y * effectiveDepthScale,
     opacity: object.style.opacity,
     draggable: !object.locked && !readOnly,
     onClick: (event: Konva.KonvaEventObject<MouseEvent>) => {
@@ -724,8 +727,8 @@ export default function BoardObject({
       const safeWidth = Number.isFinite(rect.width) ? rect.width : 0;
       const safeHeight = Number.isFinite(rect.height) ? rect.height : 0;
       const safeRotation = Number.isFinite(object.rotation) ? object.rotation : 0;
-      const dx = (safeWidth * (1 - depthScale)) / 2;
-      const dy = (safeHeight * (1 - depthScale)) / 2;
+      const dx = (safeWidth * (1 - effectiveDepthScale)) / 2;
+      const dy = (safeHeight * (1 - effectiveDepthScale)) / 2;
       const radians = (safeRotation * Math.PI) / 180;
       const cos = Math.cos(radians);
       const sin = Math.sin(radians);

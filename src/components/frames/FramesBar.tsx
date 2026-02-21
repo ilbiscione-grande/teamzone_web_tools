@@ -9,6 +9,8 @@ import { useEditorStore } from "@/state/useEditorStore";
 import { can } from "@/utils/plan";
 import { getPitchViewBounds } from "@/board/pitch/Pitch";
 
+const DEFAULT_WATERMARK_TEXT = "Teamzone Webtools - webtools.teamzoneapp.se";
+
 // Props for the FramesBar component
 
 type FramesBarProps = {
@@ -47,6 +49,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordChunksRef = useRef<BlobPart[]>([]);
   const recordCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const recordSourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const recordRafRef = useRef<number | null>(null);
   const recordLoopRef = useRef<boolean>(false);
   const recordViewportRef = useRef<typeof viewport | null>(null);
@@ -65,6 +68,15 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
     plan !== "PAID" || board.watermarkEnabled === undefined
       ? true
       : board.watermarkEnabled;
+  const threeDStrength = Math.max(
+    0,
+    Math.min(
+      100,
+      typeof board.threeDStrength === "number" && Number.isFinite(board.threeDStrength)
+        ? board.threeDStrength
+        : 55
+    )
+  );
 
   const lastFrameIndex = Math.max(0, board.frames.length - 1);
   const timelineValue = Math.min(lastFrameIndex, Math.max(0, playheadFrame));
@@ -270,6 +282,14 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       window.alert("Unable to record canvas.");
       return;
     }
+    const sourceCanvas =
+      recordSourceCanvasRef.current ?? document.createElement("canvas");
+    recordSourceCanvasRef.current = sourceCanvas;
+    const sourceCtx = sourceCanvas.getContext("2d");
+    if (!sourceCtx) {
+      window.alert("Unable to record canvas.");
+      return;
+    }
     setRecordStatus(null);
     const drawFrame = () => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -286,34 +306,67 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
         recordCanvas.width = targetW;
         recordCanvas.height = targetH;
       }
-      ctx.clearRect(0, 0, recordCanvas.width, recordCanvas.height);
-      ctx.fillStyle = "#1f5f3f";
-      ctx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
+      if (sourceCanvas.width !== targetW || sourceCanvas.height !== targetH) {
+        sourceCanvas.width = targetW;
+        sourceCanvas.height = targetH;
+      }
+      sourceCtx.setTransform(1, 0, 0, 1, 0, 0);
+      sourceCtx.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+      sourceCtx.fillStyle = "#1f5f3f";
+      sourceCtx.fillRect(0, 0, sourceCanvas.width, sourceCanvas.height);
       layers.forEach((layer) => {
         const layerCanvasWrapper = layer.getCanvas() as {
           _canvas?: HTMLCanvasElement;
         };
         const canvas = layerCanvasWrapper?._canvas;
         if (canvas) {
-            ctx.drawImage(
-              canvas,
-              srcX,
-              srcY,
-              srcW,
-              srcH,
-              0,
-              0,
-              recordCanvas.width,
-              recordCanvas.height
-            );
-          }
-        });
-        if (showWatermark) {
-          const watermarkText =
-            plan === "PAID"
-              ? board.watermarkText?.trim() ||
-                "Created with Teamzone Web Tools - https://teamzone-web-tools.vercel.app/"
-              : "Created with Teamzone Web Tools - https://teamzone-web-tools.vercel.app/";
+          sourceCtx.drawImage(
+            canvas,
+            srcX,
+            srcY,
+            srcW,
+            srcH,
+            0,
+            0,
+            sourceCanvas.width,
+            sourceCanvas.height
+          );
+        }
+      });
+      ctx.clearRect(0, 0, recordCanvas.width, recordCanvas.height);
+      ctx.fillStyle = "#1f5f3f";
+      ctx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
+      if (board.threeDView) {
+        const normalizedStrength = Math.max(0, Math.min(1, threeDStrength / 100));
+        const scaleX = 1 - normalizedStrength * 0.12;
+        const scaleY = 1 - normalizedStrength * 0.18;
+        const shearX = -0.16 * normalizedStrength;
+        const offsetX = recordCanvas.width * 0.025;
+        const offsetY =
+          recordCanvas.height * (0.02 + normalizedStrength * 0.06);
+        ctx.setTransform(scaleX, 0, shearX, scaleY, offsetX, offsetY);
+        ctx.drawImage(
+          sourceCanvas,
+          0,
+          0,
+          recordCanvas.width,
+          recordCanvas.height
+        );
+      } else {
+        ctx.drawImage(
+          sourceCanvas,
+          0,
+          0,
+          recordCanvas.width,
+          recordCanvas.height
+        );
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (showWatermark) {
+        const watermarkText =
+          plan === "PAID"
+            ? board.watermarkText?.trim() || DEFAULT_WATERMARK_TEXT
+            : DEFAULT_WATERMARK_TEXT;
         const padding = 12 * pixelRatio;
         const innerInset = 16 * pixelRatio;
         ctx.save();
@@ -323,13 +376,13 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
         ctx.textBaseline = "bottom";
         ctx.shadowColor = "rgba(0,0,0,0.35)";
         ctx.shadowBlur = 8 * pixelRatio;
-          ctx.fillText(
-            watermarkText,
-            recordCanvas.width - padding - innerInset,
-            recordCanvas.height - padding - innerInset
-          );
-          ctx.restore();
-        }
+        ctx.fillText(
+          watermarkText,
+          recordCanvas.width - padding - innerInset,
+          recordCanvas.height - padding - innerInset
+        );
+        ctx.restore();
+      }
       recordRafRef.current = requestAnimationFrame(drawFrame);
     };
     recordRafRef.current = requestAnimationFrame(drawFrame);
