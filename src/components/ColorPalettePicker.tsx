@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 const DEFAULT_COLOR_PALETTE = [
   "#ffffff",
   "#f2f1e9",
@@ -46,6 +48,8 @@ export default function ColorPalettePicker({
   allowTransparent,
   className,
 }: ColorPalettePickerProps) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const normalizedValue = normalizeHexColor(value);
   const hasValueInPalette = normalizedValue
     ? DEFAULT_COLOR_PALETTE.includes(normalizedValue as (typeof DEFAULT_COLOR_PALETTE)[number])
@@ -56,25 +60,42 @@ export default function ColorPalettePicker({
       ? [...DEFAULT_COLOR_PALETTE, normalizedValue]
       : [...DEFAULT_COLOR_PALETTE];
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current) {
+        return;
+      }
+      if (!rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
+
+  const triggerIsTransparent = value === "transparent";
+  const triggerColor =
+    normalizedValue ?? DEFAULT_COLOR_PALETTE[0];
+
   return (
     <div
-      className={`flex flex-wrap gap-1.5 ${className ?? ""}`.trim()}
-      role="radiogroup"
-      aria-label={title ?? "Color palette"}
+      ref={rootRef}
+      className={`relative inline-flex ${className ?? ""}`.trim()}
     >
-      {allowTransparent ? (
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange("transparent")}
-          className={`relative h-6 w-6 overflow-hidden rounded-md border transition ${
-            value === "transparent"
-              ? "border-[var(--accent-0)] ring-1 ring-[var(--accent-0)]"
-              : "border-[var(--line)]"
-          } ${disabled ? "cursor-not-allowed opacity-60" : "hover:border-[var(--accent-2)]"}`}
-          aria-label="Transparent"
-          title="Transparent"
-        >
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((prev) => !prev)}
+        className={`relative h-8 w-10 overflow-hidden rounded-lg border transition ${
+          open ? "border-[var(--accent-0)] ring-1 ring-[var(--accent-0)]" : "border-[var(--line)]"
+        } ${disabled ? "cursor-not-allowed opacity-60" : "hover:border-[var(--accent-2)]"}`}
+        aria-label={title ?? "Choose color"}
+        title={title ?? "Choose color"}
+      >
+        {triggerIsTransparent ? (
           <span
             className="absolute inset-0"
             style={{
@@ -85,30 +106,80 @@ export default function ColorPalettePicker({
               backgroundColor: "rgba(15,27,26,0.7)",
             }}
           />
-          <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white">
-            /
-          </span>
-        </button>
-      ) : null}
-      {palette.map((color) => {
-        const isSelected = normalizedValue === normalizeHexColor(color);
-        return (
-          <button
-            key={color}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(color)}
-            className={`h-6 w-6 rounded-md border transition ${
-              isSelected
-                ? "border-[var(--accent-0)] ring-1 ring-[var(--accent-0)]"
-                : "border-[var(--line)]"
-            } ${disabled ? "cursor-not-allowed opacity-60" : "hover:border-[var(--accent-2)]"}`}
-            style={{ backgroundColor: color }}
-            aria-label={color}
-            title={color}
+        ) : (
+          <span
+            className="absolute inset-0"
+            style={{ backgroundColor: triggerColor }}
           />
-        );
-      })}
+        )}
+        <span className="absolute inset-y-0 right-1 flex items-center text-[10px] text-[var(--ink-0)]">
+          v
+        </span>
+      </button>
+
+      {open ? (
+        <div
+          className="absolute left-0 top-10 z-40 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2 shadow-xl shadow-black/40"
+          role="radiogroup"
+          aria-label={title ?? "Color palette"}
+        >
+          <div className="flex max-w-[190px] flex-wrap gap-1.5">
+            {allowTransparent ? (
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  onChange("transparent");
+                  setOpen(false);
+                }}
+                className={`relative h-6 w-6 overflow-hidden rounded-md border transition ${
+                  value === "transparent"
+                    ? "border-[var(--accent-0)] ring-1 ring-[var(--accent-0)]"
+                    : "border-[var(--line)]"
+                } ${disabled ? "cursor-not-allowed opacity-60" : "hover:border-[var(--accent-2)]"}`}
+                aria-label="Transparent"
+                title="Transparent"
+              >
+                <span
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(45deg, rgba(255,255,255,0.3) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.3) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.3) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.3) 75%)",
+                    backgroundSize: "8px 8px",
+                    backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0px",
+                    backgroundColor: "rgba(15,27,26,0.7)",
+                  }}
+                />
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white">
+                  /
+                </span>
+              </button>
+            ) : null}
+            {palette.map((color) => {
+              const isSelected = normalizedValue === normalizeHexColor(color);
+              return (
+                <button
+                  key={color}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    onChange(color);
+                    setOpen(false);
+                  }}
+                  className={`h-6 w-6 rounded-md border transition ${
+                    isSelected
+                      ? "border-[var(--accent-0)] ring-1 ring-[var(--accent-0)]"
+                      : "border-[var(--line)]"
+                  } ${disabled ? "cursor-not-allowed opacity-60" : "hover:border-[var(--accent-2)]"}`}
+                  style={{ backgroundColor: color }}
+                  aria-label={color}
+                  title={color}
+                />
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
