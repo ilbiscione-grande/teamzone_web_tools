@@ -575,13 +575,14 @@ export default function BoardCanvas({
   );
   const stageScale = baseScale * lockedViewport.zoom;
   // In 3D preview we leave extra headroom so the full pitch stays visible.
-  const threeDScaleFactor = 1 - (threeDStrength / 100) * 0.22;
+  const threeDNormalized = threeDStrength / 100;
+  const threeDScaleFactor = 1 - threeDNormalized * 0.3;
   const effectiveStageScale = stageScale * (isThreeDView ? threeDScaleFactor : 1);
   const baseOffsetX = forcePortrait
     ? -rotatedBounds.minX * baseScale
     : (size.width - effectiveWidth * baseScale) / 2 -
       rotatedBounds.minX * baseScale;
-  const threeDOffsetX = isThreeDView ? size.width * 0.015 : 0;
+  const threeDOffsetX = 0;
   const baseOffsetY =
     (size.height - effectiveHeight * baseScale) / 2 - rotatedBounds.minY * baseScale;
 
@@ -947,7 +948,7 @@ export default function BoardCanvas({
         style={
           isThreeDView
             ? {
-                transform: `perspective(1200px) rotateX(${12 + (threeDStrength / 100) * 22}deg) translateX(2.5%) translateY(${2 + (threeDStrength / 100) * 6}%) scale(${1 - (threeDStrength / 100) * 0.12})`,
+                transform: `perspective(1200px) rotateX(${12 + threeDNormalized * 22}deg) translateX(0%) translateY(${0.5 + threeDNormalized * 2}%) scale(${1 - threeDNormalized * 0.14})`,
                 transformOrigin: "50% 0%",
               }
             : undefined
