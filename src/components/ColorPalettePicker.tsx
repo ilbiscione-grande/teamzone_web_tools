@@ -123,7 +123,7 @@ export default function ColorPalettePicker({
           role="radiogroup"
           aria-label={title ?? "Color palette"}
         >
-          <div className="flex max-w-[190px] flex-wrap gap-1.5">
+          <div className="grid grid-cols-5 gap-1.5">
             {allowTransparent ? (
               <button
                 type="button"
