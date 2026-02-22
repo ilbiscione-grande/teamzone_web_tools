@@ -415,7 +415,10 @@ export default function BoardCanvas({
   const isPortraitFull =
     board.pitchView === "FULL" &&
     (isForcedPortrait || (readOnly && size.height > size.width));
-  const lockedViewport = forcePortrait ? { zoom: 1, offsetX: 0, offsetY: 0 } : viewport;
+  const lockedViewport =
+    forcePortrait || isThreeDView
+      ? { zoom: 1, offsetX: 0, offsetY: 0 }
+      : viewport;
   const setViewportSafe = forcePortrait
     ? (_value: Partial<typeof viewport>) => {}
     : setViewport;
@@ -578,14 +581,15 @@ export default function BoardCanvas({
   const threeDNormalized = threeDStrength / 100;
   const threeDScaleFactor = 1 - threeDNormalized * 0.3;
   const effectiveStageScale = stageScale * (isThreeDView ? threeDScaleFactor : 1);
+  const centeringScale = isThreeDView ? effectiveStageScale : baseScale;
   const baseOffsetX = forcePortrait
-    ? -rotatedBounds.minX * baseScale
-    : (size.width - effectiveWidth * baseScale) / 2 -
-      rotatedBounds.minX * baseScale;
-  // Keep 3D preview centered inside editor viewport; avoid left-edge clipping.
-  const threeDOffsetX = isThreeDView ? 2.2 : 0;
+    ? -rotatedBounds.minX * centeringScale
+    : (size.width - effectiveWidth * centeringScale) / 2 -
+      rotatedBounds.minX * centeringScale;
+  const threeDOffsetX = 0;
   const baseOffsetY =
-    (size.height - effectiveHeight * baseScale) / 2 - rotatedBounds.minY * baseScale;
+    (size.height - effectiveHeight * centeringScale) / 2 -
+    rotatedBounds.minY * centeringScale;
 
   const {
     draft,
