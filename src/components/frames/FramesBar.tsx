@@ -291,6 +291,86 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       return;
     }
     setRecordStatus(null);
+    const draw3DFrame = (
+      targetCtx: CanvasRenderingContext2D,
+      source: HTMLCanvasElement,
+      strength: number
+    ) => {
+      const w = source.width;
+      const h = source.height;
+      if (w <= 0 || h <= 0) {
+        return;
+      }
+      const normalized = Math.max(0, Math.min(1, strength / 100));
+      const perspective = 1200;
+      const angle = ((12 + normalized * 22) * Math.PI) / 180;
+      const scale = 1 - normalized * 0.12;
+      const tx = w * 0.025;
+      const ty = h * (0.02 + normalized * 0.06);
+
+      const project = (x: number, y: number) => {
+        const ox = x - w / 2;
+        const sx = ox * scale;
+        const sy = y * scale;
+        const ry = sy * Math.cos(angle);
+        const rz = sy * Math.sin(angle);
+        const p = perspective / Math.max(1, perspective - rz);
+        return {
+          x: sx * p + w / 2 + tx,
+          y: ry * p + ty,
+        };
+      };
+
+      const topLeft = project(0, 0);
+      const topRight = project(w, 0);
+      const bottomLeft = project(0, h);
+      const bottomRight = project(w, h);
+      const lerpPoint = (
+        a: { x: number; y: number },
+        b: { x: number; y: number },
+        t: number
+      ) => ({
+        x: a.x + (b.x - a.x) * t,
+        y: a.y + (b.y - a.y) * t,
+      });
+
+      const strip = Math.max(1, Math.round(h / 360));
+      for (let sy = 0; sy < h; sy += strip) {
+        const sy2 = Math.min(h, sy + strip);
+        const t0 = sy / h;
+        const t1 = sy2 / h;
+        const l0 = lerpPoint(topLeft, bottomLeft, t0);
+        const r0 = lerpPoint(topRight, bottomRight, t0);
+        const l1 = lerpPoint(topLeft, bottomLeft, t1);
+        const r1 = lerpPoint(topRight, bottomRight, t1);
+
+        const minX = Math.min(l0.x, r0.x, l1.x, r1.x);
+        const maxX = Math.max(l0.x, r0.x, l1.x, r1.x);
+        const minY = Math.min(l0.y, r0.y, l1.y, r1.y);
+        const maxY = Math.max(l0.y, r0.y, l1.y, r1.y);
+
+        targetCtx.save();
+        targetCtx.beginPath();
+        targetCtx.moveTo(l0.x, l0.y);
+        targetCtx.lineTo(r0.x, r0.y);
+        targetCtx.lineTo(r1.x, r1.y);
+        targetCtx.lineTo(l1.x, l1.y);
+        targetCtx.closePath();
+        targetCtx.clip();
+        targetCtx.drawImage(
+          source,
+          0,
+          sy,
+          w,
+          sy2 - sy,
+          minX,
+          minY,
+          Math.max(1, maxX - minX),
+          Math.max(1, maxY - minY)
+        );
+        targetCtx.restore();
+      }
+    };
     const drawFrame = () => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       const stageScale = stage.scaleX();
@@ -337,21 +417,7 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       ctx.fillStyle = "#1f5f3f";
       ctx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
       if (board.threeDView) {
-        const normalizedStrength = Math.max(0, Math.min(1, threeDStrength / 100));
-        const scaleX = 1 - normalizedStrength * 0.12;
-        const scaleY = 1 - normalizedStrength * 0.18;
-        const shearX = -0.16 * normalizedStrength;
-        const offsetX = recordCanvas.width * 0.025;
-        const offsetY =
-          recordCanvas.height * (0.02 + normalizedStrength * 0.06);
-        ctx.setTransform(scaleX, 0, shearX, scaleY, offsetX, offsetY);
-        ctx.drawImage(
-          sourceCanvas,
-          0,
-          0,
-          recordCanvas.width,
-          recordCanvas.height
-        );
+        draw3DFrame(ctx, sourceCanvas, threeDStrength);
       } else {
         ctx.drawImage(
           sourceCanvas,
