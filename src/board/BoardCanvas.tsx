@@ -582,7 +582,8 @@ export default function BoardCanvas({
     ? -rotatedBounds.minX * baseScale
     : (size.width - effectiveWidth * baseScale) / 2 -
       rotatedBounds.minX * baseScale;
-  const threeDOffsetX = 0;
+  // Keep 3D preview centered inside editor viewport; avoid left-edge clipping.
+  const threeDOffsetX = isThreeDView ? 2.2 : 0;
   const baseOffsetY =
     (size.height - effectiveHeight * baseScale) / 2 - rotatedBounds.minY * baseScale;
 
