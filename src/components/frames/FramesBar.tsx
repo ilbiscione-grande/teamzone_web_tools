@@ -325,6 +325,46 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
       const topRight = project(w, 0);
       const bottomLeft = project(0, h);
       const bottomRight = project(w, h);
+      const projectedMinX = Math.min(
+        topLeft.x,
+        topRight.x,
+        bottomLeft.x,
+        bottomRight.x
+      );
+      const projectedMaxX = Math.max(
+        topLeft.x,
+        topRight.x,
+        bottomLeft.x,
+        bottomRight.x
+      );
+      const projectedMinY = Math.min(
+        topLeft.y,
+        topRight.y,
+        bottomLeft.y,
+        bottomRight.y
+      );
+      const projectedMaxY = Math.max(
+        topLeft.y,
+        topRight.y,
+        bottomLeft.y,
+        bottomRight.y
+      );
+      const projectedWidth = Math.max(1, projectedMaxX - projectedMinX);
+      const projectedHeight = Math.max(1, projectedMaxY - projectedMinY);
+      const framePaddingX = w * 0.02;
+      const framePaddingY = h * 0.02;
+      const fitScale = Math.min(
+        (w - framePaddingX * 2) / projectedWidth,
+        (h - framePaddingY * 2) / projectedHeight
+      );
+      const fitOffsetX =
+        framePaddingX + (w - framePaddingX * 2 - projectedWidth * fitScale) / 2;
+      const fitOffsetY =
+        framePaddingY + (h - framePaddingY * 2 - projectedHeight * fitScale) / 2;
+      const fitPoint = (point: { x: number; y: number }) => ({
+        x: (point.x - projectedMinX) * fitScale + fitOffsetX,
+        y: (point.y - projectedMinY) * fitScale + fitOffsetY,
+      });
       const lerpPoint = (
         a: { x: number; y: number },
         b: { x: number; y: number },
@@ -339,10 +379,10 @@ export default function FramesBar({ board, stage }: FramesBarProps) {
         const sy2 = Math.min(h, sy + strip);
         const t0 = sy / h;
         const t1 = sy2 / h;
-        const l0 = lerpPoint(topLeft, bottomLeft, t0);
-        const r0 = lerpPoint(topRight, bottomRight, t0);
-        const l1 = lerpPoint(topLeft, bottomLeft, t1);
-        const r1 = lerpPoint(topRight, bottomRight, t1);
+        const l0 = fitPoint(lerpPoint(topLeft, bottomLeft, t0));
+        const r0 = fitPoint(lerpPoint(topRight, bottomRight, t0));
+        const l1 = fitPoint(lerpPoint(topLeft, bottomLeft, t1));
+        const r1 = fitPoint(lerpPoint(topRight, bottomRight, t1));
 
         const minX = Math.min(l0.x, r0.x, l1.x, r1.x);
         const maxX = Math.max(l0.x, r0.x, l1.x, r1.x);
