@@ -31,6 +31,7 @@ import {
 import { createProjectShareLink } from "@/persistence/projectShareLinks";
 import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { getStageRef } from "@/utils/stageRef";
+import ColorPalettePicker from "@/components/ColorPalettePicker";
 
 type ManagePlayersSortKey = "default" | "name" | "position" | "number";
 const SHARE_LINK_BASE_URL = "https://webtools.teamzoneapp.se";
@@ -1887,28 +1888,24 @@ export default function TopBar() {
                           <div className="grid gap-2 md:grid-cols-2">
                             <label className="space-y-1">
                               <span className="text-[10px] text-[var(--ink-1)]">Shirt Base</span>
-                              <input
-                                type="color"
-                                className="h-7 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                              <ColorPalettePicker
                                 value={editableSquad.kit.shirt}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   updateEditableSquad({
-                                    kit: { ...editableSquad.kit, shirt: event.target.value },
+                                    kit: { ...editableSquad.kit, shirt: value },
                                   })
                                 }
                               />
                             </label>
                             <label className="space-y-1">
                               <span className="text-[10px] text-[var(--ink-1)]">Shirt Secondary</span>
-                              <input
-                                type="color"
-                                className="h-7 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                              <ColorPalettePicker
                                 value={editableSquad.kit.shirtSecondary ?? editableSquad.kit.shirt}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   updateEditableSquad({
                                     kit: {
                                       ...editableSquad.kit,
-                                      shirtSecondary: event.target.value,
+                                      shirtSecondary: value,
                                     },
                                   })
                                 }
@@ -1918,26 +1915,22 @@ export default function TopBar() {
                           <div className="grid gap-2 md:grid-cols-2">
                             <label className="space-y-1">
                               <span className="text-[10px] text-[var(--ink-1)]">Shorts</span>
-                              <input
-                                type="color"
-                                className="h-7 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                              <ColorPalettePicker
                                 value={editableSquad.kit.shorts}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   updateEditableSquad({
-                                    kit: { ...editableSquad.kit, shorts: event.target.value },
+                                    kit: { ...editableSquad.kit, shorts: value },
                                   })
                                 }
                               />
                             </label>
                             <label className="space-y-1">
                               <span className="text-[10px] text-[var(--ink-1)]">Socks</span>
-                              <input
-                                type="color"
-                                className="h-7 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                              <ColorPalettePicker
                                 value={editableSquad.kit.socks}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   updateEditableSquad({
-                                    kit: { ...editableSquad.kit, socks: event.target.value },
+                                    kit: { ...editableSquad.kit, socks: value },
                                   })
                                 }
                               />

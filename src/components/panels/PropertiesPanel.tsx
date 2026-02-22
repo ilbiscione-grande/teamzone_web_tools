@@ -7,6 +7,7 @@ import { useEditorStore } from "@/state/useEditorStore";
 import { getActiveBoard, getBoardSquads } from "@/utils/board";
 import { clone } from "@/utils/clone";
 import { createId } from "@/utils/id";
+import ColorPalettePicker from "@/components/ColorPalettePicker";
 
 const numberField = (
   value: number,
@@ -437,23 +438,17 @@ export default function PropertiesPanel({
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <label className="space-y-1">
                   <span className="text-[11px]">Stroke</span>
-                  <input
-                    type="color"
-                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                  <ColorPalettePicker
                     value={selectedLinkStyle.stroke}
-                    onChange={(event) =>
-                      updateLinkStyle({ stroke: event.target.value })
-                    }
+                    onChange={(value) => updateLinkStyle({ stroke: value })}
                   />
                 </label>
                 <label className="space-y-1">
                   <span className="text-[11px]">Outline</span>
-                  <input
-                    type="color"
-                    className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                  <ColorPalettePicker
                     value={selectedLinkStyle.outlineStroke ?? "#111111"}
-                    onChange={(event) =>
-                      updateLinkStyle({ outlineStroke: event.target.value })
+                    onChange={(value) =>
+                      updateLinkStyle({ outlineStroke: value })
                     }
                   />
                 </label>
@@ -496,26 +491,23 @@ export default function PropertiesPanel({
                 <>
                   <label className="space-y-1">
                     <span className="text-[11px]">Stroke</span>
-                    <input
-                      type="color"
-                      className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                    <ColorPalettePicker
                       value={target.style.stroke}
-                      onChange={(event) =>
+                      onChange={(value) =>
                         update({
-                          style: { ...target.style, stroke: event.target.value },
+                          style: { ...target.style, stroke: value },
                         })
                       }
                     />
                   </label>
                   <label className="space-y-1">
                     <span className="text-[11px]">Fill</span>
-                    <input
-                      type="color"
-                      className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                    <ColorPalettePicker
                       value={target.style.fill}
-                      onChange={(event) =>
+                      allowTransparent
+                      onChange={(value) =>
                         update({
-                          style: { ...target.style, fill: event.target.value },
+                          style: { ...target.style, fill: value },
                         })
                       }
                     />
@@ -560,15 +552,13 @@ export default function PropertiesPanel({
                     <>
                       <label className="space-y-1">
                         <span className="text-[11px]">Outline</span>
-                        <input
-                          type="color"
-                          className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent"
+                        <ColorPalettePicker
                           value={target.style.outlineStroke ?? "#111111"}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             update({
                               style: {
                                 ...target.style,
-                                outlineStroke: event.target.value,
+                                outlineStroke: value,
                               },
                             })
                           }
@@ -834,14 +824,13 @@ export default function PropertiesPanel({
                   <span className="text-[11px]">Vest color</span>
                   {target.squadPlayerId ? (
                     <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        className="h-8 w-10 rounded-lg border border-[var(--line)] bg-transparent"
+                      <ColorPalettePicker
                         value={
                           squadPlayerById.get(target.squadPlayerId)?.vestColor ??
                           "#000000"
                         }
-                        onChange={(event) =>
+                        title="Vest color"
+                        onChange={(value) =>
                           (() => {
                             const squadPlayerId = target.squadPlayerId;
                             if (!squadPlayerId) {
@@ -852,11 +841,10 @@ export default function PropertiesPanel({
                               return;
                             }
                             updateSquadPlayer(squadId, squadPlayerId, {
-                              vestColor: event.target.value,
+                              vestColor: value,
                             });
                           })()
                         }
-                        title="Vest color"
                       />
                       <button
                         className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
@@ -881,14 +869,10 @@ export default function PropertiesPanel({
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        className="h-8 w-10 rounded-lg border border-[var(--line)] bg-transparent"
+                      <ColorPalettePicker
                         value={target.vestColor ?? "#000000"}
-                        onChange={(event) =>
-                          update({ vestColor: event.target.value })
-                        }
                         title="Vest color"
+                        onChange={(value) => update({ vestColor: value })}
                       />
                       <button
                         className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"

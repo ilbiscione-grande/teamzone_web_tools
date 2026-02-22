@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   Arrow,
   Circle,
-  Ellipse,
   Group,
   Image as KonvaImage,
   Line,
@@ -79,6 +78,41 @@ const toPositionAbbreviation = (value?: string) => {
 };
 
 const BALL_SVG_SRC = "/ball.svg";
+const CONE_SVG_SOURCES = ["/low_cone_white.svg", "/cone_low_white.svg"] as const;
+let coneSvgTemplatePromise: Promise<string> | null = null;
+
+const loadConeSvgTemplate = async () => {
+  if (!coneSvgTemplatePromise) {
+    coneSvgTemplatePromise = (async () => {
+      for (const src of CONE_SVG_SOURCES) {
+        try {
+          const response = await fetch(src, { cache: "force-cache" });
+          if (response.ok) {
+            return await response.text();
+          }
+        } catch {
+          // Try the next candidate.
+        }
+      }
+      throw new Error("Cone SVG template not found.");
+    })();
+  }
+  return coneSvgTemplatePromise;
+};
+
+const colorizeConeSvg = (template: string, fill: string, stroke: string) => {
+  const fillColor =
+    fill && fill !== "transparent" ? fill : stroke || "rgba(255,255,255,0.9)";
+  const strokeColor =
+    stroke && stroke !== "transparent" ? stroke : "rgba(0,0,0,0.9)";
+
+  return template
+    .replace(/color:#000000/gi, `color:${fillColor}`)
+    .replace(/fill:#000000/gi, `fill:${fillColor}`)
+    .replace(/stroke:#000000/gi, `stroke:${strokeColor}`)
+    .replace(/fill="#000000"/gi, `fill="${fillColor}"`)
+    .replace(/stroke="#000000"/gi, `stroke="${strokeColor}"`);
+};
 
 function BallSprite({ radius }: { radius: number }) {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
@@ -113,6 +147,69 @@ function BallSprite({ radius }: { radius: number }) {
       height={radius * 2}
     />
   );
+}
+
+function ConeSprite({
+  width,
+  height,
+  fill,
+  stroke,
+}: {
+  width: number;
+  height: number;
+  fill: string;
+  stroke: string;
+}) {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const template = await loadConeSvgTemplate();
+        if (cancelled) {
+          return;
+        }
+        const svgMarkup = colorizeConeSvg(template, fill, stroke);
+        const svgImage = new window.Image();
+        svgImage.onload = () => {
+          if (!cancelled) {
+            setImage(svgImage);
+          }
+        };
+        svgImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+          svgMarkup
+        )}`;
+      } catch {
+        if (!cancelled) {
+          setImage(null);
+        }
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [fill, stroke]);
+
+  if (!image) {
+    return (
+      <Rect
+        x={0}
+        y={0}
+        width={width}
+        height={height}
+        cornerRadius={Math.max(0.25, Math.min(width, height) * 0.12)}
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={0.12}
+      />
+    );
+  }
+
+  return <KonvaImage image={image} x={0} y={0} width={width} height={height} />;
 }
 
 type BoardObjectProps = {
@@ -596,22 +693,6 @@ export default function BoardObject({
 
   if (object.type === "cone") {
     const cone = object as ConeToken;
-    const coneSvg = {
-      minX: 98.789669,
-      minY: 119.02408,
-      width: 92.668551,
-      height: 28.69632,
-      translateX: -39.86834,
-      translateY: 17.022282,
-      topX: 145.20242,
-      topY: 119.21153,
-      topRx: 10.01506,
-      topRy: 1.3770708,
-      bodyPath:
-        "m 98.789669,138.10972 36.436181,-19.08564 c 0.008,2.05813 19.56615,1.87074 20.02546,0.0724 l 36.20691,19.04769 c -0.0397,9.57623 -92.698888,8.42303 -92.668551,-0.033 z",
-    };
-    const coneScaleX = cone.width / coneSvg.width;
-    const coneScaleY = cone.height / coneSvg.height;
     return (
       <Group
         {...commonProps}
@@ -620,39 +701,18 @@ export default function BoardObject({
             registerNode(object.id, node);
           }
         }}
+        shadowEnabled={ambientShadowEnabled}
+        shadowColor="#000000"
+        shadowBlur={ambientShadowBlur}
+        shadowOpacity={ambientShadowOpacity}
+        shadowOffsetY={ambientShadowOffsetY}
       >
-        <Group
-          x={-coneSvg.minX + coneSvg.translateX}
-          y={-coneSvg.minY + coneSvg.translateY}
-          scaleX={coneScaleX}
-          scaleY={coneScaleY}
-        >
-          <Path
-            data={coneSvg.bodyPath}
-            fill={cone.style.fill}
-            stroke={cone.style.stroke}
-            strokeWidth={depthStroke(cone.style.strokeWidth)}
-            lineJoin="bevel"
-          />
-          <Ellipse
-            x={coneSvg.topX}
-            y={coneSvg.topY}
-            radiusX={coneSvg.topRx}
-            radiusY={coneSvg.topRy}
-            fill="rgba(0,0,0,0.35)"
-            stroke={cone.style.stroke}
-            strokeWidth={depthStroke(cone.style.strokeWidth)}
-          />
-          <Ellipse
-            x={coneSvg.topX}
-            y={coneSvg.topY}
-            radiusX={coneSvg.topRx}
-            radiusY={coneSvg.topRy}
-            fill="transparent"
-            stroke={cone.style.stroke}
-            strokeWidth={depthStroke(cone.style.strokeWidth)}
-          />
-        </Group>
+        <ConeSprite
+          width={cone.width}
+          height={cone.height}
+          fill={cone.style.fill}
+          stroke={cone.style.stroke}
+        />
       </Group>
     );
   }

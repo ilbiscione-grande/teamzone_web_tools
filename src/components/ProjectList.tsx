@@ -18,6 +18,7 @@ import { FORMATION_PRESETS, getDefaultBoardSettings } from "@/state/projectHelpe
 import AdBanner from "@/components/AdBanner";
 import PlanModal from "@/components/PlanModal";
 import BetaNoticeModal from "@/components/BetaNoticeModal";
+import ColorPalettePicker from "@/components/ColorPalettePicker";
 import { fetchProjectCloud } from "@/persistence/cloud";
 import { submitContactMessage } from "@/persistence/contact";
 import {
@@ -1575,39 +1576,36 @@ export default function ProjectList() {
                     <div className="flex flex-wrap items-center gap-3">
                       <label className="flex items-center gap-2">
                         <span>Shirt</span>
-                        <input
-                          type="color"
+                        <ColorPalettePicker
                           value={homeKit.shirt}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setHomeKit((prev) => ({
                               ...prev,
-                              shirt: event.target.value,
+                              shirt: value,
                             }))
                           }
                         />
                       </label>
                       <label className="flex items-center gap-2">
                         <span>Shorts</span>
-                        <input
-                          type="color"
+                        <ColorPalettePicker
                           value={homeKit.shorts}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setHomeKit((prev) => ({
                               ...prev,
-                              shorts: event.target.value,
+                              shorts: value,
                             }))
                           }
                         />
                       </label>
                       <label className="flex items-center gap-2">
                         <span>Socks</span>
-                        <input
-                          type="color"
+                        <ColorPalettePicker
                           value={homeKit.socks}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setHomeKit((prev) => ({
                               ...prev,
-                              socks: event.target.value,
+                              socks: value,
                             }))
                           }
                         />
@@ -1619,39 +1617,36 @@ export default function ProjectList() {
                     <div className="flex flex-wrap items-center gap-3">
                       <label className="flex items-center gap-2">
                         <span>Shirt</span>
-                        <input
-                          type="color"
+                        <ColorPalettePicker
                           value={awayKit.shirt}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setAwayKit((prev) => ({
                               ...prev,
-                              shirt: event.target.value,
+                              shirt: value,
                             }))
                           }
                         />
                       </label>
                       <label className="flex items-center gap-2">
                         <span>Shorts</span>
-                        <input
-                          type="color"
+                        <ColorPalettePicker
                           value={awayKit.shorts}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setAwayKit((prev) => ({
                               ...prev,
-                              shorts: event.target.value,
+                              shorts: value,
                             }))
                           }
                         />
                       </label>
                       <label className="flex items-center gap-2">
                         <span>Socks</span>
-                        <input
-                          type="color"
+                        <ColorPalettePicker
                           value={awayKit.socks}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setAwayKit((prev) => ({
                               ...prev,
-                              socks: event.target.value,
+                              socks: value,
                             }))
                           }
                         />
