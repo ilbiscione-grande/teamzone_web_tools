@@ -346,6 +346,23 @@ export default function BoardObject({
     },
   };
 
+  const getCenterScaleAnchorOffset = (width: number, height: number) => {
+    const sx = Number.isFinite(commonProps.scaleX) ? commonProps.scaleX : 1;
+    const sy = Number.isFinite(commonProps.scaleY) ? commonProps.scaleY : 1;
+    if (Math.abs(sx - 1) < 1e-6 && Math.abs(sy - 1) < 1e-6) {
+      return { x: 0, y: 0 };
+    }
+    const dx = (width * (1 - sx)) / 2;
+    const dy = (height * (1 - sy)) / 2;
+    const radians = ((Number.isFinite(object.rotation) ? object.rotation : 0) * Math.PI) / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    return {
+      x: dx * cos - dy * sin,
+      y: dx * sin + dy * cos,
+    };
+  };
+
   if (object.type === "player") {
     const player = object as PlayerToken;
     const fillColor = player.squadPlayerId
@@ -693,9 +710,12 @@ export default function BoardObject({
 
   if (object.type === "cone") {
     const cone = object as ConeToken;
+    const coneScaleAnchorOffset = getCenterScaleAnchorOffset(cone.width, cone.height);
     return (
       <Group
         {...commonProps}
+        x={object.position.x + coneScaleAnchorOffset.x}
+        y={object.position.y + coneScaleAnchorOffset.y}
         ref={(node) => {
           if (node) {
             registerNode(object.id, node);
@@ -719,6 +739,7 @@ export default function BoardObject({
 
   if (object.type === "goal") {
     const goal = object as MiniGoal;
+    const goalScaleAnchorOffset = getCenterScaleAnchorOffset(goal.width, goal.height);
     const goalSvg = {
       minX: 105.03958,
       minY: 34.66042,
@@ -738,6 +759,8 @@ export default function BoardObject({
     return (
       <Group
         {...commonProps}
+        x={object.position.x + goalScaleAnchorOffset.x}
+        y={object.position.y + goalScaleAnchorOffset.y}
         ref={(node) => {
           if (node) {
             registerNode(object.id, node);
@@ -780,26 +803,7 @@ export default function BoardObject({
 
   if (object.type === "rect") {
     const rect = object as ShapeRect;
-    const rectScaleAnchorOffset = (() => {
-      if (!isThreeDView || depthScale === 1) {
-        return { x: 0, y: 0 };
-      }
-      const safeWidth = Number.isFinite(rect.width) ? rect.width : 0;
-      const safeHeight = Number.isFinite(rect.height) ? rect.height : 0;
-      const safeRotation = Number.isFinite(object.rotation) ? object.rotation : 0;
-      const dx = (safeWidth * (1 - effectiveDepthScale)) / 2;
-      const dy = (safeHeight * (1 - effectiveDepthScale)) / 2;
-      const radians = (safeRotation * Math.PI) / 180;
-      const cos = Math.cos(radians);
-      const sin = Math.sin(radians);
-      if (!Number.isFinite(cos) || !Number.isFinite(sin)) {
-        return { x: 0, y: 0 };
-      }
-      return {
-        x: dx * cos - dy * sin,
-        y: dx * sin + dy * cos,
-      };
-    })();
+    const rectScaleAnchorOffset = getCenterScaleAnchorOffset(rect.width, rect.height);
     return (
       <Rect
         {...commonProps}
@@ -828,10 +832,16 @@ export default function BoardObject({
 
   if (object.type === "triangle") {
     const triangle = object as ShapeTriangle;
+    const triangleScaleAnchorOffset = getCenterScaleAnchorOffset(
+      triangle.width,
+      triangle.height
+    );
     const points = [0, 0, triangle.width, triangle.height / 2, 0, triangle.height];
     return (
       <Line
         {...commonProps}
+        x={object.position.x + triangleScaleAnchorOffset.x}
+        y={object.position.y + triangleScaleAnchorOffset.y}
         points={points}
         closed
         stroke={triangle.style.stroke}
@@ -925,9 +935,12 @@ export default function BoardObject({
     const lineCount = label.text.split("\n").length;
     const textHeight = label.height ?? lineHeight * lineCount;
     const padding = Math.max(0.4, label.fontSize * 0.25);
+    const textScaleAnchorOffset = getCenterScaleAnchorOffset(label.width, textHeight);
     return (
       <Group
         {...commonProps}
+        x={object.position.x + textScaleAnchorOffset.x}
+        y={object.position.y + textScaleAnchorOffset.y}
         scaleY={commonProps.scaleY * textForeshorten}
         shadowEnabled={ambientShadowEnabled}
         shadowColor="#000000"
