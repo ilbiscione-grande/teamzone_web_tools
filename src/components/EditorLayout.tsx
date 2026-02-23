@@ -1087,8 +1087,8 @@ export default function EditorLayout() {
             <Toolbox collapsed={toolboxCollapsed} />
           </div>
           {selection.length > 0 && !propertiesFloating && (
-            <div className="relative max-h-[42dvh] overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 shadow-xl shadow-black/30">
-              <div className="max-h-[42dvh] overflow-y-auto p-4 pr-3">
+            <div className="relative min-h-0 flex-1 overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 shadow-xl shadow-black/30">
+              <div className="h-full overflow-y-auto p-4 pr-3">
                 <PropertiesPanel
                   floating={propertiesFloating}
                   onToggleFloating={() =>
@@ -1103,8 +1103,12 @@ export default function EditorLayout() {
       </div>
       {selection.length > 0 && propertiesFloating && (
         <div
-          className="fixed z-40 w-[320px] max-h-[72dvh] overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 shadow-2xl shadow-black/40"
-          style={{ left: propertiesPos.x, top: propertiesPos.y }}
+          className="fixed z-40 flex w-[320px] flex-col overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 shadow-2xl shadow-black/40"
+          style={{
+            left: propertiesPos.x,
+            top: propertiesPos.y,
+            height: `calc(100dvh - ${propertiesPos.y}px - 16px)`,
+          }}
         >
           <div className="px-4 pb-0 pt-4">
             <div
@@ -1118,7 +1122,7 @@ export default function EditorLayout() {
               }}
             />
           </div>
-          <div className="max-h-[calc(72dvh-44px)] overflow-y-auto px-4 pb-4 pr-3">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pr-3">
             <PropertiesPanel
               floating={propertiesFloating}
               onToggleFloating={() =>
