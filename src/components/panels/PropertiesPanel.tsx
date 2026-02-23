@@ -440,6 +440,7 @@ export default function PropertiesPanel({
                   <span className="text-[11px]">Stroke</span>
                   <ColorPalettePicker
                     value={selectedLinkStyle.stroke}
+                    allowTransparent
                     onChange={(value) => updateLinkStyle({ stroke: value })}
                   />
                 </label>
@@ -447,6 +448,7 @@ export default function PropertiesPanel({
                   <span className="text-[11px]">Outline</span>
                   <ColorPalettePicker
                     value={selectedLinkStyle.outlineStroke ?? "#111111"}
+                    allowTransparent
                     onChange={(value) =>
                       updateLinkStyle({ outlineStroke: value })
                     }
@@ -493,6 +495,7 @@ export default function PropertiesPanel({
                     <span className="text-[11px]">Stroke</span>
                     <ColorPalettePicker
                       value={target.style.stroke}
+                      allowTransparent
                       onChange={(value) =>
                         update({
                           style: { ...target.style, stroke: value },
@@ -550,10 +553,29 @@ export default function PropertiesPanel({
                   </label>
                   {target.type === "arrow" && (
                     <>
+                      <label className="flex items-center gap-2 text-[11px]">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(target.style.outlineStroke)}
+                          onChange={(event) =>
+                            update({
+                              style: {
+                                ...target.style,
+                                outlineStroke: event.target.checked
+                                  ? target.style.outlineStroke ?? "#111111"
+                                  : undefined,
+                              },
+                            })
+                          }
+                        />
+                        Outline
+                      </label>
                       <label className="space-y-1">
                         <span className="text-[11px]">Outline</span>
                         <ColorPalettePicker
                           value={target.style.outlineStroke ?? "#111111"}
+                          allowTransparent
+                          disabled={!target.style.outlineStroke}
                           onChange={(value) =>
                             update({
                               style: {
@@ -830,6 +852,7 @@ export default function PropertiesPanel({
                           "#000000"
                         }
                         title="Vest color"
+                        allowTransparent
                         onChange={(value) =>
                           (() => {
                             const squadPlayerId = target.squadPlayerId;
@@ -872,6 +895,7 @@ export default function PropertiesPanel({
                       <ColorPalettePicker
                         value={target.vestColor ?? "#000000"}
                         title="Vest color"
+                        allowTransparent
                         onChange={(value) => update({ vestColor: value })}
                       />
                       <button

@@ -428,7 +428,7 @@ export const useBoardInteractions = ({
         style: {
           ...defaultStyle,
           stroke: "#f9bf4a",
-          strokeWidth: 0.65,
+          strokeWidth: 0.35,
           outlineStroke: "#111111",
         },
         zIndex: 1,
@@ -452,7 +452,7 @@ export const useBoardInteractions = ({
           style: {
             ...defaultStyle,
             stroke: "#f9bf4a",
-            strokeWidth: 0.65,
+            strokeWidth: 0.35,
             dash: [],
             outlineStroke: "#111111",
           },
