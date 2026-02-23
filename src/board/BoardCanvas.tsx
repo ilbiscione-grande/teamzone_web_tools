@@ -310,12 +310,22 @@ export default function BoardCanvas({
             };
           }
         }
-        // Fade semantics:
-        // - fadeIn belongs to the target frame (entering it)
-        // - fadeOut belongs to the source frame (leaving it)
-        // Other effects follow target frame by default.
-        const transitionEffect =
-          item.animation === "fadeOut" ? item.animation : next.animation;
+        // Transition effect ownership:
+        // - fadeIn: target frame only
+        // - fadeOut: source frame only
+        // - pop/pulse: target frame (preview while entering)
+        const transitionEffect = (() => {
+          if (item.animation === "fadeOut") {
+            return "fadeOut" as const;
+          }
+          if (next.animation === "fadeIn") {
+            return "fadeIn" as const;
+          }
+          if (next.animation === "pop" || next.animation === "pulse") {
+            return next.animation;
+          }
+          return "none" as const;
+        })();
         merged.push(applyPlaybackEffect(blended, t, transitionEffect));
       } else {
         merged.push(applyPlaybackEffect(item, t));
@@ -323,7 +333,13 @@ export default function BoardCanvas({
     });
     nextObjects.forEach((item) => {
       if (!baseObjects.find((current) => current.id === item.id)) {
-        merged.push(applyPlaybackEffect(item, t, item.animation));
+        const entryEffect =
+          item.animation === "fadeIn" ||
+          item.animation === "pop" ||
+          item.animation === "pulse"
+            ? item.animation
+            : "none";
+        merged.push(applyPlaybackEffect(item, t, entryEffect));
       }
     });
     return merged;
