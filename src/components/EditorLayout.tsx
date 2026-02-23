@@ -1087,38 +1087,46 @@ export default function EditorLayout() {
             <Toolbox collapsed={toolboxCollapsed} />
           </div>
           {selection.length > 0 && !propertiesFloating && (
-            <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 p-4 shadow-xl shadow-black/30">
-              <PropertiesPanel
-                floating={propertiesFloating}
-                onToggleFloating={() =>
-                  setPropertiesFloating((prev) => !prev)
-                }
-              />
+            <div className="relative max-h-[42dvh] overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 shadow-xl shadow-black/30">
+              <div className="max-h-[42dvh] overflow-y-auto p-4 pr-3">
+                <PropertiesPanel
+                  floating={propertiesFloating}
+                  onToggleFloating={() =>
+                    setPropertiesFloating((prev) => !prev)
+                  }
+                />
+              </div>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[var(--panel)]/95 via-[var(--panel)]/70 to-transparent" />
             </div>
           )}
         </div>
       </div>
       {selection.length > 0 && propertiesFloating && (
         <div
-          className="fixed z-40 w-[320px] rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 p-4 shadow-2xl shadow-black/40"
+          className="fixed z-40 w-[320px] max-h-[72dvh] overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)]/95 shadow-2xl shadow-black/40"
           style={{ left: propertiesPos.x, top: propertiesPos.y }}
         >
-          <div
-            className="mb-3 h-4 w-full cursor-move rounded-full bg-[var(--panel-2)]/70"
-            onPointerDown={(event) => {
-              draggingRef.current = true;
-              dragOffsetRef.current = {
-                x: event.clientX - propertiesPos.x,
-                y: event.clientY - propertiesPos.y,
-              };
-            }}
-          />
-          <PropertiesPanel
-            floating={propertiesFloating}
-            onToggleFloating={() =>
-              setPropertiesFloating((prev) => !prev)
-            }
-          />
+          <div className="px-4 pb-0 pt-4">
+            <div
+              className="mb-3 h-4 w-full cursor-move rounded-full bg-[var(--panel-2)]/70"
+              onPointerDown={(event) => {
+                draggingRef.current = true;
+                dragOffsetRef.current = {
+                  x: event.clientX - propertiesPos.x,
+                  y: event.clientY - propertiesPos.y,
+                };
+              }}
+            />
+          </div>
+          <div className="max-h-[calc(72dvh-44px)] overflow-y-auto px-4 pb-4 pr-3">
+            <PropertiesPanel
+              floating={propertiesFloating}
+              onToggleFloating={() =>
+                setPropertiesFloating((prev) => !prev)
+              }
+            />
+          </div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[var(--panel)]/95 via-[var(--panel)]/70 to-transparent" />
         </div>
       )}
     </div>
