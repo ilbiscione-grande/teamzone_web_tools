@@ -149,8 +149,8 @@ export default function BoardCanvas({
       return next;
     }
     if (effect === "pulse") {
-      const wave = Math.sin(progress * Math.PI * 2);
-      const factor = 1 + wave * 0.16;
+      const wave = Math.sin(progress * Math.PI * 4);
+      const factor = 1 + wave * 0.12;
       next.scale.x = object.scale.x * factor;
       next.scale.y = object.scale.y * factor;
       return next;
