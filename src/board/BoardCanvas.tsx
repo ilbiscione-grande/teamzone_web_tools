@@ -164,6 +164,10 @@ export default function BoardCanvas({
     }
     const lastIndex = board.frames.length - 1;
     const baseIndex = Math.min(Math.floor(playheadFrame), lastIndex);
+    if (!loopPlayback && baseIndex === lastIndex) {
+      // End of timeline should render final frame state, not restart transition effects.
+      return board.frames[lastIndex]?.objects ?? objects;
+    }
     const nextIndex = loopPlayback
       ? (baseIndex + 1) % board.frames.length
       : Math.min(baseIndex + 1, lastIndex);
