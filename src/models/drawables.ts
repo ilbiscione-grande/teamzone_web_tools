@@ -18,7 +18,8 @@ export type DrawableAnimation =
   | "fadeIn"
   | "fadeOut"
   | "pop"
-  | "pulse";
+  | "pulse"
+  | "highlight";
 
 export type BaseDrawable = {
   id: string;

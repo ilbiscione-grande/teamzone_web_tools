@@ -44,6 +44,7 @@ const drawableAnimationOptions: Array<{
   { value: "fadeOut", label: "Fade out" },
   { value: "pop", label: "Pop" },
   { value: "pulse", label: "Pulse" },
+  { value: "highlight", label: "Highlight" },
 ];
 
 const getLineWidthOption = (width: number) => {

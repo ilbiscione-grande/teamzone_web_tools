@@ -158,6 +158,23 @@ export default function BoardCanvas({
 
     return next;
   }, []);
+  const applyHighlightEffect = useCallback((
+    object: DrawableObject,
+    amount: number
+  ): DrawableObject => {
+    const strength = Math.max(0, Math.min(1, amount));
+    if (strength <= 0) {
+      return object;
+    }
+    const next = {
+      ...object,
+      style: { ...object.style },
+    } as DrawableObject;
+    next.style.stroke = "#f9bf4a";
+    next.style.strokeWidth = object.style.strokeWidth + 0.45 * strength;
+    next.style.opacity = Math.min(1, object.style.opacity + 0.1 * strength);
+    return next;
+  }, []);
   const renderObjects = useMemo(() => {
     if (board.mode !== "DYNAMIC") {
       return objects;
@@ -166,7 +183,9 @@ export default function BoardCanvas({
     const baseIndex = Math.min(Math.floor(playheadFrame), lastIndex);
     if (!loopPlayback && baseIndex === lastIndex) {
       // End of timeline should render final frame state, not restart transition effects.
-      return board.frames[lastIndex]?.objects ?? objects;
+      return (board.frames[lastIndex]?.objects ?? objects).map((item) =>
+        applyHighlightEffect(item, item.animation === "highlight" ? 1 : 0)
+      );
     }
     const nextIndex = loopPlayback
       ? (baseIndex + 1) % board.frames.length
@@ -178,7 +197,9 @@ export default function BoardCanvas({
         ? 0
         : Math.max(0, Math.min(1, playheadFrame - baseIndex));
     if (!isPlaying && t === 0 && baseIndex === frameIndex) {
-      return objects;
+      return objects.map((item) =>
+        applyHighlightEffect(item, item.animation === "highlight" ? 1 : 0)
+      );
     }
     const nextMap = new Map(nextObjects.map((item) => [item.id, item]));
     const baseMap = new Map(baseObjects.map((item) => [item.id, item]));
@@ -326,9 +347,25 @@ export default function BoardCanvas({
           }
           return "none" as const;
         })();
-        merged.push(applyPlaybackEffect(blended, t, transitionEffect));
+        const highlightAmount =
+          item.animation === "highlight" && next.animation === "highlight"
+            ? 1
+            : item.animation === "highlight"
+              ? 1 - t
+              : next.animation === "highlight"
+                ? t
+                : 0;
+        merged.push(
+          applyHighlightEffect(
+            applyPlaybackEffect(blended, t, transitionEffect),
+            highlightAmount
+          )
+        );
       } else {
-        merged.push(applyPlaybackEffect(item, t));
+        const highlightAmount = item.animation === "highlight" ? 1 - t : 0;
+        merged.push(
+          applyHighlightEffect(applyPlaybackEffect(item, t), highlightAmount)
+        );
       }
     });
     nextObjects.forEach((item) => {
@@ -339,7 +376,13 @@ export default function BoardCanvas({
           item.animation === "pulse"
             ? item.animation
             : "none";
-        merged.push(applyPlaybackEffect(item, t, entryEffect));
+        const highlightAmount = item.animation === "highlight" ? t : 0;
+        merged.push(
+          applyHighlightEffect(
+            applyPlaybackEffect(item, t, entryEffect),
+            highlightAmount
+          )
+        );
       }
     });
     return merged;
@@ -352,6 +395,7 @@ export default function BoardCanvas({
     objects,
     playheadFrame,
     applyPlaybackEffect,
+    applyHighlightEffect,
   ]);
   const sortedObjects = useMemo(() => {
     const getPriority = (type: string) => {
