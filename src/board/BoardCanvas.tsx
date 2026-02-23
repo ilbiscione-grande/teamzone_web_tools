@@ -310,8 +310,13 @@ export default function BoardCanvas({
             };
           }
         }
-        // Use the target frame's effect for this transition segment.
-        merged.push(applyPlaybackEffect(blended, t, next.animation));
+        // Fade semantics:
+        // - fadeIn belongs to the target frame (entering it)
+        // - fadeOut belongs to the source frame (leaving it)
+        // Other effects follow target frame by default.
+        const transitionEffect =
+          item.animation === "fadeOut" ? item.animation : next.animation;
+        merged.push(applyPlaybackEffect(blended, t, transitionEffect));
       } else {
         merged.push(applyPlaybackEffect(item, t));
       }
