@@ -123,7 +123,13 @@ export default function ColorPalettePicker({
           role="radiogroup"
           aria-label={title ?? "Color palette"}
         >
-          <div className="grid grid-cols-5 gap-1.5">
+          <div
+            className="grid gap-1.5"
+            style={{
+              gridTemplateColumns: "repeat(5, 24px)",
+              gridAutoRows: "24px",
+            }}
+          >
             {allowTransparent ? (
               <button
                 type="button"
@@ -132,11 +138,12 @@ export default function ColorPalettePicker({
                   onChange("transparent");
                   setOpen(false);
                 }}
-                className={`relative h-6 w-6 overflow-hidden rounded-md border transition ${
+                className={`relative overflow-hidden rounded-md border p-0 m-0 leading-none transition ${
                   value === "transparent"
                     ? "border-[var(--accent-0)] ring-1 ring-[var(--accent-0)]"
                     : "border-[var(--line)]"
                 } ${disabled ? "cursor-not-allowed opacity-60" : "hover:border-[var(--accent-2)]"}`}
+                style={{ width: 24, height: 24 }}
                 aria-label="Transparent"
                 title="Transparent"
               >
@@ -166,12 +173,12 @@ export default function ColorPalettePicker({
                     onChange(color);
                     setOpen(false);
                   }}
-                  className={`h-6 w-6 rounded-md border transition ${
+                  className={`rounded-md border p-0 m-0 leading-none transition ${
                     isSelected
                       ? "border-[var(--accent-0)] ring-1 ring-[var(--accent-0)]"
                       : "border-[var(--line)]"
                   } ${disabled ? "cursor-not-allowed opacity-60" : "hover:border-[var(--accent-2)]"}`}
-                  style={{ backgroundColor: color }}
+                  style={{ backgroundColor: color, width: 24, height: 24 }}
                   aria-label={color}
                   title={color}
                 />
