@@ -142,15 +142,15 @@ export default function BoardCanvas({
     if (effect === "pop") {
       const factor =
         progress < 0.5
-          ? 0.85 + (progress / 0.5) * 0.3
-          : 1.15 - ((progress - 0.5) / 0.5) * 0.15;
+          ? 0.7 + (progress / 0.5) * 0.65
+          : 1.35 - ((progress - 0.5) / 0.5) * 0.35;
       next.scale.x = object.scale.x * factor;
       next.scale.y = object.scale.y * factor;
       return next;
     }
     if (effect === "pulse") {
       const wave = Math.sin(progress * Math.PI * 2);
-      const factor = 1 + wave * 0.08;
+      const factor = 1 + wave * 0.16;
       next.scale.x = object.scale.x * factor;
       next.scale.y = object.scale.y * factor;
       return next;
