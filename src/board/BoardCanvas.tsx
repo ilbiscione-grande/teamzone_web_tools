@@ -170,9 +170,9 @@ export default function BoardCanvas({
       ...object,
       style: { ...object.style },
     } as DrawableObject;
-    next.style.stroke = "#f9bf4a";
-    next.style.strokeWidth = object.style.strokeWidth + 0.45 * strength;
-    next.style.opacity = Math.min(1, object.style.opacity + 0.1 * strength);
+    // Runtime-only highlight channel used by renderer to draw non-interactive glow.
+    next.style.outlineStroke = "#f9bf4a";
+    next.style.outlineWidth = strength;
     return next;
   }, []);
   const renderObjects = useMemo(() => {

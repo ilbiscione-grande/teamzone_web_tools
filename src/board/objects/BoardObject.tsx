@@ -456,6 +456,10 @@ export default function BoardObject({
     const hasAttachedBall = objects.some(
       (item) => item.type === "ball" && item.attachedToId === player.id
     );
+    const highlightGlowStrength = Math.max(
+      0,
+      Math.min(1, Number(player.style.outlineWidth ?? 0))
+    );
     return (
       <Group
         {...commonProps}
@@ -465,6 +469,42 @@ export default function BoardObject({
           }
         }}
       >
+        {highlightGlowStrength > 0 && (
+          <>
+            <Circle
+              radius={playerTokenSize + 1.8 + highlightGlowStrength * 1.4}
+              listening={false}
+              fillRadialGradientStartPoint={{ x: 0, y: 0 }}
+              fillRadialGradientStartRadius={0}
+              fillRadialGradientEndPoint={{ x: 0, y: 0 }}
+              fillRadialGradientEndRadius={playerTokenSize + 2.2 + highlightGlowStrength * 2.2}
+              fillRadialGradientColorStops={[
+                0,
+                `rgba(249,191,74,${0.45 * highlightGlowStrength})`,
+                0.45,
+                `rgba(249,191,74,${0.22 * highlightGlowStrength})`,
+                1,
+                "rgba(249,191,74,0)",
+              ]}
+            />
+            <Circle
+              radius={playerTokenSize + 2.8 + highlightGlowStrength * 2.4}
+              listening={false}
+              fillRadialGradientStartPoint={{ x: 0, y: 0 }}
+              fillRadialGradientStartRadius={0}
+              fillRadialGradientEndPoint={{ x: 0, y: 0 }}
+              fillRadialGradientEndRadius={playerTokenSize + 3.4 + highlightGlowStrength * 3.2}
+              fillRadialGradientColorStops={[
+                0,
+                `rgba(240,109,79,${0.22 * highlightGlowStrength})`,
+                0.6,
+                `rgba(240,109,79,${0.1 * highlightGlowStrength})`,
+                1,
+                "rgba(240,109,79,0)",
+              ]}
+            />
+          </>
+        )}
         {hasAttachedBall && (
           <Circle
             radius={playerTokenSize + 1.6}
