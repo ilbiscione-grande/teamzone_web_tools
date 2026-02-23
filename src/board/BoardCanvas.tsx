@@ -118,9 +118,10 @@ export default function BoardCanvas({
   );
   const applyPlaybackEffect = useCallback((
     object: DrawableObject,
-    progress: number
+    progress: number,
+    effectOverride?: DrawableObject["animation"]
   ): DrawableObject => {
-    const effect = object.animation ?? "none";
+    const effect = effectOverride ?? object.animation ?? "none";
     if (effect === "none") {
       return object;
     }
@@ -305,14 +306,15 @@ export default function BoardCanvas({
             };
           }
         }
-        merged.push(applyPlaybackEffect(blended, t));
+        // Use the target frame's effect for this transition segment.
+        merged.push(applyPlaybackEffect(blended, t, next.animation));
       } else {
         merged.push(applyPlaybackEffect(item, t));
       }
     });
     nextObjects.forEach((item) => {
       if (!baseObjects.find((current) => current.id === item.id)) {
-        merged.push(applyPlaybackEffect(item, t));
+        merged.push(applyPlaybackEffect(item, t, item.animation));
       }
     });
     return merged;
