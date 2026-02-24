@@ -669,8 +669,13 @@ export default function BoardObject({
         ? cone.style.fill
         : "#f06d4f";
     const scaleX = cone.width / CONE_BASE_WIDTH;
-    const scaleY = cone.height / CONE_BASE_HEIGHT;
-    const coneStroke = depthStroke(Math.max(0.08, cone.style.strokeWidth)) / Math.max(scaleX, scaleY, 0.01);
+    const verticalCompress = 0.62;
+    const scaleY = (cone.height / CONE_BASE_HEIGHT) * verticalCompress;
+    const coneDrawHeight = CONE_BASE_HEIGHT * scaleY;
+    const coneOffsetY = Math.max(0, cone.height - coneDrawHeight);
+    const coneStroke =
+      depthStroke(Math.max(0.08, cone.style.strokeWidth)) /
+      Math.max(scaleX, scaleY, 0.01);
     return (
       <Group
         {...commonProps}
@@ -695,7 +700,7 @@ export default function BoardObject({
           fill="rgba(0,0,0,0.001)"
           strokeEnabled={false}
         />
-        <Group scaleX={scaleX} scaleY={scaleY} listening={false}>
+        <Group y={coneOffsetY} scaleX={scaleX} scaleY={scaleY} listening={false}>
           <Path
             data={CONE_FILL_PATH}
             fill={coneFill}
