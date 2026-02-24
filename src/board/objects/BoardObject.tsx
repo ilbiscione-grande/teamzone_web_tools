@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   Arrow,
   Circle,
-  Ellipse,
   Group,
   Image as KonvaImage,
   Line,
@@ -103,16 +102,27 @@ const loadConeSvgTemplate = async () => {
 
 const colorizeConeSvg = (template: string, fill: string, stroke: string) => {
   const fillColor =
-    fill && fill !== "transparent" ? fill : stroke || "rgba(255,255,255,0.9)";
-  const strokeColor =
-    stroke && stroke !== "transparent" ? stroke : "rgba(0,0,0,0.9)";
+    fill && fill !== "transparent" ? fill : "#f06d4f";
+  const strokeColor = "#111111";
 
-  return template
+  let next = template
+    // Crop to the actual cone geometry in the source SVG.
+    .replace(/viewBox="[^"]*"/i, 'viewBox="36 151 68 22"')
     .replace(/color:#000000/gi, `color:${fillColor}`)
     .replace(/fill:#000000/gi, `fill:${fillColor}`)
     .replace(/stroke:#000000/gi, `stroke:${strokeColor}`)
+    .replace(/fill:none/gi, `fill:${fillColor}`)
     .replace(/fill="#000000"/gi, `fill="${fillColor}"`)
     .replace(/stroke="#000000"/gi, `stroke="${strokeColor}"`);
+  next = next.replace(
+    /id="path11"([^>]*)style="([^"]*)"/i,
+    `id="path11"$1style="fill:${fillColor};stroke:${strokeColor};stroke-width:0.9;stroke-linecap:round;stroke-linejoin:round"`
+  );
+  next = next.replace(
+    /id="path12"([^>]*)style="([^"]*)"/i,
+    `id="path12"$1style="fill:${fillColor};stroke:${strokeColor};stroke-width:0.28;stroke-linecap:round;stroke-linejoin:round"`
+  );
+  return next;
 };
 
 function BallSprite({ radius }: { radius: number }) {
@@ -162,6 +172,11 @@ function ConeSprite({
   stroke: string;
 }) {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
+  const aspect = 22 / 68;
+  const drawWidth = Math.min(width, height / aspect);
+  const drawHeight = drawWidth * aspect;
+  const drawX = (width - drawWidth) / 2;
+  const drawY = height - drawHeight;
 
   useEffect(() => {
     let cancelled = false;
@@ -198,19 +213,28 @@ function ConeSprite({
   if (!image) {
     return (
       <Rect
-        x={0}
-        y={0}
-        width={width}
-        height={height}
-        cornerRadius={Math.max(0.25, Math.min(width, height) * 0.12)}
-        fill={fill}
-        stroke={stroke}
+        x={drawX}
+        y={drawY}
+        width={drawWidth}
+        height={drawHeight}
+        cornerRadius={Math.max(0.1, drawHeight * 0.14)}
+        fill={fill && fill !== "transparent" ? fill : "#f06d4f"}
+        stroke="#111111"
         strokeWidth={0.12}
       />
     );
   }
 
-  return <KonvaImage image={image} x={0} y={0} width={width} height={height} />;
+  return (
+    <KonvaImage
+      image={image}
+      x={drawX}
+      y={drawY}
+      width={drawWidth}
+      height={drawHeight}
+      listening={false}
+    />
+  );
 }
 
 type BoardObjectProps = {
@@ -752,21 +776,6 @@ export default function BoardObject({
   if (object.type === "cone") {
     const cone = object as ConeToken;
     const coneScaleAnchorOffset = getCenterScaleAnchorOffset(cone.width, cone.height);
-    const coneFill =
-      cone.style.fill && cone.style.fill !== "transparent"
-        ? cone.style.fill
-        : "#f06d4f";
-    const coneOutline = "#111111";
-    const bodyPoints = [
-      0,
-      cone.height,
-      cone.width * 0.28,
-      cone.height * 0.22,
-      cone.width * 0.72,
-      cone.height * 0.22,
-      cone.width,
-      cone.height,
-    ];
     return (
       <Group
         {...commonProps}
@@ -783,34 +792,19 @@ export default function BoardObject({
         shadowOpacity={ambientShadowOpacity}
         shadowOffsetY={ambientShadowOffsetY}
       >
-        <Line
-          points={bodyPoints}
-          closed
-          fill={coneFill}
-          stroke={coneOutline}
-          strokeWidth={depthStroke(Math.max(0.1, cone.style.strokeWidth))}
-          lineJoin="round"
-          listening={false}
+        <Rect
+          x={0}
+          y={0}
+          width={cone.width}
+          height={cone.height}
+          fill="rgba(0,0,0,0.001)"
+          strokeEnabled={false}
         />
-        <Ellipse
-          x={cone.width * 0.5}
-          y={cone.height * 0.2}
-          radiusX={cone.width * 0.16}
-          radiusY={Math.max(0.08, cone.height * 0.08)}
-          fill={coneFill}
-          stroke={coneOutline}
-          strokeWidth={depthStroke(Math.max(0.08, cone.style.strokeWidth * 0.9))}
-          listening={false}
-        />
-        <Ellipse
-          x={cone.width * 0.5}
-          y={cone.height * 0.2}
-          radiusX={cone.width * 0.13}
-          radiusY={Math.max(0.06, cone.height * 0.05)}
-          fill="rgba(255,255,255,0.14)"
-          stroke={coneOutline}
-          strokeWidth={depthStroke(Math.max(0.06, cone.style.strokeWidth * 0.7))}
-          listening={false}
+        <ConeSprite
+          width={cone.width}
+          height={cone.height}
+          fill={cone.style.fill}
+          stroke={cone.style.stroke}
         />
       </Group>
     );
