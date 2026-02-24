@@ -78,7 +78,7 @@ const toPositionAbbreviation = (value?: string) => {
 };
 
 const BALL_SVG_SRC = "/ball.svg";
-const CONE_SVG_SOURCES = ["/low_cone_white.svg", "/cone_low_white.svg"] as const;
+const CONE_SVG_SOURCES = ["/cone_low_white.svg", "/low_cone_white.svg"] as const;
 let coneSvgTemplatePromise: Promise<string> | null = null;
 
 const loadConeSvgTemplate = async () => {
@@ -91,7 +91,7 @@ const loadConeSvgTemplate = async () => {
             return await response.text();
           }
         } catch {
-          // Try the next candidate.
+          // Try the next source.
         }
       }
       throw new Error("Cone SVG template not found.");
@@ -100,46 +100,19 @@ const loadConeSvgTemplate = async () => {
   return coneSvgTemplatePromise;
 };
 
-const colorizeConeSvg = (template: string, fill: string, stroke: string) => {
-  const fillColor =
-    fill && fill !== "transparent" ? fill : "#f06d4f";
+const colorizeConeSvg = (template: string, fill: string) => {
+  const fillColor = fill && fill !== "transparent" ? fill : "#f06d4f";
   const strokeColor = "#111111";
-
-  let next = template
-    // Crop to the actual cone geometry in the source SVG.
+  return template
     .replace(/viewBox="[^"]*"/i, 'viewBox="36 151 68 22"')
-    .replace(/color:#000000/gi, `color:${fillColor}`)
-    .replace(/fill:#000000/gi, `fill:${fillColor}`)
-    .replace(/stroke:#000000/gi, `stroke:${strokeColor}`)
     .replace(/fill\s*:\s*none/gi, `fill:${fillColor}`)
     .replace(/fill\s*:\s*transparent/gi, `fill:${fillColor}`)
-    .replace(/fill\s*:\s*#[0-9a-f]{3,8}/gi, `fill:${fillColor}`)
-    .replace(/stroke\s*:\s*#[0-9a-f]{3,8}/gi, `stroke:${strokeColor}`)
+    .replace(/fill:#000000/gi, `fill:${fillColor}`)
+    .replace(/stroke:#000000/gi, `stroke:${strokeColor}`)
     .replace(/fill="none"/gi, `fill="${fillColor}"`)
     .replace(/fill="transparent"/gi, `fill="${fillColor}"`)
-    .replace(/fill="#[0-9a-f]{3,8}"/gi, `fill="${fillColor}"`)
-    .replace(/stroke="#[0-9a-f]{3,8}"/gi, `stroke="${strokeColor}"`);
-  next = next.replace(
-    /id="path11"([^>]*)style="([^"]*)"/i,
-    `id="path11"$1style="fill:${fillColor};stroke:${strokeColor};stroke-width:0.9;stroke-linecap:round;stroke-linejoin:round"`
-  );
-  next = next.replace(
-    /id="path12"([^>]*)style="([^"]*)"/i,
-    `id="path12"$1style="fill:${fillColor};stroke:${strokeColor};stroke-width:0.28;stroke-linecap:round;stroke-linejoin:round"`
-  );
-  // Ensure generic cone files (without specific ids) still get fill/stroke set,
-  // but do not duplicate XML attributes.
-  next = next.replace(/<(path|ellipse)\b([^>]*)>/gi, (_match, tag, attrs) => {
-    let nextAttrs = attrs as string;
-    if (!/\bfill\s*=/.test(nextAttrs) && !/fill\s*:/.test(nextAttrs)) {
-      nextAttrs += ` fill="${fillColor}"`;
-    }
-    if (!/\bstroke\s*=/.test(nextAttrs) && !/stroke\s*:/.test(nextAttrs)) {
-      nextAttrs += ` stroke="${strokeColor}"`;
-    }
-    return `<${tag}${nextAttrs}>`;
-  });
-  return next;
+    .replace(/fill="#000000"/gi, `fill="${fillColor}"`)
+    .replace(/stroke="#000000"/gi, `stroke="${strokeColor}"`);
 };
 
 function BallSprite({ radius }: { radius: number }) {
@@ -181,12 +154,10 @@ function ConeSprite({
   width,
   height,
   fill,
-  stroke,
 }: {
   width: number;
   height: number;
   fill: string;
-  stroke: string;
 }) {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const aspect = 22 / 68;
@@ -197,21 +168,20 @@ function ConeSprite({
 
   useEffect(() => {
     let cancelled = false;
-
     const load = async () => {
       try {
         const template = await loadConeSvgTemplate();
         if (cancelled) {
           return;
         }
-        const svgMarkup = colorizeConeSvg(template, fill, stroke);
-        const svgImage = new window.Image();
-        svgImage.onload = () => {
+        const svgMarkup = colorizeConeSvg(template, fill);
+        const nextImage = new window.Image();
+        nextImage.onload = () => {
           if (!cancelled) {
-            setImage(svgImage);
+            setImage(nextImage);
           }
         };
-        svgImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+        nextImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
           svgMarkup
         )}`;
       } catch {
@@ -220,12 +190,11 @@ function ConeSprite({
         }
       }
     };
-
     load();
     return () => {
       cancelled = true;
     };
-  }, [fill, stroke]);
+  }, [fill]);
 
   if (!image) {
     return (
@@ -238,6 +207,7 @@ function ConeSprite({
         fill={fill && fill !== "transparent" ? fill : "#f06d4f"}
         stroke="#111111"
         strokeWidth={0.12}
+        listening={false}
       />
     );
   }
@@ -821,7 +791,6 @@ export default function BoardObject({
           width={cone.width}
           height={cone.height}
           fill={cone.style.fill}
-          stroke={cone.style.stroke}
         />
       </Group>
     );
