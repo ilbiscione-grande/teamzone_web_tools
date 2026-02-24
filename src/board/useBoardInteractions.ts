@@ -642,7 +642,7 @@ export const useBoardInteractions = ({
         position: world,
         rotation: 0,
         scale: { x: 1, y: 1 },
-        style: { ...defaultStyle, fill: "#f06d4f" },
+        style: { ...defaultStyle, fill: "#f06d4f", stroke: "#111111" },
         zIndex: 1,
         locked: false,
         visible: true,

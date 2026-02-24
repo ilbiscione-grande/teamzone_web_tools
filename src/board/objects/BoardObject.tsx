@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Arrow,
   Circle,
+  Ellipse,
   Group,
   Image as KonvaImage,
   Line,
@@ -751,6 +752,21 @@ export default function BoardObject({
   if (object.type === "cone") {
     const cone = object as ConeToken;
     const coneScaleAnchorOffset = getCenterScaleAnchorOffset(cone.width, cone.height);
+    const coneFill =
+      cone.style.fill && cone.style.fill !== "transparent"
+        ? cone.style.fill
+        : "#f06d4f";
+    const coneOutline = "#111111";
+    const bodyPoints = [
+      0,
+      cone.height,
+      cone.width * 0.28,
+      cone.height * 0.22,
+      cone.width * 0.72,
+      cone.height * 0.22,
+      cone.width,
+      cone.height,
+    ];
     return (
       <Group
         {...commonProps}
@@ -767,11 +783,34 @@ export default function BoardObject({
         shadowOpacity={ambientShadowOpacity}
         shadowOffsetY={ambientShadowOffsetY}
       >
-        <ConeSprite
-          width={cone.width}
-          height={cone.height}
-          fill={cone.style.fill}
-          stroke={cone.style.stroke}
+        <Line
+          points={bodyPoints}
+          closed
+          fill={coneFill}
+          stroke={coneOutline}
+          strokeWidth={depthStroke(Math.max(0.1, cone.style.strokeWidth))}
+          lineJoin="round"
+          listening={false}
+        />
+        <Ellipse
+          x={cone.width * 0.5}
+          y={cone.height * 0.2}
+          radiusX={cone.width * 0.16}
+          radiusY={Math.max(0.08, cone.height * 0.08)}
+          fill={coneFill}
+          stroke={coneOutline}
+          strokeWidth={depthStroke(Math.max(0.08, cone.style.strokeWidth * 0.9))}
+          listening={false}
+        />
+        <Ellipse
+          x={cone.width * 0.5}
+          y={cone.height * 0.2}
+          radiusX={cone.width * 0.13}
+          radiusY={Math.max(0.06, cone.height * 0.05)}
+          fill="rgba(255,255,255,0.14)"
+          stroke={coneOutline}
+          strokeWidth={depthStroke(Math.max(0.06, cone.style.strokeWidth * 0.7))}
+          listening={false}
         />
       </Group>
     );

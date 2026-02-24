@@ -527,6 +527,22 @@ export const ensureBoardSquads = (project: Project): Project => {
     if (away.kit.shirt === "#f9bf4a" || away.kit.shirt === "#4aa8f9") {
       away.kit.shirt = project.settings.awayKit.shirt;
     }
+
+    const normalizeConeObject = (object: DrawableObject) => {
+      if (object.type !== "cone") {
+        return;
+      }
+      const fill = object.style.fill;
+      if (!fill || fill === "transparent") {
+        object.style.fill = "#f06d4f";
+      }
+      object.style.stroke = "#111111";
+    };
+
+    board.frames.forEach((frame) => {
+      frame.objects.forEach(normalizeConeObject);
+    });
+    board.layers.forEach(normalizeConeObject);
   });
 
   project.squads = squads;
