@@ -111,18 +111,26 @@ const colorizeConeSvg = (template: string, fill: string) => {
     !(Number.isFinite(lowAlpha) && lowAlpha <= 0.35)
       ? fill
       : "#f06d4f";
-  const strokeColor = "#111111";
-  return template
-    .replace(/fill\s*:\s*#[0-9a-f]{3,8}/gi, `fill:${fillColor}`)
-    .replace(/fill\s*:\s*none/gi, `fill:${fillColor}`)
-    .replace(/fill\s*:\s*transparent/gi, `fill:${fillColor}`)
-    .replace(/stroke\s*:\s*#[0-9a-f]{3,8}/gi, `stroke:${strokeColor}`)
-    .replace(/stroke\s*:\s*none/gi, `stroke:${strokeColor}`)
-    .replace(/fill="#[0-9a-f]{3,8}"/gi, `fill="${fillColor}"`)
-    .replace(/fill="none"/gi, `fill="${fillColor}"`)
-    .replace(/fill="transparent"/gi, `fill="${fillColor}"`)
-    .replace(/stroke="#[0-9a-f]{3,8}"/gi, `stroke="${strokeColor}"`)
-    .replace(/stroke="none"/gi, `stroke="${strokeColor}"`);
+  const whitePatterns = [
+    /fill\s*:\s*#fff\b/gi,
+    /fill\s*:\s*#ffffff\b/gi,
+    /fill\s*:\s*rgb\(\s*255\s*,\s*255\s*,\s*255\s*\)/gi,
+    /fill\s*:\s*rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*1(?:\.0+)?\s*\)/gi,
+    /fill="#fff"/gi,
+    /fill="#ffffff"/gi,
+    /fill="rgb\(\s*255\s*,\s*255\s*,\s*255\s*\)"/gi,
+    /fill="rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*1(?:\.0+)?\s*\)"/gi,
+  ];
+  let next = template;
+  whitePatterns.forEach((pattern) => {
+    next = next.replace(pattern, (match) => {
+      if (match.includes(":")) {
+        return `fill:${fillColor}`;
+      }
+      return `fill="${fillColor}"`;
+    });
+  });
+  return next;
 };
 
 function BallSprite({ radius }: { radius: number }) {

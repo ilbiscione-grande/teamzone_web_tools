@@ -492,18 +492,20 @@ export default function PropertiesPanel({
             <div className="mt-2 grid grid-cols-2 gap-2">
               {target.type !== "player" && (
                 <>
-                  <label className="space-y-1">
-                    <span className="text-[11px]">Stroke</span>
-                    <ColorPalettePicker
-                      value={target.style.stroke}
-                      allowTransparent
-                      onChange={(value) =>
-                        update({
-                          style: { ...target.style, stroke: value },
-                        })
-                      }
-                    />
-                  </label>
+                  {target.type !== "cone" ? (
+                    <label className="space-y-1">
+                      <span className="text-[11px]">Stroke</span>
+                      <ColorPalettePicker
+                        value={target.style.stroke}
+                        allowTransparent
+                        onChange={(value) =>
+                          update({
+                            style: { ...target.style, stroke: value },
+                          })
+                        }
+                      />
+                    </label>
+                  ) : null}
                   <label className="space-y-1">
                     <span className="text-[11px]">Fill</span>
                     <ColorPalettePicker
@@ -516,42 +518,44 @@ export default function PropertiesPanel({
                       }
                     />
                   </label>
-                  <label className="space-y-1">
-                    <span className="text-[11px]">
-                      {target.type === "arrow" ? "Stroke Size" : "Stroke Width"}
-                    </span>
-                    {target.type === "arrow" ? (
-                      <select
-                        className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
-                        value={getLineWidthOption(target.style.strokeWidth).label}
-                        onChange={(event) => {
-                          const option = lineWidthOptions.find(
-                            (item) => item.label === event.target.value
-                          );
-                          if (option) {
-                            update({
-                              style: {
-                                ...target.style,
-                                strokeWidth: option.value,
-                              },
-                            });
-                          }
-                        }}
-                      >
-                        {lineWidthOptions.map((option) => (
-                          <option key={option.label} value={option.label}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      numberField(target.style.strokeWidth, (value) =>
-                        update({
-                          style: { ...target.style, strokeWidth: value },
-                        })
-                      )
-                    )}
-                  </label>
+                  {target.type !== "cone" ? (
+                    <label className="space-y-1">
+                      <span className="text-[11px]">
+                        {target.type === "arrow" ? "Stroke Size" : "Stroke Width"}
+                      </span>
+                      {target.type === "arrow" ? (
+                        <select
+                          className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                          value={getLineWidthOption(target.style.strokeWidth).label}
+                          onChange={(event) => {
+                            const option = lineWidthOptions.find(
+                              (item) => item.label === event.target.value
+                            );
+                            if (option) {
+                              update({
+                                style: {
+                                  ...target.style,
+                                  strokeWidth: option.value,
+                                },
+                              });
+                            }
+                          }}
+                        >
+                          {lineWidthOptions.map((option) => (
+                            <option key={option.label} value={option.label}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        numberField(target.style.strokeWidth, (value) =>
+                          update({
+                            style: { ...target.style, strokeWidth: value },
+                          })
+                        )
+                      )}
+                    </label>
+                  ) : null}
                   {target.type === "arrow" && (
                     <>
                       <label className="flex items-center gap-2 text-[11px]">
@@ -599,21 +603,23 @@ export default function PropertiesPanel({
                   })
                 )}
               </label>
-              <label className="flex items-center gap-2 text-[11px]">
-                <input
-                  type="checkbox"
-                  checked={target.style.dash.length > 0}
-                  onChange={(event) =>
-                    update({
-                      style: {
-                        ...target.style,
-                        dash: event.target.checked ? [1, 1] : [],
-                      },
-                    })
-                  }
-                />
-                Dashed
-              </label>
+              {target.type !== "cone" ? (
+                <label className="flex items-center gap-2 text-[11px]">
+                  <input
+                    type="checkbox"
+                    checked={target.style.dash.length > 0}
+                    onChange={(event) =>
+                      update({
+                        style: {
+                          ...target.style,
+                          dash: event.target.checked ? [1, 1] : [],
+                        },
+                      })
+                    }
+                  />
+                  Dashed
+                </label>
+              ) : null}
               {board.mode === "DYNAMIC" && (
                 <label className="space-y-1">
                   <span className="text-[11px]">Frame effect</span>
