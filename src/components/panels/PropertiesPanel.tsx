@@ -46,6 +46,16 @@ const drawableAnimationOptions: Array<{
   { value: "pulse", label: "Pulse" },
   { value: "highlight", label: "Highlight" },
 ];
+const coneFillPalette = [
+  "#f06d4f",
+  "#f9bf4a",
+  "#ffd166",
+  "#8bc34a",
+  "#2ec4b6",
+  "#2f6cf6",
+  "#b5179e",
+  "#ff7aa2",
+];
 
 const getLineWidthOption = (width: number) => {
   let closest = lineWidthOptions[0];
@@ -511,6 +521,7 @@ export default function PropertiesPanel({
                     <ColorPalettePicker
                       value={target.style.fill}
                       allowTransparent
+                      colors={target.type === "cone" ? coneFillPalette : undefined}
                       onChange={(value) =>
                         update({
                           style: { ...target.style, fill: value },

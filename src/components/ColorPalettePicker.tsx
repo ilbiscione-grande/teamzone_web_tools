@@ -38,6 +38,7 @@ type ColorPalettePickerProps = {
   disabled?: boolean;
   allowTransparent?: boolean;
   className?: string;
+  colors?: string[];
 };
 
 export default function ColorPalettePicker({
@@ -47,18 +48,22 @@ export default function ColorPalettePicker({
   disabled,
   allowTransparent,
   className,
+  colors,
 }: ColorPalettePickerProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const normalizedValue = normalizeHexColor(value);
+  const basePalette = (colors && colors.length > 0 ? colors : [...DEFAULT_COLOR_PALETTE]).map(
+    (entry) => entry.toLowerCase()
+  );
   const hasValueInPalette = normalizedValue
-    ? DEFAULT_COLOR_PALETTE.includes(normalizedValue as (typeof DEFAULT_COLOR_PALETTE)[number])
+    ? basePalette.includes(normalizedValue)
     : false;
   const palette = hasValueInPalette
-    ? [...DEFAULT_COLOR_PALETTE]
+    ? [...basePalette]
     : normalizedValue
-      ? [...DEFAULT_COLOR_PALETTE, normalizedValue]
-      : [...DEFAULT_COLOR_PALETTE];
+      ? [...basePalette, normalizedValue]
+      : [...basePalette];
 
   useEffect(() => {
     if (!open) {
