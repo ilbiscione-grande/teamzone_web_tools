@@ -111,9 +111,14 @@ const colorizeConeSvg = (template: string, fill: string, stroke: string) => {
     .replace(/color:#000000/gi, `color:${fillColor}`)
     .replace(/fill:#000000/gi, `fill:${fillColor}`)
     .replace(/stroke:#000000/gi, `stroke:${strokeColor}`)
-    .replace(/fill:none/gi, `fill:${fillColor}`)
-    .replace(/fill="#000000"/gi, `fill="${fillColor}"`)
-    .replace(/stroke="#000000"/gi, `stroke="${strokeColor}"`);
+    .replace(/fill\s*:\s*none/gi, `fill:${fillColor}`)
+    .replace(/fill\s*:\s*transparent/gi, `fill:${fillColor}`)
+    .replace(/fill\s*:\s*#[0-9a-f]{3,8}/gi, `fill:${fillColor}`)
+    .replace(/stroke\s*:\s*#[0-9a-f]{3,8}/gi, `stroke:${strokeColor}`)
+    .replace(/fill="none"/gi, `fill="${fillColor}"`)
+    .replace(/fill="transparent"/gi, `fill="${fillColor}"`)
+    .replace(/fill="#[0-9a-f]{3,8}"/gi, `fill="${fillColor}"`)
+    .replace(/stroke="#[0-9a-f]{3,8}"/gi, `stroke="${strokeColor}"`);
   next = next.replace(
     /id="path11"([^>]*)style="([^"]*)"/i,
     `id="path11"$1style="fill:${fillColor};stroke:${strokeColor};stroke-width:0.9;stroke-linecap:round;stroke-linejoin:round"`
@@ -122,6 +127,18 @@ const colorizeConeSvg = (template: string, fill: string, stroke: string) => {
     /id="path12"([^>]*)style="([^"]*)"/i,
     `id="path12"$1style="fill:${fillColor};stroke:${strokeColor};stroke-width:0.28;stroke-linecap:round;stroke-linejoin:round"`
   );
+  // Ensure generic cone files (without specific ids) still get fill/stroke set,
+  // but do not duplicate XML attributes.
+  next = next.replace(/<(path|ellipse)\b([^>]*)>/gi, (_match, tag, attrs) => {
+    let nextAttrs = attrs as string;
+    if (!/\bfill\s*=/.test(nextAttrs) && !/fill\s*:/.test(nextAttrs)) {
+      nextAttrs += ` fill="${fillColor}"`;
+    }
+    if (!/\bstroke\s*=/.test(nextAttrs) && !/stroke\s*:/.test(nextAttrs)) {
+      nextAttrs += ` stroke="${strokeColor}"`;
+    }
+    return `<${tag}${nextAttrs}>`;
+  });
   return next;
 };
 
