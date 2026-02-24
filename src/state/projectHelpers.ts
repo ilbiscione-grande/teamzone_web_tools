@@ -533,7 +533,15 @@ export const ensureBoardSquads = (project: Project): Project => {
         return;
       }
       const fill = object.style.fill;
-      if (!fill || fill === "transparent") {
+      const lowAlphaWhite = fill?.match(
+        /^rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([0-9.]+)\s*\)$/i
+      );
+      const lowAlpha = lowAlphaWhite ? Number(lowAlphaWhite[1]) : NaN;
+      if (
+        !fill ||
+        fill === "transparent" ||
+        (Number.isFinite(lowAlpha) && lowAlpha <= 0.35)
+      ) {
         object.style.fill = "#f06d4f";
       }
       object.style.stroke = "#111111";

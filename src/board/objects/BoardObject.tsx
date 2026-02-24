@@ -101,7 +101,16 @@ const loadConeSvgTemplate = async () => {
 };
 
 const colorizeConeSvg = (template: string, fill: string) => {
-  const fillColor = fill && fill !== "transparent" ? fill : "#f06d4f";
+  const lowAlphaWhite = fill.match(
+    /^rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([0-9.]+)\s*\)$/i
+  );
+  const lowAlpha = lowAlphaWhite ? Number(lowAlphaWhite[1]) : NaN;
+  const fillColor =
+    fill &&
+    fill !== "transparent" &&
+    !(Number.isFinite(lowAlpha) && lowAlpha <= 0.35)
+      ? fill
+      : "#f06d4f";
   const strokeColor = "#111111";
   return template
     .replace(/fill\s*:\s*#[0-9a-f]{3,8}/gi, `fill:${fillColor}`)
@@ -161,11 +170,10 @@ function ConeSprite({
   fill: string;
 }) {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
-  const aspect = 22 / 68;
-  const drawWidth = Math.min(width, height / aspect);
-  const drawHeight = drawWidth * aspect;
-  const drawX = (width - drawWidth) / 2;
-  const drawY = height - drawHeight;
+  const drawWidth = width;
+  const drawHeight = height;
+  const drawX = 0;
+  const drawY = 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -198,14 +206,24 @@ function ConeSprite({
   }, [fill]);
 
   if (!image) {
+    const lowAlphaWhite = fill.match(
+      /^rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([0-9.]+)\s*\)$/i
+    );
+    const lowAlpha = lowAlphaWhite ? Number(lowAlphaWhite[1]) : NaN;
+    const fillColor =
+      fill &&
+      fill !== "transparent" &&
+      !(Number.isFinite(lowAlpha) && lowAlpha <= 0.35)
+        ? fill
+        : "#f06d4f";
     return (
       <Rect
         x={drawX}
         y={drawY}
         width={drawWidth}
         height={drawHeight}
-        cornerRadius={Math.max(0.1, drawHeight * 0.14)}
-        fill={fill && fill !== "transparent" ? fill : "#f06d4f"}
+        cornerRadius={Math.max(0.25, drawHeight * 0.14)}
+        fill={fillColor}
         stroke="#111111"
         strokeWidth={0.12}
         listening={false}
