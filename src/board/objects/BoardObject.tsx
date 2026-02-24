@@ -104,15 +104,16 @@ const colorizeConeSvg = (template: string, fill: string) => {
   const fillColor = fill && fill !== "transparent" ? fill : "#f06d4f";
   const strokeColor = "#111111";
   return template
-    .replace(/viewBox="[^"]*"/i, 'viewBox="36 151 68 22"')
+    .replace(/fill\s*:\s*#[0-9a-f]{3,8}/gi, `fill:${fillColor}`)
     .replace(/fill\s*:\s*none/gi, `fill:${fillColor}`)
     .replace(/fill\s*:\s*transparent/gi, `fill:${fillColor}`)
-    .replace(/fill:#000000/gi, `fill:${fillColor}`)
-    .replace(/stroke:#000000/gi, `stroke:${strokeColor}`)
+    .replace(/stroke\s*:\s*#[0-9a-f]{3,8}/gi, `stroke:${strokeColor}`)
+    .replace(/stroke\s*:\s*none/gi, `stroke:${strokeColor}`)
+    .replace(/fill="#[0-9a-f]{3,8}"/gi, `fill="${fillColor}"`)
     .replace(/fill="none"/gi, `fill="${fillColor}"`)
     .replace(/fill="transparent"/gi, `fill="${fillColor}"`)
-    .replace(/fill="#000000"/gi, `fill="${fillColor}"`)
-    .replace(/stroke="#000000"/gi, `stroke="${strokeColor}"`);
+    .replace(/stroke="#[0-9a-f]{3,8}"/gi, `stroke="${strokeColor}"`)
+    .replace(/stroke="none"/gi, `stroke="${strokeColor}"`);
 };
 
 function BallSprite({ radius }: { radius: number }) {
