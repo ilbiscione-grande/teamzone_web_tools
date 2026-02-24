@@ -669,7 +669,7 @@ export default function BoardObject({
         ? cone.style.fill
         : "#f06d4f";
     const scaleX = cone.width / CONE_BASE_WIDTH;
-    const verticalCompress = 0.62;
+    const verticalCompress = 0.5;
     const scaleY = (cone.height / CONE_BASE_HEIGHT) * verticalCompress;
     const coneDrawHeight = CONE_BASE_HEIGHT * scaleY;
     const coneOffsetY = Math.max(0, cone.height - coneDrawHeight);
