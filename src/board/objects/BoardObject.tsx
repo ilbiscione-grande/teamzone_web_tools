@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   Arrow,
   Circle,
-  Ellipse,
   Group,
   Image as KonvaImage,
   Line,
@@ -79,64 +78,11 @@ const toPositionAbbreviation = (value?: string) => {
 };
 
 const BALL_SVG_SRC = "/ball.svg";
-const CONE_SVG_SOURCES = ["/cone_low_white.svg", "/low_cone_white.svg"] as const;
-let coneSvgTemplatePromise: Promise<string> | null = null;
-
-const loadConeSvgTemplate = async () => {
-  if (!coneSvgTemplatePromise) {
-    coneSvgTemplatePromise = (async () => {
-      for (const src of CONE_SVG_SOURCES) {
-        try {
-          const response = await fetch(src, { cache: "force-cache" });
-          if (response.ok) {
-            return await response.text();
-          }
-        } catch {
-          // Try the next source.
-        }
-      }
-      throw new Error("Cone SVG template not found.");
-    })();
-  }
-  return coneSvgTemplatePromise;
-};
-
-const colorizeConeSvg = (template: string, fill: string) => {
-  const lowAlphaWhite = fill.match(
-    /^rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([0-9.]+)\s*\)$/i
-  );
-  const lowAlpha = lowAlphaWhite ? Number(lowAlphaWhite[1]) : NaN;
-  const fillColor =
-    fill &&
-    fill !== "transparent" &&
-    !(Number.isFinite(lowAlpha) && lowAlpha <= 0.35)
-      ? fill
-      : "#f06d4f";
-  const whitePatterns = [
-    /fill\s*:\s*#fff\b/gi,
-    /fill\s*:\s*#ffffff\b/gi,
-    /fill\s*:\s*rgb\(\s*255\s*,\s*255\s*,\s*255\s*\)/gi,
-    /fill\s*:\s*rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*1(?:\.0+)?\s*\)/gi,
-    /fill="#fff"/gi,
-    /fill="#ffffff"/gi,
-    /fill="rgb\(\s*255\s*,\s*255\s*,\s*255\s*\)"/gi,
-    /fill="rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*1(?:\.0+)?\s*\)"/gi,
-  ];
-  let next = template;
-  whitePatterns.forEach((pattern) => {
-    next = next.replace(pattern, (match) => {
-      if (match.includes(":")) {
-        return "fill:transparent";
-      }
-      return 'fill="transparent"';
-    });
-  });
-  // Keep cone contour lines dark and stable.
-  next = next
-    .replace(/stroke\s*:\s*#[0-9a-f]{3,8}/gi, "stroke:#111111")
-    .replace(/stroke="#[0-9a-f]{3,8}"/gi, 'stroke="#111111"');
-  return next;
-};
+const CONE_BASE_WIDTH = 66.837547;
+const CONE_BASE_HEIGHT = 22.4858;
+// Derived from the user's cone_low_white.svg (path15), normalized by layer translation.
+const CONE_FILL_PATH =
+  "m 0.018228,20.81015 25.969013,-20.11664 c 1.90064,-0.87599 14.50962,-0.81086 14.82345,0.0943 l 25.66498,19.99291 c -22.382,1.93602 -44.54509,2.03482 -66.457443,0.0294 z";
 
 function BallSprite({ radius }: { radius: number }) {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
@@ -170,107 +116,6 @@ function BallSprite({ radius }: { radius: number }) {
       width={radius * 2}
       height={radius * 2}
     />
-  );
-}
-
-function ConeSprite({
-  width,
-  height,
-  fill,
-}: {
-  width: number;
-  height: number;
-  fill: string;
-}) {
-  const [image, setImage] = useState<HTMLImageElement | null>(null);
-  const drawWidth = width;
-  const drawHeight = height;
-  const drawX = 0;
-  const drawY = 0;
-  const bodyPoints = [
-    drawX,
-    drawY + drawHeight,
-    drawX + drawWidth * 0.18,
-    drawY + drawHeight * 0.18,
-    drawX + drawWidth * 0.82,
-    drawY + drawHeight * 0.18,
-    drawX + drawWidth,
-    drawY + drawHeight,
-  ];
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const template = await loadConeSvgTemplate();
-        if (cancelled) {
-          return;
-        }
-        const svgMarkup = colorizeConeSvg(template, fill);
-        const nextImage = new window.Image();
-        nextImage.onload = () => {
-          if (!cancelled) {
-            setImage(nextImage);
-          }
-        };
-        nextImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-          svgMarkup
-        )}`;
-      } catch {
-        if (!cancelled) {
-          setImage(null);
-        }
-      }
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [fill]);
-
-  const lowAlphaWhite = fill.match(
-    /^rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([0-9.]+)\s*\)$/i
-  );
-  const lowAlpha = lowAlphaWhite ? Number(lowAlphaWhite[1]) : NaN;
-  const fillColor =
-    fill &&
-    fill !== "transparent" &&
-    !(Number.isFinite(lowAlpha) && lowAlpha <= 0.35)
-      ? fill
-      : "#f06d4f";
-
-  return (
-    <>
-      <Line
-        points={bodyPoints}
-        closed
-        fill={fillColor}
-        stroke="#111111"
-        strokeWidth={0.12}
-        lineJoin="round"
-        listening={false}
-      />
-      <Ellipse
-        x={drawX + drawWidth * 0.5}
-        y={drawY + drawHeight * 0.2}
-        radiusX={drawWidth * 0.16}
-        radiusY={Math.max(0.06, drawHeight * 0.08)}
-        fill={fillColor}
-        stroke="#111111"
-        strokeWidth={0.1}
-        listening={false}
-      />
-      {image ? (
-        <KonvaImage
-          image={image}
-          x={drawX}
-          y={drawY}
-          width={drawWidth}
-          height={drawHeight}
-          listening={false}
-        />
-      ) : null}
-    </>
   );
 }
 
@@ -813,6 +658,19 @@ export default function BoardObject({
   if (object.type === "cone") {
     const cone = object as ConeToken;
     const coneScaleAnchorOffset = getCenterScaleAnchorOffset(cone.width, cone.height);
+    const lowAlphaWhite = cone.style.fill.match(
+      /^rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([0-9.]+)\s*\)$/i
+    );
+    const lowAlpha = lowAlphaWhite ? Number(lowAlphaWhite[1]) : NaN;
+    const coneFill =
+      cone.style.fill &&
+      cone.style.fill !== "transparent" &&
+      !(Number.isFinite(lowAlpha) && lowAlpha <= 0.35)
+        ? cone.style.fill
+        : "#f06d4f";
+    const scaleX = cone.width / CONE_BASE_WIDTH;
+    const scaleY = cone.height / CONE_BASE_HEIGHT;
+    const coneStroke = depthStroke(Math.max(0.08, cone.style.strokeWidth)) / Math.max(scaleX, scaleY, 0.01);
     return (
       <Group
         {...commonProps}
@@ -837,11 +695,15 @@ export default function BoardObject({
           fill="rgba(0,0,0,0.001)"
           strokeEnabled={false}
         />
-        <ConeSprite
-          width={cone.width}
-          height={cone.height}
-          fill={cone.style.fill}
-        />
+        <Group scaleX={scaleX} scaleY={scaleY} listening={false}>
+          <Path
+            data={CONE_FILL_PATH}
+            fill={coneFill}
+            stroke="#111111"
+            strokeWidth={coneStroke}
+            lineJoin="round"
+          />
+        </Group>
       </Group>
     );
   }
