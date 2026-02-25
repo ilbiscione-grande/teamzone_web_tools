@@ -834,33 +834,34 @@ export default function BoardObject({
       mannequin.width,
       mannequin.height
     );
-    const headRadius = Math.max(0.35, mannequin.width * 0.16);
+    const headRadius = Math.max(0.38, mannequin.width * 0.2);
     const headCenterX = mannequin.width / 2;
-    const headCenterY = headRadius + 0.18;
-    const bodyTopY = headCenterY + headRadius + 0.18;
-    const bodyBottomY = mannequin.height - 0.28;
-    const shoulderHalf = mannequin.width * 0.28;
-    const hipHalf = mannequin.width * 0.2;
-    const legSpread = mannequin.width * 0.34;
+    const headCenterY = headRadius + 0.16;
+    const shoulderY = headCenterY + headRadius - 0.02;
+    const torsoBottomY = mannequin.height * 0.56;
+    const legTopY = mannequin.height * 0.84;
+    const baseY = mannequin.height;
+    const shoulderHalf = mannequin.width * 0.42;
+    const waistHalf = mannequin.width * 0.24;
+    const legHalf = mannequin.width * 0.18;
+    const baseHalf = mannequin.width * 0.52;
     const bodyPath = [
       headCenterX - shoulderHalf,
-      bodyTopY + mannequin.height * 0.08,
+      shoulderY,
       headCenterX + shoulderHalf,
-      bodyTopY + mannequin.height * 0.08,
-      headCenterX + hipHalf,
-      bodyBottomY - mannequin.height * 0.18,
-      headCenterX + legSpread,
-      bodyBottomY,
-      headCenterX + legSpread * 0.46,
-      bodyBottomY,
-      headCenterX,
-      bodyBottomY - mannequin.height * 0.12,
-      headCenterX - legSpread * 0.46,
-      bodyBottomY,
-      headCenterX - legSpread,
-      bodyBottomY,
-      headCenterX - hipHalf,
-      bodyBottomY - mannequin.height * 0.18,
+      shoulderY,
+      headCenterX + waistHalf,
+      torsoBottomY,
+      headCenterX + legHalf,
+      legTopY,
+      headCenterX + baseHalf,
+      baseY,
+      headCenterX - baseHalf,
+      baseY,
+      headCenterX - legHalf,
+      legTopY,
+      headCenterX - waistHalf,
+      torsoBottomY,
     ];
     return (
       <Group
