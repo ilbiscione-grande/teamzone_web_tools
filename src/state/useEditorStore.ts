@@ -6,6 +6,8 @@ export type Tool =
   | "player"
   | "ball"
   | "cone"
+  | "pole"
+  | "mannequin"
   | "goal"
   | "circle"
   | "rect"

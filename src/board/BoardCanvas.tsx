@@ -9,8 +9,10 @@ import type {
   Board,
   ConeToken,
   DrawableObject,
+  MannequinToken,
   MiniGoal,
   MovementPath,
+  PoleToken,
   PlayerToken,
   ShapeCircle,
   ShapeRect,
@@ -276,6 +278,26 @@ export default function BoardCanvas({
           x: object.position.x + goal.width / 2,
           y: object.position.y + goal.height / 2,
           radius: Math.max(1.4, Math.hypot(goal.width, goal.height) * 0.56),
+          strength,
+        };
+      }
+      if (object.type === "pole") {
+        const pole = object as PoleToken;
+        return {
+          id: object.id,
+          x: object.position.x + pole.width / 2,
+          y: object.position.y + pole.height / 2,
+          radius: Math.max(1.1, Math.hypot(pole.width, pole.height) * 0.52),
+          strength,
+        };
+      }
+      if (object.type === "mannequin") {
+        const mannequin = object as MannequinToken;
+        return {
+          id: object.id,
+          x: object.position.x + mannequin.width / 2,
+          y: object.position.y + mannequin.height / 2,
+          radius: Math.max(1.3, Math.hypot(mannequin.width, mannequin.height) * 0.54),
           strength,
         };
       }
@@ -1030,7 +1052,9 @@ export default function BoardCanvas({
       item.type === "rect" ||
       item.type === "triangle" ||
       item.type === "goal" ||
-      item.type === "cone"
+      item.type === "cone" ||
+      item.type === "pole" ||
+      item.type === "mannequin"
     ) {
       return {
         x: item.position.x + item.width,
@@ -1293,15 +1317,6 @@ export default function BoardCanvas({
                       1,
                       "rgba(150,236,255,0)",
                     ]}
-                  />
-                  <Circle
-                    x={aura.x}
-                    y={aura.y}
-                    radius={radius * (1.03 + aura.strength * 0.08)}
-                    stroke="#e7f7ff"
-                    strokeWidth={0.18 + aura.strength * 0.2}
-                    opacity={0.5 + aura.strength * 0.4}
-                    dash={[0.55, 0.36]}
                   />
                   <Line
                     points={[aura.x - spikeIn, aura.y, aura.x - spikeOut, aura.y]}
@@ -2033,7 +2048,12 @@ export default function BoardCanvas({
               .filter(
                 (item) =>
                   selection.includes(item.id) &&
-                  (item.type === "cone" || item.type === "goal")
+                  (
+                    item.type === "cone" ||
+                    item.type === "goal" ||
+                    item.type === "pole" ||
+                    item.type === "mannequin"
+                  )
               )
               .map((item) => {
                 const width = "width" in item ? item.width : 0;

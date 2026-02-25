@@ -29,6 +29,8 @@ export type BaseDrawable = {
     | "player"
     | "ball"
     | "cone"
+    | "pole"
+    | "mannequin"
     | "goal"
     | "circle"
     | "rect"
@@ -72,6 +74,18 @@ export type ConeToken = BaseDrawable & {
 
 export type MiniGoal = BaseDrawable & {
   type: "goal";
+  width: number;
+  height: number;
+};
+
+export type PoleToken = BaseDrawable & {
+  type: "pole";
+  width: number;
+  height: number;
+};
+
+export type MannequinToken = BaseDrawable & {
+  type: "mannequin";
   width: number;
   height: number;
 };
@@ -124,6 +138,8 @@ export type DrawableObject =
   | PlayerToken
   | BallToken
   | ConeToken
+  | PoleToken
+  | MannequinToken
   | MiniGoal
   | ShapeCircle
   | ShapeRect

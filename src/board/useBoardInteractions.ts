@@ -646,8 +646,40 @@ export const useBoardInteractions = ({
         zIndex: 1,
         locked: false,
         visible: true,
-        width: 6,
-        height: 6,
+        width: 3,
+        height: 3,
+      });
+    }
+    if (activeTool === "pole") {
+      pushHistory(clone(objects));
+      addObject(boardId, frameIndex, {
+        id: createId(),
+        type: "pole",
+        position: world,
+        rotation: 0,
+        scale: { x: 1, y: 1 },
+        style: { ...defaultStyle, fill: "#f2f1e9", stroke: "#111111" },
+        zIndex: 1,
+        locked: false,
+        visible: true,
+        width: 2.4,
+        height: 8,
+      });
+    }
+    if (activeTool === "mannequin") {
+      pushHistory(clone(objects));
+      addObject(boardId, frameIndex, {
+        id: createId(),
+        type: "mannequin",
+        position: world,
+        rotation: 0,
+        scale: { x: 1, y: 1 },
+        style: { ...defaultStyle, fill: "rgba(230,236,240,0.88)", stroke: "#111111" },
+        zIndex: 1,
+        locked: false,
+        visible: true,
+        width: 4.8,
+        height: 10,
       });
     }
     if (activeTool === "goal") {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Arrow,
   Circle,
+  Ellipse,
   Group,
   Image as KonvaImage,
   Line,
@@ -17,8 +18,10 @@ import type {
   BallToken,
   ConeToken,
   DrawableObject,
+  MannequinToken,
   MovementPath,
   MiniGoal,
+  PoleToken,
   PlayerToken,
   ShapeCircle,
   ShapeRect,
@@ -772,6 +775,124 @@ export default function BoardObject({
           height={goal.height}
           fill="#ffffff"
           strokeWidth={0}
+        />
+      </Group>
+    );
+  }
+
+  if (object.type === "pole") {
+    const pole = object as PoleToken;
+    const poleScaleAnchorOffset = getCenterScaleAnchorOffset(pole.width, pole.height);
+    const standRadiusX = Math.max(0.35, pole.width * 0.4);
+    const standRadiusY = Math.max(0.18, pole.width * 0.2);
+    const shaftWidth = Math.max(0.24, pole.width * 0.22);
+    const shaftHeight = Math.max(0.6, pole.height - standRadiusY * 2.2);
+    const shaftX = pole.width / 2 - shaftWidth / 2;
+    const shaftY = Math.max(0, pole.height - shaftHeight - standRadiusY * 1.2);
+    return (
+      <Group
+        {...commonProps}
+        x={object.position.x + poleScaleAnchorOffset.x}
+        y={object.position.y + poleScaleAnchorOffset.y}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
+        shadowEnabled={ambientShadowEnabled}
+        shadowColor="#000000"
+        shadowBlur={ambientShadowBlur}
+        shadowOpacity={ambientShadowOpacity}
+        shadowOffsetY={ambientShadowOffsetY}
+      >
+        <Rect
+          x={shaftX}
+          y={shaftY}
+          width={shaftWidth}
+          height={shaftHeight}
+          fill={pole.style.fill}
+          stroke={pole.style.stroke}
+          strokeWidth={depthStroke(Math.max(0.08, pole.style.strokeWidth))}
+          cornerRadius={shaftWidth * 0.45}
+        />
+        <Ellipse
+          x={pole.width / 2}
+          y={pole.height - standRadiusY}
+          radiusX={standRadiusX}
+          radiusY={standRadiusY}
+          fill={pole.style.fill}
+          stroke={pole.style.stroke}
+          strokeWidth={depthStroke(Math.max(0.08, pole.style.strokeWidth))}
+        />
+      </Group>
+    );
+  }
+
+  if (object.type === "mannequin") {
+    const mannequin = object as MannequinToken;
+    const mannequinScaleAnchorOffset = getCenterScaleAnchorOffset(
+      mannequin.width,
+      mannequin.height
+    );
+    const headRadius = Math.max(0.35, mannequin.width * 0.16);
+    const headCenterX = mannequin.width / 2;
+    const headCenterY = headRadius + 0.18;
+    const bodyTopY = headCenterY + headRadius + 0.18;
+    const bodyBottomY = mannequin.height - 0.28;
+    const shoulderHalf = mannequin.width * 0.28;
+    const hipHalf = mannequin.width * 0.2;
+    const legSpread = mannequin.width * 0.34;
+    const bodyPath = [
+      headCenterX - shoulderHalf,
+      bodyTopY + mannequin.height * 0.08,
+      headCenterX + shoulderHalf,
+      bodyTopY + mannequin.height * 0.08,
+      headCenterX + hipHalf,
+      bodyBottomY - mannequin.height * 0.18,
+      headCenterX + legSpread,
+      bodyBottomY,
+      headCenterX + legSpread * 0.46,
+      bodyBottomY,
+      headCenterX,
+      bodyBottomY - mannequin.height * 0.12,
+      headCenterX - legSpread * 0.46,
+      bodyBottomY,
+      headCenterX - legSpread,
+      bodyBottomY,
+      headCenterX - hipHalf,
+      bodyBottomY - mannequin.height * 0.18,
+    ];
+    return (
+      <Group
+        {...commonProps}
+        x={object.position.x + mannequinScaleAnchorOffset.x}
+        y={object.position.y + mannequinScaleAnchorOffset.y}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
+        shadowEnabled={ambientShadowEnabled}
+        shadowColor="#000000"
+        shadowBlur={ambientShadowBlur}
+        shadowOpacity={ambientShadowOpacity}
+        shadowOffsetY={ambientShadowOffsetY}
+      >
+        <Line
+          points={bodyPath}
+          closed
+          fill={mannequin.style.fill}
+          stroke={mannequin.style.stroke}
+          strokeWidth={depthStroke(Math.max(0.08, mannequin.style.strokeWidth))}
+          lineJoin="round"
+        />
+        <Circle
+          x={headCenterX}
+          y={headCenterY}
+          radius={headRadius}
+          fill={mannequin.style.fill}
+          stroke={mannequin.style.stroke}
+          strokeWidth={depthStroke(Math.max(0.08, mannequin.style.strokeWidth))}
         />
       </Group>
     );

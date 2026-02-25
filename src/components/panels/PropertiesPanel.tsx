@@ -103,7 +103,17 @@ export default function PropertiesPanel({
   );
   const target = selected[0];
   const lockableSelected = selected.filter((item) =>
-    ["cone", "goal", "circle", "rect", "triangle", "arrow", "text"].includes(
+    [
+      "cone",
+      "goal",
+      "pole",
+      "mannequin",
+      "circle",
+      "rect",
+      "triangle",
+      "arrow",
+      "text",
+    ].includes(
       item.type
     )
   );
@@ -793,6 +803,8 @@ export default function PropertiesPanel({
 
           {(target.type === "cone" ||
             target.type === "goal" ||
+            target.type === "pole" ||
+            target.type === "mannequin" ||
             target.type === "circle" ||
             target.type === "rect" ||
             target.type === "triangle") && (
