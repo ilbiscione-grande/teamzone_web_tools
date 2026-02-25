@@ -11,6 +11,7 @@ export type Style = {
   opacity: number;
   outlineStroke?: string;
   outlineWidth?: number;
+  fxLightningStrength?: number;
 };
 
 export type DrawableAnimation =
@@ -19,7 +20,8 @@ export type DrawableAnimation =
   | "fadeOut"
   | "pop"
   | "pulse"
-  | "highlight";
+  | "highlight"
+  | "lightning";
 
 export type BaseDrawable = {
   id: string;

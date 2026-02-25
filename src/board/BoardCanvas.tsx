@@ -7,7 +7,10 @@ import type {
   ArrowLine,
   BallToken,
   Board,
+  ConeToken,
   DrawableObject,
+  MiniGoal,
+  MovementPath,
   PlayerToken,
   ShapeCircle,
   ShapeRect,
@@ -130,6 +133,7 @@ export default function BoardCanvas({
       style: { ...object.style },
       scale: { ...object.scale },
     } as DrawableObject;
+    next.style.fxLightningStrength = 0;
 
     if (effect === "fadeIn") {
       next.style.opacity = object.style.opacity * progress;
@@ -155,6 +159,29 @@ export default function BoardCanvas({
       next.scale.y = object.scale.y * factor;
       return next;
     }
+    if (effect === "lightning") {
+      const flashAt = (center: number, width: number) => {
+        const dist = Math.abs(progress - center);
+        if (dist >= width) {
+          return 0;
+        }
+        return 1 - dist / width;
+      };
+      // Three quick, sharp flashes to read as a clear lightning blink.
+      const flashStrength = Math.min(
+        1,
+        Math.max(
+          flashAt(0.16, 0.1),
+          flashAt(0.34, 0.085),
+          flashAt(0.56, 0.09)
+        )
+      );
+      const punch = 1 + flashStrength * 0.06;
+      next.scale.x = object.scale.x * punch;
+      next.scale.y = object.scale.y * punch;
+      next.style.fxLightningStrength = flashStrength;
+      return next;
+    }
 
     return next;
   }, []);
@@ -175,6 +202,147 @@ export default function BoardCanvas({
     next.style.outlineWidth = strength;
     return next;
   }, []);
+  const getLightningAura = useCallback(
+    (object: DrawableObject) => {
+      const strength = Math.max(
+        0,
+        Math.min(1, Number(object.style.fxLightningStrength ?? 0))
+      );
+      if (strength <= 0) {
+        return null;
+      }
+      if (object.type === "player") {
+        return {
+          id: object.id,
+          x: object.position.x,
+          y: object.position.y,
+          radius: playerTokenSize + 2.4,
+          strength,
+        };
+      }
+      if (object.type === "ball") {
+        return {
+          id: object.id,
+          x: object.position.x,
+          y: object.position.y,
+          radius: Math.max(0.9, playerTokenSize * 0.52 + 1.5),
+          strength,
+        };
+      }
+      if (object.type === "circle") {
+        const circle = object as ShapeCircle;
+        return {
+          id: object.id,
+          x: object.position.x,
+          y: object.position.y,
+          radius: Math.max(1.2, circle.radius + 1.2),
+          strength,
+        };
+      }
+      if (object.type === "rect") {
+        const rect = object as ShapeRect;
+        return {
+          id: object.id,
+          x: object.position.x + rect.width / 2,
+          y: object.position.y + rect.height / 2,
+          radius: Math.max(1.4, Math.hypot(rect.width, rect.height) * 0.56),
+          strength,
+        };
+      }
+      if (object.type === "triangle") {
+        const tri = object as ShapeTriangle;
+        return {
+          id: object.id,
+          x: object.position.x + tri.width / 2,
+          y: object.position.y + tri.height / 2,
+          radius: Math.max(1.4, Math.hypot(tri.width, tri.height) * 0.58),
+          strength,
+        };
+      }
+      if (object.type === "cone") {
+        const cone = object as ConeToken;
+        return {
+          id: object.id,
+          x: object.position.x + cone.width / 2,
+          y: object.position.y + cone.height / 2,
+          radius: Math.max(1.4, Math.hypot(cone.width, cone.height) * 0.56),
+          strength,
+        };
+      }
+      if (object.type === "goal") {
+        const goal = object as MiniGoal;
+        return {
+          id: object.id,
+          x: object.position.x + goal.width / 2,
+          y: object.position.y + goal.height / 2,
+          radius: Math.max(1.4, Math.hypot(goal.width, goal.height) * 0.56),
+          strength,
+        };
+      }
+      if (object.type === "text") {
+        const text = object as TextLabel;
+        const textHeight =
+          text.height ??
+          Math.max(2, text.text.split("\n").length * text.fontSize * 1.4);
+        return {
+          id: object.id,
+          x: object.position.x + text.width / 2,
+          y: object.position.y + textHeight / 2,
+          radius: Math.max(1.2, Math.hypot(text.width, textHeight) * 0.52),
+          strength,
+        };
+      }
+      if (object.type === "arrow") {
+        const arrow = object as ArrowLine;
+        const xs = [0, arrow.points[2]];
+        const ys = [0, arrow.points[3]];
+        if (arrow.control) {
+          xs.push(arrow.control.x);
+          ys.push(arrow.control.y);
+        }
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        const width = Math.max(1, maxX - minX);
+        const height = Math.max(1, maxY - minY);
+        return {
+          id: object.id,
+          x: object.position.x + minX + width / 2,
+          y: object.position.y + minY + height / 2,
+          radius: Math.max(1.2, Math.hypot(width, height) * 0.55),
+          strength,
+        };
+      }
+      if (object.type === "path") {
+        const path = object as MovementPath;
+        if (path.points.length < 2) {
+          return null;
+        }
+        const xs: number[] = [];
+        const ys: number[] = [];
+        for (let i = 0; i < path.points.length; i += 2) {
+          xs.push(path.points[i]);
+          ys.push(path.points[i + 1]);
+        }
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        const width = Math.max(1, maxX - minX);
+        const height = Math.max(1, maxY - minY);
+        return {
+          id: object.id,
+          x: object.position.x + minX + width / 2,
+          y: object.position.y + minY + height / 2,
+          radius: Math.max(1.2, Math.hypot(width, height) * 0.55),
+          strength,
+        };
+      }
+      return null;
+    },
+    [playerTokenSize]
+  );
   const renderObjects = useMemo(() => {
     if (board.mode !== "DYNAMIC") {
       return objects;
@@ -334,7 +502,7 @@ export default function BoardCanvas({
         // Transition effect ownership:
         // - fadeIn: target frame only
         // - fadeOut: source frame only
-        // - pop/pulse: target frame (preview while entering)
+        // - pop/pulse/lightning: target frame (preview while entering)
         const transitionEffect = (() => {
           if (item.animation === "fadeOut") {
             return "fadeOut" as const;
@@ -342,7 +510,11 @@ export default function BoardCanvas({
           if (next.animation === "fadeIn") {
             return "fadeIn" as const;
           }
-          if (next.animation === "pop" || next.animation === "pulse") {
+          if (
+            next.animation === "pop" ||
+            next.animation === "pulse" ||
+            next.animation === "lightning"
+          ) {
             return next.animation;
           }
           return "none" as const;
@@ -373,7 +545,8 @@ export default function BoardCanvas({
         const entryEffect =
           item.animation === "fadeIn" ||
           item.animation === "pop" ||
-          item.animation === "pulse"
+          item.animation === "pulse" ||
+          item.animation === "lightning"
             ? item.animation
             : "none";
         const highlightAmount = item.animation === "highlight" ? t : 0;
@@ -397,6 +570,10 @@ export default function BoardCanvas({
     applyPlaybackEffect,
     applyHighlightEffect,
   ]);
+  const lightningAuras = useMemo(
+    () => renderObjects.map((item) => getLightningAura(item)).filter(Boolean),
+    [getLightningAura, renderObjects]
+  );
   const sortedObjects = useMemo(() => {
     const getPriority = (type: string) => {
       if (type === "ball") {
@@ -1090,6 +1267,73 @@ export default function BoardCanvas({
                 ]}
               />
             ) : null}
+            {lightningAuras.map((aura) => {
+              if (!aura) {
+                return null;
+              }
+              const radius = aura.radius;
+              const outerRadius = radius * (1.22 + aura.strength * 0.22);
+              const spikeIn = outerRadius * 1.02;
+              const spikeOut = outerRadius * 1.24;
+              return (
+                <Group key={`lightning-${aura.id}`} listening={false}>
+                  <Circle
+                    x={aura.x}
+                    y={aura.y}
+                    radius={outerRadius}
+                    fillRadialGradientStartPoint={{ x: 0, y: 0 }}
+                    fillRadialGradientStartRadius={0}
+                    fillRadialGradientEndPoint={{ x: 0, y: 0 }}
+                    fillRadialGradientEndRadius={outerRadius}
+                    fillRadialGradientColorStops={[
+                      0,
+                      `rgba(255,255,255,${0.16 * aura.strength})`,
+                      0.42,
+                      `rgba(150,236,255,${0.22 * aura.strength})`,
+                      1,
+                      "rgba(150,236,255,0)",
+                    ]}
+                  />
+                  <Circle
+                    x={aura.x}
+                    y={aura.y}
+                    radius={radius * (1.03 + aura.strength * 0.08)}
+                    stroke="#e7f7ff"
+                    strokeWidth={0.18 + aura.strength * 0.2}
+                    opacity={0.5 + aura.strength * 0.4}
+                    dash={[0.55, 0.36]}
+                  />
+                  <Line
+                    points={[aura.x - spikeIn, aura.y, aura.x - spikeOut, aura.y]}
+                    stroke="#bdeeff"
+                    strokeWidth={0.12 + aura.strength * 0.1}
+                    opacity={0.55 + aura.strength * 0.4}
+                    lineCap="round"
+                  />
+                  <Line
+                    points={[aura.x + spikeIn, aura.y, aura.x + spikeOut, aura.y]}
+                    stroke="#bdeeff"
+                    strokeWidth={0.12 + aura.strength * 0.1}
+                    opacity={0.55 + aura.strength * 0.4}
+                    lineCap="round"
+                  />
+                  <Line
+                    points={[aura.x, aura.y - spikeIn, aura.x, aura.y - spikeOut]}
+                    stroke="#bdeeff"
+                    strokeWidth={0.12 + aura.strength * 0.1}
+                    opacity={0.55 + aura.strength * 0.4}
+                    lineCap="round"
+                  />
+                  <Line
+                    points={[aura.x, aura.y + spikeIn, aura.x, aura.y + spikeOut]}
+                    stroke="#bdeeff"
+                    strokeWidth={0.12 + aura.strength * 0.1}
+                    opacity={0.55 + aura.strength * 0.4}
+                    lineCap="round"
+                  />
+                </Group>
+              );
+            })}
             {nonPlayerObjects.map((object) => (
               <BoardObject
                 key={object.id}

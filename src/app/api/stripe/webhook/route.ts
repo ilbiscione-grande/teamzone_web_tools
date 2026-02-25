@@ -28,18 +28,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
   }
 
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId =
       session.client_reference_id ?? session.metadata?.userId ?? null;
     if (userId) {
-      const supabase = createClient(supabaseUrl, serviceRoleKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      });
       await supabase
         .from("profiles")
         .update({
@@ -50,6 +51,42 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", userId);
+    }
+  }
+
+  if (
+    event.type === "customer.subscription.updated" ||
+    event.type === "customer.subscription.deleted"
+  ) {
+    const subscription = event.data.object as Stripe.Subscription;
+    const customerId =
+      typeof subscription.customer === "string"
+        ? subscription.customer
+        : subscription.customer?.id;
+    if (customerId) {
+      const activeLikeStatuses: Stripe.Subscription.Status[] = [
+        "active",
+        "trialing",
+      ];
+      const shouldBePaid = activeLikeStatuses.includes(subscription.status);
+
+      if (shouldBePaid) {
+        await supabase
+          .from("profiles")
+          .update({
+            plan: "PAID",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("stripe_customer_id", customerId);
+      } else {
+        await supabase
+          .from("profiles")
+          .update({
+            plan: "AUTH",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("stripe_customer_id", customerId);
+      }
     }
   }
 

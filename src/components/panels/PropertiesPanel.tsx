@@ -45,6 +45,7 @@ const drawableAnimationOptions: Array<{
   { value: "pop", label: "Pop" },
   { value: "pulse", label: "Pulse" },
   { value: "highlight", label: "Highlight" },
+  { value: "lightning", label: "Lightning" },
 ];
 const coneFillPalette = [
   "#f06d4f",

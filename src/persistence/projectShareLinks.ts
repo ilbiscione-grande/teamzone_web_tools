@@ -1,6 +1,7 @@
 import { supabase } from "@/utils/supabaseClient";
 import type { Project } from "@/models";
 import { createId } from "@/utils/id";
+import { hasEffectivePaidAccess, type ProfilePlanSnapshot } from "@/utils/effectivePlan";
 
 const TABLE = "project_share_links";
 
@@ -23,13 +24,13 @@ export const createProjectShareLink = async (project: Project) => {
   }
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("plan")
+    .select("plan,manual_paid_override")
     .eq("id", userData.user.id)
-    .maybeSingle<{ plan: string }>();
-  if (profileError || !profile?.plan) {
+    .maybeSingle<ProfilePlanSnapshot>();
+  if (profileError || !profile) {
     return { ok: false as const, error: "Unable to verify plan." };
   }
-  if (profile.plan !== "PAID") {
+  if (!hasEffectivePaidAccess(profile)) {
     return {
       ok: false as const,
       error: "Paid plan required to create share links.",

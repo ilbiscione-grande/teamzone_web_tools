@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { supabase } from "@/utils/supabaseClient";
+import { hasEffectivePaidAccess, type ProfilePlanSnapshot } from "@/utils/effectivePlan";
 import {
   useProjectStore,
   persistActiveProject,
@@ -218,15 +219,15 @@ export default function AuthListener() {
       if (typeof window !== "undefined" && !window.navigator.onLine) {
         return;
       }
-      let data: { plan?: string } | null = null;
+      let data: ProfilePlanSnapshot | null = null;
       let error: unknown = null;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         const result = await supabase
           .from("profiles")
-          .select("plan")
+          .select("plan,manual_paid_override")
           .eq("id", userId)
           .single();
-        data = result.data as { plan?: string } | null;
+        data = result.data as ProfilePlanSnapshot | null;
         error = result.error;
         if (!error && data) {
           break;
@@ -236,8 +237,7 @@ export default function AuthListener() {
       if (error || !data) {
         return;
       }
-      const normalized = String(data?.plan ?? "").trim().toUpperCase();
-      const plan = normalized === "PAID" ? "PAID" : "AUTH";
+      const plan = hasEffectivePaidAccess(data) ? "PAID" : "AUTH";
       setPlanFromProfile(plan);
       persistPlanCheck();
     };
