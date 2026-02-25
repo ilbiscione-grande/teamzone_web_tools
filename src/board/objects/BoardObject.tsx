@@ -272,9 +272,13 @@ export default function BoardObject({
     if (shimmerStrength <= 0 || width <= 0 || height <= 0) {
       return null;
     }
-    const bandWidth = Math.max(0.7, width * 0.22);
+    const bandWidth = Math.max(0.75, width * 0.24);
     const travel = width + height + bandWidth * 2;
-    const sweepX = x - bandWidth + travel * shimmerProgress;
+    const shimmerTravelProgress = Math.max(
+      0,
+      Math.min(1, shimmerProgress * 0.78 + 0.02)
+    );
+    const sweepX = x - bandWidth + travel * shimmerTravelProgress;
     const sweepY = y - height * 0.18;
     return (
       <Group
@@ -295,15 +299,22 @@ export default function BoardObject({
             fillLinearGradientColorStops={[
               0,
               "rgba(255,255,255,0)",
-              0.38,
-              `rgba(255,255,255,${0.2 * shimmerStrength})`,
-              0.52,
-              `rgba(255,255,255,${0.6 * shimmerStrength})`,
-              0.7,
-              `rgba(160,236,255,${0.28 * shimmerStrength})`,
+              0.34,
+              `rgba(255,255,255,${0.26 * shimmerStrength})`,
+              0.5,
+              `rgba(255,255,255,${0.82 * shimmerStrength})`,
+              0.66,
+              `rgba(172,240,255,${0.38 * shimmerStrength})`,
               1,
               "rgba(255,255,255,0)",
             ]}
+          />
+          <Rect
+            x={bandWidth * 0.44}
+            y={0}
+            width={Math.max(0.22, bandWidth * 0.18)}
+            height={height * 1.8}
+            fill={`rgba(255,255,255,${0.42 * shimmerStrength})`}
           />
         </Group>
       </Group>
@@ -314,9 +325,13 @@ export default function BoardObject({
       return null;
     }
     const diameter = radius * 2;
-    const bandWidth = Math.max(0.5, diameter * 0.24);
+    const bandWidth = Math.max(0.55, diameter * 0.26);
     const travel = diameter + bandWidth * 2;
-    const sweepX = x - radius - bandWidth + travel * shimmerProgress;
+    const shimmerTravelProgress = Math.max(
+      0,
+      Math.min(1, shimmerProgress * 0.78 + 0.02)
+    );
+    const sweepX = x - radius - bandWidth + travel * shimmerTravelProgress;
     const sweepY = y - radius * 1.25;
     return (
       <Group
@@ -338,15 +353,22 @@ export default function BoardObject({
             fillLinearGradientColorStops={[
               0,
               "rgba(255,255,255,0)",
-              0.4,
-              `rgba(255,255,255,${0.18 * shimmerStrength})`,
-              0.55,
-              `rgba(255,255,255,${0.56 * shimmerStrength})`,
-              0.72,
-              `rgba(160,236,255,${0.26 * shimmerStrength})`,
+              0.36,
+              `rgba(255,255,255,${0.24 * shimmerStrength})`,
+              0.52,
+              `rgba(255,255,255,${0.74 * shimmerStrength})`,
+              0.69,
+              `rgba(172,240,255,${0.34 * shimmerStrength})`,
               1,
               "rgba(255,255,255,0)",
             ]}
+          />
+          <Rect
+            x={bandWidth * 0.45}
+            y={0}
+            width={Math.max(0.2, bandWidth * 0.16)}
+            height={diameter * 1.8}
+            fill={`rgba(255,255,255,${0.38 * shimmerStrength})`}
           />
         </Group>
       </Group>
