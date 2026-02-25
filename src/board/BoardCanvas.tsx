@@ -136,6 +136,8 @@ export default function BoardCanvas({
       scale: { ...object.scale },
     } as DrawableObject;
     next.style.fxLightningStrength = 0;
+    next.style.fxShimmerStrength = 0;
+    next.style.fxShimmerProgress = 0;
 
     if (effect === "fadeIn") {
       next.style.opacity = object.style.opacity * progress;
@@ -182,6 +184,23 @@ export default function BoardCanvas({
       next.scale.x = object.scale.x * punch;
       next.scale.y = object.scale.y * punch;
       next.style.fxLightningStrength = flashStrength;
+      return next;
+    }
+    if (effect === "lightPulse") {
+      // Single slower pulse using the same light channel as lightning.
+      const bell = Math.sin(progress * Math.PI);
+      const pulseStrength = Math.max(0, Math.min(1, bell * 0.9));
+      const punch = 1 + pulseStrength * 0.04;
+      next.scale.x = object.scale.x * punch;
+      next.scale.y = object.scale.y * punch;
+      next.style.fxLightningStrength = pulseStrength;
+      return next;
+    }
+    if (effect === "shimmer") {
+      const envelope = Math.pow(Math.sin(progress * Math.PI), 0.9);
+      const shimmerStrength = Math.max(0, Math.min(1, envelope));
+      next.style.fxShimmerStrength = shimmerStrength;
+      next.style.fxShimmerProgress = progress;
       return next;
     }
 
@@ -524,7 +543,7 @@ export default function BoardCanvas({
         // Transition effect ownership:
         // - fadeIn: target frame only
         // - fadeOut: source frame only
-        // - pop/pulse/lightning: target frame (preview while entering)
+        // - pop/pulse/lightning/lightPulse/shimmer: target frame (preview while entering)
         const transitionEffect = (() => {
           if (item.animation === "fadeOut") {
             return "fadeOut" as const;
@@ -535,7 +554,9 @@ export default function BoardCanvas({
           if (
             next.animation === "pop" ||
             next.animation === "pulse" ||
-            next.animation === "lightning"
+            next.animation === "lightning" ||
+            next.animation === "lightPulse" ||
+            next.animation === "shimmer"
           ) {
             return next.animation;
           }
@@ -568,7 +589,9 @@ export default function BoardCanvas({
           item.animation === "fadeIn" ||
           item.animation === "pop" ||
           item.animation === "pulse" ||
-          item.animation === "lightning"
+          item.animation === "lightning" ||
+          item.animation === "lightPulse" ||
+          item.animation === "shimmer"
             ? item.animation
             : "none";
         const highlightAmount = item.animation === "highlight" ? t : 0;

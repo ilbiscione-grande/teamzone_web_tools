@@ -255,6 +255,103 @@ export default function BoardObject({
       onDragEnd(object.id, { x: event.target.x(), y: event.target.y() });
     },
   };
+  const shimmerStrength = Math.max(
+    0,
+    Math.min(1, Number(object.style.fxShimmerStrength ?? 0))
+  );
+  const shimmerProgress = Math.max(
+    0,
+    Math.min(1, Number(object.style.fxShimmerProgress ?? 0))
+  );
+  const renderShimmerSweepInBox = (
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ) => {
+    if (shimmerStrength <= 0 || width <= 0 || height <= 0) {
+      return null;
+    }
+    const bandWidth = Math.max(0.7, width * 0.22);
+    const travel = width + height + bandWidth * 2;
+    const sweepX = x - bandWidth + travel * shimmerProgress;
+    const sweepY = y - height * 0.18;
+    return (
+      <Group
+        listening={false}
+        clipX={x}
+        clipY={y}
+        clipWidth={width}
+        clipHeight={height}
+      >
+        <Group x={sweepX} y={sweepY} rotation={35}>
+          <Rect
+            x={0}
+            y={0}
+            width={bandWidth}
+            height={height * 1.8}
+            fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+            fillLinearGradientEndPoint={{ x: bandWidth, y: 0 }}
+            fillLinearGradientColorStops={[
+              0,
+              "rgba(255,255,255,0)",
+              0.38,
+              `rgba(255,255,255,${0.2 * shimmerStrength})`,
+              0.52,
+              `rgba(255,255,255,${0.6 * shimmerStrength})`,
+              0.7,
+              `rgba(160,236,255,${0.28 * shimmerStrength})`,
+              1,
+              "rgba(255,255,255,0)",
+            ]}
+          />
+        </Group>
+      </Group>
+    );
+  };
+  const renderShimmerSweepInCircle = (x: number, y: number, radius: number) => {
+    if (shimmerStrength <= 0 || radius <= 0) {
+      return null;
+    }
+    const diameter = radius * 2;
+    const bandWidth = Math.max(0.5, diameter * 0.24);
+    const travel = diameter + bandWidth * 2;
+    const sweepX = x - radius - bandWidth + travel * shimmerProgress;
+    const sweepY = y - radius * 1.25;
+    return (
+      <Group
+        listening={false}
+        clipFunc={(ctx) => {
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.closePath();
+        }}
+      >
+        <Group x={sweepX} y={sweepY} rotation={35}>
+          <Rect
+            x={0}
+            y={0}
+            width={bandWidth}
+            height={diameter * 1.8}
+            fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+            fillLinearGradientEndPoint={{ x: bandWidth, y: 0 }}
+            fillLinearGradientColorStops={[
+              0,
+              "rgba(255,255,255,0)",
+              0.4,
+              `rgba(255,255,255,${0.18 * shimmerStrength})`,
+              0.55,
+              `rgba(255,255,255,${0.56 * shimmerStrength})`,
+              0.72,
+              `rgba(160,236,255,${0.26 * shimmerStrength})`,
+              1,
+              "rgba(255,255,255,0)",
+            ]}
+          />
+        </Group>
+      </Group>
+    );
+  };
 
   const getCenterScaleAnchorOffset = (width: number, height: number) => {
     const sx = Number.isFinite(commonProps.scaleX) ? commonProps.scaleX : 1;
@@ -474,6 +571,7 @@ export default function BoardObject({
           shadowBlur={isThreeDView ? 0.8 : 0}
           shadowOffsetY={isThreeDView ? 0.35 : 0}
         />
+        {renderShimmerSweepInCircle(0, 0, playerTokenSize)}
         {isThreeDView && (
           <>
             <Circle
@@ -635,6 +733,7 @@ export default function BoardObject({
           />
         )}
         <BallSprite radius={ballRadius} />
+        {renderShimmerSweepInCircle(0, 0, ballRadius)}
       </Group>
     );
   }
@@ -642,19 +741,23 @@ export default function BoardObject({
   if (object.type === "circle") {
     const circle = object as ShapeCircle;
     return (
-      <Circle
+      <Group
         {...commonProps}
-        radius={circle.radius}
-        stroke={circle.style.stroke}
-        strokeWidth={depthStroke(circle.style.strokeWidth)}
-        fill={circle.style.fill}
-        dash={circle.style.dash}
         ref={(node) => {
           if (node) {
             registerNode(object.id, node);
           }
         }}
-      />
+      >
+        <Circle
+          radius={circle.radius}
+          stroke={circle.style.stroke}
+          strokeWidth={depthStroke(circle.style.strokeWidth)}
+          fill={circle.style.fill}
+          dash={circle.style.dash}
+        />
+        {renderShimmerSweepInCircle(0, 0, circle.radius)}
+      </Group>
     );
   }
 
@@ -712,6 +815,7 @@ export default function BoardObject({
             lineJoin="round"
           />
         </Group>
+        {renderShimmerSweepInBox(0, 0, cone.width, cone.height)}
       </Group>
     );
   }
@@ -776,6 +880,7 @@ export default function BoardObject({
           fill="#ffffff"
           strokeWidth={0}
         />
+        {renderShimmerSweepInBox(0, 0, goal.width, goal.height)}
       </Group>
     );
   }
@@ -824,6 +929,7 @@ export default function BoardObject({
           stroke={pole.style.stroke}
           strokeWidth={depthStroke(Math.max(0.08, pole.style.strokeWidth))}
         />
+        {renderShimmerSweepInBox(0, 0, pole.width, pole.height)}
       </Group>
     );
   }
@@ -895,6 +1001,7 @@ export default function BoardObject({
           stroke={mannequin.style.stroke}
           strokeWidth={depthStroke(Math.max(0.08, mannequin.style.strokeWidth))}
         />
+        {renderShimmerSweepInBox(0, 0, mannequin.width, mannequin.height)}
       </Group>
     );
   }
@@ -903,17 +1010,10 @@ export default function BoardObject({
     const rect = object as ShapeRect;
     const rectScaleAnchorOffset = getCenterScaleAnchorOffset(rect.width, rect.height);
     return (
-      <Rect
+      <Group
         {...commonProps}
         x={object.position.x + rectScaleAnchorOffset.x}
         y={object.position.y + rectScaleAnchorOffset.y}
-        width={rect.width}
-        height={rect.height}
-        cornerRadius={rect.cornerRadius}
-        stroke={rect.style.stroke}
-        strokeWidth={depthStroke(rect.style.strokeWidth)}
-        fill={rect.style.fill}
-        dash={rect.style.dash}
         shadowEnabled={ambientShadowEnabled}
         shadowColor="#000000"
         shadowBlur={ambientShadowBlur}
@@ -924,7 +1024,18 @@ export default function BoardObject({
             registerNode(object.id, node);
           }
         }}
-      />
+      >
+        <Rect
+          width={rect.width}
+          height={rect.height}
+          cornerRadius={rect.cornerRadius}
+          stroke={rect.style.stroke}
+          strokeWidth={depthStroke(rect.style.strokeWidth)}
+          fill={rect.style.fill}
+          dash={rect.style.dash}
+        />
+        {renderShimmerSweepInBox(0, 0, rect.width, rect.height)}
+      </Group>
     );
   }
 
@@ -936,16 +1047,10 @@ export default function BoardObject({
     );
     const points = [0, 0, triangle.width, triangle.height / 2, 0, triangle.height];
     return (
-      <Line
+      <Group
         {...commonProps}
         x={object.position.x + triangleScaleAnchorOffset.x}
         y={object.position.y + triangleScaleAnchorOffset.y}
-        points={points}
-        closed
-        stroke={triangle.style.stroke}
-        strokeWidth={depthStroke(triangle.style.strokeWidth)}
-        fill={triangle.style.fill}
-        dash={triangle.style.dash}
         shadowEnabled={ambientShadowEnabled}
         shadowColor="#000000"
         shadowBlur={ambientShadowBlur}
@@ -956,7 +1061,17 @@ export default function BoardObject({
             registerNode(object.id, node);
           }
         }}
-      />
+      >
+        <Line
+          points={points}
+          closed
+          stroke={triangle.style.stroke}
+          strokeWidth={depthStroke(triangle.style.strokeWidth)}
+          fill={triangle.style.fill}
+          dash={triangle.style.dash}
+        />
+        {renderShimmerSweepInBox(0, 0, triangle.width, triangle.height)}
+      </Group>
     );
   }
 
@@ -1070,6 +1185,7 @@ export default function BoardObject({
           height={textHeight}
           align={label.align}
         />
+        {renderShimmerSweepInBox(0, 0, label.width, textHeight)}
       </Group>
     );
   }

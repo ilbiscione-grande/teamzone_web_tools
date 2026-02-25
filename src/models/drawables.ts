@@ -12,6 +12,8 @@ export type Style = {
   outlineStroke?: string;
   outlineWidth?: number;
   fxLightningStrength?: number;
+  fxShimmerStrength?: number;
+  fxShimmerProgress?: number;
 };
 
 export type DrawableAnimation =
@@ -21,7 +23,9 @@ export type DrawableAnimation =
   | "pop"
   | "pulse"
   | "highlight"
-  | "lightning";
+  | "lightning"
+  | "lightPulse"
+  | "shimmer";
 
 export type BaseDrawable = {
   id: string;

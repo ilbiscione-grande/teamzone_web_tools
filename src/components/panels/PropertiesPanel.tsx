@@ -46,6 +46,8 @@ const drawableAnimationOptions: Array<{
   { value: "pulse", label: "Pulse" },
   { value: "highlight", label: "Highlight" },
   { value: "lightning", label: "Lightning" },
+  { value: "lightPulse", label: "Light Pulse" },
+  { value: "shimmer", label: "Shimmer" },
 ];
 const coneFillPalette = [
   "#f06d4f",
