@@ -1907,8 +1907,8 @@ export default function BoardCanvas({
                           event.cancelBubble = true;
                         }}
                         onDragStart={() => pushHistory(clone(objects))}
-                      onDragMove={(event) => {
-                        const rawAngle =
+                        onDragMove={(event) => {
+                          const rawAngle =
                             getRawRotationAngleFromPointer(event, {
                               x: 0,
                               y: 0,
@@ -1922,10 +1922,6 @@ export default function BoardCanvas({
                           }
                           updateObject(board.id, frameIndex, item.id, {
                             rotation: angle,
-                          });
-                          event.target.position({
-                            x: 0,
-                            y: (-radius - 2) * item.scale.y,
                           });
                         }}
                         onDragEnd={(event) => {
@@ -2081,10 +2077,6 @@ export default function BoardCanvas({
                         }
                         updateObject(board.id, frameIndex, item.id, {
                           rotation: angle,
-                        });
-                        event.target.position({
-                          x: rotateHandle.x * scaleX,
-                          y: rotateHandle.y * scaleY,
                         });
                       }}
                       onDragEnd={(event) => {
@@ -2405,10 +2397,6 @@ export default function BoardCanvas({
                         }
                         updateObject(board.id, frameIndex, item.id, {
                           rotation: angle,
-                        });
-                        event.target.position({
-                          x: rotateHandle.x * scaleX,
-                          y: rotateHandle.y * scaleY,
                         });
                       }}
                       onDragEnd={(event) => {
