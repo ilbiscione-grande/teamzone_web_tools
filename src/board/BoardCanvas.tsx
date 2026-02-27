@@ -139,6 +139,9 @@ export default function BoardCanvas({
   const rotationSnapStateRef = useRef<Record<string, number>>({});
   const [size, setSize] = useState({ width: 800, height: 500 });
   const [controlsMenuOpen, setControlsMenuOpen] = useState(false);
+  const [objectActionMenuId, setObjectActionMenuId] = useState<string | null>(
+    null
+  );
 
   const activeTool = useEditorStore((state) => state.activeTool);
   const playerTokenSize = useEditorStore((state) => state.playerTokenSize);
@@ -1220,8 +1223,11 @@ export default function BoardCanvas({
     window.addEventListener("pointerdown", handlePointerDown);
     return () => window.removeEventListener("pointerdown", handlePointerDown);
   }, [controlsMenuOpen]);
+  useEffect(() => {
+    setObjectActionMenuId(null);
+  }, [board.id, frameIndex, selection]);
 
-  const getDeleteAnchor = (item: DrawableObject) => {
+  const getObjectActionAnchor = (item: DrawableObject) => {
     const fallback = { x: item.position.x, y: item.position.y };
     if (item.type === "arrow" || item.type === "path") {
       const points = item.points ?? [];
@@ -1261,13 +1267,13 @@ export default function BoardCanvas({
     ) {
       return {
         x: item.position.x + item.width,
-        y: item.position.y - 1.5,
+        y: item.position.y,
       };
     }
     if (item.type === "text") {
       return {
         x: item.position.x + item.width,
-        y: item.position.y - 1.5,
+        y: item.position.y,
       };
     }
     return fallback;
@@ -1979,11 +1985,11 @@ export default function BoardCanvas({
                         onDragMove={(event) => {
                           let localX = Math.max(
                             minSize,
-                            Math.abs(event.target.x() / item.scale.x)
+                            Math.abs(event.target.x())
                           );
                           let localY = Math.max(
                             minSize,
-                            Math.abs(event.target.y() / item.scale.y)
+                            Math.abs(event.target.y())
                           );
                           const constrained = event.evt?.shiftKey;
                           const allowFreeSize = !!event.evt?.altKey;
@@ -2012,22 +2018,22 @@ export default function BoardCanvas({
                             scale: nextScale,
                           });
                           event.target.position({
-                            x: localX * item.scale.x,
-                            y: localY * item.scale.y,
+                            x: localX,
+                            y: localY,
                           });
                         }}
                         onDragEnd={(event) => {
                           const allowFreeSize = !!event.evt?.altKey;
                           const localX = allowFreeSize
-                            ? Math.max(minSize, Math.abs(event.target.x() / item.scale.x))
+                            ? Math.max(minSize, Math.abs(event.target.x()))
                             : snapSizeValue(
-                                Math.max(minSize, Math.abs(event.target.x() / item.scale.x)),
+                                Math.max(minSize, Math.abs(event.target.x())),
                                 minSize
                               );
                           const localY = allowFreeSize
-                            ? Math.max(minSize, Math.abs(event.target.y() / item.scale.y))
+                            ? Math.max(minSize, Math.abs(event.target.y()))
                             : snapSizeValue(
-                                Math.max(minSize, Math.abs(event.target.y() / item.scale.y)),
+                                Math.max(minSize, Math.abs(event.target.y())),
                                 minSize
                               );
                           const constrained = !!event.evt?.shiftKey;
@@ -2045,8 +2051,8 @@ export default function BoardCanvas({
                             scale: nextScale,
                           });
                           event.target.position({
-                            x: localX * item.scale.x,
-                            y: localY * item.scale.y,
+                            x: localX,
+                            y: localY,
                           });
                         }}
                       />
@@ -2552,77 +2558,16 @@ export default function BoardCanvas({
                 return null;
               }
               const shouldLock = !selectedItems.every((item) => item.locked);
-              const anchor = getDeleteAnchor(selectedItem);
+              const anchor = getObjectActionAnchor(selectedItem);
+              const isObjectMenuOpen = objectActionMenuId === selectedItem.id;
               return (
                 <Group
-                  key={`${selectedItem.id}-delete`}
+                  key={`${selectedItem.id}-actions`}
                   x={anchor.x + 1.4}
                   y={anchor.y - 1.4}
                   scaleX={mobileActionScale}
                   scaleY={mobileActionScale}
                 >
-                  <Group x={-2.9} y={0}>
-                    <Rect
-                      x={-1.3}
-                      y={-1.3}
-                      width={2.6}
-                      height={2.6}
-                      cornerRadius={0.5}
-                      fill="#0f1b1a"
-                      opacity={0.85}
-                      stroke="#ffffff"
-                      strokeWidth={0.12}
-                    />
-                    <Rect
-                      x={-0.55}
-                      y={-0.1}
-                      width={1.1}
-                      height={0.9}
-                      stroke="#ffffff"
-                      strokeWidth={0.12}
-                      cornerRadius={0.18}
-                    />
-                    <Line
-                      points={[-0.35, -0.1, -0.35, -0.45, 0.35, -0.45, 0.35, -0.1]}
-                      stroke="#ffffff"
-                      strokeWidth={0.12}
-                      lineCap="round"
-                      lineJoin="round"
-                    />
-                    {!shouldLock && (
-                      <Line
-                        points={[0.55, 0.55, -0.55, -0.55]}
-                        stroke="#ffffff"
-                        strokeWidth={0.12}
-                      />
-                    )}
-                    <Rect
-                      x={-1.3}
-                      y={-1.3}
-                      width={2.6}
-                      height={2.6}
-                      cornerRadius={0.5}
-                      opacity={0}
-                      onClick={(event) => {
-                        event.cancelBubble = true;
-                        pushHistory(clone(objects));
-                        selectedItems.forEach((item) => {
-                          updateObject(board.id, frameIndex, item.id, {
-                            locked: shouldLock,
-                          });
-                        });
-                      }}
-                      onTap={(event) => {
-                        event.cancelBubble = true;
-                        pushHistory(clone(objects));
-                        selectedItems.forEach((item) => {
-                          updateObject(board.id, frameIndex, item.id, {
-                            locked: shouldLock,
-                          });
-                        });
-                      }}
-                    />
-                  </Group>
                   <Rect
                     x={-1.3}
                     y={-1.3}
@@ -2634,34 +2579,9 @@ export default function BoardCanvas({
                     stroke="#ffffff"
                     strokeWidth={0.12}
                   />
-                  <Rect
-                    x={-0.55}
-                    y={-0.15}
-                    width={1.1}
-                    height={0.9}
-                    stroke="#ffffff"
-                    strokeWidth={0.12}
-                  />
-                  <Line
-                    points={[-0.75, -0.45, 0.75, -0.45]}
-                    stroke="#ffffff"
-                    strokeWidth={0.12}
-                  />
-                  <Line
-                    points={[-0.35, -0.15, -0.35, 0.65]}
-                    stroke="#ffffff"
-                    strokeWidth={0.1}
-                  />
-                  <Line
-                    points={[0, -0.15, 0, 0.65]}
-                    stroke="#ffffff"
-                    strokeWidth={0.1}
-                  />
-                  <Line
-                    points={[0.35, -0.15, 0.35, 0.65]}
-                    stroke="#ffffff"
-                    strokeWidth={0.1}
-                  />
+                  <Circle x={0} y={-0.48} radius={0.14} fill="#ffffff" />
+                  <Circle x={0} y={0} radius={0.14} fill="#ffffff" />
+                  <Circle x={0} y={0.48} radius={0.14} fill="#ffffff" />
                   <Rect
                     x={-1.3}
                     y={-1.3}
@@ -2671,19 +2591,118 @@ export default function BoardCanvas({
                     opacity={0}
                     onClick={(event) => {
                       event.cancelBubble = true;
-                      pushHistory(clone(objects));
-                      removeObject(board.id, frameIndex, selectedItem.id);
-                      setSelection([]);
-                      setSelectedLinkId(null);
+                      setObjectActionMenuId((prev) =>
+                        prev === selectedItem.id ? null : selectedItem.id
+                      );
                     }}
                     onTap={(event) => {
                       event.cancelBubble = true;
-                      pushHistory(clone(objects));
-                      removeObject(board.id, frameIndex, selectedItem.id);
-                      setSelection([]);
-                      setSelectedLinkId(null);
+                      setObjectActionMenuId((prev) =>
+                        prev === selectedItem.id ? null : selectedItem.id
+                      );
                     }}
                   />
+                  {isObjectMenuOpen && (
+                    <Group x={-11.6} y={-1.3}>
+                      <Rect
+                        x={0}
+                        y={0}
+                        width={9.9}
+                        height={5.3}
+                        cornerRadius={0.7}
+                        fill="#0f1b1a"
+                        opacity={0.92}
+                        stroke="#ffffff"
+                        strokeWidth={0.1}
+                      />
+                      <Rect
+                        x={0.35}
+                        y={0.35}
+                        width={9.2}
+                        height={2.1}
+                        cornerRadius={0.45}
+                        fill="rgba(20,35,32,0.9)"
+                        stroke="#ffffff"
+                        strokeWidth={0.08}
+                      />
+                      <Text
+                        x={0.9}
+                        y={0.92}
+                        text={shouldLock ? "Lock" : "Unlock"}
+                        fontSize={0.88}
+                        fill="#ffffff"
+                      />
+                      <Rect
+                        x={0.35}
+                        y={2.8}
+                        width={9.2}
+                        height={2.1}
+                        cornerRadius={0.45}
+                        fill="rgba(48,17,17,0.9)"
+                        stroke="#ffffff"
+                        strokeWidth={0.08}
+                      />
+                      <Text
+                        x={0.9}
+                        y={3.37}
+                        text="Delete"
+                        fontSize={0.88}
+                        fill="#ffffff"
+                      />
+                      <Rect
+                        x={0.35}
+                        y={0.35}
+                        width={9.2}
+                        height={2.1}
+                        cornerRadius={0.45}
+                        opacity={0}
+                        onClick={(event) => {
+                          event.cancelBubble = true;
+                          pushHistory(clone(objects));
+                          selectedItems.forEach((item) => {
+                            updateObject(board.id, frameIndex, item.id, {
+                              locked: shouldLock,
+                            });
+                          });
+                          setObjectActionMenuId(null);
+                        }}
+                        onTap={(event) => {
+                          event.cancelBubble = true;
+                          pushHistory(clone(objects));
+                          selectedItems.forEach((item) => {
+                            updateObject(board.id, frameIndex, item.id, {
+                              locked: shouldLock,
+                            });
+                          });
+                          setObjectActionMenuId(null);
+                        }}
+                      />
+                      <Rect
+                        x={0.35}
+                        y={2.8}
+                        width={9.2}
+                        height={2.1}
+                        cornerRadius={0.45}
+                        opacity={0}
+                        onClick={(event) => {
+                          event.cancelBubble = true;
+                          pushHistory(clone(objects));
+                          removeObject(board.id, frameIndex, selectedItem.id);
+                          setSelection([]);
+                          setSelectedLinkId(null);
+                          setObjectActionMenuId(null);
+                        }}
+                        onTap={(event) => {
+                          event.cancelBubble = true;
+                          pushHistory(clone(objects));
+                          removeObject(board.id, frameIndex, selectedItem.id);
+                          setSelection([]);
+                          setSelectedLinkId(null);
+                          setObjectActionMenuId(null);
+                        }}
+                      />
+                    </Group>
+                  )}
                 </Group>
               );
             })()}
