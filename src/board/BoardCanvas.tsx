@@ -43,6 +43,7 @@ const ROTATION_SNAP_STEPS = 16;
 const ROTATION_SNAP_DEGREES = 360 / ROTATION_SNAP_STEPS;
 const snapRotationAngle = (angle: number) =>
   Math.round(angle / ROTATION_SNAP_DEGREES) * ROTATION_SNAP_DEGREES;
+const ROTATION_SNAP_HYSTERESIS_DEGREES = 4;
 const SIZE_SNAP_STEP = 0.5;
 const snapSizeValue = (value: number, min: number) =>
   Math.max(min, Math.round(value / SIZE_SNAP_STEP) * SIZE_SNAP_STEP);
@@ -103,6 +104,7 @@ export default function BoardCanvas({
   const shapeRefs = useRef<Record<string, Konva.Node>>({});
   const containerRef = useRef<HTMLDivElement | null>(null);
   const controlsMenuRef = useRef<HTMLDivElement | null>(null);
+  const rotationSnapStateRef = useRef<Record<string, number>>({});
   const [size, setSize] = useState({ width: 800, height: 500 });
   const [controlsMenuOpen, setControlsMenuOpen] = useState(false);
 
@@ -264,6 +266,48 @@ export default function BoardCanvas({
 
     return next;
   }, []);
+  const normalizeAngle = useCallback((angle: number) => {
+    let normalized = angle % 360;
+    if (normalized < 0) {
+      normalized += 360;
+    }
+    return normalized;
+  }, []);
+  const shortestAngleDiff = useCallback((from: number, to: number) => {
+    const a = normalizeAngle(from);
+    const b = normalizeAngle(to);
+    let diff = b - a;
+    if (diff > 180) {
+      diff -= 360;
+    } else if (diff < -180) {
+      diff += 360;
+    }
+    return diff;
+  }, [normalizeAngle]);
+  const clearRotationSnapState = useCallback((key: string) => {
+    delete rotationSnapStateRef.current[key];
+  }, []);
+  const getStableSnappedRotation = useCallback(
+    (rawAngle: number, key: string) => {
+      const normalized = normalizeAngle(rawAngle);
+      const nearest =
+        Math.round(normalized / ROTATION_SNAP_DEGREES) * ROTATION_SNAP_DEGREES;
+      const last = rotationSnapStateRef.current[key];
+      if (!Number.isFinite(last)) {
+        rotationSnapStateRef.current[key] = nearest;
+        return nearest;
+      }
+      const distanceToLast = Math.abs(shortestAngleDiff(last, normalized));
+      const holdBoundary =
+        ROTATION_SNAP_DEGREES / 2 + ROTATION_SNAP_HYSTERESIS_DEGREES;
+      if (distanceToLast <= holdBoundary) {
+        return last;
+      }
+      rotationSnapStateRef.current[key] = nearest;
+      return nearest;
+    },
+    [normalizeAngle, shortestAngleDiff]
+  );
   const applyHighlightEffect = useCallback((
     object: DrawableObject,
     amount: number
@@ -1863,15 +1907,19 @@ export default function BoardCanvas({
                           event.cancelBubble = true;
                         }}
                         onDragStart={() => pushHistory(clone(objects))}
-                        onDragMove={(event) => {
-                          const rawAngle =
+                      onDragMove={(event) => {
+                        const rawAngle =
                             getRawRotationAngleFromPointer(event, {
                               x: 0,
                               y: 0,
                             }) ?? item.rotation;
+                          const snapKey = `${item.id}:rotate`;
                           const angle = event.evt?.altKey
                             ? rawAngle
-                            : snapRotationAngle(rawAngle);
+                            : getStableSnappedRotation(rawAngle, snapKey);
+                          if (event.evt?.altKey) {
+                            clearRotationSnapState(snapKey);
+                          }
                           updateObject(board.id, frameIndex, item.id, {
                             rotation: angle,
                           });
@@ -1881,6 +1929,7 @@ export default function BoardCanvas({
                           });
                         }}
                         onDragEnd={(event) => {
+                          clearRotationSnapState(`${item.id}:rotate`);
                           event.target.position({
                             x: 0,
                             y: (-radius - 2) * item.scale.y,
@@ -2023,9 +2072,13 @@ export default function BoardCanvas({
                         const rawAngle =
                           getRawRotationAngleFromPointer(event, center) ??
                           item.rotation;
+                        const snapKey = `${item.id}:rotate`;
                         const angle = event.evt?.altKey
                           ? rawAngle
-                          : snapRotationAngle(rawAngle);
+                          : getStableSnappedRotation(rawAngle, snapKey);
+                        if (event.evt?.altKey) {
+                          clearRotationSnapState(snapKey);
+                        }
                         updateObject(board.id, frameIndex, item.id, {
                           rotation: angle,
                         });
@@ -2035,6 +2088,7 @@ export default function BoardCanvas({
                         });
                       }}
                       onDragEnd={(event) => {
+                        clearRotationSnapState(`${item.id}:rotate`);
                         event.target.position({
                           x: rotateHandle.x * scaleX,
                           y: rotateHandle.y * scaleY,
@@ -2183,14 +2237,19 @@ export default function BoardCanvas({
                             180) /
                             Math.PI +
                           90;
+                        const snapKey = `${label.id}:rotate`;
                         const angle = event.evt?.altKey
                           ? rawAngle
-                          : snapRotationAngle(rawAngle);
+                          : getStableSnappedRotation(rawAngle, snapKey);
+                        if (event.evt?.altKey) {
+                          clearRotationSnapState(snapKey);
+                        }
                         updateObject(board.id, frameIndex, label.id, {
                           rotation: angle,
                         });
                       }}
                       onDragEnd={(event) => {
+                        clearRotationSnapState(`${label.id}:rotate`);
                         event.target.position({
                           x: rotateHandle.x * scaleX,
                           y: rotateHandle.y * scaleY,
@@ -2337,9 +2396,13 @@ export default function BoardCanvas({
                         const rawAngle =
                           getRawRotationAngleFromPointer(event, center) ??
                           item.rotation;
+                        const snapKey = `${item.id}:rotate`;
                         const angle = event.evt?.altKey
                           ? rawAngle
-                          : snapRotationAngle(rawAngle);
+                          : getStableSnappedRotation(rawAngle, snapKey);
+                        if (event.evt?.altKey) {
+                          clearRotationSnapState(snapKey);
+                        }
                         updateObject(board.id, frameIndex, item.id, {
                           rotation: angle,
                         });
@@ -2349,6 +2412,7 @@ export default function BoardCanvas({
                         });
                       }}
                       onDragEnd={(event) => {
+                        clearRotationSnapState(`${item.id}:rotate`);
                         event.target.position({
                           x: rotateHandle.x * scaleX,
                           y: rotateHandle.y * scaleY,
