@@ -344,6 +344,42 @@ export default function PropertiesPanel({
       }
     });
   };
+  const copySelectionToAllFrames = () => {
+    if (!board || selected.length === 0 || board.frames.length <= 1) {
+      return;
+    }
+    const selectedById = new Map(selected.map((item) => [item.id, clone(item)]));
+    const nextFrames = board.frames.map((frame, index) => {
+      if (index === frameIndex) {
+        return frame;
+      }
+      const nextObjects = [...(frame.objects ?? [])];
+      selectedById.forEach((item, id) => {
+        const existingIndex = nextObjects.findIndex((entry) => entry.id === id);
+        if (existingIndex >= 0) {
+          nextObjects[existingIndex] = clone(item);
+        } else {
+          nextObjects.push(clone(item));
+        }
+      });
+      return {
+        ...frame,
+        objects: nextObjects,
+      };
+    });
+    updateBoard(board.id, { frames: nextFrames });
+  };
+  const removeSelectionFromAllFrames = () => {
+    if (!board || selected.length === 0 || board.frames.length <= 1) {
+      return;
+    }
+    const selectedIds = new Set(selected.map((item) => item.id));
+    const nextFrames = board.frames.map((frame) => ({
+      ...frame,
+      objects: (frame.objects ?? []).filter((item) => !selectedIds.has(item.id)),
+    }));
+    updateBoard(board.id, { frames: nextFrames });
+  };
   const copyPlayersToTarget = (targetBoardId: string, targetFrameIndex: number) => {
     if (!project || selectedPlayers.length === 0) {
       return;
@@ -696,6 +732,20 @@ export default function PropertiesPanel({
                   disabled={frameIndex >= board.frames.length - 1}
                 >
                   Copy to next frame
+                </button>
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={copySelectionToAllFrames}
+                  disabled={board.frames.length <= 1}
+                >
+                  Copy to all frames
+                </button>
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                  onClick={removeSelectionFromAllFrames}
+                  disabled={board.frames.length <= 1}
+                >
+                  Remove from all frames
                 </button>
               </div>
             </div>
