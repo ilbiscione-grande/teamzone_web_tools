@@ -64,6 +64,38 @@ const getProportionalDimensions = (
     height: safeBaseHeight * scale,
   };
 };
+const rotateVector = (vector: { x: number; y: number }, angle: number) => {
+  const radians = (angle * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return {
+    x: vector.x * cos - vector.y * sin,
+    y: vector.x * sin + vector.y * cos,
+  };
+};
+const getCenterAnchoredPositionForRotation = (params: {
+  position: { x: number; y: number };
+  center: { x: number; y: number };
+  scale: { x: number; y: number };
+  fromAngle: number;
+  toAngle: number;
+}) => {
+  const { position, center, scale, fromAngle, toAngle } = params;
+  const localCenter = {
+    x: center.x * scale.x,
+    y: center.y * scale.y,
+  };
+  const fromVector = rotateVector(localCenter, fromAngle);
+  const toVector = rotateVector(localCenter, toAngle);
+  const centerWorld = {
+    x: position.x + fromVector.x,
+    y: position.y + fromVector.y,
+  };
+  return {
+    x: centerWorld.x - toVector.x,
+    y: centerWorld.y - toVector.y,
+  };
+};
 
 const getRawRotationAngleFromPointer = (
   event: Konva.KonvaEventObject<DragEvent>,
@@ -2075,8 +2107,16 @@ export default function BoardCanvas({
                         if (event.evt?.altKey) {
                           clearRotationSnapState(snapKey);
                         }
+                        const nextPosition = getCenterAnchoredPositionForRotation({
+                          position: item.position,
+                          center,
+                          scale: { x: scaleX, y: scaleY },
+                          fromAngle: item.rotation,
+                          toAngle: angle,
+                        });
                         updateObject(board.id, frameIndex, item.id, {
                           rotation: angle,
+                          position: nextPosition,
                         });
                       }}
                       onDragEnd={(event) => {
@@ -2236,8 +2276,16 @@ export default function BoardCanvas({
                         if (event.evt?.altKey) {
                           clearRotationSnapState(snapKey);
                         }
+                        const nextPosition = getCenterAnchoredPositionForRotation({
+                          position: label.position,
+                          center,
+                          scale: { x: scaleX, y: scaleY },
+                          fromAngle: label.rotation,
+                          toAngle: angle,
+                        });
                         updateObject(board.id, frameIndex, label.id, {
                           rotation: angle,
+                          position: nextPosition,
                         });
                       }}
                       onDragEnd={(event) => {
@@ -2395,8 +2443,16 @@ export default function BoardCanvas({
                         if (event.evt?.altKey) {
                           clearRotationSnapState(snapKey);
                         }
+                        const nextPosition = getCenterAnchoredPositionForRotation({
+                          position: item.position,
+                          center,
+                          scale: { x: scaleX, y: scaleY },
+                          fromAngle: item.rotation,
+                          toAngle: angle,
+                        });
                         updateObject(board.id, frameIndex, item.id, {
                           rotation: angle,
+                          position: nextPosition,
                         });
                       }}
                       onDragEnd={(event) => {
