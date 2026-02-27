@@ -19,6 +19,7 @@ import { can, getPlanLimits } from "@/utils/plan";
 import { persistAuthUser, persistPlan } from "@/state/useProjectStore";
 import {
   deleteProjectCloud,
+  fetchProjectIndexCloud,
   fetchProjectCloud,
   saveProjectCloud,
   syncProjects,
@@ -44,6 +45,28 @@ type CoreActionSlice = Pick<
   | "loadSample"
   | "updateProjectMeta"
 >;
+
+const toTimestamp = (value?: string | null) => {
+  const parsed = Date.parse(value ?? "");
+  return Number.isFinite(parsed) ? parsed : -1;
+};
+
+const mergeProjectSummaries = (
+  localIndex: { id: string; name: string; updatedAt: string }[],
+  cloudIndex: { id: string; name: string; updatedAt: string }[]
+) => {
+  const merged = new Map<string, { id: string; name: string; updatedAt: string }>();
+  localIndex.forEach((item) => merged.set(item.id, item));
+  cloudIndex.forEach((item) => {
+    const existing = merged.get(item.id);
+    if (!existing || toTimestamp(item.updatedAt) >= toTimestamp(existing.updatedAt)) {
+      merged.set(item.id, item);
+    }
+  });
+  return Array.from(merged.values()).sort(
+    (a, b) => toTimestamp(b.updatedAt) - toTimestamp(a.updatedAt)
+  );
+};
 
 export const createCoreActions: StateCreator<
   ProjectStore,
@@ -74,15 +97,28 @@ export const createCoreActions: StateCreator<
         state: "syncing",
         updatedAt: new Date().toISOString(),
       });
-      syncProjects()
-        .then((index) => {
+      fetchProjectIndexCloud()
+        .then((cloudIndex) => {
+          const local = loadProjectIndex(authUser.id);
+          const mergedIndex = mergeProjectSummaries(local, cloudIndex);
+          saveProjectIndex(mergedIndex, authUser.id);
           set((state) => {
-            state.index = index;
+            state.index = mergedIndex;
           });
           get().setSyncStatus({
             state: "saved",
             updatedAt: new Date().toISOString(),
           });
+          // Deep local/cloud reconciliation can be expensive; run it in background.
+          void syncProjects()
+            .then((syncedIndex) => {
+              set((state) => {
+                state.index = syncedIndex;
+              });
+            })
+            .catch(() => {
+              // Keep fast merged index if deep sync fails.
+            });
         })
         .catch(() => {
           get().setSyncStatus({

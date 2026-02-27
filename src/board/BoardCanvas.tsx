@@ -73,6 +73,26 @@ const rotateVector = (vector: { x: number; y: number }, angle: number) => {
     y: vector.x * sin + vector.y * cos,
   };
 };
+const rotatePointAround = (
+  point: { x: number; y: number },
+  pivot: { x: number; y: number },
+  angle: number
+) => {
+  if (angle === 0) {
+    return point;
+  }
+  const radians = (angle * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const dx = point.x - pivot.x;
+  const dy = point.y - pivot.y;
+  return {
+    x: pivot.x + dx * cos - dy * sin,
+    y: pivot.y + dx * sin + dy * cos,
+  };
+};
+const clampValue = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, value));
 const getCenterAnchoredPositionForRotation = (params: {
   position: { x: number; y: number };
   center: { x: number; y: number };
@@ -142,6 +162,7 @@ export default function BoardCanvas({
   const [objectActionMenuId, setObjectActionMenuId] = useState<string | null>(
     null
   );
+  const [objectListOpen, setObjectListOpen] = useState(false);
 
   const activeTool = useEditorStore((state) => state.activeTool);
   const playerTokenSize = useEditorStore((state) => state.playerTokenSize);
@@ -915,6 +936,11 @@ export default function BoardCanvas({
     () => boardSquads.all.flatMap((squad) => squad.players),
     [boardSquads]
   );
+  const squadPlayerById = useMemo(() => {
+    const map = new Map<string, (typeof squadPlayers)[number]>();
+    squadPlayers.forEach((player) => map.set(player.id, player));
+    return map;
+  }, [squadPlayers]);
   const kitByPlayerId = useMemo(() => {
     const map: Record<string, string> = {};
     boardSquads.all.forEach((squad) => {
@@ -1226,7 +1252,132 @@ export default function BoardCanvas({
   }, [controlsMenuOpen]);
   useEffect(() => {
     setObjectActionMenuId(null);
+    setObjectListOpen(false);
   }, [board.id, frameIndex, selection]);
+
+  const getObjectFocusPoint = useCallback((item: DrawableObject) => {
+    if (item.type === "arrow" || item.type === "path") {
+      const points = item.points ?? [];
+      if (points.length < 2) {
+        return item.position;
+      }
+      let minX = item.position.x + points[0]!;
+      let maxX = minX;
+      let minY = item.position.y + points[1]!;
+      let maxY = minY;
+      for (let index = 2; index < points.length; index += 2) {
+        const x = item.position.x + (points[index] ?? 0);
+        const y = item.position.y + (points[index + 1] ?? 0);
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+      return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+    }
+    if (item.type === "circle") {
+      return item.position;
+    }
+    if (
+      item.type === "rect" ||
+      item.type === "triangle" ||
+      item.type === "goal" ||
+      item.type === "cone" ||
+      item.type === "pole" ||
+      item.type === "mannequin" ||
+      item.type === "text"
+    ) {
+      const height = item.type === "text" ? item.height ?? 1.2 : item.height;
+      return {
+        x: item.position.x + item.width / 2,
+        y: item.position.y + height / 2,
+      };
+    }
+    return item.position;
+  }, []);
+
+  const focusObject = useCallback(
+    (item: DrawableObject) => {
+      setSelection([item.id]);
+      setSelectedLinkId(null);
+      setObjectActionMenuId(null);
+      if (forcePortrait || isThreeDView || isCanvasReadOnly) {
+        return;
+      }
+      const zoom = viewport.zoom;
+      const focusPoint = getObjectFocusPoint(item);
+      const displayedPoint =
+        viewRotation === 0
+          ? focusPoint
+          : rotatePointAround(focusPoint, rotationPivot, viewRotation);
+      const nextOffsetX =
+        size.width / 2 - displayedPoint.x * baseScale * zoom - baseOffsetX;
+      const nextOffsetY =
+        size.height / 2 - displayedPoint.y * baseScale * zoom - baseOffsetY;
+      setViewportSafe({ offsetX: nextOffsetX, offsetY: nextOffsetY });
+    },
+    [
+      baseOffsetX,
+      baseOffsetY,
+      baseScale,
+      forcePortrait,
+      getObjectFocusPoint,
+      isCanvasReadOnly,
+      isThreeDView,
+      rotationPivot,
+      setSelectedLinkId,
+      setSelection,
+      setViewportSafe,
+      size.height,
+      size.width,
+      viewRotation,
+      viewport.zoom,
+    ]
+  );
+
+  const objectListEntries = useMemo(() => {
+    const typeLabel: Record<DrawableObject["type"], string> = {
+      player: "Player",
+      ball: "Ball",
+      cone: "Cone",
+      pole: "Pole",
+      mannequin: "Mannequin",
+      goal: "Mini goal",
+      circle: "Circle",
+      rect: "Rectangle",
+      triangle: "Triangle",
+      arrow: "Line",
+      text: "Text",
+      path: "Path",
+    };
+    return objects
+      .map((item, index) => {
+        let details = "";
+        if (item.type === "player") {
+          const squadPlayer = item.squadPlayerId
+            ? squadPlayerById.get(item.squadPlayerId)
+            : null;
+          details = squadPlayer?.name?.trim() || `#${index + 1}`;
+        } else if (item.type === "text") {
+          details = item.text.trim().slice(0, 36) || `#${index + 1}`;
+        } else {
+          details = `#${index + 1}`;
+        }
+        return {
+          id: item.id,
+          item,
+          label: `${typeLabel[item.type]} ${details}`,
+        };
+      })
+      .sort((a, b) => {
+        const za = a.item.zIndex ?? 0;
+        const zb = b.item.zIndex ?? 0;
+        if (za !== zb) {
+          return za - zb;
+        }
+        return a.label.localeCompare(b.label);
+      });
+  }, [objects, squadPlayerById]);
 
   const getObjectActionAnchor = (item: DrawableObject) => {
     const fallback = { x: item.position.x, y: item.position.y };
@@ -1340,6 +1491,30 @@ export default function BoardCanvas({
                 <span>Reset view</span>
               </button>
               <button
+                className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 text-left text-xs text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => {
+                  setObjectListOpen(true);
+                  setControlsMenuOpen(false);
+                }}
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M8 6h12M8 12h12M8 18h12" />
+                  <circle cx="4" cy="6" r="1.25" />
+                  <circle cx="4" cy="12" r="1.25" />
+                  <circle cx="4" cy="18" r="1.25" />
+                </svg>
+                <span>Object list ({objects.length})</span>
+              </button>
+              <button
                 className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 text-left text-xs text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
                 onClick={handleClearPitch}
               >
@@ -1430,6 +1605,55 @@ export default function BoardCanvas({
           )}
         </div>
       )}
+      {objectListOpen ? (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 px-4 py-6">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 shadow-xl shadow-black/40">
+            <div className="mb-2 flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-[var(--accent-0)]">
+                  Current Frame Objects
+                </p>
+                <p className="text-[11px] text-[var(--ink-1)]">
+                  Select an object to focus and highlight it on the pitch.
+                </p>
+              </div>
+              <button
+                className="rounded-full border border-[var(--line)] px-2 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                onClick={() => setObjectListOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="max-h-[55vh] space-y-1 overflow-y-auto pr-1" data-scrollable>
+              {objectListEntries.length === 0 ? (
+                <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 text-xs text-[var(--ink-1)]">
+                  No objects in this frame.
+                </p>
+              ) : (
+                objectListEntries.map((entry) => {
+                  const isActive = selection.includes(entry.id);
+                  return (
+                    <button
+                      key={entry.id}
+                      className={`w-full rounded-xl border px-3 py-2 text-left text-xs transition ${
+                        isActive
+                          ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                          : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--ink-0)]"
+                      }`}
+                      onClick={() => {
+                        focusObject(entry.item);
+                        setObjectListOpen(false);
+                      }}
+                    >
+                      {entry.label}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div
         className="h-full w-full"
         style={
@@ -2561,15 +2785,66 @@ export default function BoardCanvas({
               const shouldLock = !selectedItems.every((item) => item.locked);
               const anchor = getObjectActionAnchor(selectedItem);
               const isObjectMenuOpen = objectActionMenuId === selectedItem.id;
-              const openMenuLeft = anchor.x > bounds.x + bounds.width * 0.55;
-              const openMenuDown = anchor.y < bounds.y + bounds.height * 0.2;
-              const menuOffsetX = openMenuLeft ? -11.6 : 1.6;
-              const menuOffsetY = openMenuDown ? 1.6 : -1.3;
+              const actionAnchorOffsetX = 1.4;
+              const actionAnchorOffsetY = -1.4;
+              const menuWidth = 9.9;
+              const menuHeight = 5.3;
+              const menuSpacingX = 1.6;
+              const menuSpacingYUp = -1.3;
+              const menuSpacingYDown = 1.6;
+              const anchorDisplay = rotatePointAround(
+                anchor,
+                rotationPivot,
+                viewRotation
+              );
+              const viewportPadding = 0.6;
+              const viewportMinX =
+                rotatedBounds.minX + viewportPadding;
+              const viewportMaxX =
+                rotatedBounds.maxX - viewportPadding;
+              const viewportMinY =
+                rotatedBounds.minY + viewportPadding;
+              const viewportMaxY =
+                rotatedBounds.maxY - viewportPadding;
+              const roomRight =
+                viewportMaxX - (anchorDisplay.x + actionAnchorOffsetX);
+              const roomLeft =
+                anchorDisplay.x + actionAnchorOffsetX - viewportMinX;
+              const roomAbove =
+                anchorDisplay.y + actionAnchorOffsetY - viewportMinY;
+              const roomBelow =
+                viewportMaxY - (anchorDisplay.y + actionAnchorOffsetY);
+              const preferLeft = roomRight < menuWidth && roomLeft > roomRight;
+              const preferDown = roomAbove < menuHeight && roomBelow > roomAbove;
+              const initialMenuOffsetX = preferLeft
+                ? -(menuWidth + menuSpacingX)
+                : menuSpacingX;
+              const initialMenuOffsetY = preferDown
+                ? menuSpacingYDown
+                : menuSpacingYUp;
+              const targetMenuX =
+                anchorDisplay.x + actionAnchorOffsetX + initialMenuOffsetX;
+              const targetMenuY =
+                anchorDisplay.y + actionAnchorOffsetY + initialMenuOffsetY;
+              const clampedMenuX = clampValue(
+                targetMenuX,
+                viewportMinX,
+                viewportMaxX - menuWidth
+              );
+              const clampedMenuY = clampValue(
+                targetMenuY,
+                viewportMinY,
+                viewportMaxY - menuHeight
+              );
+              const menuOffsetX =
+                clampedMenuX - (anchorDisplay.x + actionAnchorOffsetX);
+              const menuOffsetY =
+                clampedMenuY - (anchorDisplay.y + actionAnchorOffsetY);
               return (
                 <Group
                   key={`${selectedItem.id}-actions`}
-                  x={anchor.x + 1.4}
-                  y={anchor.y - 1.4}
+                  x={anchor.x + actionAnchorOffsetX}
+                  y={anchor.y + actionAnchorOffsetY}
                   rotation={labelRotation}
                   scaleX={mobileActionScale}
                   scaleY={mobileActionScale}

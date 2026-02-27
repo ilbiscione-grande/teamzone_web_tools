@@ -35,6 +35,11 @@ import {
   fetchSharedBoards,
   fetchSharesByOwner,
 } from "@/persistence/shares";
+import {
+  createProjectFromTemplate,
+  loadProjectTemplates,
+  type ProjectTemplate,
+} from "@/persistence/projectTemplates";
 
 export default function ProjectList() {
   const showBetaUi = process.env.NEXT_PUBLIC_BETA_UI === "true";
@@ -61,6 +66,7 @@ export default function ProjectList() {
   const createProject = useProjectStore((state) => state.createProject);
   const deleteProject = useProjectStore((state) => state.deleteProject);
   const loadSample = useProjectStore((state) => state.loadSample);
+  const syncStatus = useProjectStore((state) => state.syncStatus);
   const plan = useProjectStore((state) => state.plan);
   const project = useProjectStore((state) => state.project);
   const authUser = useProjectStore((state) => state.authUser);
@@ -123,7 +129,9 @@ export default function ProjectList() {
   const [contactStatus, setContactStatus] = useState<string | null>(null);
   const [contactSending, setContactSending] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createMode, setCreateMode] = useState<"training" | "match" | "education">("match");
+  const [createMode, setCreateMode] = useState<
+    "training" | "match" | "education" | "custom"
+  >("match");
   const [createPitchView, setCreatePitchView] = useState<"FULL" | "DEF_HALF" | "OFF_HALF" | "GREEN_EMPTY">("FULL");
   const [createPitchOverlay, setCreatePitchOverlay] = useState<"NONE" | "THIRDS" | "ZONES_18" | "CORRIDORS">("NONE");
   const [createPitchShape, setCreatePitchShape] = useState<"none" | "circle" | "square" | "rect">("none");
@@ -140,6 +148,10 @@ export default function ProjectList() {
     null
   );
   const [startingFormation, setStartingFormation] = useState<string>("none");
+  const [projectTemplates, setProjectTemplates] = useState<ProjectTemplate[]>(
+    []
+  );
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [squadPresets, setSquadPresets] = useState<SquadPreset[]>([]);
   const [squadPresetsLoading, setSquadPresetsLoading] = useState(false);
   const [squadPresetsError, setSquadPresetsError] = useState<string | null>(null);
@@ -489,6 +501,9 @@ export default function ProjectList() {
     if (!paid && createMode !== "match") {
       setCreateMode("match");
     }
+    if (nextMode === "custom") {
+      return;
+    }
     const defaults = getDefaultBoardSettings(nextMode);
     setAttachBallToPlayer(defaults.attachBallToPlayer);
     setCreatePitchView(paid ? defaults.pitchView : "FULL");
@@ -508,6 +523,27 @@ export default function ProjectList() {
     setAwaySquadPresetId("");
     setStartingFormation("none");
   }, [createMode, plan]);
+  useEffect(() => {
+    if (!createOpen) {
+      return;
+    }
+    if (plan !== "PAID" || !authUser) {
+      setProjectTemplates([]);
+      setSelectedTemplateId("");
+      return;
+    }
+    const templates = loadProjectTemplates(authUser?.id ?? null);
+    setProjectTemplates(templates);
+    if (templates.length === 0) {
+      setSelectedTemplateId("");
+      return;
+    }
+    setSelectedTemplateId((current) =>
+      current && templates.some((item) => item.id === current)
+        ? current
+        : templates[0]!.id
+    );
+  }, [authUser?.id, createOpen, plan]);
 
   useEffect(() => {
     if (!authUser || plan !== "PAID") {
@@ -576,7 +612,8 @@ export default function ProjectList() {
     setCreateOpen(true);
   };
 
-  const createTemplateOptions = getBoardTemplates(createMode, plan);
+  const createTemplateOptions =
+    createMode === "custom" ? [] : getBoardTemplates(createMode, plan);
 
   const readJsonFile = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -969,6 +1006,9 @@ export default function ProjectList() {
             <h2 className="display-font text-xl text-[var(--accent-0)]">
               Recent Projects
             </h2>
+            {syncStatus.state === "syncing" ? (
+              <p className="text-xs text-[var(--ink-1)]">Refreshing...</p>
+            ) : null}
             <div className="space-y-2">
               {index.length === 0 ? (
                 <p className="text-sm text-[var(--ink-1)]">
@@ -1293,8 +1333,13 @@ export default function ProjectList() {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
               />
-              <div className="grid grid-cols-3 gap-2">
-                {["training", "match", "education"].map((mode) => (
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  "training",
+                  "match",
+                  "education",
+                  ...(plan === "PAID" ? (["custom"] as const) : []),
+                ].map((mode) => (
                   <button
                     key={mode}
                     className={`rounded-2xl border px-3 py-2 text-xs ${
@@ -1304,7 +1349,9 @@ export default function ProjectList() {
                     } ${plan !== "PAID" ? "cursor-not-allowed opacity-50" : ""}`}
                     onClick={() =>
                       plan === "PAID" &&
-                      setCreateMode(mode as "training" | "match" | "education")
+                      setCreateMode(
+                        mode as "training" | "match" | "education" | "custom"
+                      )
                     }
                     disabled={plan !== "PAID"}
                     data-locked={plan !== "PAID"}
@@ -1318,6 +1365,32 @@ export default function ProjectList() {
                   </button>
                 ))}
               </div>
+              {createMode === "custom" && (
+                <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                    Template
+                  </p>
+                  {projectTemplates.length === 0 ? (
+                    <p className="text-xs text-[var(--ink-1)]">
+                      No saved templates yet. Open a project and use Actions -
+                      Save as template.
+                    </p>
+                  ) : (
+                    <select
+                      className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                      value={selectedTemplateId}
+                      onChange={(event) => setSelectedTemplateId(event.target.value)}
+                    >
+                      {projectTemplates.map((template) => (
+                        <option key={template.id} value={template.id}>
+                          {template.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+              {createMode !== "custom" && (
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Labels</p>
@@ -1423,6 +1496,9 @@ export default function ProjectList() {
                   </select>
                 </div>
               </div>
+              )}
+              {createMode !== "custom" && (
+              <>
               <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                 <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Boards to create</p>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -1683,6 +1759,8 @@ export default function ProjectList() {
                   onChange={(event) => setAttachBallToPlayer(event.target.checked)}
                 />
               </label>
+              </>
+              )}
               <button
                 className="h-10 w-full rounded-full bg-[var(--accent-0)] px-5 text-xs font-semibold text-black transition hover:brightness-110"
                 onClick={() => {
@@ -1699,6 +1777,26 @@ export default function ProjectList() {
                     setError("Enter a project name.");
                     return;
                   }
+                  if (createMode === "custom") {
+                    if (plan !== "PAID" || !authUser) {
+                      setError("Custom templates are available on paid plans.");
+                      return;
+                    }
+                    const template = projectTemplates.find(
+                      (item) => item.id === selectedTemplateId
+                    );
+                    if (!template) {
+                      setError("Select a template first.");
+                      return;
+                    }
+                    openProjectFromData(
+                      createProjectFromTemplate(template, name.trim())
+                    );
+                    setCreateOpen(false);
+                    setName("");
+                    setError(null);
+                    return;
+                  }
                   const templates = createTemplateOptions.filter((board) =>
                     createBoards.includes(board.id)
                   );
@@ -1712,7 +1810,7 @@ export default function ProjectList() {
                     homeKit,
                     awayKit,
                     attachBallToPlayer,
-                    mode: createMode,
+                    mode: createMode as "training" | "match" | "education",
                     pitchView: createPitchView,
                     pitchOverlay: createPitchOverlay,
                     pitchShape: createPitchShape,
