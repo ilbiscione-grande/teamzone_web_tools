@@ -180,7 +180,6 @@ export default function BoardCanvas({
   const transformHandleRadius = 0.7 * mobileTransformScale;
   const transformHandleSize = 1.6 * mobileTransformScale;
   const transformHandleHalf = transformHandleSize / 2;
-  const rotateHandlePadding = isMobileViewport ? 2.5 : 1.5;
   const transformHandleHitStrokeWidth = isMobileViewport ? 1.8 : 1;
   const effectivePlayerTokenSize = playerTokenSize * mobileObjectScale;
   const isThreeDView = board.threeDView ?? false;
@@ -1920,15 +1919,15 @@ export default function BoardCanvas({
                       scaleY={item.scale.y}
                     >
                       <Line
-                        points={[0, 0, 0, -radius - 2]}
+                        points={[0, 0, -radius, -radius]}
                         stroke="rgba(255,255,255,0.5)"
                         strokeWidth={0.2}
                         dash={[0.6, 0.6]}
                         listening={false}
                       />
                       <Circle
-                        x={0}
-                        y={-radius - 2}
+                        x={-radius}
+                        y={-radius}
                         radius={transformHandleRadius}
                         fill="#ffffff"
                         stroke="#0f1b1a"
@@ -1959,8 +1958,8 @@ export default function BoardCanvas({
                         onDragEnd={(event) => {
                           clearRotationSnapState(`${item.id}:rotate`);
                           event.target.position({
-                            x: 0,
-                            y: (-radius - 2) * item.scale.y,
+                            x: -radius * item.scale.x,
+                            y: -radius * item.scale.y,
                           });
                         }}
                       />
@@ -1978,19 +1977,14 @@ export default function BoardCanvas({
                         }}
                         onDragStart={() => pushHistory(clone(objects))}
                         onDragMove={(event) => {
-                          const stage = event.target.getStage();
-                          const parent = event.target.getParent();
-                          const pointer = stage?.getPointerPosition();
-                          if (!pointer || !parent) {
-                            return;
-                          }
-                          const localPoint = parent
-                            .getAbsoluteTransform()
-                            .copy()
-                            .invert()
-                            .point(pointer);
-                          let localX = Math.abs(localPoint.x);
-                          let localY = Math.abs(localPoint.y);
+                          let localX = Math.max(
+                            minSize,
+                            Math.abs(event.target.x() / item.scale.x)
+                          );
+                          let localY = Math.max(
+                            minSize,
+                            Math.abs(event.target.y() / item.scale.y)
+                          );
                           const constrained = event.evt?.shiftKey;
                           const allowFreeSize = !!event.evt?.altKey;
                           if (constrained) {
@@ -2017,39 +2011,43 @@ export default function BoardCanvas({
                             radius: nextRadius,
                             scale: nextScale,
                           });
-                          event.target.position({ x: localX, y: localY });
+                          event.target.position({
+                            x: localX * item.scale.x,
+                            y: localY * item.scale.y,
+                          });
                         }}
                         onDragEnd={(event) => {
-                          const stage = event.target.getStage();
-                          const parent = event.target.getParent();
-                          const pointer = stage?.getPointerPosition();
-                          if (!pointer || !parent) {
-                            return;
-                          }
-                          const localPoint = parent
-                            .getAbsoluteTransform()
-                            .copy()
-                            .invert()
-                            .point(pointer);
                           const allowFreeSize = !!event.evt?.altKey;
                           const localX = allowFreeSize
-                            ? Math.abs(localPoint.x)
-                            : snapSizeValue(Math.abs(localPoint.x), minSize);
+                            ? Math.max(minSize, Math.abs(event.target.x() / item.scale.x))
+                            : snapSizeValue(
+                                Math.max(minSize, Math.abs(event.target.x() / item.scale.x)),
+                                minSize
+                              );
                           const localY = allowFreeSize
-                            ? Math.abs(localPoint.y)
-                            : snapSizeValue(Math.abs(localPoint.y), minSize);
-                          const size = Math.max(localX, localY);
-                          const ratio = size > 0 ? Math.abs(localX - localY) / size : 0;
-                          if (ratio <= 0.08) {
-                            const snapSize = Math.max(minSize, size);
-                            updateObject(board.id, frameIndex, item.id, {
-                              radius: snapSize,
-                              scale: { x: 1, y: 1 },
-                            });
-                            event.target.position({ x: snapSize, y: snapSize });
-                            return;
-                          }
-                          event.target.position({ x: localX, y: localY });
+                            ? Math.max(minSize, Math.abs(event.target.y() / item.scale.y))
+                            : snapSizeValue(
+                                Math.max(minSize, Math.abs(event.target.y() / item.scale.y)),
+                                minSize
+                              );
+                          const constrained = !!event.evt?.shiftKey;
+                          const nextSize = Math.max(localX, localY);
+                          const nextRadius = Math.max(minSize, nextSize);
+                          const minScale = 0.2;
+                          const nextScale = constrained
+                            ? { x: 1, y: 1 }
+                            : {
+                                x: Math.max(minScale, localX / nextRadius),
+                                y: Math.max(minScale, localY / nextRadius),
+                              };
+                          updateObject(board.id, frameIndex, item.id, {
+                            radius: nextRadius,
+                            scale: nextScale,
+                          });
+                          event.target.position({
+                            x: localX * item.scale.x,
+                            y: localY * item.scale.y,
+                          });
                         }}
                       />
                     </Group>
@@ -2059,8 +2057,10 @@ export default function BoardCanvas({
                 const height = "height" in item ? item.height ?? 0 : 0;
                 const scaleX = item.scale.x || 1;
                 const scaleY = item.scale.y || 1;
-                const handleOffset = Math.max(width, height) * 0.6 + rotateHandlePadding;
-                const rotateHandle = { x: width / 2, y: -handleOffset };
+                const rotateHandle = {
+                  x: -transformHandleHalf,
+                  y: -transformHandleHalf,
+                };
                 const center = { x: width / 2, y: height / 2 };
                 return (
                   <Group
@@ -2214,8 +2214,10 @@ export default function BoardCanvas({
                   (label.text.split("\n").length || 1) * label.fontSize * 1.4;
                 const scaleX = label.scale.x || 1;
                 const scaleY = label.scale.y || 1;
-                const handleOffset = Math.max(width, height) * 0.6 + rotateHandlePadding;
-                const rotateHandle = { x: width / 2, y: -handleOffset };
+                const rotateHandle = {
+                  x: -transformHandleHalf,
+                  y: -transformHandleHalf,
+                };
                 const center = { x: width / 2, y: height / 2 };
                 return (
                   <Group
@@ -2394,8 +2396,10 @@ export default function BoardCanvas({
                 const height = "height" in item ? item.height ?? 0 : 0;
                 const scaleX = item.scale.x || 1;
                 const scaleY = item.scale.y || 1;
-                const handleOffset = Math.max(width, height) * 0.6 + rotateHandlePadding;
-                const rotateHandle = { x: width / 2, y: -handleOffset };
+                const rotateHandle = {
+                  x: -transformHandleHalf,
+                  y: -transformHandleHalf,
+                };
                 const center = { x: width / 2, y: height / 2 };
                 const minSize = 2;
                 return (
