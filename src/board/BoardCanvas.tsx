@@ -2403,33 +2403,37 @@ export default function BoardCanvas({
                     stroke="#ffffff"
                     strokeWidth={0.12}
                   />
-                  <Rect
-                    x={-0.55}
-                    y={-0.15}
-                    width={1.1}
-                    height={0.9}
+                  <Circle
+                    x={-0.28}
+                    y={0}
+                    radius={0.42}
                     stroke="#ffffff"
-                    strokeWidth={0.12}
+                    strokeWidth={0.11}
+                  />
+                  <Circle
+                    x={0.46}
+                    y={0}
+                    radius={0.42}
+                    stroke="#ffffff"
+                    strokeWidth={0.11}
                   />
                   <Line
-                    points={[-0.75, -0.45, 0.75, -0.45]}
+                    points={[-0.02, -0.24, 0.2, -0.04]}
                     stroke="#ffffff"
-                    strokeWidth={0.12}
+                    strokeWidth={0.11}
+                    lineCap="round"
                   />
                   <Line
-                    points={[-0.35, -0.15, -0.35, 0.65]}
+                    points={[-0.02, 0.24, 0.2, 0.04]}
                     stroke="#ffffff"
-                    strokeWidth={0.1}
+                    strokeWidth={0.11}
+                    lineCap="round"
                   />
                   <Line
-                    points={[0, -0.15, 0, 0.65]}
+                    points={[-0.86, 0.62, 0.9, -0.66]}
                     stroke="#ffffff"
-                    strokeWidth={0.1}
-                  />
-                  <Line
-                    points={[0.35, -0.15, 0.35, 0.65]}
-                    stroke="#ffffff"
-                    strokeWidth={0.1}
+                    strokeWidth={0.11}
+                    lineCap="round"
                   />
                   <Rect
                     x={-1.3}
@@ -2487,17 +2491,34 @@ export default function BoardCanvas({
                   shadowOpacity={0.32}
                   shadowOffsetY={0.1}
                 />
-                <Text
-                  x={0}
-                  y={0}
-                  width={7.6}
-                  height={2.4}
-                  text="Connect"
-                  align="center"
-                  verticalAlign="middle"
-                  fontSize={0.82}
-                  fontStyle="bold"
-                  fill="#f9bf4a"
+                <Circle
+                  x={3.25}
+                  y={1.2}
+                  radius={0.55}
+                  stroke="#f9bf4a"
+                  strokeWidth={0.12}
+                  listening={false}
+                />
+                <Circle
+                  x={4.35}
+                  y={1.2}
+                  radius={0.55}
+                  stroke="#f9bf4a"
+                  strokeWidth={0.12}
+                  listening={false}
+                />
+                <Line
+                  points={[3.72, 0.92, 3.88, 1.08]}
+                  stroke="#f9bf4a"
+                  strokeWidth={0.12}
+                  lineCap="round"
+                  listening={false}
+                />
+                <Line
+                  points={[3.72, 1.48, 3.88, 1.32]}
+                  stroke="#f9bf4a"
+                  strokeWidth={0.12}
+                  lineCap="round"
                   listening={false}
                 />
                 <Rect

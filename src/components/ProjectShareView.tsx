@@ -49,15 +49,30 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     if (typeof window === "undefined") {
       return;
     }
-    const media = window.matchMedia("(max-width: 768px)");
-    const update = () => setForcePortrait(media.matches);
+    const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
+    const update = () => {
+      const isMobileLayout =
+        window.innerWidth <= 1024 &&
+        (coarsePointerQuery.matches || window.innerHeight <= 860);
+      setForcePortrait(isMobileLayout);
+    };
     update();
-    if (media.addEventListener) {
-      media.addEventListener("change", update);
-      return () => media.removeEventListener("change", update);
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    if (coarsePointerQuery.addEventListener) {
+      coarsePointerQuery.addEventListener("change", update);
+      return () => {
+        window.removeEventListener("resize", update);
+        window.removeEventListener("orientationchange", update);
+        coarsePointerQuery.removeEventListener("change", update);
+      };
     }
-    media.addListener(update);
-    return () => media.removeListener(update);
+    coarsePointerQuery.addListener(update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+      coarsePointerQuery.removeListener(update);
+    };
   }, []);
 
   useEffect(() => {
