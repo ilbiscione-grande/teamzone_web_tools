@@ -853,14 +853,15 @@ export default function BoardCanvas({
     : setViewport;
   const viewRotation = useMemo(() => {
     let rotation = 0;
-    if (board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF") {
-      // Half-pitch is already vertical enough; do not force landscape on mobile portrait.
-      rotation = isForcedPortrait ? 0 : -90;
+    if (isForcedPortrait) {
+      rotation = -90;
+    } else if (board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF") {
+      rotation = -90;
     } else if (isPortraitFull) {
       // Keep home side toward the bottom on full-pitch portrait views.
       rotation = -90;
     }
-    if (isPortraitFull && board.pitchRotation === 180) {
+    if (rotation !== 0 && board.pitchRotation === 180) {
       rotation += 180;
     }
     return rotation;
@@ -2565,6 +2566,7 @@ export default function BoardCanvas({
                   key={`${selectedItem.id}-actions`}
                   x={anchor.x + 1.4}
                   y={anchor.y - 1.4}
+                  rotation={labelRotation}
                   scaleX={mobileActionScale}
                   scaleY={mobileActionScale}
                 >
@@ -2739,6 +2741,7 @@ export default function BoardCanvas({
                   key={`${link.id}-delete`}
                   x={anchor.x}
                   y={anchor.y}
+                  rotation={labelRotation}
                   scaleX={mobileActionScale}
                   scaleY={mobileActionScale}
                 >
@@ -2826,6 +2829,7 @@ export default function BoardCanvas({
               <Group
                 x={latestLinkingPlayerPosition.x + 2.4}
                 y={latestLinkingPlayerPosition.y - 2.4}
+                rotation={labelRotation}
                 scaleX={mobileActionScale}
                 scaleY={mobileActionScale}
               >
