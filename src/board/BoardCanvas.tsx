@@ -98,6 +98,7 @@ export default function BoardCanvas({
     isSharedReadOnly && (!!forcePortrait || size.width <= 700);
   const isMobileViewport = !!forcePortrait || size.width <= 900;
   const mobileObjectScale = isMobileViewport ? 1.65 : 1;
+  const mobileActionScale = isMobileViewport ? 1.45 : 1;
   const effectivePlayerTokenSize = playerTokenSize * mobileObjectScale;
   const isThreeDView = board.threeDView ?? false;
   const rawThreeDStrength =
@@ -1491,6 +1492,10 @@ export default function BoardCanvas({
                 points.reduce((sum, point) => sum + point.y, 0) / points.length;
               const depthFactor = getThreeDDepthFactor(avgY);
               const depthStrokeWidth = Math.max(0.05, strokeWidth * depthFactor);
+              const lineHitStrokeWidth = Math.max(
+                depthStrokeWidth,
+                isMobileViewport ? 4.2 : 2.2
+              );
               const outlineWidth = getLineOutlineWidth(depthStrokeWidth);
               const outlineStroke = style.outlineStroke;
               const depthRange = Math.max(0.001, bounds.height);
@@ -1515,6 +1520,7 @@ export default function BoardCanvas({
                     points={points.flatMap((point) => [point.x, point.y])}
                     stroke={style.stroke}
                     strokeWidth={depthStrokeWidth}
+                    hitStrokeWidth={lineHitStrokeWidth}
                     opacity={style.opacity}
                     lineCap="round"
                     lineJoin="round"
@@ -2247,6 +2253,8 @@ export default function BoardCanvas({
                   key={`${selectedItem.id}-delete`}
                   x={anchor.x + 1.4}
                   y={anchor.y - 1.4}
+                  scaleX={mobileActionScale}
+                  scaleY={mobileActionScale}
                 >
                   <Group x={-2.9} y={0}>
                     <Rect
@@ -2391,6 +2399,8 @@ export default function BoardCanvas({
                   key={`${link.id}-delete`}
                   x={anchor.x + 1.4}
                   y={anchor.y - 1.4}
+                  scaleX={mobileActionScale}
+                  scaleY={mobileActionScale}
                 >
                   <Rect
                     x={-1.3}
@@ -2476,6 +2486,8 @@ export default function BoardCanvas({
               <Group
                 x={latestLinkingPlayerPosition.x + 2.4}
                 y={latestLinkingPlayerPosition.y - 2.4}
+                scaleX={mobileActionScale}
+                scaleY={mobileActionScale}
               >
                 <Rect
                   x={0}

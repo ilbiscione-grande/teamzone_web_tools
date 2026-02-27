@@ -52,8 +52,9 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
     const update = () => {
       const isMobileLayout =
-        window.innerWidth <= 1024 &&
-        (coarsePointerQuery.matches || window.innerHeight <= 860);
+        window.innerWidth <= 1024 ||
+        coarsePointerQuery.matches ||
+        window.innerHeight <= 860;
       setForcePortrait(isMobileLayout);
     };
     update();
