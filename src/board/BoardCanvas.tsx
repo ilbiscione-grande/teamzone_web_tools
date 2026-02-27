@@ -99,6 +99,12 @@ export default function BoardCanvas({
   const isMobileViewport = !!forcePortrait || size.width <= 900;
   const mobileObjectScale = isMobileViewport ? 1.65 : 1;
   const mobileActionScale = isMobileViewport ? 1.9 : 1;
+  const mobileTransformScale = isMobileViewport ? 1.6 : 1;
+  const transformHandleRadius = 0.7 * mobileTransformScale;
+  const transformHandleSize = 1.6 * mobileTransformScale;
+  const transformHandleHalf = transformHandleSize / 2;
+  const rotateHandlePadding = isMobileViewport ? 2.5 : 1.5;
+  const transformHandleHitStrokeWidth = isMobileViewport ? 1.8 : 1;
   const effectivePlayerTokenSize = playerTokenSize * mobileObjectScale;
   const isThreeDView = board.threeDView ?? false;
   const rawThreeDStrength =
@@ -1621,10 +1627,11 @@ export default function BoardCanvas({
                   <Circle
                     x={start.x}
                     y={start.y}
-                    radius={0.7}
+                    radius={transformHandleRadius}
                     fill="#ffffff"
                     stroke="#0f1b1a"
                     strokeWidth={0.15}
+                    hitStrokeWidth={transformHandleHitStrokeWidth}
                     draggable={!locked}
                     onDragStart={() => pushHistory(clone(objects))}
                     onDragEnd={(event) => {
@@ -1655,10 +1662,11 @@ export default function BoardCanvas({
                   <Circle
                     x={end.x}
                     y={end.y}
-                    radius={0.7}
+                    radius={transformHandleRadius}
                     fill="#ffffff"
                     stroke="#0f1b1a"
                     strokeWidth={0.15}
+                    hitStrokeWidth={transformHandleHitStrokeWidth}
                     draggable={!locked}
                     onDragStart={() => pushHistory(clone(objects))}
                     onDragEnd={(event) => {
@@ -1681,10 +1689,11 @@ export default function BoardCanvas({
                     <Circle
                       x={controlWorld.x}
                       y={controlWorld.y}
-                      radius={0.7}
+                      radius={transformHandleRadius}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!locked}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
@@ -1740,10 +1749,11 @@ export default function BoardCanvas({
                     <Circle
                       x={control.x}
                       y={control.y}
-                      radius={0.7}
+                      radius={transformHandleRadius}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!player.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
@@ -1800,10 +1810,11 @@ export default function BoardCanvas({
                       <Circle
                         x={0}
                         y={-radius - 2}
-                        radius={0.7}
+                        radius={transformHandleRadius}
                         fill="#ffffff"
                         stroke="#0f1b1a"
                         strokeWidth={0.15}
+                        hitStrokeWidth={transformHandleHitStrokeWidth}
                         draggable={!item.locked}
                         onMouseDown={(event) => {
                           event.cancelBubble = true;
@@ -1832,10 +1843,11 @@ export default function BoardCanvas({
                       <Circle
                         x={radius}
                         y={radius}
-                        radius={0.7}
+                        radius={transformHandleRadius}
                         fill="#ffffff"
                         stroke="#0f1b1a"
                         strokeWidth={0.15}
+                        hitStrokeWidth={transformHandleHitStrokeWidth}
                         draggable={!item.locked}
                         onMouseDown={(event) => {
                           event.cancelBubble = true;
@@ -1911,7 +1923,7 @@ export default function BoardCanvas({
                 const height = "height" in item ? item.height ?? 0 : 0;
                 const scaleX = item.scale.x || 1;
                 const scaleY = item.scale.y || 1;
-                const handleOffset = Math.max(width, height) * 0.6 + 1.5;
+                const handleOffset = Math.max(width, height) * 0.6 + rotateHandlePadding;
                 const rotateHandle = { x: width / 2, y: -handleOffset };
                 const center = { x: width / 2, y: height / 2 };
                 return (
@@ -1938,10 +1950,11 @@ export default function BoardCanvas({
                     <Circle
                       x={rotateHandle.x}
                       y={rotateHandle.y}
-                      radius={0.7}
+                      radius={transformHandleRadius}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!item.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
@@ -1971,14 +1984,15 @@ export default function BoardCanvas({
                       }}
                     />
                     <Rect
-                      x={width - 0.8}
-                      y={height - 0.8}
-                      width={1.6}
-                      height={1.6}
+                      x={width - transformHandleHalf}
+                      y={height - transformHandleHalf}
+                      width={transformHandleSize}
+                      height={transformHandleSize}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
-                      cornerRadius={0.2}
+                      cornerRadius={0.2 * mobileTransformScale}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!item.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
@@ -2023,7 +2037,7 @@ export default function BoardCanvas({
                   (label.text.split("\n").length || 1) * label.fontSize * 1.4;
                 const scaleX = label.scale.x || 1;
                 const scaleY = label.scale.y || 1;
-                const handleOffset = Math.max(width, height) * 0.6 + 1.5;
+                const handleOffset = Math.max(width, height) * 0.6 + rotateHandlePadding;
                 const rotateHandle = { x: width / 2, y: -handleOffset };
                 const center = { x: width / 2, y: height / 2 };
                 return (
@@ -2050,10 +2064,11 @@ export default function BoardCanvas({
                     <Circle
                       x={rotateHandle.x}
                       y={rotateHandle.y}
-                      radius={0.7}
+                      radius={transformHandleRadius}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!label.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
@@ -2097,14 +2112,15 @@ export default function BoardCanvas({
                       listening={false}
                     />
                     <Rect
-                      x={width - 0.8}
-                      y={height - 0.8}
-                      width={1.6}
-                      height={1.6}
+                      x={width - transformHandleHalf}
+                      y={height - transformHandleHalf}
+                      width={transformHandleSize}
+                      height={transformHandleSize}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
-                      cornerRadius={0.2}
+                      cornerRadius={0.2 * mobileTransformScale}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!label.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
@@ -2144,7 +2160,7 @@ export default function BoardCanvas({
                 const height = "height" in item ? item.height ?? 0 : 0;
                 const scaleX = item.scale.x || 1;
                 const scaleY = item.scale.y || 1;
-                const handleOffset = Math.max(width, height) * 0.6 + 1.5;
+                const handleOffset = Math.max(width, height) * 0.6 + rotateHandlePadding;
                 const rotateHandle = { x: width / 2, y: -handleOffset };
                 const center = { x: width / 2, y: height / 2 };
                 const minSize = 2;
@@ -2172,10 +2188,11 @@ export default function BoardCanvas({
                     <Circle
                       x={rotateHandle.x}
                       y={rotateHandle.y}
-                      radius={0.7}
+                      radius={transformHandleRadius}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!item.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
@@ -2205,14 +2222,15 @@ export default function BoardCanvas({
                       }}
                     />
                     <Rect
-                      x={width - 0.8}
-                      y={height - 0.8}
-                      width={1.6}
-                      height={1.6}
+                      x={width - transformHandleHalf}
+                      y={height - transformHandleHalf}
+                      width={transformHandleSize}
+                      height={transformHandleSize}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
-                      cornerRadius={0.2}
+                      cornerRadius={0.2 * mobileTransformScale}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!item.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
