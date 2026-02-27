@@ -98,7 +98,7 @@ export default function BoardCanvas({
     isSharedReadOnly && (!!forcePortrait || size.width <= 700);
   const isMobileViewport = !!forcePortrait || size.width <= 900;
   const mobileObjectScale = isMobileViewport ? 1.65 : 1;
-  const mobileActionScale = isMobileViewport ? 1.45 : 1;
+  const mobileActionScale = isMobileViewport ? 1.7 : 1;
   const effectivePlayerTokenSize = playerTokenSize * mobileObjectScale;
   const isThreeDView = board.threeDView ?? false;
   const rawThreeDStrength =

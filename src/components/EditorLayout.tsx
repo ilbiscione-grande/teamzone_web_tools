@@ -507,6 +507,7 @@ export default function EditorLayout() {
               >
                 <BoardCanvas
                   board={board}
+                  forcePortrait={forcePortraitPitch}
                   onStageReady={(nextStage) => {
                     setStage(nextStage);
                     setStageRef(nextStage);
@@ -684,6 +685,7 @@ export default function EditorLayout() {
               >
                 <BoardCanvas
                   board={board}
+                  forcePortrait={forcePortraitPitch}
                   onStageReady={(nextStage) => {
                     setStage(nextStage);
                     setStageRef(nextStage);
