@@ -98,7 +98,7 @@ export default function BoardCanvas({
     isSharedReadOnly && (!!forcePortrait || size.width <= 700);
   const isMobileViewport = !!forcePortrait || size.width <= 900;
   const mobileObjectScale = isMobileViewport ? 1.65 : 1;
-  const mobileActionScale = isMobileViewport ? 1.7 : 1;
+  const mobileActionScale = isMobileViewport ? 1.9 : 1;
   const effectivePlayerTokenSize = playerTokenSize * mobileObjectScale;
   const isThreeDView = board.threeDView ?? false;
   const rawThreeDStrength =
@@ -2390,15 +2390,31 @@ export default function BoardCanvas({
               const points = link.playerIds
                 .map((id) => playerPositions.get(id))
                 .filter(Boolean) as { x: number; y: number }[];
-              if (points.length === 0) {
+              if (points.length < 2) {
                 return null;
               }
-              const anchor = points[points.length - 1]!;
+              const segmentCenters: { x: number; y: number }[] = [];
+              for (let index = 0; index < points.length - 1; index += 1) {
+                const from = points[index];
+                const to = points[index + 1];
+                if (!from || !to) {
+                  continue;
+                }
+                segmentCenters.push({
+                  x: (from.x + to.x) / 2,
+                  y: (from.y + to.y) / 2,
+                });
+              }
+              if (segmentCenters.length === 0) {
+                return null;
+              }
+              const centerIndex = Math.floor((segmentCenters.length - 1) / 2);
+              const anchor = segmentCenters[centerIndex]!;
               return (
                 <Group
                   key={`${link.id}-delete`}
-                  x={anchor.x + 1.4}
-                  y={anchor.y - 1.4}
+                  x={anchor.x}
+                  y={anchor.y}
                   scaleX={mobileActionScale}
                   scaleY={mobileActionScale}
                 >

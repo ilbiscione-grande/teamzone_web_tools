@@ -81,6 +81,7 @@ const toPositionAbbreviation = (value?: string) => {
 };
 
 const BALL_SVG_SRC = "/ball.svg";
+const GOAL_SVG_SRC = "/goal.svg";
 const CONE_BASE_WIDTH = 66.837547;
 const CONE_BASE_HEIGHT = 22.4858;
 // Derived from the user's cone_low_white.svg (path15), normalized by layer translation.
@@ -120,6 +121,47 @@ function BallSprite({ radius }: { radius: number }) {
       height={radius * 2}
     />
   );
+}
+
+function GoalSprite({ width, height }: { width: number; height: number }) {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const svgImage = new window.Image();
+    svgImage.onload = () => setImage(svgImage);
+    svgImage.src = GOAL_SVG_SRC;
+    return () => {
+      svgImage.onload = null;
+    };
+  }, []);
+
+  if (!image) {
+    const postWidth = Math.max(0.2, width * 0.08);
+    return (
+      <Group listening={false}>
+        <Rect
+          x={0}
+          y={0}
+          width={width}
+          height={height}
+          fill="rgba(255,255,255,0.12)"
+          stroke="#ffffff"
+          strokeWidth={Math.max(0.08, width * 0.02)}
+          cornerRadius={Math.max(0.2, width * 0.04)}
+        />
+        <Rect x={0} y={0} width={postWidth} height={height} fill="#ffffff" />
+        <Rect
+          x={width - postWidth}
+          y={0}
+          width={postWidth}
+          height={height}
+          fill="#ffffff"
+        />
+      </Group>
+    );
+  }
+
+  return <KonvaImage image={image} x={0} y={0} width={width} height={height} />;
 }
 
 type BoardObjectProps = {
@@ -845,22 +887,6 @@ export default function BoardObject({
   if (object.type === "goal") {
     const goal = object as MiniGoal;
     const goalScaleAnchorOffset = getCenterScaleAnchorOffset(goal.width, goal.height);
-    const goalSvg = {
-      minX: 105.03958,
-      minY: 34.66042,
-      width: 48.14002,
-      height: 79.96958,
-      path:
-        "m 105.03958,34.66042 v 2.05414 56.8389 l 6.09162,15.82488 10e-4,-5.2e-4 v 5.2e-4 h 28.45046 2.05414 V 109.2476 108.33137 51.75343 49.4006 49.306 l -22.62343,-14.64562 -0.0134,0.0207 v -0.0207 h -12.14495 z m 2.60605,2.05414 h 9.3002 V 49.4006 h -4.41626 z m 11.35434,0.38447 19.00246,12.30157 h -19.00246 z m -12.14499,2.61534 4.39715,11.42308 0.0305,-0.0119 v 0.0119 h 5.66323 v 40.36188 h -10.09086 z m 12.14499,11.42308 h 20.58272 v 55.73303 L 118.99997,92.22951 Z M 106.9852,93.55346 h 10.33167 l 19.80603,14.08803 h -24.71477 z",
-    };
-    const goalScaleX = goal.width / goalSvg.width;
-    const goalScaleY = goal.height / goalSvg.height;
-    const stretchY = 1.15;
-    const scaledWidth = goalSvg.width * goalScaleX;
-    const scaledHeight = goalSvg.height * goalScaleY * stretchY;
-    const offsetX = (goal.width - scaledWidth) / 2;
-    const offsetY = (goal.height - scaledHeight) / 2;
-    const postWidth = Math.max(0.2, goal.width * 0.08);
     return (
       <Group
         {...commonProps}
@@ -872,36 +898,7 @@ export default function BoardObject({
           }
         }}
       >
-        <Group
-          x={-goalSvg.minX * goalScaleX + offsetX}
-          y={-goalSvg.minY * goalScaleY + offsetY}
-          scaleX={goalScaleX}
-          scaleY={goalScaleY * stretchY}
-        >
-          <Path
-            data={goalSvg.path}
-            fill={goal.style.fill}
-            stroke={goal.style.stroke}
-            strokeWidth={depthStroke(goal.style.strokeWidth)}
-            lineJoin="bevel"
-          />
-        </Group>
-        <Rect
-          x={0}
-          y={0}
-          width={postWidth}
-          height={goal.height}
-          fill="#ffffff"
-          strokeWidth={0}
-        />
-        <Rect
-          x={goal.width - postWidth}
-          y={0}
-          width={postWidth}
-          height={goal.height}
-          fill="#ffffff"
-          strokeWidth={0}
-        />
+        <GoalSprite width={goal.width} height={goal.height} />
         {renderShimmerSweepInBox(0, 0, goal.width, goal.height)}
       </Group>
     );
