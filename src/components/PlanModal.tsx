@@ -41,6 +41,7 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
   const limits = useMemo(() => getPlanLimits(plan), [plan]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const canSignIn = email.trim().length > 0;
@@ -368,13 +369,33 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                   />
-                  <input
-                    className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                    placeholder="Password"
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                  />
+                  <div className="relative">
+                    <input
+                      className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 pr-20 text-xs text-[var(--ink-0)]"
+                      placeholder="Password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-[var(--line)] bg-[var(--panel)]/90 px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      title={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                  <label className="flex items-center gap-2 px-1 text-[11px] text-[var(--ink-1)]">
+                    <input
+                      type="checkbox"
+                      checked={showPassword}
+                      onChange={(event) => setShowPassword(event.target.checked)}
+                    />
+                    <span>Show password</span>
+                  </label>
                   <input
                     className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                     placeholder="Name (optional)"

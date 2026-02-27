@@ -202,6 +202,7 @@ export const useBoardInteractions = ({
     head: activeTool === "arrow" || activeTool === "arrow_dashed",
     dashed: activeTool === "line_dashed" || activeTool === "arrow_dashed",
   };
+  const defaultPlacedRotation = rotation !== 0 ? 90 : 0;
 
   const handleMouseDown = (event: Konva.KonvaEventObject<MouseEvent>) => {
     const stage = stageRef.current;
@@ -365,7 +366,7 @@ export const useBoardInteractions = ({
         id: createId(),
         type: "circle",
         position: start,
-        rotation: 0,
+        rotation: defaultPlacedRotation,
         scale,
         style: { ...defaultStyle },
         zIndex: 1,
@@ -388,7 +389,7 @@ export const useBoardInteractions = ({
         id: createId(),
         type: "rect",
         position: { x, y },
-        rotation: 0,
+        rotation: defaultPlacedRotation,
         scale: { x: 1, y: 1 },
         style: { ...defaultStyle },
         zIndex: 1,
@@ -408,7 +409,7 @@ export const useBoardInteractions = ({
         id: createId(),
         type: "triangle",
         position: { x, y },
-        rotation: 0,
+        rotation: defaultPlacedRotation,
         scale: { x: 1, y: 1 },
         style: { ...defaultStyle },
         zIndex: 1,
@@ -640,7 +641,7 @@ export const useBoardInteractions = ({
         id: createId(),
         type: "cone",
         position: world,
-        rotation: 0,
+        rotation: defaultPlacedRotation,
         scale: { x: 1, y: 1 },
         style: { ...defaultStyle, fill: "#f06d4f", stroke: "#111111" },
         zIndex: 1,
@@ -656,7 +657,7 @@ export const useBoardInteractions = ({
         id: createId(),
         type: "pole",
         position: world,
-        rotation: 0,
+        rotation: defaultPlacedRotation,
         scale: { x: 1, y: 1 },
         style: { ...defaultStyle, fill: "#f2f1e9", stroke: "#111111" },
         zIndex: 1,
@@ -672,7 +673,7 @@ export const useBoardInteractions = ({
         id: createId(),
         type: "mannequin",
         position: world,
-        rotation: 0,
+        rotation: defaultPlacedRotation,
         scale: { x: 1, y: 1 },
         style: { ...defaultStyle, fill: "rgba(230,236,240,0.88)", stroke: "#111111" },
         zIndex: 1,
@@ -688,7 +689,7 @@ export const useBoardInteractions = ({
         id: createId(),
         type: "goal",
         position: world,
-        rotation: 0,
+        rotation: defaultPlacedRotation,
         scale: { x: 1, y: 1 },
         style: { ...defaultStyle, fill: "rgba(255,255,255,0.05)" },
         zIndex: 1,
@@ -716,7 +717,10 @@ export const useBoardInteractions = ({
         return;
       }
       pushHistory(clone(objects));
-      addObject(boardId, frameIndex, createText(world, text));
+      addObject(boardId, frameIndex, {
+        ...createText(world, text),
+        rotation: defaultPlacedRotation,
+      });
     }
   };
 

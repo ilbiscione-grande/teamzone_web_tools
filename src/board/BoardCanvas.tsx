@@ -2561,6 +2561,10 @@ export default function BoardCanvas({
               const shouldLock = !selectedItems.every((item) => item.locked);
               const anchor = getObjectActionAnchor(selectedItem);
               const isObjectMenuOpen = objectActionMenuId === selectedItem.id;
+              const openMenuLeft = anchor.x > bounds.x + bounds.width * 0.55;
+              const openMenuDown = anchor.y < bounds.y + bounds.height * 0.2;
+              const menuOffsetX = openMenuLeft ? -11.6 : 1.6;
+              const menuOffsetY = openMenuDown ? 1.6 : -1.3;
               return (
                 <Group
                   key={`${selectedItem.id}-actions`}
@@ -2605,7 +2609,7 @@ export default function BoardCanvas({
                     }}
                   />
                   {isObjectMenuOpen && (
-                    <Group x={-11.6} y={-1.3}>
+                    <Group x={menuOffsetX} y={menuOffsetY}>
                       <Rect
                         x={0}
                         y={0}
