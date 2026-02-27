@@ -64,6 +64,24 @@ const getProportionalDimensions = (
   };
 };
 
+const getRawRotationAngleFromPointer = (
+  event: Konva.KonvaEventObject<DragEvent>,
+  center: { x: number; y: number }
+) => {
+  const stage = event.target.getStage();
+  const parent = event.target.getParent();
+  const pointer = stage?.getPointerPosition();
+  if (!pointer || !parent) {
+    return null;
+  }
+  const centerPoint = parent.getAbsoluteTransform().point(center);
+  return (
+    (Math.atan2(pointer.y - centerPoint.y, pointer.x - centerPoint.x) * 180) /
+      Math.PI +
+    90
+  );
+};
+
 type BoardCanvasProps = {
   board: Board;
   onStageReady?: (stage: Konva.Stage | null) => void;
@@ -1846,10 +1864,11 @@ export default function BoardCanvas({
                         }}
                         onDragStart={() => pushHistory(clone(objects))}
                         onDragMove={(event) => {
-                          const localX = event.target.x() / item.scale.x;
-                          const localY = event.target.y() / item.scale.y;
                           const rawAngle =
-                            (Math.atan2(localY, localX) * 180) / Math.PI - 90;
+                            getRawRotationAngleFromPointer(event, {
+                              x: 0,
+                              y: 0,
+                            }) ?? item.rotation;
                           const angle = event.evt?.altKey
                             ? rawAngle
                             : snapRotationAngle(rawAngle);
@@ -2001,13 +2020,9 @@ export default function BoardCanvas({
                       }}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
-                        const localX = event.target.x() / scaleX;
-                        const localY = event.target.y() / scaleY;
                         const rawAngle =
-                          (Math.atan2(localY - center.y, localX - center.x) *
-                            180) /
-                            Math.PI +
-                          90;
+                          getRawRotationAngleFromPointer(event, center) ??
+                          item.rotation;
                         const angle = event.evt?.altKey
                           ? rawAngle
                           : snapRotationAngle(rawAngle);
@@ -2319,13 +2334,9 @@ export default function BoardCanvas({
                       }}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
-                        const localX = event.target.x() / scaleX;
-                        const localY = event.target.y() / scaleY;
                         const rawAngle =
-                          (Math.atan2(localY - center.y, localX - center.x) *
-                            180) /
-                            Math.PI +
-                          90;
+                          getRawRotationAngleFromPointer(event, center) ??
+                          item.rotation;
                         const angle = event.evt?.altKey
                           ? rawAngle
                           : snapRotationAngle(rawAngle);
