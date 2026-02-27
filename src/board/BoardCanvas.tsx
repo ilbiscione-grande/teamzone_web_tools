@@ -39,6 +39,14 @@ const getArrowHeadSize = (strokeWidth: number) => {
   };
 };
 
+const ROTATION_SNAP_STEPS = 16;
+const ROTATION_SNAP_DEGREES = 360 / ROTATION_SNAP_STEPS;
+const snapRotationAngle = (angle: number) =>
+  Math.round(angle / ROTATION_SNAP_DEGREES) * ROTATION_SNAP_DEGREES;
+const SIZE_SNAP_STEP = 0.5;
+const snapSizeValue = (value: number, min: number) =>
+  Math.max(min, Math.round(value / SIZE_SNAP_STEP) * SIZE_SNAP_STEP);
+
 type BoardCanvasProps = {
   board: Board;
   onStageReady?: (stage: Konva.Stage | null) => void;
@@ -1823,8 +1831,11 @@ export default function BoardCanvas({
                         onDragMove={(event) => {
                           const localX = event.target.x() / item.scale.x;
                           const localY = event.target.y() / item.scale.y;
-                          const angle =
+                          const rawAngle =
                             (Math.atan2(localY, localX) * 180) / Math.PI - 90;
+                          const angle = event.evt?.altKey
+                            ? rawAngle
+                            : snapRotationAngle(rawAngle);
                           updateObject(board.id, frameIndex, item.id, {
                             rotation: angle,
                           });
@@ -1868,10 +1879,17 @@ export default function BoardCanvas({
                           let localX = Math.abs(localPoint.x);
                           let localY = Math.abs(localPoint.y);
                           const constrained = event.evt?.shiftKey;
+                          const allowFreeSize = !!event.evt?.altKey;
                           if (constrained) {
                             const snapSize = Math.max(localX, localY);
-                            localX = snapSize;
-                            localY = snapSize;
+                            const nextSize = allowFreeSize
+                              ? snapSize
+                              : snapSizeValue(snapSize, minSize);
+                            localX = nextSize;
+                            localY = nextSize;
+                          } else if (!allowFreeSize) {
+                            localX = snapSizeValue(localX, minSize);
+                            localY = snapSizeValue(localY, minSize);
                           }
                           const nextSize = Math.max(localX, localY);
                           const nextRadius = Math.max(minSize, nextSize);
@@ -1900,8 +1918,13 @@ export default function BoardCanvas({
                             .copy()
                             .invert()
                             .point(pointer);
-                          const localX = Math.abs(localPoint.x);
-                          const localY = Math.abs(localPoint.y);
+                          const allowFreeSize = !!event.evt?.altKey;
+                          const localX = allowFreeSize
+                            ? Math.abs(localPoint.x)
+                            : snapSizeValue(Math.abs(localPoint.x), minSize);
+                          const localY = allowFreeSize
+                            ? Math.abs(localPoint.y)
+                            : snapSizeValue(Math.abs(localPoint.y), minSize);
                           const size = Math.max(localX, localY);
                           const ratio = size > 0 ? Math.abs(localX - localY) / size : 0;
                           if (ratio <= 0.08) {
@@ -1963,11 +1986,14 @@ export default function BoardCanvas({
                       onDragMove={(event) => {
                         const localX = event.target.x() / scaleX;
                         const localY = event.target.y() / scaleY;
-                        const angle =
+                        const rawAngle =
                           (Math.atan2(localY - center.y, localX - center.x) *
                             180) /
                             Math.PI +
                           90;
+                        const angle = event.evt?.altKey
+                          ? rawAngle
+                          : snapRotationAngle(rawAngle);
                         updateObject(board.id, frameIndex, item.id, {
                           rotation: angle,
                         });
@@ -1999,26 +2025,35 @@ export default function BoardCanvas({
                       }}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
-                        const localX = Math.max(
+                        const allowFreeSize = !!event.evt?.altKey;
+                        const baseX = Math.max(
                           minSize,
                           event.target.x() / scaleX
                         );
-                        const localY = Math.max(
+                        const baseY = Math.max(
                           minSize,
                           event.target.y() / scaleY
                         );
                         const constrained = event.evt?.shiftKey;
-                        const size = Math.max(localX, localY);
+                        const localX = allowFreeSize
+                          ? baseX
+                          : snapSizeValue(baseX, minSize);
+                        const localY = allowFreeSize
+                          ? baseY
+                          : snapSizeValue(baseY, minSize);
+                        const size = allowFreeSize
+                          ? Math.max(localX, localY)
+                          : snapSizeValue(Math.max(localX, localY), minSize);
+                        const nextWidth = constrained ? size : localX;
+                        const nextHeight = constrained ? size : localY;
                         updateObject(board.id, frameIndex, item.id, {
-                          width: constrained ? size : localX,
-                          height: constrained ? size : localY,
+                          width: nextWidth,
+                          height: nextHeight,
                         });
-                        if (constrained) {
-                          event.target.position({
-                            x: size * scaleX,
-                            y: size * scaleY,
-                          });
-                        }
+                        event.target.position({
+                          x: nextWidth * scaleX,
+                          y: nextHeight * scaleY,
+                        });
                       }}
                     />
                   </Group>
@@ -2084,7 +2119,7 @@ export default function BoardCanvas({
                         const centerPoint = parent
                           .getAbsoluteTransform()
                           .point(center);
-                        const angle =
+                        const rawAngle =
                           (Math.atan2(
                             pointer.y - centerPoint.y,
                             pointer.x - centerPoint.x
@@ -2092,6 +2127,9 @@ export default function BoardCanvas({
                             180) /
                             Math.PI +
                           90;
+                        const angle = event.evt?.altKey
+                          ? rawAngle
+                          : snapRotationAngle(rawAngle);
                         updateObject(board.id, frameIndex, label.id, {
                           rotation: angle,
                         });
@@ -2127,17 +2165,28 @@ export default function BoardCanvas({
                       }}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
-                        const localX = Math.max(
+                        const allowFreeSize = !!event.evt?.altKey;
+                        const baseX = Math.max(
                           minSize,
                           event.target.x() / scaleX
                         );
-                        const localY = Math.max(
+                        const baseY = Math.max(
                           minSize,
                           event.target.y() / scaleY
                         );
+                        const localX = allowFreeSize
+                          ? baseX
+                          : snapSizeValue(baseX, minSize);
+                        const localY = allowFreeSize
+                          ? baseY
+                          : snapSizeValue(baseY, minSize);
                         updateObject(board.id, frameIndex, label.id, {
                           width: localX,
                           height: localY,
+                        });
+                        event.target.position({
+                          x: localX * scaleX,
+                          y: localY * scaleY,
                         });
                       }}
                     />
@@ -2201,11 +2250,14 @@ export default function BoardCanvas({
                       onDragMove={(event) => {
                         const localX = event.target.x() / scaleX;
                         const localY = event.target.y() / scaleY;
-                        const angle =
+                        const rawAngle =
                           (Math.atan2(localY - center.y, localX - center.x) *
                             180) /
                             Math.PI +
                           90;
+                        const angle = event.evt?.altKey
+                          ? rawAngle
+                          : snapRotationAngle(rawAngle);
                         updateObject(board.id, frameIndex, item.id, {
                           rotation: angle,
                         });
@@ -2237,17 +2289,28 @@ export default function BoardCanvas({
                       }}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
-                        const localX = Math.max(
+                        const allowFreeSize = !!event.evt?.altKey;
+                        const baseX = Math.max(
                           minSize,
                           event.target.x() / scaleX
                         );
-                        const localY = Math.max(
+                        const baseY = Math.max(
                           minSize,
                           event.target.y() / scaleY
                         );
+                        const localX = allowFreeSize
+                          ? baseX
+                          : snapSizeValue(baseX, minSize);
+                        const localY = allowFreeSize
+                          ? baseY
+                          : snapSizeValue(baseY, minSize);
                         updateObject(board.id, frameIndex, item.id, {
                           width: localX,
                           height: localY,
+                        });
+                        event.target.position({
+                          x: localX * scaleX,
+                          y: localY * scaleY,
                         });
                       }}
                     />
