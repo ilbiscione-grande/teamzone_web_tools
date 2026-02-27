@@ -46,6 +46,23 @@ const snapRotationAngle = (angle: number) =>
 const SIZE_SNAP_STEP = 0.5;
 const snapSizeValue = (value: number, min: number) =>
   Math.max(min, Math.round(value / SIZE_SNAP_STEP) * SIZE_SNAP_STEP);
+const getProportionalDimensions = (
+  targetWidth: number,
+  targetHeight: number,
+  baseWidth: number,
+  baseHeight: number
+) => {
+  const safeBaseWidth = Math.max(0.001, baseWidth);
+  const safeBaseHeight = Math.max(0.001, baseHeight);
+  const scale = Math.max(
+    targetWidth / safeBaseWidth,
+    targetHeight / safeBaseHeight
+  );
+  return {
+    width: safeBaseWidth * scale,
+    height: safeBaseHeight * scale,
+  };
+};
 
 type BoardCanvasProps = {
   board: Board;
@@ -2041,11 +2058,35 @@ export default function BoardCanvas({
                         const localY = allowFreeSize
                           ? baseY
                           : snapSizeValue(baseY, minSize);
-                        const size = allowFreeSize
-                          ? Math.max(localX, localY)
-                          : snapSizeValue(Math.max(localX, localY), minSize);
-                        const nextWidth = constrained ? size : localX;
-                        const nextHeight = constrained ? size : localY;
+                        let nextWidth = localX;
+                        let nextHeight = localY;
+                        if (constrained) {
+                          const baseWidth = Math.max(minSize, width);
+                          const baseHeight = Math.max(minSize, height);
+                          const proportional = getProportionalDimensions(
+                            localX,
+                            localY,
+                            baseWidth,
+                            baseHeight
+                          );
+                          if (allowFreeSize) {
+                            nextWidth = proportional.width;
+                            nextHeight = proportional.height;
+                          } else {
+                            const dominantBase = Math.max(baseWidth, baseHeight);
+                            const dominantNext = Math.max(
+                              proportional.width,
+                              proportional.height
+                            );
+                            const snappedDominant = snapSizeValue(
+                              dominantNext,
+                              dominantBase
+                            );
+                            const factor = snappedDominant / dominantBase;
+                            nextWidth = baseWidth * factor;
+                            nextHeight = baseHeight * factor;
+                          }
+                        }
                         updateObject(board.id, frameIndex, item.id, {
                           width: nextWidth,
                           height: nextHeight,
@@ -2180,13 +2221,43 @@ export default function BoardCanvas({
                         const localY = allowFreeSize
                           ? baseY
                           : snapSizeValue(baseY, minSize);
+                        const constrained = !!event.evt?.shiftKey;
+                        let nextWidth = localX;
+                        let nextHeight = localY;
+                        if (constrained) {
+                          const baseWidth = Math.max(minSize, width);
+                          const baseHeight = Math.max(minSize, height);
+                          const proportional = getProportionalDimensions(
+                            localX,
+                            localY,
+                            baseWidth,
+                            baseHeight
+                          );
+                          if (allowFreeSize) {
+                            nextWidth = proportional.width;
+                            nextHeight = proportional.height;
+                          } else {
+                            const dominantBase = Math.max(baseWidth, baseHeight);
+                            const dominantNext = Math.max(
+                              proportional.width,
+                              proportional.height
+                            );
+                            const snappedDominant = snapSizeValue(
+                              dominantNext,
+                              dominantBase
+                            );
+                            const factor = snappedDominant / dominantBase;
+                            nextWidth = baseWidth * factor;
+                            nextHeight = baseHeight * factor;
+                          }
+                        }
                         updateObject(board.id, frameIndex, label.id, {
-                          width: localX,
-                          height: localY,
+                          width: nextWidth,
+                          height: nextHeight,
                         });
                         event.target.position({
-                          x: localX * scaleX,
-                          y: localY * scaleY,
+                          x: nextWidth * scaleX,
+                          y: nextHeight * scaleY,
                         });
                       }}
                     />
@@ -2304,13 +2375,43 @@ export default function BoardCanvas({
                         const localY = allowFreeSize
                           ? baseY
                           : snapSizeValue(baseY, minSize);
+                        const constrained = !!event.evt?.shiftKey;
+                        let nextWidth = localX;
+                        let nextHeight = localY;
+                        if (constrained) {
+                          const baseWidth = Math.max(minSize, width);
+                          const baseHeight = Math.max(minSize, height);
+                          const proportional = getProportionalDimensions(
+                            localX,
+                            localY,
+                            baseWidth,
+                            baseHeight
+                          );
+                          if (allowFreeSize) {
+                            nextWidth = proportional.width;
+                            nextHeight = proportional.height;
+                          } else {
+                            const dominantBase = Math.max(baseWidth, baseHeight);
+                            const dominantNext = Math.max(
+                              proportional.width,
+                              proportional.height
+                            );
+                            const snappedDominant = snapSizeValue(
+                              dominantNext,
+                              dominantBase
+                            );
+                            const factor = snappedDominant / dominantBase;
+                            nextWidth = baseWidth * factor;
+                            nextHeight = baseHeight * factor;
+                          }
+                        }
                         updateObject(board.id, frameIndex, item.id, {
-                          width: localX,
-                          height: localY,
+                          width: nextWidth,
+                          height: nextHeight,
                         });
                         event.target.position({
-                          x: localX * scaleX,
-                          y: localY * scaleY,
+                          x: nextWidth * scaleX,
+                          y: nextHeight * scaleY,
                         });
                       }}
                     />

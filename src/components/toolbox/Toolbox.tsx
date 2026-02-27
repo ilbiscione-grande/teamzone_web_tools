@@ -194,9 +194,12 @@ const FramesIcon = () => (
     <path d="M8 6v12M16 6v12" />
   </svg>
 );
-const CommentsIcon = () => (
+const ShareIcon = () => (
   <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
-    <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+    <circle cx="18" cy="5" r="2.2" />
+    <circle cx="6" cy="12" r="2.2" />
+    <circle cx="18" cy="19" r="2.2" />
+    <path d="M8 11l8-5M8 13l8 5" />
   </svg>
 );
 const HighlightIcon = () => (
@@ -860,7 +863,7 @@ export default function Toolbox({
           { id: "squad", label: "Squad", icon: <SquadIcon /> },
           { id: "notes", label: "Notes", icon: <NotesIcon /> },
           { id: "frames", label: "Frames", icon: <FramesIcon /> },
-          { id: "shared", label: "Shared", icon: <CommentsIcon /> },
+          { id: "shared", label: "Shared", icon: <ShareIcon /> },
         ].map((tab) => {
           const hasShared =
             tab.id !== "shared"
