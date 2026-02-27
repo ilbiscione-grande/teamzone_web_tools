@@ -163,6 +163,11 @@ export default function BoardCanvas({
     null
   );
   const [objectListOpen, setObjectListOpen] = useState(false);
+  const [objectListSearch, setObjectListSearch] = useState("");
+  const [objectListFilter, setObjectListFilter] = useState<
+    "all" | DrawableObject["type"]
+  >("all");
+  const [objectListStatus, setObjectListStatus] = useState<string | null>(null);
 
   const activeTool = useEditorStore((state) => state.activeTool);
   const playerTokenSize = useEditorStore((state) => state.playerTokenSize);
@@ -1253,6 +1258,9 @@ export default function BoardCanvas({
   useEffect(() => {
     setObjectActionMenuId(null);
     setObjectListOpen(false);
+    setObjectListSearch("");
+    setObjectListFilter("all");
+    setObjectListStatus(null);
   }, [board.id, frameIndex, selection]);
 
   const getObjectFocusPoint = useCallback((item: DrawableObject) => {
@@ -1352,21 +1360,28 @@ export default function BoardCanvas({
     };
     return objects
       .map((item, index) => {
-        let details = "";
+        let fallbackName = "";
         if (item.type === "player") {
           const squadPlayer = item.squadPlayerId
             ? squadPlayerById.get(item.squadPlayerId)
             : null;
-          details = squadPlayer?.name?.trim() || `#${index + 1}`;
+          fallbackName = squadPlayer?.name?.trim() || `#${index + 1}`;
         } else if (item.type === "text") {
-          details = item.text.trim().slice(0, 36) || `#${index + 1}`;
+          fallbackName = item.text.trim().slice(0, 36) || `#${index + 1}`;
         } else {
-          details = `#${index + 1}`;
+          fallbackName = `#${index + 1}`;
         }
+        const displayName = (item.name?.trim() || fallbackName).trim();
+        const type = item.type;
+        const typeName = typeLabel[type];
         return {
           id: item.id,
+          type,
           item,
-          label: `${typeLabel[item.type]} ${details}`,
+          fallbackName,
+          displayName,
+          label: `${typeName} ${displayName}`,
+          searchText: `${typeName} ${displayName}`.toLowerCase(),
         };
       })
       .sort((a, b) => {
@@ -1378,6 +1393,43 @@ export default function BoardCanvas({
         return a.label.localeCompare(b.label);
       });
   }, [objects, squadPlayerById]);
+
+  const filteredObjectListEntries = useMemo(() => {
+    const query = objectListSearch.trim().toLowerCase();
+    return objectListEntries.filter((entry) => {
+      if (objectListFilter !== "all" && entry.type !== objectListFilter) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      return entry.searchText.includes(query);
+    });
+  }, [objectListEntries, objectListFilter, objectListSearch]);
+
+  const renameObjectFromList = useCallback(
+    (item: DrawableObject, currentName: string) => {
+      const input = window.prompt("Object name", currentName) ?? "";
+      const nextName = input.trim();
+      if (!nextName) {
+        setObjectListStatus("Name cannot be empty.");
+        return;
+      }
+      const normalized = nextName.toLocaleLowerCase();
+      const duplicate = objects.some(
+        (entry) =>
+          entry.id !== item.id &&
+          (entry.name?.trim() || "").toLocaleLowerCase() === normalized
+      );
+      if (duplicate) {
+        setObjectListStatus("Name already exists. Use a unique object name.");
+        return;
+      }
+      updateObject(board.id, frameIndex, item.id, { name: nextName });
+      setObjectListStatus(`Renamed to "${nextName}".`);
+    },
+    [board.id, frameIndex, objects, updateObject]
+  );
 
   const getObjectActionAnchor = (item: DrawableObject) => {
     const fallback = { x: item.position.x, y: item.position.y };
@@ -1619,34 +1671,91 @@ export default function BoardCanvas({
               </div>
               <button
                 className="rounded-full border border-[var(--line)] px-2 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                onClick={() => setObjectListOpen(false)}
+                onClick={() => {
+                  setObjectListOpen(false);
+                  setObjectListSearch("");
+                  setObjectListFilter("all");
+                  setObjectListStatus(null);
+                }}
               >
                 Close
               </button>
             </div>
+            <div className="mb-2 grid grid-cols-[minmax(0,1fr)_120px] gap-2">
+              <input
+                className="h-8 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                placeholder="Search objects"
+                value={objectListSearch}
+                onChange={(event) => setObjectListSearch(event.target.value)}
+              />
+              <select
+                className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                value={objectListFilter}
+                onChange={(event) =>
+                  setObjectListFilter(
+                    event.target.value as "all" | DrawableObject["type"]
+                  )
+                }
+              >
+                <option value="all">All types</option>
+                <option value="player">Player</option>
+                <option value="ball">Ball</option>
+                <option value="cone">Cone</option>
+                <option value="pole">Pole</option>
+                <option value="mannequin">Mannequin</option>
+                <option value="goal">Mini goal</option>
+                <option value="circle">Circle</option>
+                <option value="rect">Rectangle</option>
+                <option value="triangle">Triangle</option>
+                <option value="arrow">Line/Arrow</option>
+                <option value="text">Text</option>
+                <option value="path">Path</option>
+              </select>
+            </div>
+            {objectListStatus ? (
+              <p className="mb-2 text-[11px] text-[var(--accent-1)]">
+                {objectListStatus}
+              </p>
+            ) : null}
             <div className="max-h-[55vh] space-y-1 overflow-y-auto pr-1" data-scrollable>
-              {objectListEntries.length === 0 ? (
+              {filteredObjectListEntries.length === 0 ? (
                 <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 text-xs text-[var(--ink-1)]">
-                  No objects in this frame.
+                  No matching objects.
                 </p>
               ) : (
-                objectListEntries.map((entry) => {
+                filteredObjectListEntries.map((entry) => {
                   const isActive = selection.includes(entry.id);
                   return (
-                    <button
+                    <div
                       key={entry.id}
-                      className={`w-full rounded-xl border px-3 py-2 text-left text-xs transition ${
+                      className={`flex items-center gap-2 rounded-xl border px-2 py-2 transition ${
                         isActive
-                          ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
-                          : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--ink-0)]"
+                          ? "border-[var(--accent-0)] bg-[var(--panel-2)]"
+                          : "border-[var(--line)] bg-[var(--panel)]"
                       }`}
-                      onClick={() => {
-                        focusObject(entry.item);
-                        setObjectListOpen(false);
-                      }}
                     >
-                      {entry.label}
-                    </button>
+                      <button
+                        className={`min-w-0 flex-1 rounded-lg px-2 py-1 text-left text-xs ${
+                          isActive
+                            ? "text-[var(--ink-0)]"
+                            : "text-[var(--ink-1)] hover:text-[var(--ink-0)]"
+                        }`}
+                        onClick={() => {
+                          focusObject(entry.item);
+                          setObjectListOpen(false);
+                        }}
+                      >
+                        {entry.label}
+                      </button>
+                      <button
+                        className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        onClick={() =>
+                          renameObjectFromList(entry.item, entry.displayName)
+                        }
+                      >
+                        Rename
+                      </button>
+                    </div>
                   );
                 })
               )}

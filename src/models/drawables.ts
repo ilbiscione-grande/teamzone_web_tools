@@ -29,6 +29,7 @@ export type DrawableAnimation =
 
 export type BaseDrawable = {
   id: string;
+  name?: string;
   type:
     | "player"
     | "ball"
