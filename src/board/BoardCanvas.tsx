@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
-import { Stage, Layer, Rect, Arrow, Group, Circle, Line } from "react-konva";
+import { Stage, Layer, Rect, Arrow, Group, Circle, Line, Text } from "react-konva";
 import type {
   ArrowLine,
   BallToken,
@@ -23,6 +23,7 @@ import Pitch, { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { useEditorStore } from "@/state/useEditorStore";
 import { useProjectStore } from "@/state/useProjectStore";
 import { clone } from "@/utils/clone";
+import { createId } from "@/utils/id";
 import BoardObject from "@/board/objects/BoardObject";
 import { useBoardInteractions } from "@/board/useBoardInteractions";
 import { getBoardSquads } from "@/utils/board";
@@ -85,12 +86,19 @@ export default function BoardCanvas({
     (state) => state.linkingPlayerIds
   );
   const addLinkingPlayer = useEditorStore((state) => state.addLinkingPlayer);
+  const setLinkingPlayers = useEditorStore((state) => state.setLinkingPlayers);
+  const clearLinkingPlayers = useEditorStore(
+    (state) => state.clearLinkingPlayers
+  );
   const selectedLinkId = useEditorStore((state) => state.selectedLinkId);
 
   const project = useProjectStore((state) => state.project);
   const isSharedReadOnly = readOnly || (project?.isShared ?? false);
   const useCompactPlayerLabels =
     isSharedReadOnly && (!!forcePortrait || size.width <= 700);
+  const isMobileViewport = !!forcePortrait || size.width <= 900;
+  const mobileObjectScale = isMobileViewport ? 1.65 : 1;
+  const effectivePlayerTokenSize = playerTokenSize * mobileObjectScale;
   const isThreeDView = board.threeDView ?? false;
   const rawThreeDStrength =
     typeof board.threeDStrength === "number" && Number.isFinite(board.threeDStrength)
@@ -237,7 +245,7 @@ export default function BoardCanvas({
           id: object.id,
           x: object.position.x,
           y: object.position.y,
-          radius: playerTokenSize + 2.4,
+          radius: effectivePlayerTokenSize + 2.4,
           strength,
         };
       }
@@ -246,7 +254,7 @@ export default function BoardCanvas({
           id: object.id,
           x: object.position.x,
           y: object.position.y,
-          radius: Math.max(0.9, playerTokenSize * 0.52 + 1.5),
+          radius: Math.max(0.9, effectivePlayerTokenSize * 0.52 + 1.5),
           strength,
         };
       }
@@ -382,7 +390,7 @@ export default function BoardCanvas({
       }
       return null;
     },
-    [playerTokenSize]
+    [effectivePlayerTokenSize]
   );
   const renderObjects = useMemo(() => {
     if (board.mode !== "DYNAMIC") {
@@ -853,6 +861,53 @@ export default function BoardCanvas({
     });
     return map;
   }, [renderObjects]);
+  const finishLinkingPlayers = useCallback(() => {
+    if (!isLinkingPlayers) {
+      return;
+    }
+    if (linkingPlayerIds.length >= 2) {
+      const nextLinks = [
+        ...((activeFrame?.playerLinks ?? board.playerLinks) ?? []),
+        {
+          id: createId(),
+          playerIds: [...linkingPlayerIds],
+          style: {
+            stroke: "#f9bf4a",
+            strokeWidth: 0.65,
+            fill: "transparent",
+            dash: [],
+            opacity: 1,
+            outlineStroke: "#111111",
+          },
+        },
+      ];
+      const nextFrames = board.frames.map((frame, index) =>
+        index === frameIndex ? { ...frame, playerLinks: nextLinks } : frame
+      );
+      updateBoard(board.id, { frames: nextFrames });
+    }
+    setLinkingPlayers(false);
+    clearLinkingPlayers();
+  }, [
+    activeFrame?.playerLinks,
+    board,
+    clearLinkingPlayers,
+    frameIndex,
+    isLinkingPlayers,
+    linkingPlayerIds,
+    setLinkingPlayers,
+    updateBoard,
+  ]);
+  const latestLinkingPlayerPosition = useMemo(() => {
+    if (!isLinkingPlayers || linkingPlayerIds.length < 2) {
+      return null;
+    }
+    const latestId = linkingPlayerIds[linkingPlayerIds.length - 1];
+    if (!latestId) {
+      return null;
+    }
+    return playerPositions.get(latestId) ?? null;
+  }, [isLinkingPlayers, linkingPlayerIds, playerPositions]);
   const getThreeDDepthFactor = (y: number) => {
     if (!isThreeDView) {
       return 1;
@@ -903,7 +958,7 @@ export default function BoardCanvas({
     frameIndex,
     objects,
     activeTool,
-    playerTokenSize,
+    playerTokenSize: effectivePlayerTokenSize,
     playerFill: defaultPlayerFill,
     readOnly: isCanvasReadOnly,
     baseOffsetX,
@@ -951,7 +1006,7 @@ export default function BoardCanvas({
         closestId = player.id;
       }
     });
-    const snapRadius = playerTokenSize + 3;
+    const snapRadius = effectivePlayerTokenSize + 3;
     if (closestId && closestDist <= snapRadius) {
       const player = players.find((item) => item.id === closestId);
       if (!player) {
@@ -960,8 +1015,8 @@ export default function BoardCanvas({
       const dx = position.x - player.position.x;
       const dy = position.y - player.position.y;
       const len = Math.hypot(dx, dy) || 1;
-      const ballRadius = Math.max(0.7, playerTokenSize * 0.52);
-      const offsetLen = playerTokenSize + ballRadius - 0.3;
+      const ballRadius = Math.max(0.7, effectivePlayerTokenSize * 0.52);
+      const offsetLen = effectivePlayerTokenSize + ballRadius - 0.3;
       const offset = {
         x: (dx / len) * offsetLen,
         y: (dy / len) * offsetLen,
@@ -1067,8 +1122,8 @@ export default function BoardCanvas({
     }
     if (item.type === "player" || item.type === "ball") {
       return {
-        x: item.position.x + playerTokenSize,
-        y: item.position.y - playerTokenSize,
+        x: item.position.x + effectivePlayerTokenSize,
+        y: item.position.y - effectivePlayerTokenSize,
       };
     }
     if (
@@ -1387,7 +1442,7 @@ export default function BoardCanvas({
                 kitByPlayerId={kitByPlayerId}
                 vestByPlayerId={vestByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}
-                playerTokenSize={playerTokenSize}
+                playerTokenSize={effectivePlayerTokenSize}
                 showPlayerName={board.playerLabel?.showName ?? true}
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
@@ -1497,7 +1552,7 @@ export default function BoardCanvas({
                 kitByPlayerId={kitByPlayerId}
                 vestByPlayerId={vestByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}
-                playerTokenSize={playerTokenSize}
+                playerTokenSize={effectivePlayerTokenSize}
                 showPlayerName={board.playerLabel?.showName ?? true}
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
@@ -2413,6 +2468,56 @@ export default function BoardCanvas({
                 </Group>
               );
             })()}
+            {latestLinkingPlayerPosition && !isSharedReadOnly && (
+              <Group
+                x={latestLinkingPlayerPosition.x + 2.4}
+                y={latestLinkingPlayerPosition.y - 2.4}
+              >
+                <Rect
+                  x={0}
+                  y={0}
+                  width={7.6}
+                  height={2.4}
+                  cornerRadius={1.1}
+                  fill="rgba(9,26,21,0.92)"
+                  stroke="#f9bf4a"
+                  strokeWidth={0.14}
+                  shadowColor="#000000"
+                  shadowBlur={0.35}
+                  shadowOpacity={0.32}
+                  shadowOffsetY={0.1}
+                />
+                <Text
+                  x={0}
+                  y={0}
+                  width={7.6}
+                  height={2.4}
+                  text="Connect"
+                  align="center"
+                  verticalAlign="middle"
+                  fontSize={0.82}
+                  fontStyle="bold"
+                  fill="#f9bf4a"
+                  listening={false}
+                />
+                <Rect
+                  x={0}
+                  y={0}
+                  width={7.6}
+                  height={2.4}
+                  cornerRadius={1.1}
+                  opacity={0}
+                  onClick={(event) => {
+                    event.cancelBubble = true;
+                    finishLinkingPlayers();
+                  }}
+                  onTap={(event) => {
+                    event.cancelBubble = true;
+                    finishLinkingPlayers();
+                  }}
+                />
+              </Group>
+            )}
             {draft && draft.type === "arrow" && (
               <Arrow
                 points={[
