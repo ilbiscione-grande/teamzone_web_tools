@@ -1184,15 +1184,7 @@ export default function BoardCanvas({
     const nextZoomObject = findZoomObject(nextObjects);
     const tRaw = Math.max(0, Math.min(1, playheadFrame - baseIndex));
     const t = tRaw * tRaw * (3 - 2 * tRaw);
-    const baseMatchForNext = nextZoomObject
-      ? baseObjects.find((item) => item.id === nextZoomObject.id)
-      : undefined;
-    const from =
-      nextZoomObject && baseMatchForNext
-        ? toViewportForObject(baseMatchForNext)
-        : baseZoomObject
-          ? toViewportForObject(baseZoomObject)
-          : fallback;
+    const from = baseZoomObject ? toViewportForObject(baseZoomObject) : fallback;
     const to = nextZoomObject ? toViewportForObject(nextZoomObject) : fallback;
     return {
       zoom: from.zoom + (to.zoom - from.zoom) * t,
