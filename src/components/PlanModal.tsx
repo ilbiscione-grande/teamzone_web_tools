@@ -230,7 +230,7 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
     setAuthBusy("reset");
     supabase.auth
       .resetPasswordForEmail(trimmedEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/reset-password?mode=recovery`,
       })
       .then(({ error }) => {
         if (error) {

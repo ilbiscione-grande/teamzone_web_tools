@@ -251,7 +251,15 @@ export default function AuthListener() {
         return false;
       }
       const hash = window.location.hash ?? "";
-      return event === "PASSWORD_RECOVERY" || hash.includes("type=recovery");
+      const search = window.location.search ?? "";
+      const href = window.location.href ?? "";
+      return (
+        event === "PASSWORD_RECOVERY" ||
+        hash.includes("type=recovery") ||
+        search.includes("type=recovery") ||
+        search.includes("mode=recovery") ||
+        href.includes("type=recovery")
+      );
     };
 
     sb.auth.getSession().then(({ data }) => {
