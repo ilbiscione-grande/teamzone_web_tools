@@ -1394,51 +1394,183 @@ export default function BoardCanvas({
       });
   }, [objects, squadPlayerById]);
 
-  const renderObjectTypeIcon = (type: DrawableObject["type"]) => {
-    const base = "h-3.5 w-3.5";
-    if (type === "player" || type === "mannequin" || type === "pole") {
+  const renderObjectTypeIcon = (item: DrawableObject) => {
+    const stroke = item.style.stroke || "#111111";
+    const fill = item.style.fill || "#ffffff";
+    const commonSvgClass = "h-4 w-4";
+    if (item.type === "ball") {
       return (
-        <svg aria-hidden viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="6.5" r="2.5" />
-          <path d="M7.5 21l2-7h5l2 7" />
-          <path d="M9.5 14V10h5v4" />
+        <img
+          src="/ball.svg"
+          alt=""
+          aria-hidden
+          className={commonSvgClass}
+          draggable={false}
+        />
+      );
+    }
+    if (item.type === "goal") {
+      return (
+        <img
+          src="/goal.svg"
+          alt=""
+          aria-hidden
+          className={commonSvgClass}
+          draggable={false}
+        />
+      );
+    }
+    if (item.type === "player") {
+      const playerFill = item.squadPlayerId
+        ? kitByPlayerId[item.squadPlayerId] ?? item.style.fill
+        : item.style.fill === "#f9bf4a"
+          ? defaultPlayerFill
+          : item.style.fill;
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="8" fill={playerFill || fill} />
         </svg>
       );
     }
-    if (type === "ball" || type === "circle") {
+    if (item.type === "cone") {
       return (
-        <svg aria-hidden viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="8" />
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M2.5 18.5 9 7.8h6L21.5 18.5z" fill={fill} />
+          <ellipse cx="12" cy="8.1" rx="3.2" ry="1.2" fill={fill} />
         </svg>
       );
     }
-    if (type === "cone" || type === "triangle") {
+    if (item.type === "pole") {
       return (
-        <svg aria-hidden viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 5l8 14H4L12 5z" />
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <ellipse cx="12" cy="19" rx="5.8" ry="2.8" fill={fill} />
+          <rect x="10.9" y="4" width="2.2" height="13" rx="1.1" fill={fill} />
         </svg>
       );
     }
-    if (type === "goal" || type === "rect") {
+    if (item.type === "mannequin") {
       return (
-        <svg aria-hidden viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="4" y="6" width="16" height="12" rx="1.5" />
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="5.5" r="2.8" fill={fill} />
+          <path d="M7.2 10c0-1.5 1-2.8 2.5-2.8h4.6c1.5 0 2.5 1.3 2.5 2.8l-1.8 4.8V19H9v-4.2z" fill={fill} />
+          <path d="M7.2 20h9.6" />
         </svg>
       );
     }
-    if (type === "arrow" || type === "path") {
+    if (item.type === "circle") {
       return (
-        <svg aria-hidden viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+        >
+          <circle cx="12" cy="12" r="8" fill={fill} />
+        </svg>
+      );
+    }
+    if (item.type === "rect") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+        >
+          <rect x="4" y="6" width="16" height="12" rx="1.8" fill={fill} />
+        </svg>
+      );
+    }
+    if (item.type === "triangle") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 5 20 19H4z" fill={fill} />
+        </svg>
+      );
+    }
+    if (item.type === "arrow" || item.type === "path") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M4 16c4-8 8-8 14-8" />
-          <path d="M14 6l4 2-2 4" />
+          {item.type === "arrow" ? <path d="M14 6l4 2-2 4" /> : null}
         </svg>
       );
     }
-    return (
-      <svg aria-hidden viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="5" y="5" width="14" height="14" rx="2" />
-      </svg>
-    );
+    if (item.type === "text") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M5 6h14M12 6v12M8 18h8" />
+        </svg>
+      );
+    }
+    return null;
   };
 
   const filteredObjectListEntries = useMemo(() => {
@@ -1794,7 +1926,7 @@ export default function BoardCanvas({
                       >
                         <span className="inline-flex items-center gap-2">
                           <span className="text-[var(--accent-0)]">
-                            {renderObjectTypeIcon(entry.type)}
+                            {renderObjectTypeIcon(entry.item)}
                           </span>
                           <span className="truncate">{entry.displayName}</span>
                         </span>
