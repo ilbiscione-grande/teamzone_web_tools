@@ -42,10 +42,14 @@ const drawableAnimationOptions: Array<{
   { value: "none", label: "None" },
   { value: "fadeIn", label: "Fade in" },
   { value: "fadeOut", label: "Fade out" },
+  { value: "draw", label: "Draw (Arrow)" },
   { value: "pop", label: "Pop" },
   { value: "pulse", label: "Pulse" },
+  { value: "zoom", label: "Zoom" },
   { value: "highlight", label: "Highlight" },
   { value: "lightning", label: "Lightning" },
+  { value: "lightPulse", label: "Light Pulse" },
+  { value: "shimmer", label: "Shimmer" },
 ];
 const coneFillPalette = [
   "#f06d4f",
@@ -103,7 +107,17 @@ export default function PropertiesPanel({
   );
   const target = selected[0];
   const lockableSelected = selected.filter((item) =>
-    ["cone", "goal", "circle", "rect", "triangle", "arrow", "text"].includes(
+    [
+      "cone",
+      "goal",
+      "pole",
+      "mannequin",
+      "circle",
+      "rect",
+      "triangle",
+      "arrow",
+      "text",
+    ].includes(
       item.type
     )
   );
@@ -331,6 +345,42 @@ export default function PropertiesPanel({
         addObject(board.id, targetIndex, clone(item));
       }
     });
+  };
+  const copySelectionToAllFrames = () => {
+    if (!board || selected.length === 0 || board.frames.length <= 1) {
+      return;
+    }
+    const selectedById = new Map(selected.map((item) => [item.id, clone(item)]));
+    const nextFrames = board.frames.map((frame, index) => {
+      if (index === frameIndex) {
+        return frame;
+      }
+      const nextObjects = [...(frame.objects ?? [])];
+      selectedById.forEach((item, id) => {
+        const existingIndex = nextObjects.findIndex((entry) => entry.id === id);
+        if (existingIndex >= 0) {
+          nextObjects[existingIndex] = clone(item);
+        } else {
+          nextObjects.push(clone(item));
+        }
+      });
+      return {
+        ...frame,
+        objects: nextObjects,
+      };
+    });
+    updateBoard(board.id, { frames: nextFrames });
+  };
+  const removeSelectionFromAllFrames = () => {
+    if (!board || selected.length === 0 || board.frames.length <= 1) {
+      return;
+    }
+    const selectedIds = new Set(selected.map((item) => item.id));
+    const nextFrames = board.frames.map((frame) => ({
+      ...frame,
+      objects: (frame.objects ?? []).filter((item) => !selectedIds.has(item.id)),
+    }));
+    updateBoard(board.id, { frames: nextFrames });
   };
   const copyPlayersToTarget = (targetBoardId: string, targetFrameIndex: number) => {
     if (!project || selectedPlayers.length === 0) {
@@ -685,6 +735,20 @@ export default function PropertiesPanel({
                 >
                   Copy to next frame
                 </button>
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={copySelectionToAllFrames}
+                  disabled={board.frames.length <= 1}
+                >
+                  Copy to all frames
+                </button>
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                  onClick={removeSelectionFromAllFrames}
+                  disabled={board.frames.length <= 1}
+                >
+                  Remove from all frames
+                </button>
               </div>
             </div>
           )}
@@ -793,6 +857,8 @@ export default function PropertiesPanel({
 
           {(target.type === "cone" ||
             target.type === "goal" ||
+            target.type === "pole" ||
+            target.type === "mannequin" ||
             target.type === "circle" ||
             target.type === "rect" ||
             target.type === "triangle") && (

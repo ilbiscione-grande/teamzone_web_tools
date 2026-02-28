@@ -6,6 +6,8 @@ export type Tool =
   | "player"
   | "ball"
   | "cone"
+  | "pole"
+  | "mannequin"
   | "goal"
   | "circle"
   | "rect"
@@ -15,7 +17,8 @@ export type Tool =
   | "arrow"
   | "arrow_dashed"
   | "freehand"
-  | "text";
+  | "text"
+  | "zoom";
 
 type Viewport = {
   zoom: number;

@@ -2,15 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
-import { Stage, Layer, Rect, Arrow, Group, Circle, Line } from "react-konva";
+import { Stage, Layer, Rect, Arrow, Group, Circle, Line, Text } from "react-konva";
 import type {
   ArrowLine,
   BallToken,
   Board,
   ConeToken,
   DrawableObject,
+  MannequinToken,
   MiniGoal,
   MovementPath,
+  PoleToken,
   PlayerToken,
   ShapeCircle,
   ShapeRect,
@@ -21,6 +23,7 @@ import Pitch, { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { useEditorStore } from "@/state/useEditorStore";
 import { useProjectStore } from "@/state/useProjectStore";
 import { clone } from "@/utils/clone";
+import { createId } from "@/utils/id";
 import BoardObject from "@/board/objects/BoardObject";
 import { useBoardInteractions } from "@/board/useBoardInteractions";
 import { getBoardSquads } from "@/utils/board";
@@ -34,6 +37,102 @@ const getArrowHeadSize = (strokeWidth: number) => {
     length: Math.max(1.8, base * 4.2),
     width: Math.max(1.4, base * 3.2),
   };
+};
+
+const ROTATION_SNAP_STEPS = 16;
+const ROTATION_SNAP_DEGREES = 360 / ROTATION_SNAP_STEPS;
+const snapRotationAngle = (angle: number) =>
+  Math.round(angle / ROTATION_SNAP_DEGREES) * ROTATION_SNAP_DEGREES;
+const ROTATION_SNAP_HYSTERESIS_DEGREES = 4;
+const SIZE_SNAP_STEP = 0.5;
+const snapSizeValue = (value: number, min: number) =>
+  Math.max(min, Math.round(value / SIZE_SNAP_STEP) * SIZE_SNAP_STEP);
+const getProportionalDimensions = (
+  targetWidth: number,
+  targetHeight: number,
+  baseWidth: number,
+  baseHeight: number
+) => {
+  const safeBaseWidth = Math.max(0.001, baseWidth);
+  const safeBaseHeight = Math.max(0.001, baseHeight);
+  const scale = Math.max(
+    targetWidth / safeBaseWidth,
+    targetHeight / safeBaseHeight
+  );
+  return {
+    width: safeBaseWidth * scale,
+    height: safeBaseHeight * scale,
+  };
+};
+const rotateVector = (vector: { x: number; y: number }, angle: number) => {
+  const radians = (angle * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return {
+    x: vector.x * cos - vector.y * sin,
+    y: vector.x * sin + vector.y * cos,
+  };
+};
+const rotatePointAround = (
+  point: { x: number; y: number },
+  pivot: { x: number; y: number },
+  angle: number
+) => {
+  if (angle === 0) {
+    return point;
+  }
+  const radians = (angle * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const dx = point.x - pivot.x;
+  const dy = point.y - pivot.y;
+  return {
+    x: pivot.x + dx * cos - dy * sin,
+    y: pivot.y + dx * sin + dy * cos,
+  };
+};
+const clampValue = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, value));
+const getCenterAnchoredPositionForRotation = (params: {
+  position: { x: number; y: number };
+  center: { x: number; y: number };
+  scale: { x: number; y: number };
+  fromAngle: number;
+  toAngle: number;
+}) => {
+  const { position, center, scale, fromAngle, toAngle } = params;
+  const localCenter = {
+    x: center.x * scale.x,
+    y: center.y * scale.y,
+  };
+  const fromVector = rotateVector(localCenter, fromAngle);
+  const toVector = rotateVector(localCenter, toAngle);
+  const centerWorld = {
+    x: position.x + fromVector.x,
+    y: position.y + fromVector.y,
+  };
+  return {
+    x: centerWorld.x - toVector.x,
+    y: centerWorld.y - toVector.y,
+  };
+};
+
+const getRawRotationAngleFromPointer = (
+  event: Konva.KonvaEventObject<DragEvent>,
+  center: { x: number; y: number }
+) => {
+  const stage = event.target.getStage();
+  const parent = event.target.getParent();
+  const pointer = stage?.getPointerPosition();
+  if (!pointer || !parent) {
+    return null;
+  }
+  const centerPoint = parent.getAbsoluteTransform().point(center);
+  return (
+    (Math.atan2(pointer.y - centerPoint.y, pointer.x - centerPoint.x) * 180) /
+      Math.PI +
+    90
+  );
 };
 
 type BoardCanvasProps = {
@@ -57,8 +156,18 @@ export default function BoardCanvas({
   const shapeRefs = useRef<Record<string, Konva.Node>>({});
   const containerRef = useRef<HTMLDivElement | null>(null);
   const controlsMenuRef = useRef<HTMLDivElement | null>(null);
+  const rotationSnapStateRef = useRef<Record<string, number>>({});
   const [size, setSize] = useState({ width: 800, height: 500 });
   const [controlsMenuOpen, setControlsMenuOpen] = useState(false);
+  const [objectActionMenuId, setObjectActionMenuId] = useState<string | null>(
+    null
+  );
+  const [objectListOpen, setObjectListOpen] = useState(false);
+  const [objectListSearch, setObjectListSearch] = useState("");
+  const [objectListFilter, setObjectListFilter] = useState<
+    "all" | DrawableObject["type"]
+  >("all");
+  const [objectListStatus, setObjectListStatus] = useState<string | null>(null);
 
   const activeTool = useEditorStore((state) => state.activeTool);
   const playerTokenSize = useEditorStore((state) => state.playerTokenSize);
@@ -83,12 +192,25 @@ export default function BoardCanvas({
     (state) => state.linkingPlayerIds
   );
   const addLinkingPlayer = useEditorStore((state) => state.addLinkingPlayer);
+  const setLinkingPlayers = useEditorStore((state) => state.setLinkingPlayers);
+  const clearLinkingPlayers = useEditorStore(
+    (state) => state.clearLinkingPlayers
+  );
   const selectedLinkId = useEditorStore((state) => state.selectedLinkId);
 
   const project = useProjectStore((state) => state.project);
   const isSharedReadOnly = readOnly || (project?.isShared ?? false);
   const useCompactPlayerLabels =
     isSharedReadOnly && (!!forcePortrait || size.width <= 700);
+  const isMobileViewport = !!forcePortrait || size.width <= 900;
+  const mobileObjectScale = isMobileViewport ? 1.65 : 1;
+  const mobileActionScale = isMobileViewport ? 1.9 : 1;
+  const mobileTransformScale = isMobileViewport ? 1.6 : 1;
+  const transformHandleRadius = 0.7 * mobileTransformScale;
+  const transformHandleSize = 1.6 * mobileTransformScale;
+  const transformHandleHalf = transformHandleSize / 2;
+  const transformHandleHitStrokeWidth = isMobileViewport ? 1.8 : 1;
+  const effectivePlayerTokenSize = playerTokenSize * mobileObjectScale;
   const isThreeDView = board.threeDView ?? false;
   const rawThreeDStrength =
     typeof board.threeDStrength === "number" && Number.isFinite(board.threeDStrength)
@@ -134,6 +256,8 @@ export default function BoardCanvas({
       scale: { ...object.scale },
     } as DrawableObject;
     next.style.fxLightningStrength = 0;
+    next.style.fxShimmerStrength = 0;
+    next.style.fxShimmerProgress = 0;
 
     if (effect === "fadeIn") {
       next.style.opacity = object.style.opacity * progress;
@@ -182,9 +306,68 @@ export default function BoardCanvas({
       next.style.fxLightningStrength = flashStrength;
       return next;
     }
+    if (effect === "lightPulse") {
+      // Single slower pulse using the same light channel as lightning.
+      const bell = Math.sin(progress * Math.PI);
+      const pulseStrength = Math.max(0, Math.min(1, bell * 0.9));
+      const punch = 1 + pulseStrength * 0.04;
+      next.scale.x = object.scale.x * punch;
+      next.scale.y = object.scale.y * punch;
+      next.style.fxLightningStrength = pulseStrength;
+      return next;
+    }
+    if (effect === "shimmer") {
+      const envelope = Math.pow(Math.sin(progress * Math.PI), 0.9);
+      const shimmerStrength = Math.max(0, Math.min(1, envelope));
+      next.style.fxShimmerStrength = shimmerStrength;
+      next.style.fxShimmerProgress = progress;
+      return next;
+    }
 
     return next;
   }, []);
+  const normalizeAngle = useCallback((angle: number) => {
+    let normalized = angle % 360;
+    if (normalized < 0) {
+      normalized += 360;
+    }
+    return normalized;
+  }, []);
+  const shortestAngleDiff = useCallback((from: number, to: number) => {
+    const a = normalizeAngle(from);
+    const b = normalizeAngle(to);
+    let diff = b - a;
+    if (diff > 180) {
+      diff -= 360;
+    } else if (diff < -180) {
+      diff += 360;
+    }
+    return diff;
+  }, [normalizeAngle]);
+  const clearRotationSnapState = useCallback((key: string) => {
+    delete rotationSnapStateRef.current[key];
+  }, []);
+  const getStableSnappedRotation = useCallback(
+    (rawAngle: number, key: string) => {
+      const normalized = normalizeAngle(rawAngle);
+      const nearest =
+        Math.round(normalized / ROTATION_SNAP_DEGREES) * ROTATION_SNAP_DEGREES;
+      const last = rotationSnapStateRef.current[key];
+      if (!Number.isFinite(last)) {
+        rotationSnapStateRef.current[key] = nearest;
+        return nearest;
+      }
+      const distanceToLast = Math.abs(shortestAngleDiff(last, normalized));
+      const holdBoundary =
+        ROTATION_SNAP_DEGREES / 2 + ROTATION_SNAP_HYSTERESIS_DEGREES;
+      if (distanceToLast <= holdBoundary) {
+        return last;
+      }
+      rotationSnapStateRef.current[key] = nearest;
+      return nearest;
+    },
+    [normalizeAngle, shortestAngleDiff]
+  );
   const applyHighlightEffect = useCallback((
     object: DrawableObject,
     amount: number
@@ -202,6 +385,22 @@ export default function BoardCanvas({
     next.style.outlineWidth = strength;
     return next;
   }, []);
+  const applyArrowDrawProgress = useCallback((
+    object: DrawableObject,
+    amount: number
+  ): DrawableObject => {
+    if (object.type !== "arrow") {
+      return object;
+    }
+    const progress = Math.max(0, Math.min(1, amount));
+    return {
+      ...object,
+      style: {
+        ...object.style,
+        fxDrawProgress: progress,
+      },
+    } as DrawableObject;
+  }, []);
   const getLightningAura = useCallback(
     (object: DrawableObject) => {
       const strength = Math.max(
@@ -216,7 +415,7 @@ export default function BoardCanvas({
           id: object.id,
           x: object.position.x,
           y: object.position.y,
-          radius: playerTokenSize + 2.4,
+          radius: effectivePlayerTokenSize + 2.4,
           strength,
         };
       }
@@ -225,7 +424,7 @@ export default function BoardCanvas({
           id: object.id,
           x: object.position.x,
           y: object.position.y,
-          radius: Math.max(0.9, playerTokenSize * 0.52 + 1.5),
+          radius: Math.max(0.9, effectivePlayerTokenSize * 0.52 + 1.5),
           strength,
         };
       }
@@ -276,6 +475,26 @@ export default function BoardCanvas({
           x: object.position.x + goal.width / 2,
           y: object.position.y + goal.height / 2,
           radius: Math.max(1.4, Math.hypot(goal.width, goal.height) * 0.56),
+          strength,
+        };
+      }
+      if (object.type === "pole") {
+        const pole = object as PoleToken;
+        return {
+          id: object.id,
+          x: object.position.x + pole.width / 2,
+          y: object.position.y + pole.height / 2,
+          radius: Math.max(1.1, Math.hypot(pole.width, pole.height) * 0.52),
+          strength,
+        };
+      }
+      if (object.type === "mannequin") {
+        const mannequin = object as MannequinToken;
+        return {
+          id: object.id,
+          x: object.position.x + mannequin.width / 2,
+          y: object.position.y + mannequin.height / 2,
+          radius: Math.max(1.3, Math.hypot(mannequin.width, mannequin.height) * 0.54),
           strength,
         };
       }
@@ -341,7 +560,7 @@ export default function BoardCanvas({
       }
       return null;
     },
-    [playerTokenSize]
+    [effectivePlayerTokenSize]
   );
   const renderObjects = useMemo(() => {
     if (board.mode !== "DYNAMIC") {
@@ -352,7 +571,10 @@ export default function BoardCanvas({
     if (!loopPlayback && baseIndex === lastIndex) {
       // End of timeline should render final frame state, not restart transition effects.
       return (board.frames[lastIndex]?.objects ?? objects).map((item) =>
-        applyHighlightEffect(item, item.animation === "highlight" ? 1 : 0)
+        applyArrowDrawProgress(
+          applyHighlightEffect(item, item.animation === "highlight" ? 1 : 0),
+          1
+        )
       );
     }
     const nextIndex = loopPlayback
@@ -502,7 +724,7 @@ export default function BoardCanvas({
         // Transition effect ownership:
         // - fadeIn: target frame only
         // - fadeOut: source frame only
-        // - pop/pulse/lightning: target frame (preview while entering)
+        // - draw/pop/pulse/lightning/lightPulse/shimmer: target frame (preview while entering)
         const transitionEffect = (() => {
           if (item.animation === "fadeOut") {
             return "fadeOut" as const;
@@ -511,9 +733,12 @@ export default function BoardCanvas({
             return "fadeIn" as const;
           }
           if (
+            next.animation === "draw" ||
             next.animation === "pop" ||
             next.animation === "pulse" ||
-            next.animation === "lightning"
+            next.animation === "lightning" ||
+            next.animation === "lightPulse" ||
+            next.animation === "shimmer"
           ) {
             return next.animation;
           }
@@ -528,15 +753,21 @@ export default function BoardCanvas({
                 ? t
                 : 0;
         merged.push(
-          applyHighlightEffect(
-            applyPlaybackEffect(blended, t, transitionEffect),
-            highlightAmount
+          applyArrowDrawProgress(
+            applyHighlightEffect(
+              applyPlaybackEffect(blended, t, transitionEffect),
+              highlightAmount
+            ),
+            transitionEffect === "draw" ? t : 1
           )
         );
       } else {
         const highlightAmount = item.animation === "highlight" ? 1 - t : 0;
         merged.push(
-          applyHighlightEffect(applyPlaybackEffect(item, t), highlightAmount)
+          applyArrowDrawProgress(
+            applyHighlightEffect(applyPlaybackEffect(item, t), highlightAmount),
+            1
+          )
         );
       }
     });
@@ -544,16 +775,22 @@ export default function BoardCanvas({
       if (!baseObjects.find((current) => current.id === item.id)) {
         const entryEffect =
           item.animation === "fadeIn" ||
+          item.animation === "draw" ||
           item.animation === "pop" ||
           item.animation === "pulse" ||
-          item.animation === "lightning"
+          item.animation === "lightning" ||
+          item.animation === "lightPulse" ||
+          item.animation === "shimmer"
             ? item.animation
             : "none";
         const highlightAmount = item.animation === "highlight" ? t : 0;
         merged.push(
-          applyHighlightEffect(
-            applyPlaybackEffect(item, t, entryEffect),
-            highlightAmount
+          applyArrowDrawProgress(
+            applyHighlightEffect(
+              applyPlaybackEffect(item, t, entryEffect),
+              highlightAmount
+            ),
+            entryEffect === "draw" ? t : 1
           )
         );
       }
@@ -569,6 +806,7 @@ export default function BoardCanvas({
     playheadFrame,
     applyPlaybackEffect,
     applyHighlightEffect,
+    applyArrowDrawProgress,
   ]);
   const lightningAuras = useMemo(
     () => renderObjects.map((item) => getLightningAura(item)).filter(Boolean),
@@ -672,14 +910,15 @@ export default function BoardCanvas({
     : setViewport;
   const viewRotation = useMemo(() => {
     let rotation = 0;
-    if (board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF") {
-      // Half-pitch is already vertical enough; do not force landscape on mobile portrait.
-      rotation = isForcedPortrait ? 0 : -90;
+    if (isForcedPortrait) {
+      rotation = -90;
+    } else if (board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF") {
+      rotation = -90;
     } else if (isPortraitFull) {
       // Keep home side toward the bottom on full-pitch portrait views.
       rotation = -90;
     }
-    if (isPortraitFull && board.pitchRotation === 180) {
+    if (rotation !== 0 && board.pitchRotation === 180) {
       rotation += 180;
     }
     return rotation;
@@ -733,6 +972,11 @@ export default function BoardCanvas({
     () => boardSquads.all.flatMap((squad) => squad.players),
     [boardSquads]
   );
+  const squadPlayerById = useMemo(() => {
+    const map = new Map<string, (typeof squadPlayers)[number]>();
+    squadPlayers.forEach((player) => map.set(player.id, player));
+    return map;
+  }, [squadPlayers]);
   const kitByPlayerId = useMemo(() => {
     const map: Record<string, string> = {};
     boardSquads.all.forEach((squad) => {
@@ -808,6 +1052,53 @@ export default function BoardCanvas({
     });
     return map;
   }, [renderObjects]);
+  const finishLinkingPlayers = useCallback(() => {
+    if (!isLinkingPlayers) {
+      return;
+    }
+    if (linkingPlayerIds.length >= 2) {
+      const nextLinks = [
+        ...((activeFrame?.playerLinks ?? board.playerLinks) ?? []),
+        {
+          id: createId(),
+          playerIds: [...linkingPlayerIds],
+          style: {
+            stroke: "#f9bf4a",
+            strokeWidth: 0.65,
+            fill: "transparent",
+            dash: [],
+            opacity: 1,
+            outlineStroke: "#111111",
+          },
+        },
+      ];
+      const nextFrames = board.frames.map((frame, index) =>
+        index === frameIndex ? { ...frame, playerLinks: nextLinks } : frame
+      );
+      updateBoard(board.id, { frames: nextFrames });
+    }
+    setLinkingPlayers(false);
+    clearLinkingPlayers();
+  }, [
+    activeFrame?.playerLinks,
+    board,
+    clearLinkingPlayers,
+    frameIndex,
+    isLinkingPlayers,
+    linkingPlayerIds,
+    setLinkingPlayers,
+    updateBoard,
+  ]);
+  const latestLinkingPlayerPosition = useMemo(() => {
+    if (!isLinkingPlayers || linkingPlayerIds.length < 2) {
+      return null;
+    }
+    const latestId = linkingPlayerIds[linkingPlayerIds.length - 1];
+    if (!latestId) {
+      return null;
+    }
+    return playerPositions.get(latestId) ?? null;
+  }, [isLinkingPlayers, linkingPlayerIds, playerPositions]);
   const getThreeDDepthFactor = (y: number) => {
     if (!isThreeDView) {
       return 1;
@@ -824,12 +1115,12 @@ export default function BoardCanvas({
     size.width / effectiveWidth,
     size.height / effectiveHeight
   );
-  const stageScale = baseScale * lockedViewport.zoom;
-  // In 3D preview we leave extra headroom so the full pitch stays visible.
   const threeDNormalized = threeDStrength / 100;
   const threeDScaleFactor = 1 - threeDNormalized * 0.3;
-  const effectiveStageScale = stageScale * (isThreeDView ? threeDScaleFactor : 1);
-  const centeringScale = isThreeDView ? effectiveStageScale : baseScale;
+  const centeringStageScale = baseScale * lockedViewport.zoom;
+  const centeringEffectiveScale =
+    centeringStageScale * (isThreeDView ? threeDScaleFactor : 1);
+  const centeringScale = isThreeDView ? centeringEffectiveScale : baseScale;
   const baseOffsetX = forcePortrait
     ? -rotatedBounds.minX * centeringScale
     : (size.width - effectiveWidth * centeringScale) / 2 -
@@ -838,10 +1129,129 @@ export default function BoardCanvas({
   const baseOffsetY =
     (size.height - effectiveHeight * centeringScale) / 2 -
     rotatedBounds.minY * centeringScale;
+  const displayViewport = useMemo(() => {
+    const lastIndex = Math.max(0, board.frames.length - 1);
+    const isStoppedAtTimelineEnd =
+      !isPlaying &&
+      !loopPlayback &&
+      board.mode === "DYNAMIC" &&
+      board.frames.length > 0 &&
+      Math.floor(playheadFrame) >= lastIndex;
+    if (
+      board.mode !== "DYNAMIC" ||
+      (!isPlaying && !isStoppedAtTimelineEnd) ||
+      forcePortrait ||
+      isThreeDView ||
+      board.frames.length === 0
+    ) {
+      return lockedViewport;
+    }
+    const ZOOM_EFFECT_LEVEL = 1.8;
+    const fallback = { zoom: 1, offsetX: 0, offsetY: 0 };
+    const getFocusPoint = (item: DrawableObject) => {
+      if (item.type === "arrow" || item.type === "path") {
+        const points = item.points ?? [];
+        if (points.length < 2) {
+          return item.position;
+        }
+        let minX = item.position.x + points[0]!;
+        let maxX = minX;
+        let minY = item.position.y + points[1]!;
+        let maxY = minY;
+        for (let index = 2; index < points.length; index += 2) {
+          const x = item.position.x + (points[index] ?? 0);
+          const y = item.position.y + (points[index + 1] ?? 0);
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+        return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+      }
+      if (item.type === "circle") {
+        return item.position;
+      }
+      if (
+        item.type === "rect" ||
+        item.type === "triangle" ||
+        item.type === "goal" ||
+        item.type === "cone" ||
+        item.type === "pole" ||
+        item.type === "mannequin" ||
+        item.type === "text"
+      ) {
+        const height = item.type === "text" ? item.height ?? 1.2 : item.height;
+        return {
+          x: item.position.x + item.width / 2,
+          y: item.position.y + height / 2,
+        };
+      }
+      return item.position;
+    };
+    const toViewportForObject = (item: DrawableObject) => {
+      const focusPoint = getFocusPoint(item);
+      const displayedPoint =
+        viewRotation === 0
+          ? focusPoint
+          : rotatePointAround(focusPoint, rotationPivot, viewRotation);
+      return {
+        zoom: ZOOM_EFFECT_LEVEL,
+        offsetX:
+          size.width / 2 -
+          displayedPoint.x * baseScale * ZOOM_EFFECT_LEVEL -
+          baseOffsetX,
+        offsetY:
+          size.height / 2 -
+          displayedPoint.y * baseScale * ZOOM_EFFECT_LEVEL -
+          baseOffsetY,
+      };
+    };
+    const findZoomObject = (items: DrawableObject[]) =>
+      items.find((item) => item.animation === "zoom");
+    const baseIndex = Math.min(Math.floor(playheadFrame), lastIndex);
+    const baseObjects = board.frames[baseIndex]?.objects ?? [];
+    const baseZoomObject = findZoomObject(baseObjects);
+    if (!loopPlayback && baseIndex === lastIndex) {
+      return baseZoomObject ? toViewportForObject(baseZoomObject) : fallback;
+    }
+    const nextIndex = loopPlayback
+      ? (baseIndex + 1) % board.frames.length
+      : Math.min(baseIndex + 1, lastIndex);
+    const nextObjects = board.frames[nextIndex]?.objects ?? [];
+    const nextZoomObject = findZoomObject(nextObjects);
+    const tRaw = Math.max(0, Math.min(1, playheadFrame - baseIndex));
+    const t = tRaw * tRaw * (3 - 2 * tRaw);
+    const from = baseZoomObject ? toViewportForObject(baseZoomObject) : fallback;
+    const to = nextZoomObject ? toViewportForObject(nextZoomObject) : fallback;
+    return {
+      zoom: from.zoom + (to.zoom - from.zoom) * t,
+      offsetX: from.offsetX + (to.offsetX - from.offsetX) * t,
+      offsetY: from.offsetY + (to.offsetY - from.offsetY) * t,
+    };
+  }, [
+    baseOffsetX,
+    baseOffsetY,
+    baseScale,
+    board.frames,
+    board.mode,
+    forcePortrait,
+    isPlaying,
+    isThreeDView,
+    lockedViewport,
+    loopPlayback,
+    playheadFrame,
+    rotationPivot,
+    size.height,
+    size.width,
+    viewRotation,
+  ]);
+  const stageScale = baseScale * displayViewport.zoom;
+  const effectiveStageScale = stageScale * (isThreeDView ? threeDScaleFactor : 1);
 
   const {
     draft,
     marquee,
+    marqueeMode,
     isPanning,
     handleWheel,
     handleMouseDown,
@@ -858,13 +1268,13 @@ export default function BoardCanvas({
     frameIndex,
     objects,
     activeTool,
-    playerTokenSize,
+    playerTokenSize: effectivePlayerTokenSize,
     playerFill: defaultPlayerFill,
     readOnly: isCanvasReadOnly,
     baseOffsetX,
     baseOffsetY,
     baseScale,
-    viewport: lockedViewport,
+    viewport: displayViewport,
     rotation: viewRotation,
     rotationPivot,
     stageRef,
@@ -906,7 +1316,7 @@ export default function BoardCanvas({
         closestId = player.id;
       }
     });
-    const snapRadius = playerTokenSize + 3;
+    const snapRadius = effectivePlayerTokenSize + 3;
     if (closestId && closestDist <= snapRadius) {
       const player = players.find((item) => item.id === closestId);
       if (!player) {
@@ -915,8 +1325,8 @@ export default function BoardCanvas({
       const dx = position.x - player.position.x;
       const dy = position.y - player.position.y;
       const len = Math.hypot(dx, dy) || 1;
-      const ballRadius = Math.max(0.7, playerTokenSize * 0.52);
-      const offsetLen = playerTokenSize + ballRadius - 0.3;
+      const ballRadius = Math.max(0.7, effectivePlayerTokenSize * 0.52);
+      const offsetLen = effectivePlayerTokenSize + ballRadius - 0.3;
       const offset = {
         x: (dx / len) * offsetLen,
         y: (dy / len) * offsetLen,
@@ -995,8 +1405,362 @@ export default function BoardCanvas({
     window.addEventListener("pointerdown", handlePointerDown);
     return () => window.removeEventListener("pointerdown", handlePointerDown);
   }, [controlsMenuOpen]);
+  useEffect(() => {
+    setObjectActionMenuId(null);
+    setObjectListOpen(false);
+    setObjectListSearch("");
+    setObjectListFilter("all");
+    setObjectListStatus(null);
+  }, [board.id, frameIndex, selection]);
 
-  const getDeleteAnchor = (item: DrawableObject) => {
+  const getObjectFocusPoint = useCallback((item: DrawableObject) => {
+    if (item.type === "arrow" || item.type === "path") {
+      const points = item.points ?? [];
+      if (points.length < 2) {
+        return item.position;
+      }
+      let minX = item.position.x + points[0]!;
+      let maxX = minX;
+      let minY = item.position.y + points[1]!;
+      let maxY = minY;
+      for (let index = 2; index < points.length; index += 2) {
+        const x = item.position.x + (points[index] ?? 0);
+        const y = item.position.y + (points[index + 1] ?? 0);
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+      return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+    }
+    if (item.type === "circle") {
+      return item.position;
+    }
+    if (
+      item.type === "rect" ||
+      item.type === "triangle" ||
+      item.type === "goal" ||
+      item.type === "cone" ||
+      item.type === "pole" ||
+      item.type === "mannequin" ||
+      item.type === "text"
+    ) {
+      const height = item.type === "text" ? item.height ?? 1.2 : item.height;
+      return {
+        x: item.position.x + item.width / 2,
+        y: item.position.y + height / 2,
+      };
+    }
+    return item.position;
+  }, []);
+
+  const focusObject = useCallback(
+    (item: DrawableObject) => {
+      setSelection([item.id]);
+      setSelectedLinkId(null);
+      setObjectActionMenuId(null);
+      if (forcePortrait || isThreeDView || isCanvasReadOnly) {
+        return;
+      }
+      const zoom = displayViewport.zoom;
+      const focusPoint = getObjectFocusPoint(item);
+      const displayedPoint =
+        viewRotation === 0
+          ? focusPoint
+          : rotatePointAround(focusPoint, rotationPivot, viewRotation);
+      const nextOffsetX =
+        size.width / 2 - displayedPoint.x * baseScale * zoom - baseOffsetX;
+      const nextOffsetY =
+        size.height / 2 - displayedPoint.y * baseScale * zoom - baseOffsetY;
+      setViewportSafe({ offsetX: nextOffsetX, offsetY: nextOffsetY });
+    },
+    [
+      baseOffsetX,
+      baseOffsetY,
+      baseScale,
+      forcePortrait,
+      getObjectFocusPoint,
+      isCanvasReadOnly,
+      isThreeDView,
+      rotationPivot,
+      setSelectedLinkId,
+      setSelection,
+      setViewportSafe,
+      size.height,
+      size.width,
+      viewRotation,
+      displayViewport.zoom,
+    ]
+  );
+
+  const objectListEntries = useMemo(() => {
+    const typeLabel: Record<DrawableObject["type"], string> = {
+      player: "Player",
+      ball: "Ball",
+      cone: "Cone",
+      pole: "Pole",
+      mannequin: "Mannequin",
+      goal: "Mini goal",
+      circle: "Circle",
+      rect: "Rectangle",
+      triangle: "Triangle",
+      arrow: "Line",
+      text: "Text",
+      path: "Path",
+    };
+    return objects
+      .map((item, index) => {
+        let fallbackName = "";
+        if (item.type === "player") {
+          const squadPlayer = item.squadPlayerId
+            ? squadPlayerById.get(item.squadPlayerId)
+            : null;
+          fallbackName = squadPlayer?.name?.trim() || `#${index + 1}`;
+        } else if (item.type === "text") {
+          fallbackName = item.text.trim().slice(0, 36) || `#${index + 1}`;
+        } else {
+          fallbackName = `#${index + 1}`;
+        }
+        const displayName = (item.name?.trim() || fallbackName).trim();
+        const type = item.type;
+        const typeName = typeLabel[type];
+        return {
+          id: item.id,
+          type,
+          item,
+          fallbackName,
+          displayName,
+          label: `${typeName} ${displayName}`,
+          searchText: `${typeName} ${displayName}`.toLowerCase(),
+        };
+      })
+      .sort((a, b) => {
+        const za = a.item.zIndex ?? 0;
+        const zb = b.item.zIndex ?? 0;
+        if (za !== zb) {
+          return za - zb;
+        }
+        return a.label.localeCompare(b.label);
+      });
+  }, [objects, squadPlayerById]);
+
+  const renderObjectTypeIcon = (item: DrawableObject) => {
+    const stroke = item.style.stroke || "#111111";
+    const fill = item.style.fill || "#ffffff";
+    const commonSvgClass = "h-4 w-4";
+    if (item.type === "ball") {
+      return (
+        <img
+          src="/ball.svg"
+          alt=""
+          aria-hidden
+          className={commonSvgClass}
+          draggable={false}
+        />
+      );
+    }
+    if (item.type === "goal") {
+      return (
+        <img
+          src="/goal.svg"
+          alt=""
+          aria-hidden
+          className={commonSvgClass}
+          draggable={false}
+        />
+      );
+    }
+    if (item.type === "player") {
+      const playerFill = item.squadPlayerId
+        ? kitByPlayerId[item.squadPlayerId] ?? item.style.fill
+        : item.style.fill === "#f9bf4a"
+          ? defaultPlayerFill
+          : item.style.fill;
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="8" fill={playerFill || fill} />
+        </svg>
+      );
+    }
+    if (item.type === "cone") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M2.5 18.5 9 7.8h6L21.5 18.5z" fill={fill} />
+          <ellipse cx="12" cy="8.1" rx="3.2" ry="1.2" fill={fill} />
+        </svg>
+      );
+    }
+    if (item.type === "pole") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <ellipse cx="12" cy="19" rx="5.8" ry="2.8" fill={fill} />
+          <rect x="10.9" y="4" width="2.2" height="13" rx="1.1" fill={fill} />
+        </svg>
+      );
+    }
+    if (item.type === "mannequin") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="5.5" r="2.8" fill={fill} />
+          <path d="M7.2 10c0-1.5 1-2.8 2.5-2.8h4.6c1.5 0 2.5 1.3 2.5 2.8l-1.8 4.8V19H9v-4.2z" fill={fill} />
+          <path d="M7.2 20h9.6" />
+        </svg>
+      );
+    }
+    if (item.type === "circle") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+        >
+          <circle cx="12" cy="12" r="8" fill={fill} />
+        </svg>
+      );
+    }
+    if (item.type === "rect") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+        >
+          <rect x="4" y="6" width="16" height="12" rx="1.8" fill={fill} />
+        </svg>
+      );
+    }
+    if (item.type === "triangle") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 5 20 19H4z" fill={fill} />
+        </svg>
+      );
+    }
+    if (item.type === "arrow" || item.type === "path") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M4 16c4-8 8-8 14-8" />
+          {item.type === "arrow" ? <path d="M14 6l4 2-2 4" /> : null}
+        </svg>
+      );
+    }
+    if (item.type === "text") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M5 6h14M12 6v12M8 18h8" />
+        </svg>
+      );
+    }
+    return null;
+  };
+
+  const filteredObjectListEntries = useMemo(() => {
+    const query = objectListSearch.trim().toLowerCase();
+    return objectListEntries.filter((entry) => {
+      if (objectListFilter !== "all" && entry.type !== objectListFilter) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      return entry.searchText.includes(query);
+    });
+  }, [objectListEntries, objectListFilter, objectListSearch]);
+
+  const renameObjectFromList = useCallback(
+    (item: DrawableObject, currentName: string) => {
+      const input = window.prompt("Object name", currentName) ?? "";
+      const nextName = input.trim();
+      if (!nextName) {
+        setObjectListStatus("Name cannot be empty.");
+        return;
+      }
+      const normalized = nextName.toLocaleLowerCase();
+      const duplicate = objects.some(
+        (entry) =>
+          entry.id !== item.id &&
+          (entry.name?.trim() || "").toLocaleLowerCase() === normalized
+      );
+      if (duplicate) {
+        setObjectListStatus("Name already exists. Use a unique object name.");
+        return;
+      }
+      updateObject(board.id, frameIndex, item.id, { name: nextName });
+      setObjectListStatus(`Renamed to "${nextName}".`);
+    },
+    [board.id, frameIndex, objects, updateObject]
+  );
+
+  const getObjectActionAnchor = (item: DrawableObject) => {
     const fallback = { x: item.position.x, y: item.position.y };
     if (item.type === "arrow" || item.type === "path") {
       const points = item.points ?? [];
@@ -1022,25 +1786,27 @@ export default function BoardCanvas({
     }
     if (item.type === "player" || item.type === "ball") {
       return {
-        x: item.position.x + playerTokenSize,
-        y: item.position.y - playerTokenSize,
+        x: item.position.x + effectivePlayerTokenSize,
+        y: item.position.y - effectivePlayerTokenSize,
       };
     }
     if (
       item.type === "rect" ||
       item.type === "triangle" ||
       item.type === "goal" ||
-      item.type === "cone"
+      item.type === "cone" ||
+      item.type === "pole" ||
+      item.type === "mannequin"
     ) {
       return {
         x: item.position.x + item.width,
-        y: item.position.y - 1.5,
+        y: item.position.y,
       };
     }
     if (item.type === "text") {
       return {
         x: item.position.x + item.width,
-        y: item.position.y - 1.5,
+        y: item.position.y,
       };
     }
     return fallback;
@@ -1104,6 +1870,30 @@ export default function BoardCanvas({
                   <path d="M4 12a8 8 0 0 0 14 5" />
                 </svg>
                 <span>Reset view</span>
+              </button>
+              <button
+                className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 text-left text-xs text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => {
+                  setObjectListOpen(true);
+                  setControlsMenuOpen(false);
+                }}
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M8 6h12M8 12h12M8 18h12" />
+                  <circle cx="4" cy="6" r="1.25" />
+                  <circle cx="4" cy="12" r="1.25" />
+                  <circle cx="4" cy="18" r="1.25" />
+                </svg>
+                <span>Object list ({objects.length})</span>
               </button>
               <button
                 className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 text-left text-xs text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
@@ -1196,6 +1986,117 @@ export default function BoardCanvas({
           )}
         </div>
       )}
+      {objectListOpen ? (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 px-4 py-6">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 shadow-xl shadow-black/40">
+            <div className="mb-2 flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-[var(--accent-0)]">
+                  Current Frame Objects
+                </p>
+                <p className="text-[11px] text-[var(--ink-1)]">
+                  Select an object to focus and highlight it on the pitch.
+                </p>
+              </div>
+              <button
+                className="rounded-full border border-[var(--line)] px-2 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                onClick={() => {
+                  setObjectListOpen(false);
+                  setObjectListSearch("");
+                  setObjectListFilter("all");
+                  setObjectListStatus(null);
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <div className="mb-2 grid grid-cols-[minmax(0,1fr)_120px] gap-2">
+              <input
+                className="h-8 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                placeholder="Search objects"
+                value={objectListSearch}
+                onChange={(event) => setObjectListSearch(event.target.value)}
+              />
+              <select
+                className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                value={objectListFilter}
+                onChange={(event) =>
+                  setObjectListFilter(
+                    event.target.value as "all" | DrawableObject["type"]
+                  )
+                }
+              >
+                <option value="all">All types</option>
+                <option value="player">Player</option>
+                <option value="ball">Ball</option>
+                <option value="cone">Cone</option>
+                <option value="pole">Pole</option>
+                <option value="mannequin">Mannequin</option>
+                <option value="goal">Mini goal</option>
+                <option value="circle">Circle</option>
+                <option value="rect">Rectangle</option>
+                <option value="triangle">Triangle</option>
+                <option value="arrow">Line/Arrow</option>
+                <option value="text">Text</option>
+                <option value="path">Path</option>
+              </select>
+            </div>
+            {objectListStatus ? (
+              <p className="mb-2 text-[11px] text-[var(--accent-1)]">
+                {objectListStatus}
+              </p>
+            ) : null}
+            <div className="max-h-[55vh] space-y-1 overflow-y-auto pr-1" data-scrollable>
+              {filteredObjectListEntries.length === 0 ? (
+                <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 text-xs text-[var(--ink-1)]">
+                  No matching objects.
+                </p>
+              ) : (
+                filteredObjectListEntries.map((entry) => {
+                  const isActive = selection.includes(entry.id);
+                  return (
+                    <div
+                      key={entry.id}
+                      className={`flex items-center gap-2 rounded-xl border px-2 py-2 transition ${
+                        isActive
+                          ? "border-[var(--accent-0)] bg-[var(--panel-2)]"
+                          : "border-[var(--line)] bg-[var(--panel)]"
+                      }`}
+                    >
+                      <button
+                        className={`min-w-0 flex-1 rounded-lg px-2 py-1 text-left text-xs ${
+                          isActive
+                            ? "text-[var(--ink-0)]"
+                            : "text-[var(--ink-1)] hover:text-[var(--ink-0)]"
+                        }`}
+                        onClick={() => {
+                          focusObject(entry.item);
+                          setObjectListOpen(false);
+                        }}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <span className="text-[var(--accent-0)]">
+                            {renderObjectTypeIcon(entry.item)}
+                          </span>
+                          <span className="truncate">{entry.displayName}</span>
+                        </span>
+                      </button>
+                      <button
+                        className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        onClick={() =>
+                          renameObjectFromList(entry.item, entry.displayName)
+                        }
+                      >
+                        Rename
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div
         className="h-full w-full"
         style={
@@ -1214,8 +2115,8 @@ export default function BoardCanvas({
           height={size.height}
           scaleX={effectiveStageScale}
           scaleY={effectiveStageScale}
-          x={baseOffsetX + threeDOffsetX + lockedViewport.offsetX}
-          y={baseOffsetY + lockedViewport.offsetY}
+          x={baseOffsetX + threeDOffsetX + displayViewport.offsetX}
+          y={baseOffsetY + displayViewport.offsetY}
           draggable={
             isPanning &&
             !forcePortrait &&
@@ -1294,15 +2195,6 @@ export default function BoardCanvas({
                       "rgba(150,236,255,0)",
                     ]}
                   />
-                  <Circle
-                    x={aura.x}
-                    y={aura.y}
-                    radius={radius * (1.03 + aura.strength * 0.08)}
-                    stroke="#e7f7ff"
-                    strokeWidth={0.18 + aura.strength * 0.2}
-                    opacity={0.5 + aura.strength * 0.4}
-                    dash={[0.55, 0.36]}
-                  />
                   <Line
                     points={[aura.x - spikeIn, aura.y, aura.x - spikeOut, aura.y]}
                     stroke="#bdeeff"
@@ -1349,7 +2241,7 @@ export default function BoardCanvas({
                 kitByPlayerId={kitByPlayerId}
                 vestByPlayerId={vestByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}
-                playerTokenSize={playerTokenSize}
+                playerTokenSize={effectivePlayerTokenSize}
                 showPlayerName={board.playerLabel?.showName ?? true}
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
@@ -1398,6 +2290,10 @@ export default function BoardCanvas({
                 points.reduce((sum, point) => sum + point.y, 0) / points.length;
               const depthFactor = getThreeDDepthFactor(avgY);
               const depthStrokeWidth = Math.max(0.05, strokeWidth * depthFactor);
+              const lineHitStrokeWidth = Math.max(
+                depthStrokeWidth,
+                isMobileViewport ? 4.2 : 2.2
+              );
               const outlineWidth = getLineOutlineWidth(depthStrokeWidth);
               const outlineStroke = style.outlineStroke;
               const depthRange = Math.max(0.001, bounds.height);
@@ -1422,6 +2318,7 @@ export default function BoardCanvas({
                     points={points.flatMap((point) => [point.x, point.y])}
                     stroke={style.stroke}
                     strokeWidth={depthStrokeWidth}
+                    hitStrokeWidth={lineHitStrokeWidth}
                     opacity={style.opacity}
                     lineCap="round"
                     lineJoin="round"
@@ -1459,7 +2356,7 @@ export default function BoardCanvas({
                 kitByPlayerId={kitByPlayerId}
                 vestByPlayerId={vestByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}
-                playerTokenSize={playerTokenSize}
+                playerTokenSize={effectivePlayerTokenSize}
                 showPlayerName={board.playerLabel?.showName ?? true}
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}
                 showPlayerNumber={board.playerLabel?.showNumber ?? false}
@@ -1489,26 +2386,30 @@ export default function BoardCanvas({
             ))}
             {selectedArrows.map((arrow) => {
               const start = arrow.position;
+              const endLocal = {
+                x: (arrow as { points: number[] }).points[2],
+                y: (arrow as { points: number[] }).points[3],
+              };
               const end = {
-                x: arrow.position.x + (arrow as { points: number[] }).points[2],
-                y: arrow.position.y + (arrow as { points: number[] }).points[3],
+                x: arrow.position.x + endLocal.x,
+                y: arrow.position.y + endLocal.y,
               };
               const control = arrow.curved
                 ? arrow.control ?? {
-                    x: (arrow as { points: number[] }).points[2] / 2,
-                    y: (arrow as { points: number[] }).points[3] / 2,
+                    x: endLocal.x / 2,
+                    y: endLocal.y / 2,
                   }
                 : null;
               const controlWorld = control
                 ? (() => {
                     const cp1 = { x: (2 * control.x) / 3, y: (2 * control.y) / 3 };
                     const cp2 = {
-                      x: (end.x + 2 * control.x) / 3,
-                      y: (end.y + 2 * control.y) / 3,
+                      x: (endLocal.x + 2 * control.x) / 3,
+                      y: (endLocal.y + 2 * control.y) / 3,
                     };
                     const mid = {
-                      x: (3 * cp1.x + 3 * cp2.x + end.x) / 8,
-                      y: (3 * cp1.y + 3 * cp2.y + end.y) / 8,
+                      x: (3 * cp1.x + 3 * cp2.x + endLocal.x) / 8,
+                      y: (3 * cp1.y + 3 * cp2.y + endLocal.y) / 8,
                     };
                     return {
                       x: arrow.position.x + mid.x,
@@ -1522,10 +2423,11 @@ export default function BoardCanvas({
                   <Circle
                     x={start.x}
                     y={start.y}
-                    radius={0.7}
+                    radius={transformHandleRadius}
                     fill="#ffffff"
                     stroke="#0f1b1a"
                     strokeWidth={0.15}
+                    hitStrokeWidth={transformHandleHitStrokeWidth}
                     draggable={!locked}
                     onDragStart={() => pushHistory(clone(objects))}
                     onDragEnd={(event) => {
@@ -1556,10 +2458,11 @@ export default function BoardCanvas({
                   <Circle
                     x={end.x}
                     y={end.y}
-                    radius={0.7}
+                    radius={transformHandleRadius}
                     fill="#ffffff"
                     stroke="#0f1b1a"
                     strokeWidth={0.15}
+                    hitStrokeWidth={transformHandleHitStrokeWidth}
                     draggable={!locked}
                     onDragStart={() => pushHistory(clone(objects))}
                     onDragEnd={(event) => {
@@ -1582,10 +2485,11 @@ export default function BoardCanvas({
                     <Circle
                       x={controlWorld.x}
                       y={controlWorld.y}
-                      radius={0.7}
+                      radius={transformHandleRadius}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!locked}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
@@ -1594,8 +2498,8 @@ export default function BoardCanvas({
                           y: event.target.y() - start.y,
                         };
                         const next = {
-                          x: 2 * localMid.x - end.x / 2,
-                          y: 2 * localMid.y - end.y / 2,
+                          x: 2 * localMid.x - endLocal.x / 2,
+                          y: 2 * localMid.y - endLocal.y / 2,
                         };
                         updateObject(board.id, frameIndex, arrow.id, {
                           control: next,
@@ -1641,10 +2545,11 @@ export default function BoardCanvas({
                     <Circle
                       x={control.x}
                       y={control.y}
-                      radius={0.7}
+                      radius={transformHandleRadius}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!player.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
@@ -1692,75 +2597,84 @@ export default function BoardCanvas({
                       scaleY={item.scale.y}
                     >
                       <Line
-                        points={[0, 0, 0, -radius - 2]}
+                        points={[0, 0, -radius, -radius]}
                         stroke="rgba(255,255,255,0.5)"
                         strokeWidth={0.2}
                         dash={[0.6, 0.6]}
                         listening={false}
                       />
                       <Circle
-                        x={0}
-                        y={-radius - 2}
-                        radius={0.7}
+                        x={-radius}
+                        y={-radius}
+                        radius={transformHandleRadius}
                         fill="#ffffff"
                         stroke="#0f1b1a"
                         strokeWidth={0.15}
+                        hitStrokeWidth={transformHandleHitStrokeWidth}
                         draggable={!item.locked}
                         onMouseDown={(event) => {
                           event.cancelBubble = true;
                         }}
                         onDragStart={() => pushHistory(clone(objects))}
                         onDragMove={(event) => {
-                          const localX = event.target.x() / item.scale.x;
-                          const localY = event.target.y() / item.scale.y;
-                          const angle =
-                            (Math.atan2(localY, localX) * 180) / Math.PI - 90;
+                          const rawAngle =
+                            getRawRotationAngleFromPointer(event, {
+                              x: 0,
+                              y: 0,
+                            }) ?? item.rotation;
+                          const snapKey = `${item.id}:rotate`;
+                          const angle = event.evt?.altKey
+                            ? rawAngle
+                            : getStableSnappedRotation(rawAngle, snapKey);
+                          if (event.evt?.altKey) {
+                            clearRotationSnapState(snapKey);
+                          }
                           updateObject(board.id, frameIndex, item.id, {
                             rotation: angle,
                           });
-                          event.target.position({
-                            x: 0,
-                            y: (-radius - 2) * item.scale.y,
-                          });
                         }}
                         onDragEnd={(event) => {
+                          clearRotationSnapState(`${item.id}:rotate`);
                           event.target.position({
-                            x: 0,
-                            y: (-radius - 2) * item.scale.y,
+                            x: -radius * item.scale.x,
+                            y: -radius * item.scale.y,
                           });
                         }}
                       />
                       <Circle
                         x={radius}
                         y={radius}
-                        radius={0.7}
+                        radius={transformHandleRadius}
                         fill="#ffffff"
                         stroke="#0f1b1a"
                         strokeWidth={0.15}
+                        hitStrokeWidth={transformHandleHitStrokeWidth}
                         draggable={!item.locked}
                         onMouseDown={(event) => {
                           event.cancelBubble = true;
                         }}
                         onDragStart={() => pushHistory(clone(objects))}
                         onDragMove={(event) => {
-                          const stage = event.target.getStage();
-                          const parent = event.target.getParent();
-                          const pointer = stage?.getPointerPosition();
-                          if (!pointer || !parent) {
-                            return;
-                          }
-                          const localPoint = parent
-                            .getAbsoluteTransform()
-                            .copy()
-                            .invert()
-                            .point(pointer);
-                          let localX = Math.abs(localPoint.x);
-                          let localY = Math.abs(localPoint.y);
+                          let localX = Math.max(
+                            minSize,
+                            Math.abs(event.target.x())
+                          );
+                          let localY = Math.max(
+                            minSize,
+                            Math.abs(event.target.y())
+                          );
                           const constrained = event.evt?.shiftKey;
+                          const allowFreeSize = !!event.evt?.altKey;
                           if (constrained) {
                             const snapSize = Math.max(localX, localY);
-                            localX = snapSize;
-                            localY = snapSize;
+                            const nextSize = allowFreeSize
+                              ? snapSize
+                              : snapSizeValue(snapSize, minSize);
+                            localX = nextSize;
+                            localY = nextSize;
+                          } else if (!allowFreeSize) {
+                            localX = snapSizeValue(localX, minSize);
+                            localY = snapSizeValue(localY, minSize);
                           }
                           const nextSize = Math.max(localX, localY);
                           const nextRadius = Math.max(minSize, nextSize);
@@ -1775,34 +2689,43 @@ export default function BoardCanvas({
                             radius: nextRadius,
                             scale: nextScale,
                           });
-                          event.target.position({ x: localX, y: localY });
+                          event.target.position({
+                            x: localX,
+                            y: localY,
+                          });
                         }}
                         onDragEnd={(event) => {
-                          const stage = event.target.getStage();
-                          const parent = event.target.getParent();
-                          const pointer = stage?.getPointerPosition();
-                          if (!pointer || !parent) {
-                            return;
-                          }
-                          const localPoint = parent
-                            .getAbsoluteTransform()
-                            .copy()
-                            .invert()
-                            .point(pointer);
-                          const localX = Math.abs(localPoint.x);
-                          const localY = Math.abs(localPoint.y);
-                          const size = Math.max(localX, localY);
-                          const ratio = size > 0 ? Math.abs(localX - localY) / size : 0;
-                          if (ratio <= 0.08) {
-                            const snapSize = Math.max(minSize, size);
-                            updateObject(board.id, frameIndex, item.id, {
-                              radius: snapSize,
-                              scale: { x: 1, y: 1 },
-                            });
-                            event.target.position({ x: snapSize, y: snapSize });
-                            return;
-                          }
-                          event.target.position({ x: localX, y: localY });
+                          const allowFreeSize = !!event.evt?.altKey;
+                          const localX = allowFreeSize
+                            ? Math.max(minSize, Math.abs(event.target.x()))
+                            : snapSizeValue(
+                                Math.max(minSize, Math.abs(event.target.x())),
+                                minSize
+                              );
+                          const localY = allowFreeSize
+                            ? Math.max(minSize, Math.abs(event.target.y()))
+                            : snapSizeValue(
+                                Math.max(minSize, Math.abs(event.target.y())),
+                                minSize
+                              );
+                          const constrained = !!event.evt?.shiftKey;
+                          const nextSize = Math.max(localX, localY);
+                          const nextRadius = Math.max(minSize, nextSize);
+                          const minScale = 0.2;
+                          const nextScale = constrained
+                            ? { x: 1, y: 1 }
+                            : {
+                                x: Math.max(minScale, localX / nextRadius),
+                                y: Math.max(minScale, localY / nextRadius),
+                              };
+                          updateObject(board.id, frameIndex, item.id, {
+                            radius: nextRadius,
+                            scale: nextScale,
+                          });
+                          event.target.position({
+                            x: localX,
+                            y: localY,
+                          });
                         }}
                       />
                     </Group>
@@ -1812,8 +2735,10 @@ export default function BoardCanvas({
                 const height = "height" in item ? item.height ?? 0 : 0;
                 const scaleX = item.scale.x || 1;
                 const scaleY = item.scale.y || 1;
-                const handleOffset = Math.max(width, height) * 0.6 + 1.5;
-                const rotateHandle = { x: width / 2, y: -handleOffset };
+                const rotateHandle = {
+                  x: -transformHandleHalf,
+                  y: -transformHandleHalf,
+                };
                 const center = { x: width / 2, y: height / 2 };
                 return (
                   <Group
@@ -1839,32 +2764,41 @@ export default function BoardCanvas({
                     <Circle
                       x={rotateHandle.x}
                       y={rotateHandle.y}
-                      radius={0.7}
+                      radius={transformHandleRadius}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!item.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
                       }}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
-                        const localX = event.target.x() / scaleX;
-                        const localY = event.target.y() / scaleY;
-                        const angle =
-                          (Math.atan2(localY - center.y, localX - center.x) *
-                            180) /
-                            Math.PI +
-                          90;
+                        const rawAngle =
+                          getRawRotationAngleFromPointer(event, center) ??
+                          item.rotation;
+                        const snapKey = `${item.id}:rotate`;
+                        const angle = event.evt?.altKey
+                          ? rawAngle
+                          : getStableSnappedRotation(rawAngle, snapKey);
+                        if (event.evt?.altKey) {
+                          clearRotationSnapState(snapKey);
+                        }
+                        const nextPosition = getCenterAnchoredPositionForRotation({
+                          position: item.position,
+                          center,
+                          scale: { x: scaleX, y: scaleY },
+                          fromAngle: item.rotation,
+                          toAngle: angle,
+                        });
                         updateObject(board.id, frameIndex, item.id, {
                           rotation: angle,
-                        });
-                        event.target.position({
-                          x: rotateHandle.x * scaleX,
-                          y: rotateHandle.y * scaleY,
+                          position: nextPosition,
                         });
                       }}
                       onDragEnd={(event) => {
+                        clearRotationSnapState(`${item.id}:rotate`);
                         event.target.position({
                           x: rotateHandle.x * scaleX,
                           y: rotateHandle.y * scaleY,
@@ -1872,40 +2806,74 @@ export default function BoardCanvas({
                       }}
                     />
                     <Rect
-                      x={width - 0.8}
-                      y={height - 0.8}
-                      width={1.6}
-                      height={1.6}
+                      x={width - transformHandleHalf}
+                      y={height - transformHandleHalf}
+                      width={transformHandleSize}
+                      height={transformHandleSize}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
-                      cornerRadius={0.2}
+                      cornerRadius={0.2 * mobileTransformScale}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!item.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
                       }}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
-                        const localX = Math.max(
+                        const allowFreeSize = !!event.evt?.altKey;
+                        const baseX = Math.max(
                           minSize,
                           event.target.x() / scaleX
                         );
-                        const localY = Math.max(
+                        const baseY = Math.max(
                           minSize,
                           event.target.y() / scaleY
                         );
                         const constrained = event.evt?.shiftKey;
-                        const size = Math.max(localX, localY);
-                        updateObject(board.id, frameIndex, item.id, {
-                          width: constrained ? size : localX,
-                          height: constrained ? size : localY,
-                        });
+                        const localX = allowFreeSize
+                          ? baseX
+                          : snapSizeValue(baseX, minSize);
+                        const localY = allowFreeSize
+                          ? baseY
+                          : snapSizeValue(baseY, minSize);
+                        let nextWidth = localX;
+                        let nextHeight = localY;
                         if (constrained) {
-                          event.target.position({
-                            x: size * scaleX,
-                            y: size * scaleY,
-                          });
+                          const baseWidth = Math.max(minSize, width);
+                          const baseHeight = Math.max(minSize, height);
+                          const proportional = getProportionalDimensions(
+                            localX,
+                            localY,
+                            baseWidth,
+                            baseHeight
+                          );
+                          if (allowFreeSize) {
+                            nextWidth = proportional.width;
+                            nextHeight = proportional.height;
+                          } else {
+                            const dominantBase = Math.max(baseWidth, baseHeight);
+                            const dominantNext = Math.max(
+                              proportional.width,
+                              proportional.height
+                            );
+                            const snappedDominant = snapSizeValue(
+                              dominantNext,
+                              dominantBase
+                            );
+                            const factor = snappedDominant / dominantBase;
+                            nextWidth = baseWidth * factor;
+                            nextHeight = baseHeight * factor;
+                          }
                         }
+                        updateObject(board.id, frameIndex, item.id, {
+                          width: nextWidth,
+                          height: nextHeight,
+                        });
+                        event.target.position({
+                          x: nextWidth * scaleX,
+                          y: nextHeight * scaleY,
+                        });
                       }}
                     />
                   </Group>
@@ -1924,8 +2892,10 @@ export default function BoardCanvas({
                   (label.text.split("\n").length || 1) * label.fontSize * 1.4;
                 const scaleX = label.scale.x || 1;
                 const scaleY = label.scale.y || 1;
-                const handleOffset = Math.max(width, height) * 0.6 + 1.5;
-                const rotateHandle = { x: width / 2, y: -handleOffset };
+                const rotateHandle = {
+                  x: -transformHandleHalf,
+                  y: -transformHandleHalf,
+                };
                 const center = { x: width / 2, y: height / 2 };
                 return (
                   <Group
@@ -1951,10 +2921,11 @@ export default function BoardCanvas({
                     <Circle
                       x={rotateHandle.x}
                       y={rotateHandle.y}
-                      radius={0.7}
+                      radius={transformHandleRadius}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!label.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
@@ -1970,7 +2941,7 @@ export default function BoardCanvas({
                         const centerPoint = parent
                           .getAbsoluteTransform()
                           .point(center);
-                        const angle =
+                        const rawAngle =
                           (Math.atan2(
                             pointer.y - centerPoint.y,
                             pointer.x - centerPoint.x
@@ -1978,11 +2949,27 @@ export default function BoardCanvas({
                             180) /
                             Math.PI +
                           90;
+                        const snapKey = `${label.id}:rotate`;
+                        const angle = event.evt?.altKey
+                          ? rawAngle
+                          : getStableSnappedRotation(rawAngle, snapKey);
+                        if (event.evt?.altKey) {
+                          clearRotationSnapState(snapKey);
+                        }
+                        const nextPosition = getCenterAnchoredPositionForRotation({
+                          position: label.position,
+                          center,
+                          scale: { x: scaleX, y: scaleY },
+                          fromAngle: label.rotation,
+                          toAngle: angle,
+                        });
                         updateObject(board.id, frameIndex, label.id, {
                           rotation: angle,
+                          position: nextPosition,
                         });
                       }}
                       onDragEnd={(event) => {
+                        clearRotationSnapState(`${label.id}:rotate`);
                         event.target.position({
                           x: rotateHandle.x * scaleX,
                           y: rotateHandle.y * scaleY,
@@ -1998,31 +2985,73 @@ export default function BoardCanvas({
                       listening={false}
                     />
                     <Rect
-                      x={width - 0.8}
-                      y={height - 0.8}
-                      width={1.6}
-                      height={1.6}
+                      x={width - transformHandleHalf}
+                      y={height - transformHandleHalf}
+                      width={transformHandleSize}
+                      height={transformHandleSize}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
-                      cornerRadius={0.2}
+                      cornerRadius={0.2 * mobileTransformScale}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!label.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
                       }}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
-                        const localX = Math.max(
+                        const allowFreeSize = !!event.evt?.altKey;
+                        const baseX = Math.max(
                           minSize,
                           event.target.x() / scaleX
                         );
-                        const localY = Math.max(
+                        const baseY = Math.max(
                           minSize,
                           event.target.y() / scaleY
                         );
+                        const localX = allowFreeSize
+                          ? baseX
+                          : snapSizeValue(baseX, minSize);
+                        const localY = allowFreeSize
+                          ? baseY
+                          : snapSizeValue(baseY, minSize);
+                        const constrained = !!event.evt?.shiftKey;
+                        let nextWidth = localX;
+                        let nextHeight = localY;
+                        if (constrained) {
+                          const baseWidth = Math.max(minSize, width);
+                          const baseHeight = Math.max(minSize, height);
+                          const proportional = getProportionalDimensions(
+                            localX,
+                            localY,
+                            baseWidth,
+                            baseHeight
+                          );
+                          if (allowFreeSize) {
+                            nextWidth = proportional.width;
+                            nextHeight = proportional.height;
+                          } else {
+                            const dominantBase = Math.max(baseWidth, baseHeight);
+                            const dominantNext = Math.max(
+                              proportional.width,
+                              proportional.height
+                            );
+                            const snappedDominant = snapSizeValue(
+                              dominantNext,
+                              dominantBase
+                            );
+                            const factor = snappedDominant / dominantBase;
+                            nextWidth = baseWidth * factor;
+                            nextHeight = baseHeight * factor;
+                          }
+                        }
                         updateObject(board.id, frameIndex, label.id, {
-                          width: localX,
-                          height: localY,
+                          width: nextWidth,
+                          height: nextHeight,
+                        });
+                        event.target.position({
+                          x: nextWidth * scaleX,
+                          y: nextHeight * scaleY,
                         });
                       }}
                     />
@@ -2033,15 +3062,22 @@ export default function BoardCanvas({
               .filter(
                 (item) =>
                   selection.includes(item.id) &&
-                  (item.type === "cone" || item.type === "goal")
+                  (
+                    item.type === "cone" ||
+                    item.type === "goal" ||
+                    item.type === "pole" ||
+                    item.type === "mannequin"
+                  )
               )
               .map((item) => {
                 const width = "width" in item ? item.width : 0;
                 const height = "height" in item ? item.height ?? 0 : 0;
                 const scaleX = item.scale.x || 1;
                 const scaleY = item.scale.y || 1;
-                const handleOffset = Math.max(width, height) * 0.6 + 1.5;
-                const rotateHandle = { x: width / 2, y: -handleOffset };
+                const rotateHandle = {
+                  x: -transformHandleHalf,
+                  y: -transformHandleHalf,
+                };
                 const center = { x: width / 2, y: height / 2 };
                 const minSize = 2;
                 return (
@@ -2068,32 +3104,41 @@ export default function BoardCanvas({
                     <Circle
                       x={rotateHandle.x}
                       y={rotateHandle.y}
-                      radius={0.7}
+                      radius={transformHandleRadius}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!item.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
                       }}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
-                        const localX = event.target.x() / scaleX;
-                        const localY = event.target.y() / scaleY;
-                        const angle =
-                          (Math.atan2(localY - center.y, localX - center.x) *
-                            180) /
-                            Math.PI +
-                          90;
+                        const rawAngle =
+                          getRawRotationAngleFromPointer(event, center) ??
+                          item.rotation;
+                        const snapKey = `${item.id}:rotate`;
+                        const angle = event.evt?.altKey
+                          ? rawAngle
+                          : getStableSnappedRotation(rawAngle, snapKey);
+                        if (event.evt?.altKey) {
+                          clearRotationSnapState(snapKey);
+                        }
+                        const nextPosition = getCenterAnchoredPositionForRotation({
+                          position: item.position,
+                          center,
+                          scale: { x: scaleX, y: scaleY },
+                          fromAngle: item.rotation,
+                          toAngle: angle,
+                        });
                         updateObject(board.id, frameIndex, item.id, {
                           rotation: angle,
-                        });
-                        event.target.position({
-                          x: rotateHandle.x * scaleX,
-                          y: rotateHandle.y * scaleY,
+                          position: nextPosition,
                         });
                       }}
                       onDragEnd={(event) => {
+                        clearRotationSnapState(`${item.id}:rotate`);
                         event.target.position({
                           x: rotateHandle.x * scaleX,
                           y: rotateHandle.y * scaleY,
@@ -2101,31 +3146,73 @@ export default function BoardCanvas({
                       }}
                     />
                     <Rect
-                      x={width - 0.8}
-                      y={height - 0.8}
-                      width={1.6}
-                      height={1.6}
+                      x={width - transformHandleHalf}
+                      y={height - transformHandleHalf}
+                      width={transformHandleSize}
+                      height={transformHandleSize}
                       fill="#ffffff"
                       stroke="#0f1b1a"
                       strokeWidth={0.15}
-                      cornerRadius={0.2}
+                      cornerRadius={0.2 * mobileTransformScale}
+                      hitStrokeWidth={transformHandleHitStrokeWidth}
                       draggable={!item.locked}
                       onMouseDown={(event) => {
                         event.cancelBubble = true;
                       }}
                       onDragStart={() => pushHistory(clone(objects))}
                       onDragMove={(event) => {
-                        const localX = Math.max(
+                        const allowFreeSize = !!event.evt?.altKey;
+                        const baseX = Math.max(
                           minSize,
                           event.target.x() / scaleX
                         );
-                        const localY = Math.max(
+                        const baseY = Math.max(
                           minSize,
                           event.target.y() / scaleY
                         );
+                        const localX = allowFreeSize
+                          ? baseX
+                          : snapSizeValue(baseX, minSize);
+                        const localY = allowFreeSize
+                          ? baseY
+                          : snapSizeValue(baseY, minSize);
+                        const constrained = !!event.evt?.shiftKey;
+                        let nextWidth = localX;
+                        let nextHeight = localY;
+                        if (constrained) {
+                          const baseWidth = Math.max(minSize, width);
+                          const baseHeight = Math.max(minSize, height);
+                          const proportional = getProportionalDimensions(
+                            localX,
+                            localY,
+                            baseWidth,
+                            baseHeight
+                          );
+                          if (allowFreeSize) {
+                            nextWidth = proportional.width;
+                            nextHeight = proportional.height;
+                          } else {
+                            const dominantBase = Math.max(baseWidth, baseHeight);
+                            const dominantNext = Math.max(
+                              proportional.width,
+                              proportional.height
+                            );
+                            const snappedDominant = snapSizeValue(
+                              dominantNext,
+                              dominantBase
+                            );
+                            const factor = snappedDominant / dominantBase;
+                            nextWidth = baseWidth * factor;
+                            nextHeight = baseHeight * factor;
+                          }
+                        }
                         updateObject(board.id, frameIndex, item.id, {
-                          width: localX,
-                          height: localY,
+                          width: nextWidth,
+                          height: nextHeight,
+                        });
+                        event.target.position({
+                          x: nextWidth * scaleX,
+                          y: nextHeight * scaleY,
                         });
                       }}
                     />
@@ -2143,75 +3230,72 @@ export default function BoardCanvas({
                 return null;
               }
               const shouldLock = !selectedItems.every((item) => item.locked);
-              const anchor = getDeleteAnchor(selectedItem);
+              const anchor = getObjectActionAnchor(selectedItem);
+              const isObjectMenuOpen = objectActionMenuId === selectedItem.id;
+              const actionAnchorOffsetX = 1.4;
+              const actionAnchorOffsetY = -1.4;
+              const menuWidth = 9.9;
+              const menuHeight = 5.3;
+              const menuSpacingX = 1.6;
+              const menuSpacingYUp = -1.3;
+              const menuSpacingYDown = 1.6;
+              const anchorDisplay = rotatePointAround(
+                anchor,
+                rotationPivot,
+                viewRotation
+              );
+              const viewportPadding = 0.6;
+              const viewportMinX =
+                rotatedBounds.minX + viewportPadding;
+              const viewportMaxX =
+                rotatedBounds.maxX - viewportPadding;
+              const viewportMinY =
+                rotatedBounds.minY + viewportPadding;
+              const viewportMaxY =
+                rotatedBounds.maxY - viewportPadding;
+              const roomRight =
+                viewportMaxX - (anchorDisplay.x + actionAnchorOffsetX);
+              const roomLeft =
+                anchorDisplay.x + actionAnchorOffsetX - viewportMinX;
+              const roomAbove =
+                anchorDisplay.y + actionAnchorOffsetY - viewportMinY;
+              const roomBelow =
+                viewportMaxY - (anchorDisplay.y + actionAnchorOffsetY);
+              const preferLeft = roomRight < menuWidth && roomLeft > roomRight;
+              const preferDown = roomAbove < menuHeight && roomBelow > roomAbove;
+              const initialMenuOffsetX = preferLeft
+                ? -(menuWidth + menuSpacingX)
+                : menuSpacingX;
+              const initialMenuOffsetY = preferDown
+                ? menuSpacingYDown
+                : menuSpacingYUp;
+              const targetMenuX =
+                anchorDisplay.x + actionAnchorOffsetX + initialMenuOffsetX;
+              const targetMenuY =
+                anchorDisplay.y + actionAnchorOffsetY + initialMenuOffsetY;
+              const clampedMenuX = clampValue(
+                targetMenuX,
+                viewportMinX,
+                viewportMaxX - menuWidth
+              );
+              const clampedMenuY = clampValue(
+                targetMenuY,
+                viewportMinY,
+                viewportMaxY - menuHeight
+              );
+              const menuOffsetX =
+                clampedMenuX - (anchorDisplay.x + actionAnchorOffsetX);
+              const menuOffsetY =
+                clampedMenuY - (anchorDisplay.y + actionAnchorOffsetY);
               return (
                 <Group
-                  key={`${selectedItem.id}-delete`}
-                  x={anchor.x + 1.4}
-                  y={anchor.y - 1.4}
+                  key={`${selectedItem.id}-actions`}
+                  x={anchor.x + actionAnchorOffsetX}
+                  y={anchor.y + actionAnchorOffsetY}
+                  rotation={labelRotation}
+                  scaleX={mobileActionScale}
+                  scaleY={mobileActionScale}
                 >
-                  <Group x={-2.9} y={0}>
-                    <Rect
-                      x={-1.3}
-                      y={-1.3}
-                      width={2.6}
-                      height={2.6}
-                      cornerRadius={0.5}
-                      fill="#0f1b1a"
-                      opacity={0.85}
-                      stroke="#ffffff"
-                      strokeWidth={0.12}
-                    />
-                    <Rect
-                      x={-0.55}
-                      y={-0.1}
-                      width={1.1}
-                      height={0.9}
-                      stroke="#ffffff"
-                      strokeWidth={0.12}
-                      cornerRadius={0.18}
-                    />
-                    <Line
-                      points={[-0.35, -0.1, -0.35, -0.45, 0.35, -0.45, 0.35, -0.1]}
-                      stroke="#ffffff"
-                      strokeWidth={0.12}
-                      lineCap="round"
-                      lineJoin="round"
-                    />
-                    {!shouldLock && (
-                      <Line
-                        points={[0.55, 0.55, -0.55, -0.55]}
-                        stroke="#ffffff"
-                        strokeWidth={0.12}
-                      />
-                    )}
-                    <Rect
-                      x={-1.3}
-                      y={-1.3}
-                      width={2.6}
-                      height={2.6}
-                      cornerRadius={0.5}
-                      opacity={0}
-                      onClick={(event) => {
-                        event.cancelBubble = true;
-                        pushHistory(clone(objects));
-                        selectedItems.forEach((item) => {
-                          updateObject(board.id, frameIndex, item.id, {
-                            locked: shouldLock,
-                          });
-                        });
-                      }}
-                      onTap={(event) => {
-                        event.cancelBubble = true;
-                        pushHistory(clone(objects));
-                        selectedItems.forEach((item) => {
-                          updateObject(board.id, frameIndex, item.id, {
-                            locked: shouldLock,
-                          });
-                        });
-                      }}
-                    />
-                  </Group>
                   <Rect
                     x={-1.3}
                     y={-1.3}
@@ -2223,34 +3307,9 @@ export default function BoardCanvas({
                     stroke="#ffffff"
                     strokeWidth={0.12}
                   />
-                  <Rect
-                    x={-0.55}
-                    y={-0.15}
-                    width={1.1}
-                    height={0.9}
-                    stroke="#ffffff"
-                    strokeWidth={0.12}
-                  />
-                  <Line
-                    points={[-0.75, -0.45, 0.75, -0.45]}
-                    stroke="#ffffff"
-                    strokeWidth={0.12}
-                  />
-                  <Line
-                    points={[-0.35, -0.15, -0.35, 0.65]}
-                    stroke="#ffffff"
-                    strokeWidth={0.1}
-                  />
-                  <Line
-                    points={[0, -0.15, 0, 0.65]}
-                    stroke="#ffffff"
-                    strokeWidth={0.1}
-                  />
-                  <Line
-                    points={[0.35, -0.15, 0.35, 0.65]}
-                    stroke="#ffffff"
-                    strokeWidth={0.1}
-                  />
+                  <Circle x={0} y={-0.48} radius={0.14} fill="#ffffff" />
+                  <Circle x={0} y={0} radius={0.14} fill="#ffffff" />
+                  <Circle x={0} y={0.48} radius={0.14} fill="#ffffff" />
                   <Rect
                     x={-1.3}
                     y={-1.3}
@@ -2260,19 +3319,118 @@ export default function BoardCanvas({
                     opacity={0}
                     onClick={(event) => {
                       event.cancelBubble = true;
-                      pushHistory(clone(objects));
-                      removeObject(board.id, frameIndex, selectedItem.id);
-                      setSelection([]);
-                      setSelectedLinkId(null);
+                      setObjectActionMenuId((prev) =>
+                        prev === selectedItem.id ? null : selectedItem.id
+                      );
                     }}
                     onTap={(event) => {
                       event.cancelBubble = true;
-                      pushHistory(clone(objects));
-                      removeObject(board.id, frameIndex, selectedItem.id);
-                      setSelection([]);
-                      setSelectedLinkId(null);
+                      setObjectActionMenuId((prev) =>
+                        prev === selectedItem.id ? null : selectedItem.id
+                      );
                     }}
                   />
+                  {isObjectMenuOpen && (
+                    <Group x={menuOffsetX} y={menuOffsetY}>
+                      <Rect
+                        x={0}
+                        y={0}
+                        width={9.9}
+                        height={5.3}
+                        cornerRadius={0.7}
+                        fill="#0f1b1a"
+                        opacity={0.92}
+                        stroke="#ffffff"
+                        strokeWidth={0.1}
+                      />
+                      <Rect
+                        x={0.35}
+                        y={0.35}
+                        width={9.2}
+                        height={2.1}
+                        cornerRadius={0.45}
+                        fill="rgba(20,35,32,0.9)"
+                        stroke="#ffffff"
+                        strokeWidth={0.08}
+                      />
+                      <Text
+                        x={0.9}
+                        y={0.92}
+                        text={shouldLock ? "Lock" : "Unlock"}
+                        fontSize={0.88}
+                        fill="#ffffff"
+                      />
+                      <Rect
+                        x={0.35}
+                        y={2.8}
+                        width={9.2}
+                        height={2.1}
+                        cornerRadius={0.45}
+                        fill="rgba(48,17,17,0.9)"
+                        stroke="#ffffff"
+                        strokeWidth={0.08}
+                      />
+                      <Text
+                        x={0.9}
+                        y={3.37}
+                        text="Delete"
+                        fontSize={0.88}
+                        fill="#ffffff"
+                      />
+                      <Rect
+                        x={0.35}
+                        y={0.35}
+                        width={9.2}
+                        height={2.1}
+                        cornerRadius={0.45}
+                        opacity={0}
+                        onClick={(event) => {
+                          event.cancelBubble = true;
+                          pushHistory(clone(objects));
+                          selectedItems.forEach((item) => {
+                            updateObject(board.id, frameIndex, item.id, {
+                              locked: shouldLock,
+                            });
+                          });
+                          setObjectActionMenuId(null);
+                        }}
+                        onTap={(event) => {
+                          event.cancelBubble = true;
+                          pushHistory(clone(objects));
+                          selectedItems.forEach((item) => {
+                            updateObject(board.id, frameIndex, item.id, {
+                              locked: shouldLock,
+                            });
+                          });
+                          setObjectActionMenuId(null);
+                        }}
+                      />
+                      <Rect
+                        x={0.35}
+                        y={2.8}
+                        width={9.2}
+                        height={2.1}
+                        cornerRadius={0.45}
+                        opacity={0}
+                        onClick={(event) => {
+                          event.cancelBubble = true;
+                          pushHistory(clone(objects));
+                          removeObject(board.id, frameIndex, selectedItem.id);
+                          setSelection([]);
+                          setSelectedLinkId(null);
+                          setObjectActionMenuId(null);
+                        }}
+                        onTap={(event) => {
+                          event.cancelBubble = true;
+                          pushHistory(clone(objects));
+                          removeObject(board.id, frameIndex, selectedItem.id);
+                          setSelection([]);
+                          setSelectedLinkId(null);
+                          setObjectActionMenuId(null);
+                        }}
+                      />
+                    </Group>
+                  )}
                 </Group>
               );
             })()}
@@ -2284,15 +3442,34 @@ export default function BoardCanvas({
               const points = link.playerIds
                 .map((id) => playerPositions.get(id))
                 .filter(Boolean) as { x: number; y: number }[];
-              if (points.length === 0) {
+              if (points.length < 2) {
                 return null;
               }
-              const anchor = points[points.length - 1]!;
+              const segmentCenters: { x: number; y: number }[] = [];
+              for (let index = 0; index < points.length - 1; index += 1) {
+                const from = points[index];
+                const to = points[index + 1];
+                if (!from || !to) {
+                  continue;
+                }
+                segmentCenters.push({
+                  x: (from.x + to.x) / 2,
+                  y: (from.y + to.y) / 2,
+                });
+              }
+              if (segmentCenters.length === 0) {
+                return null;
+              }
+              const centerIndex = Math.floor((segmentCenters.length - 1) / 2);
+              const anchor = segmentCenters[centerIndex]!;
               return (
                 <Group
                   key={`${link.id}-delete`}
-                  x={anchor.x + 1.4}
-                  y={anchor.y - 1.4}
+                  x={anchor.x}
+                  y={anchor.y}
+                  rotation={labelRotation}
+                  scaleX={mobileActionScale}
+                  scaleY={mobileActionScale}
                 >
                   <Rect
                     x={-1.3}
@@ -2305,33 +3482,37 @@ export default function BoardCanvas({
                     stroke="#ffffff"
                     strokeWidth={0.12}
                   />
-                  <Rect
-                    x={-0.55}
-                    y={-0.15}
-                    width={1.1}
-                    height={0.9}
+                  <Circle
+                    x={-0.28}
+                    y={0}
+                    radius={0.42}
                     stroke="#ffffff"
-                    strokeWidth={0.12}
+                    strokeWidth={0.11}
+                  />
+                  <Circle
+                    x={0.46}
+                    y={0}
+                    radius={0.42}
+                    stroke="#ffffff"
+                    strokeWidth={0.11}
                   />
                   <Line
-                    points={[-0.75, -0.45, 0.75, -0.45]}
+                    points={[-0.02, -0.24, 0.2, -0.04]}
                     stroke="#ffffff"
-                    strokeWidth={0.12}
+                    strokeWidth={0.11}
+                    lineCap="round"
                   />
                   <Line
-                    points={[-0.35, -0.15, -0.35, 0.65]}
+                    points={[-0.02, 0.24, 0.2, 0.04]}
                     stroke="#ffffff"
-                    strokeWidth={0.1}
+                    strokeWidth={0.11}
+                    lineCap="round"
                   />
                   <Line
-                    points={[0, -0.15, 0, 0.65]}
+                    points={[-0.86, 0.62, 0.9, -0.66]}
                     stroke="#ffffff"
-                    strokeWidth={0.1}
-                  />
-                  <Line
-                    points={[0.35, -0.15, 0.35, 0.65]}
-                    stroke="#ffffff"
-                    strokeWidth={0.1}
+                    strokeWidth={0.11}
+                    lineCap="round"
                   />
                   <Rect
                     x={-1.3}
@@ -2370,6 +3551,76 @@ export default function BoardCanvas({
                 </Group>
               );
             })()}
+            {latestLinkingPlayerPosition && !isSharedReadOnly && (
+              <Group
+                x={latestLinkingPlayerPosition.x + 2.4}
+                y={latestLinkingPlayerPosition.y - 2.4}
+                rotation={labelRotation}
+                scaleX={mobileActionScale}
+                scaleY={mobileActionScale}
+              >
+                <Rect
+                  x={0}
+                  y={0}
+                  width={7.6}
+                  height={2.4}
+                  cornerRadius={1.1}
+                  fill="rgba(9,26,21,0.92)"
+                  stroke="#f9bf4a"
+                  strokeWidth={0.14}
+                  shadowColor="#000000"
+                  shadowBlur={0.35}
+                  shadowOpacity={0.32}
+                  shadowOffsetY={0.1}
+                />
+                <Circle
+                  x={3.25}
+                  y={1.2}
+                  radius={0.55}
+                  stroke="#f9bf4a"
+                  strokeWidth={0.12}
+                  listening={false}
+                />
+                <Circle
+                  x={4.35}
+                  y={1.2}
+                  radius={0.55}
+                  stroke="#f9bf4a"
+                  strokeWidth={0.12}
+                  listening={false}
+                />
+                <Line
+                  points={[3.72, 0.92, 3.88, 1.08]}
+                  stroke="#f9bf4a"
+                  strokeWidth={0.12}
+                  lineCap="round"
+                  listening={false}
+                />
+                <Line
+                  points={[3.72, 1.48, 3.88, 1.32]}
+                  stroke="#f9bf4a"
+                  strokeWidth={0.12}
+                  lineCap="round"
+                  listening={false}
+                />
+                <Rect
+                  x={0}
+                  y={0}
+                  width={7.6}
+                  height={2.4}
+                  cornerRadius={1.1}
+                  opacity={0}
+                  onClick={(event) => {
+                    event.cancelBubble = true;
+                    finishLinkingPlayers();
+                  }}
+                  onTap={(event) => {
+                    event.cancelBubble = true;
+                    finishLinkingPlayers();
+                  }}
+                />
+              </Group>
+            )}
             {draft && draft.type === "arrow" && (
               <Arrow
                 points={[
@@ -2415,10 +3666,14 @@ export default function BoardCanvas({
                 y={Math.min(marquee.start.y, marquee.current.y)}
                 width={Math.abs(marquee.current.x - marquee.start.x)}
                 height={Math.abs(marquee.current.y - marquee.start.y)}
-                stroke="#f9bf4a"
+                stroke={marqueeMode === "zoom" ? "#7dd3fc" : "#f9bf4a"}
                 dash={[1, 1]}
                 strokeWidth={0.3}
-                fill="rgba(249,191,74,0.08)"
+                fill={
+                  marqueeMode === "zoom"
+                    ? "rgba(125,211,252,0.12)"
+                    : "rgba(249,191,74,0.08)"
+                }
               />
             )}
           </Group>

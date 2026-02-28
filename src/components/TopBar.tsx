@@ -28,7 +28,17 @@ import {
   fetchTeamsWithSquad,
   updateTeamWithSquad,
 } from "@/persistence/teamSquads";
-import { createProjectShareLink } from "@/persistence/projectShareLinks";
+import {
+  createProjectShareLink,
+  fetchProjectShareLinkForOwner,
+} from "@/persistence/projectShareLinks";
+import {
+  deleteProjectTemplate,
+  loadProjectTemplates,
+  renameProjectTemplate,
+  saveProjectTemplate,
+  type ProjectTemplate,
+} from "@/persistence/projectTemplates";
 import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { getStageRef } from "@/utils/stageRef";
 import ColorPalettePicker from "@/components/ColorPalettePicker";
@@ -112,11 +122,15 @@ export default function TopBar() {
   const [hideBetaBanner, setHideBetaBanner] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [manageTemplatesOpen, setManageTemplatesOpen] = useState(false);
+  const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
+  const [templateStatus, setTemplateStatus] = useState<string | null>(null);
   const [boardActionsOpen, setBoardActionsOpen] = useState(false);
   const [projectActionsOpen, setProjectActionsOpen] = useState(false);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
   const showAds = plan === "FREE";
+  const canUseTemplates = plan === "PAID" && !!authUser;
   const showPlanGraceWarning =
     plan === "AUTH" &&
     authUser &&
@@ -140,6 +154,14 @@ export default function TopBar() {
   const autoTeamPresetKey = authUser?.id
     ? `tacticsboard:autoTeamPreset:${authUser.id}`
     : "tacticsboard:autoTeamPreset";
+
+  const refreshTemplates = () => {
+    if (!canUseTemplates) {
+      setTemplates([]);
+      return;
+    }
+    setTemplates(loadProjectTemplates(authUser?.id ?? null));
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -231,6 +253,17 @@ export default function TopBar() {
       })
       .finally(() => setSquadPresetsLoading(false));
   }, [squadPresetsOpen, authUser, plan]);
+  useEffect(() => {
+    if (!manageTemplatesOpen) {
+      setTemplateStatus(null);
+      return;
+    }
+    if (!canUseTemplates) {
+      setTemplates([]);
+      return;
+    }
+    setTemplates(loadProjectTemplates(authUser?.id ?? null));
+  }, [authUser?.id, canUseTemplates, manageTemplatesOpen]);
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -334,6 +367,43 @@ export default function TopBar() {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "project"}-share-qr.png`;
+  useEffect(() => {
+    if (!shareLinkOpen || !project || !authUser || plan !== "PAID") {
+      return;
+    }
+    let cancelled = false;
+    setShareLinkStatus("Loading existing share link...");
+    setShareLinkCopied(false);
+    setShareLinkQrError(false);
+    fetchProjectShareLinkForOwner(project.id)
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        if (!result.ok) {
+          setShareLinkUrl(null);
+          setShareLinkStatus(result.error);
+          return;
+        }
+        if (!result.token) {
+          setShareLinkUrl(null);
+          setShareLinkStatus("No share link yet. Generate one below.");
+          return;
+        }
+        setShareLinkUrl(`${SHARE_LINK_BASE_URL}/share/${result.token}`);
+        setShareLinkStatus(null);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setShareLinkUrl(null);
+        setShareLinkStatus("Unable to load existing share link.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser, plan, project, shareLinkOpen]);
   useEffect(() => {
     if (!squadPresetsOpen) {
       setManageAutoAppliedKey(null);
@@ -1600,6 +1670,77 @@ export default function TopBar() {
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                     onClick={() => {
                       setActionsOpen(false);
+                      if (!canUseTemplates) {
+                        window.alert("Templates are available for paid users.");
+                        return;
+                      }
+                      if (!project) {
+                        return;
+                      }
+                      const suggested = `${project.name} template`;
+                      const name =
+                        window.prompt("Template name", suggested) ?? "";
+                      if (!name.trim()) {
+                        return;
+                      }
+                      const result = saveProjectTemplate(
+                        project,
+                        name,
+                        authUser?.id ?? null
+                      );
+                      if (!result.ok) {
+                        window.alert(result.error);
+                        return;
+                      }
+                      window.alert(`Template "${result.template.name}" saved.`);
+                    }}
+                    disabled={!project || !canUseTemplates}
+                    data-locked={!project || !canUseTemplates}
+                  >
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 24 24"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z" />
+                    </svg>
+                    Save as template
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                    onClick={() => {
+                      setActionsOpen(false);
+                      setManageTemplatesOpen(true);
+                    }}
+                    disabled={!canUseTemplates}
+                    data-locked={!canUseTemplates}
+                  >
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 24 24"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M3 7h18" />
+                      <path d="M8 7V5h8v2" />
+                      <rect x="4" y="7" width="16" height="13" rx="2" />
+                      <path d="M8 12h8M8 16h5" />
+                    </svg>
+                    Manage templates
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                    onClick={() => {
+                      setActionsOpen(false);
                       setPdfOpen(true);
                       setPdfStatus(null);
                     }}
@@ -2281,6 +2422,110 @@ export default function TopBar() {
                   <p className="text-xs text-[var(--accent-1)]">{managePresetStatus}</p>
                 ) : null}
               </div>
+          </div>
+        </div>
+      )}
+      {manageTemplatesOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="w-full max-w-2xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="display-font text-xl text-[var(--accent-0)]">
+                  Manage templates
+                </h2>
+                <p className="text-xs text-[var(--ink-1)]">
+                  Templates are available on paid plans.
+                </p>
+              </div>
+              <button
+                className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                onClick={() => {
+                  setManageTemplatesOpen(false);
+                  setTemplateStatus(null);
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-4 max-h-[50vh] space-y-2 overflow-y-auto pr-1" data-scrollable>
+              {templates.length === 0 ? (
+                <p className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-xs text-[var(--ink-1)]">
+                  No templates saved yet.
+                </p>
+              ) : (
+                templates.map((template) => (
+                  <div
+                    key={template.id}
+                    className="flex items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 px-3 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-[var(--ink-0)]">
+                        {template.name}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Updated {new Date(template.updatedAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <button
+                      className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={() => {
+                        const nextName = window.prompt(
+                          "Rename template",
+                          template.name
+                        );
+                        if (!nextName || !nextName.trim()) {
+                          return;
+                        }
+                        const result = renameProjectTemplate(
+                          template.id,
+                          nextName,
+                          authUser?.id ?? null
+                        );
+                        if (!result.ok) {
+                          setTemplateStatus(result.error);
+                          return;
+                        }
+                        setTemplates(result.templates);
+                        setTemplateStatus("Template renamed.");
+                      }}
+                    >
+                      Rename
+                    </button>
+                    <button
+                      className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                      onClick={() => {
+                        if (!window.confirm(`Delete template "${template.name}"?`)) {
+                          return;
+                        }
+                        const result = deleteProjectTemplate(
+                          template.id,
+                          authUser?.id ?? null
+                        );
+                        if (!result.ok) {
+                          setTemplateStatus(result.error);
+                          return;
+                        }
+                        setTemplates(result.templates);
+                        setTemplateStatus("Template deleted.");
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <button
+                className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => refreshTemplates()}
+              >
+                Refresh
+              </button>
+              {templateStatus ? (
+                <p className="text-xs text-[var(--accent-1)]">{templateStatus}</p>
+              ) : null}
+            </div>
           </div>
         </div>
       )}

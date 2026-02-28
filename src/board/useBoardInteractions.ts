@@ -77,6 +77,7 @@ export const useBoardInteractions = ({
     start: { x: number; y: number };
     current: { x: number; y: number };
   } | null>(null);
+  const [marqueeMode, setMarqueeMode] = useState<"select" | "zoom">("select");
   const [isPanning, setIsPanning] = useState(false);
   const circleSnapTolerance = 0.08;
   const smoothPathPoints = (points: number[]) => {
@@ -163,6 +164,39 @@ export const useBoardInteractions = ({
   const stageToWorld = (pointer: { x: number; y: number }) =>
     screenToWorld(pointer, viewport.zoom);
 
+  const animateViewportTo = (
+    target: { zoom: number; offsetX: number; offsetY: number },
+    durationMs = 320
+  ) => {
+    const from = {
+      zoom: viewport.zoom,
+      offsetX: viewport.offsetX,
+      offsetY: viewport.offsetY,
+    };
+    const start = performance.now();
+    const step = (now: number) => {
+      const elapsed = now - start;
+      const t = Math.max(0, Math.min(1, elapsed / durationMs));
+      const eased = 1 - Math.pow(1 - t, 3);
+      setViewport({
+        zoom: from.zoom + (target.zoom - from.zoom) * eased,
+        offsetX: from.offsetX + (target.offsetX - from.offsetX) * eased,
+        offsetY: from.offsetY + (target.offsetY - from.offsetY) * eased,
+      });
+      if (t < 1) {
+        requestAnimationFrame(step);
+      }
+    };
+    requestAnimationFrame(step);
+  };
+
+  const worldToStagePoint = (point: { x: number; y: number }) => {
+    if (rotation === 0) {
+      return point;
+    }
+    return rotatePoint(point, rotationPivot, rotation);
+  };
+
   const handleWheel = (event: Konva.KonvaEventObject<WheelEvent>) => {
     event.evt.preventDefault();
     if (readOnly || disablePanZoom) {
@@ -202,6 +236,7 @@ export const useBoardInteractions = ({
     head: activeTool === "arrow" || activeTool === "arrow_dashed",
     dashed: activeTool === "line_dashed" || activeTool === "arrow_dashed",
   };
+  const defaultPlacedRotation = rotation !== 0 ? 90 : 0;
 
   const handleMouseDown = (event: Konva.KonvaEventObject<MouseEvent>) => {
     const stage = stageRef.current;
@@ -221,6 +256,15 @@ export const useBoardInteractions = ({
       const world = stageToWorld(pointer);
       if (!isShapeTool) {
         if (activeTool === "player") {
+          setMarqueeMode("select");
+          setMarquee({
+            start: world,
+            current: world,
+          });
+          return;
+        }
+        if (activeTool === "zoom") {
+          setMarqueeMode("zoom");
           setMarquee({
             start: world,
             current: world,
@@ -365,7 +409,7 @@ export const useBoardInteractions = ({
         id: createId(),
         type: "circle",
         position: start,
-        rotation: 0,
+        rotation: defaultPlacedRotation,
         scale,
         style: { ...defaultStyle },
         zIndex: 1,
@@ -388,7 +432,7 @@ export const useBoardInteractions = ({
         id: createId(),
         type: "rect",
         position: { x, y },
-        rotation: 0,
+        rotation: defaultPlacedRotation,
         scale: { x: 1, y: 1 },
         style: { ...defaultStyle },
         zIndex: 1,
@@ -408,7 +452,7 @@ export const useBoardInteractions = ({
         id: createId(),
         type: "triangle",
         position: { x, y },
-        rotation: 0,
+        rotation: defaultPlacedRotation,
         scale: { x: 1, y: 1 },
         style: { ...defaultStyle },
         zIndex: 1,
@@ -467,7 +511,10 @@ export const useBoardInteractions = ({
   };
 
   const handleMouseUp = () => {
-    if (marquee) {
+    const completeMarquee = () => {
+      if (!marquee) {
+        return false;
+      }
       const minX = Math.min(marquee.start.x, marquee.current.x);
       const maxX = Math.max(marquee.start.x, marquee.current.x);
       const minY = Math.min(marquee.start.y, marquee.current.y);
@@ -475,7 +522,17 @@ export const useBoardInteractions = ({
       const width = maxX - minX;
       const height = maxY - minY;
       const isDragSelection = width > 0.8 || height > 0.8;
-      if (isDragSelection) {
+      if (!isDragSelection && marqueeMode === "zoom") {
+        animateViewportTo(
+          {
+            zoom: 1,
+            offsetX: 0,
+            offsetY: 0,
+          },
+          280
+        );
+      }
+      if (isDragSelection && marqueeMode === "select") {
         const selectedIds = objects
           .filter((item) => item.type === "player")
           .filter(
@@ -488,7 +545,43 @@ export const useBoardInteractions = ({
           .map((item) => item.id);
         selectByMarquee(selectedIds);
       }
+      if (isDragSelection && marqueeMode === "zoom") {
+        const stage = stageRef.current;
+        const stageWidth = stage?.width() ?? 0;
+        const stageHeight = stage?.height() ?? 0;
+        if (stageWidth > 0 && stageHeight > 0) {
+          const targetZoom = clamp(
+            Math.min(
+              stageWidth / Math.max(0.001, width * baseScale),
+              stageHeight / Math.max(0.001, height * baseScale)
+            ) * 0.92,
+            0.5,
+            2.5
+          );
+          const center = {
+            x: minX + width / 2,
+            y: minY + height / 2,
+          };
+          const centerStage = worldToStagePoint(center);
+          const targetOffsetX =
+            stageWidth / 2 - centerStage.x * baseScale * targetZoom - baseOffsetX;
+          const targetOffsetY =
+            stageHeight / 2 - centerStage.y * baseScale * targetZoom - baseOffsetY;
+          animateViewportTo(
+            {
+              zoom: targetZoom,
+              offsetX: targetOffsetX,
+              offsetY: targetOffsetY,
+            },
+            320
+          );
+        }
+      }
       setMarquee(null);
+      setMarqueeMode("select");
+      return true;
+    };
+    if (completeMarquee()) {
       return;
     }
     if (draft) {
@@ -518,6 +611,19 @@ export const useBoardInteractions = ({
         return;
       }
       if (!isShapeTool) {
+        if (activeTool === "zoom") {
+          const pointer = stage.getPointerPosition();
+          if (!pointer) {
+            return;
+          }
+          const world = stageToWorld(pointer);
+          setMarqueeMode("zoom");
+          setMarquee({
+            start: world,
+            current: world,
+          });
+          return;
+        }
         if (disablePanZoom) {
           return;
         }
@@ -557,7 +663,7 @@ export const useBoardInteractions = ({
   };
 
   const handleTouchMove = (event: Konva.KonvaEventObject<TouchEvent>) => {
-    if (!draft && !isPanning) {
+    if (!draft && !isPanning && !marquee) {
       return;
     }
     const stage = stageRef.current;
@@ -569,6 +675,14 @@ export const useBoardInteractions = ({
       return;
     }
     event.evt.preventDefault();
+    if (marquee) {
+      const world = stageToWorld(pointer);
+      setMarquee({
+        ...marquee,
+        current: world,
+      });
+      return;
+    }
     if (draft) {
       const world = stageToWorld(pointer);
       if (draft.type === "path") {
@@ -594,6 +708,73 @@ export const useBoardInteractions = ({
   };
 
   const handleTouchEnd = () => {
+    if (marquee) {
+      const minX = Math.min(marquee.start.x, marquee.current.x);
+      const maxX = Math.max(marquee.start.x, marquee.current.x);
+      const minY = Math.min(marquee.start.y, marquee.current.y);
+      const maxY = Math.max(marquee.start.y, marquee.current.y);
+      const width = maxX - minX;
+      const height = maxY - minY;
+      const isDragSelection = width > 0.8 || height > 0.8;
+      if (!isDragSelection && marqueeMode === "zoom") {
+        animateViewportTo(
+          {
+            zoom: 1,
+            offsetX: 0,
+            offsetY: 0,
+          },
+          280
+        );
+      }
+      if (isDragSelection && marqueeMode === "zoom") {
+        const stage = stageRef.current;
+        const stageWidth = stage?.width() ?? 0;
+        const stageHeight = stage?.height() ?? 0;
+        if (stageWidth > 0 && stageHeight > 0) {
+          const targetZoom = clamp(
+            Math.min(
+              stageWidth / Math.max(0.001, width * baseScale),
+              stageHeight / Math.max(0.001, height * baseScale)
+            ) * 0.92,
+            0.5,
+            2.5
+          );
+          const center = {
+            x: minX + width / 2,
+            y: minY + height / 2,
+          };
+          const centerStage = worldToStagePoint(center);
+          const targetOffsetX =
+            stageWidth / 2 - centerStage.x * baseScale * targetZoom - baseOffsetX;
+          const targetOffsetY =
+            stageHeight / 2 - centerStage.y * baseScale * targetZoom - baseOffsetY;
+          animateViewportTo(
+            {
+              zoom: targetZoom,
+              offsetX: targetOffsetX,
+              offsetY: targetOffsetY,
+            },
+            320
+          );
+        }
+      }
+      if (isDragSelection && marqueeMode === "select") {
+        const selectedIds = objects
+          .filter((item) => item.type === "player")
+          .filter(
+            (item) =>
+              item.position.x >= minX &&
+              item.position.x <= maxX &&
+              item.position.y >= minY &&
+              item.position.y <= maxY
+          )
+          .map((item) => item.id);
+        selectByMarquee(selectedIds);
+      }
+      setMarquee(null);
+      setMarqueeMode("select");
+      return;
+    }
     if (draft) {
       commitDraft();
     }
@@ -640,14 +821,46 @@ export const useBoardInteractions = ({
         id: createId(),
         type: "cone",
         position: world,
-        rotation: 0,
+        rotation: defaultPlacedRotation,
         scale: { x: 1, y: 1 },
         style: { ...defaultStyle, fill: "#f06d4f", stroke: "#111111" },
         zIndex: 1,
         locked: false,
         visible: true,
-        width: 6,
-        height: 6,
+        width: 3,
+        height: 3,
+      });
+    }
+    if (activeTool === "pole") {
+      pushHistory(clone(objects));
+      addObject(boardId, frameIndex, {
+        id: createId(),
+        type: "pole",
+        position: world,
+        rotation: defaultPlacedRotation,
+        scale: { x: 1, y: 1 },
+        style: { ...defaultStyle, fill: "#f2f1e9", stroke: "#111111" },
+        zIndex: 1,
+        locked: false,
+        visible: true,
+        width: 2.4,
+        height: 8,
+      });
+    }
+    if (activeTool === "mannequin") {
+      pushHistory(clone(objects));
+      addObject(boardId, frameIndex, {
+        id: createId(),
+        type: "mannequin",
+        position: world,
+        rotation: defaultPlacedRotation,
+        scale: { x: 1, y: 1 },
+        style: { ...defaultStyle, fill: "rgba(230,236,240,0.88)", stroke: "#111111" },
+        zIndex: 1,
+        locked: false,
+        visible: true,
+        width: 4.8,
+        height: 10,
       });
     }
     if (activeTool === "goal") {
@@ -656,7 +869,7 @@ export const useBoardInteractions = ({
         id: createId(),
         type: "goal",
         position: world,
-        rotation: 0,
+        rotation: defaultPlacedRotation,
         scale: { x: 1, y: 1 },
         style: { ...defaultStyle, fill: "rgba(255,255,255,0.05)" },
         zIndex: 1,
@@ -684,7 +897,10 @@ export const useBoardInteractions = ({
         return;
       }
       pushHistory(clone(objects));
-      addObject(boardId, frameIndex, createText(world, text));
+      addObject(boardId, frameIndex, {
+        ...createText(world, text),
+        rotation: defaultPlacedRotation,
+      });
     }
   };
 
@@ -704,6 +920,7 @@ export const useBoardInteractions = ({
   return {
     draft,
     marquee,
+    marqueeMode,
     isPanning,
     handleWheel,
     handleMouseDown,

@@ -104,3 +104,35 @@ export const fetchProjectShareLink = async (token: string) => {
     createdAt: data.created_at,
   };
 };
+
+export const fetchProjectShareLinkForOwner = async (projectId: string) => {
+  if (!supabase) {
+    return { ok: false as const, error: "Supabase not configured." };
+  }
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) {
+    return { ok: false as const, error: "Not authenticated." };
+  }
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("token, created_at")
+    .eq("project_id", projectId)
+    .eq("user_id", userData.user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ token: string; created_at: string }>();
+  if (error) {
+    return {
+      ok: false as const,
+      error: error.message || "Unable to fetch existing share link.",
+    };
+  }
+  if (!data?.token) {
+    return { ok: true as const, token: null as string | null };
+  }
+  return {
+    ok: true as const,
+    token: data.token,
+    createdAt: data.created_at,
+  };
+};

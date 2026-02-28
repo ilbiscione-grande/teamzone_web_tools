@@ -45,6 +45,19 @@ const GoalIcon = () => (
     <path d="M8 8v8M16 8v8" />
   </svg>
 );
+const PoleIcon = () => (
+  <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
+    <ellipse cx="12" cy="19" rx="5" ry="2.2" />
+    <rect x="11.2" y="5" width="1.6" height="12" rx="0.8" />
+  </svg>
+);
+const MannequinIcon = () => (
+  <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
+    <circle cx="12" cy="6.5" r="2.2" />
+    <path d="M8.2 12.2L12 9.5l3.8 2.7M9 19l1.4-4.8L8 12.5M15 19l-1.4-4.8 2.4-1.7" />
+    <path d="M12 9.5v8.5" />
+  </svg>
+);
 const TextIcon = () => (
   <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
     <path d="M5 7h14M12 7v12M8 19h8" />
@@ -77,6 +90,13 @@ const FreehandIcon = () => (
     <path d="M4 15c2.5-4 4.5-6 7-5 2.3 1 2 4 4 4 1.6 0 2.4-1.2 5-4" />
   </svg>
 );
+const ZoomIcon = () => (
+  <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
+    <rect x="4.5" y="4.5" width="10.5" height="10.5" rx="2" strokeDasharray="2 2" />
+    <circle cx="10" cy="10" r="2.2" />
+    <path d="M14.5 14.5L20 20" />
+  </svg>
+);
 const CircleIcon = () => (
   <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
     <circle cx="12" cy="12" r="6" />
@@ -105,11 +125,14 @@ const itemTools: { id: Tool; label: string; hint: string; icon: ReactNode }[] = 
   { id: "player", label: "Player", hint: "Double-click to add", icon: <PlayerIcon /> },
   { id: "ball", label: "Ball", hint: "Double-click to add", icon: <BallIcon /> },
   { id: "cone", label: "Cone", hint: "Double-click to add", icon: <ConeIcon /> },
+  { id: "pole", label: "Pole", hint: "Double-click to add", icon: <PoleIcon /> },
+  { id: "mannequin", label: "Mannequin", hint: "Double-click to add", icon: <MannequinIcon /> },
   { id: "goal", label: "Mini-goal", hint: "Double-click to add", icon: <GoalIcon /> },
   { id: "text", label: "Text", hint: "Double-click to add", icon: <TextIcon /> },
 ];
 
 const lineTools: { id: Tool; label: string; hint: string; icon: ReactNode }[] = [
+  { id: "zoom", label: "Zoom area", hint: "Drag to zoom", icon: <ZoomIcon /> },
   { id: "line", label: "Solid line", hint: "Drag to draw", icon: <LineIcon /> },
   { id: "line_dashed", label: "Dashed line", hint: "Drag to draw", icon: <DashedLineIcon /> },
   { id: "arrow", label: "Arrow", hint: "Drag to draw", icon: <ArrowIcon /> },
@@ -179,9 +202,12 @@ const FramesIcon = () => (
     <path d="M8 6v12M16 6v12" />
   </svg>
 );
-const CommentsIcon = () => (
+const ShareIcon = () => (
   <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
-    <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+    <circle cx="18" cy="5" r="2.2" />
+    <circle cx="6" cy="12" r="2.2" />
+    <circle cx="18" cy="19" r="2.2" />
+    <path d="M8 11l8-5M8 13l8 5" />
   </svg>
 );
 const HighlightIcon = () => (
@@ -845,7 +871,7 @@ export default function Toolbox({
           { id: "squad", label: "Squad", icon: <SquadIcon /> },
           { id: "notes", label: "Notes", icon: <NotesIcon /> },
           { id: "frames", label: "Frames", icon: <FramesIcon /> },
-          { id: "shared", label: "Shared", icon: <CommentsIcon /> },
+          { id: "shared", label: "Shared", icon: <ShareIcon /> },
         ].map((tab) => {
           const hasShared =
             tab.id !== "shared"

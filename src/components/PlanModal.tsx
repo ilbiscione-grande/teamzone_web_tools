@@ -41,11 +41,14 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
   const limits = useMemo(() => getPlanLimits(plan), [plan]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const canSignIn = email.trim().length > 0;
   const [upgradeBusy, setUpgradeBusy] = useState(false);
-  const [authBusy, setAuthBusy] = useState<null | "signin" | "signup" | "magic">(
+  const [authBusy, setAuthBusy] = useState<
+    null | "signin" | "signup" | "magic" | "reset"
+  >(
     null
   );
   const [priceInfo, setPriceInfo] = useState<{
@@ -217,6 +220,32 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
         setAuthBusy(null);
       });
   };
+  const onForgotPassword = () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!supabase || !trimmedEmail) {
+      setStatus("Enter your email first.");
+      return;
+    }
+    setStatus(null);
+    setAuthBusy("reset");
+    supabase.auth
+      .resetPasswordForEmail(trimmedEmail, {
+        redirectTo: `${window.location.origin}/reset-password?mode=recovery`,
+      })
+      .then(({ error }) => {
+        if (error) {
+          setStatus(error.message);
+          setAuthBusy(null);
+          return;
+        }
+        setStatus("Password reset email sent. Check your inbox.");
+        setAuthBusy(null);
+      })
+      .catch(() => {
+        setStatus("Unable to send reset email.");
+        setAuthBusy(null);
+      });
+  };
 
   const onGoogle = () => {
     if (!supabase) {
@@ -368,13 +397,55 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                   />
-                  <input
-                    className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                    placeholder="Password"
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                  />
+                  <div className="relative">
+                    <input
+                      className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 pr-20 text-xs text-[var(--ink-0)]"
+                      placeholder="Password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-[var(--line)] bg-[var(--panel)]/90 p-1.5 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      title={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M3 3l18 18" />
+                          <path d="M10.6 10.6a2 2 0 1 0 2.8 2.8" />
+                          <path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c5.6 0 9.6 4.7 10 5.2a.7.7 0 0 1 0 .9 17 17 0 0 1-4 3.7" />
+                          <path d="M6.6 6.6A16.9 16.9 0 0 0 2 9.2a.7.7 0 0 0 0 .9C2.4 10.6 6.4 15.3 12 15.3c1.4 0 2.7-.3 3.9-.8" />
+                        </svg>
+                      ) : (
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" />
+                          <circle cx="12" cy="12" r="2.5" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                   <input
                     className="h-10 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                     placeholder="Name (optional)"
@@ -397,6 +468,13 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
                       disabled={!canSignIn || !supabase || !!authBusy}
                     >
                       {authBusy === "magic" ? "Sending..." : "Send magic link"}
+                    </button>
+                    <button
+                      className="w-full rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={onForgotPassword}
+                      disabled={!canSignIn || !supabase || !!authBusy}
+                    >
+                      {authBusy === "reset" ? "Sending..." : "Forgot password"}
                     </button>
                   </div>
                   {status ? (

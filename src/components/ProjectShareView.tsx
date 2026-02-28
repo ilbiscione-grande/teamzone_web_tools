@@ -9,6 +9,7 @@ import { fetchProjectShareLink } from "@/persistence/projectShareLinks";
 import BoardCanvas from "@/board/BoardCanvas";
 import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import type { Project } from "@/models";
+import NotesMarkdown from "@/components/notes/NotesMarkdown";
 
 type ProjectShareViewProps = {
   token?: string;
@@ -49,15 +50,31 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     if (typeof window === "undefined") {
       return;
     }
-    const media = window.matchMedia("(max-width: 768px)");
-    const update = () => setForcePortrait(media.matches);
+    const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
+    const update = () => {
+      const isMobileLayout =
+        window.innerWidth <= 1024 ||
+        coarsePointerQuery.matches ||
+        window.innerHeight <= 860;
+      setForcePortrait(isMobileLayout);
+    };
     update();
-    if (media.addEventListener) {
-      media.addEventListener("change", update);
-      return () => media.removeEventListener("change", update);
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    if (coarsePointerQuery.addEventListener) {
+      coarsePointerQuery.addEventListener("change", update);
+      return () => {
+        window.removeEventListener("resize", update);
+        window.removeEventListener("orientationchange", update);
+        coarsePointerQuery.removeEventListener("change", update);
+      };
     }
-    media.addListener(update);
-    return () => media.removeListener(update);
+    coarsePointerQuery.addListener(update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+      coarsePointerQuery.removeListener(update);
+    };
   }, []);
 
   useEffect(() => {
@@ -399,8 +416,8 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
           <p className="mb-2 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
             Notes
           </p>
-          <div className="max-h-40 overflow-auto whitespace-pre-wrap rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-[11px]">
-            {board.notes}
+          <div className="max-h-40 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-[11px]">
+            <NotesMarkdown text={board.notes ?? ""} />
           </div>
         </div>
       )}

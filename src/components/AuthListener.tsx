@@ -242,10 +242,34 @@ export default function AuthListener() {
       persistPlanCheck();
     };
 
+    const shouldRouteToResetPassword = (event?: string) => {
+      if (typeof window === "undefined") {
+        return false;
+      }
+      const path = window.location.pathname;
+      if (path.startsWith("/reset-password")) {
+        return false;
+      }
+      const hash = window.location.hash ?? "";
+      const search = window.location.search ?? "";
+      const href = window.location.href ?? "";
+      return (
+        event === "PASSWORD_RECOVERY" ||
+        hash.includes("type=recovery") ||
+        search.includes("type=recovery") ||
+        search.includes("mode=recovery") ||
+        href.includes("type=recovery")
+      );
+    };
+
     sb.auth.getSession().then(({ data }) => {
       persistActiveProject();
       const session = data.session;
       if (session?.user) {
+        if (shouldRouteToResetPassword()) {
+          window.location.replace("/reset-password");
+          return;
+        }
         const user = session.user;
         setAuthUser({
           id: user.id,
@@ -275,9 +299,13 @@ export default function AuthListener() {
     });
 
     const { data: subscription } = sb.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         persistActiveProject();
         if (session?.user) {
+          if (shouldRouteToResetPassword(event)) {
+            window.location.replace("/reset-password");
+            return;
+          }
           const user = session.user;
           setAuthUser({
             id: user.id,

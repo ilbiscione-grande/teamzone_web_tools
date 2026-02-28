@@ -287,8 +287,7 @@ export default function EditorLayout() {
   const compactVertical = viewport.height <= 860;
   const isMobileLayout =
     viewport.width <= 1024 && (isCoarsePointer || viewport.height <= 860);
-  const isPortraitMobile = isMobileLayout && viewport.height > viewport.width;
-  const forcePortraitPitch = isPortraitMobile;
+  const forcePortraitPitch = isMobileLayout;
   useEffect(() => {
     if (!isMobileLayout || !board) {
       return;
@@ -508,6 +507,7 @@ export default function EditorLayout() {
               >
                 <BoardCanvas
                   board={board}
+                  forcePortrait={forcePortraitPitch}
                   onStageReady={(nextStage) => {
                     setStage(nextStage);
                     setStageRef(nextStage);
@@ -685,6 +685,7 @@ export default function EditorLayout() {
               >
                 <BoardCanvas
                   board={board}
+                  forcePortrait={forcePortraitPitch}
                   onStageReady={(nextStage) => {
                     setStage(nextStage);
                     setStageRef(nextStage);
@@ -942,7 +943,7 @@ export default function EditorLayout() {
                 }}
                 isMaximized={isMaximized}
                 onToggleMaximize={() => {
-                  setShowMaximizedNotes(true);
+                  setShowMaximizedNotes(!isMobileLayout);
                   setIsMaximized(true);
                 }}
               />
@@ -1069,7 +1070,7 @@ export default function EditorLayout() {
                 }}
                 isMaximized={isMaximized}
                 onToggleMaximize={() => {
-                  setShowMaximizedNotes(true);
+                  setShowMaximizedNotes(!isMobileLayout);
                   setIsMaximized(true);
                 }}
               />
