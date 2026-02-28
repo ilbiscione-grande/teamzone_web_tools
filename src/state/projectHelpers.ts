@@ -620,4 +620,5 @@ export const cloneFrame = (frame: BoardFrame): BoardFrame => ({
   id: createId(),
   name: `${frame.name} Copy`,
   objects: JSON.parse(JSON.stringify(frame.objects)),
+  zoomEffect: frame.zoomEffect ? { ...frame.zoomEffect } : undefined,
 });

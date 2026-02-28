@@ -874,6 +874,60 @@ export default function BoardCanvas({
     forcePortrait || isThreeDView
       ? { zoom: 1, offsetX: 0, offsetY: 0 }
       : viewport;
+  const hasFrameZoomEffects = useMemo(
+    () => board.frames.some((frame) => Boolean(frame.zoomEffect)),
+    [board.frames]
+  );
+  const playbackViewport = useMemo(() => {
+    if (
+      board.mode !== "DYNAMIC" ||
+      !isPlaying ||
+      !hasFrameZoomEffects ||
+      board.frames.length === 0
+    ) {
+      return lockedViewport;
+    }
+    const fallback = { zoom: 1, offsetX: 0, offsetY: 0 };
+    const resolveFrameViewport = (index: number) => {
+      const zoom = board.frames[index]?.zoomEffect;
+      if (!zoom) {
+        return fallback;
+      }
+      const safeZoom = Number.isFinite(zoom.zoom) ? zoom.zoom : 1;
+      const safeOffsetX = Number.isFinite(zoom.offsetX) ? zoom.offsetX : 0;
+      const safeOffsetY = Number.isFinite(zoom.offsetY) ? zoom.offsetY : 0;
+      return {
+        zoom: Math.max(0.5, Math.min(2.5, safeZoom)),
+        offsetX: safeOffsetX,
+        offsetY: safeOffsetY,
+      };
+    };
+    const lastIndex = Math.max(0, board.frames.length - 1);
+    const baseIndex = Math.min(Math.floor(playheadFrame), lastIndex);
+    if (!loopPlayback && baseIndex === lastIndex) {
+      return resolveFrameViewport(lastIndex);
+    }
+    const nextIndex = loopPlayback
+      ? (baseIndex + 1) % board.frames.length
+      : Math.min(baseIndex + 1, lastIndex);
+    const t = Math.max(0, Math.min(1, playheadFrame - baseIndex));
+    const from = resolveFrameViewport(baseIndex);
+    const to = resolveFrameViewport(nextIndex);
+    return {
+      zoom: from.zoom + (to.zoom - from.zoom) * t,
+      offsetX: from.offsetX + (to.offsetX - from.offsetX) * t,
+      offsetY: from.offsetY + (to.offsetY - from.offsetY) * t,
+    };
+  }, [
+    board.frames,
+    board.mode,
+    hasFrameZoomEffects,
+    isPlaying,
+    lockedViewport,
+    loopPlayback,
+    playheadFrame,
+  ]);
+  const displayViewport = playbackViewport;
   const setViewportSafe = forcePortrait
     ? (_value: Partial<typeof viewport>) => {}
     : setViewport;
@@ -1084,7 +1138,7 @@ export default function BoardCanvas({
     size.width / effectiveWidth,
     size.height / effectiveHeight
   );
-  const stageScale = baseScale * lockedViewport.zoom;
+  const stageScale = baseScale * displayViewport.zoom;
   // In 3D preview we leave extra headroom so the full pitch stays visible.
   const threeDNormalized = threeDStrength / 100;
   const threeDScaleFactor = 1 - threeDNormalized * 0.3;
@@ -1125,7 +1179,7 @@ export default function BoardCanvas({
     baseOffsetX,
     baseOffsetY,
     baseScale,
-    viewport: lockedViewport,
+    viewport: displayViewport,
     rotation: viewRotation,
     rotationPivot,
     stageRef,
@@ -1313,7 +1367,7 @@ export default function BoardCanvas({
       if (forcePortrait || isThreeDView || isCanvasReadOnly) {
         return;
       }
-      const zoom = viewport.zoom;
+      const zoom = displayViewport.zoom;
       const focusPoint = getObjectFocusPoint(item);
       const displayedPoint =
         viewRotation === 0
@@ -1340,7 +1394,7 @@ export default function BoardCanvas({
       size.height,
       size.width,
       viewRotation,
-      viewport.zoom,
+      displayViewport.zoom,
     ]
   );
 
@@ -1966,8 +2020,8 @@ export default function BoardCanvas({
           height={size.height}
           scaleX={effectiveStageScale}
           scaleY={effectiveStageScale}
-          x={baseOffsetX + threeDOffsetX + lockedViewport.offsetX}
-          y={baseOffsetY + lockedViewport.offsetY}
+          x={baseOffsetX + threeDOffsetX + displayViewport.offsetX}
+          y={baseOffsetY + displayViewport.offsetY}
           draggable={
             isPanning &&
             !forcePortrait &&

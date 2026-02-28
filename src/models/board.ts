@@ -4,6 +4,12 @@ export type BoardMode = "STATIC" | "DYNAMIC";
 export type PitchView = "FULL" | "DEF_HALF" | "OFF_HALF" | "GREEN_EMPTY";
 export type PitchOverlay = "NONE" | "CORRIDORS" | "THIRDS" | "ZONES_18";
 
+export type BoardFrameZoomEffect = {
+  zoom: number;
+  offsetX: number;
+  offsetY: number;
+};
+
 export type BoardFrame = {
   id: string;
   name: string;
@@ -11,6 +17,7 @@ export type BoardFrame = {
   action?: string;
   notes?: string;
   durationMs?: number;
+  zoomEffect?: BoardFrameZoomEffect;
   playerHighlights?: string[];
   playerLinks?: PlayerLink[];
 };

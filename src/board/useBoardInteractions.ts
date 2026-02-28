@@ -522,6 +522,16 @@ export const useBoardInteractions = ({
       const width = maxX - minX;
       const height = maxY - minY;
       const isDragSelection = width > 0.8 || height > 0.8;
+      if (!isDragSelection && marqueeMode === "zoom") {
+        animateViewportTo(
+          {
+            zoom: 1,
+            offsetX: 0,
+            offsetY: 0,
+          },
+          280
+        );
+      }
       if (isDragSelection && marqueeMode === "select") {
         const selectedIds = objects
           .filter((item) => item.type === "player")
@@ -706,6 +716,16 @@ export const useBoardInteractions = ({
       const width = maxX - minX;
       const height = maxY - minY;
       const isDragSelection = width > 0.8 || height > 0.8;
+      if (!isDragSelection && marqueeMode === "zoom") {
+        animateViewportTo(
+          {
+            zoom: 1,
+            offsetX: 0,
+            offsetY: 0,
+          },
+          280
+        );
+      }
       if (isDragSelection && marqueeMode === "zoom") {
         const stage = stageRef.current;
         const stageWidth = stage?.width() ?? 0;
