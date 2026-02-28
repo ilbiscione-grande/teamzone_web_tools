@@ -1190,15 +1190,19 @@ export default function BoardCanvas({
         viewRotation === 0
           ? focusPoint
           : rotatePointAround(focusPoint, rotationPivot, viewRotation);
+      const effectiveZoomScale =
+        baseScale *
+        ZOOM_EFFECT_LEVEL *
+        (isThreeDView ? threeDScaleFactor : 1);
       return {
         zoom: ZOOM_EFFECT_LEVEL,
         offsetX:
           size.width / 2 -
-          displayedPoint.x * baseScale * ZOOM_EFFECT_LEVEL -
+          displayedPoint.x * effectiveZoomScale -
           baseOffsetX,
         offsetY:
           size.height / 2 -
-          displayedPoint.y * baseScale * ZOOM_EFFECT_LEVEL -
+          displayedPoint.y * effectiveZoomScale -
           baseOffsetY,
       };
     };
@@ -1231,12 +1235,14 @@ export default function BoardCanvas({
     board.frames,
     board.mode,
     isPlaying,
+    isThreeDView,
     lockedViewport,
     loopPlayback,
     playheadFrame,
     rotationPivot,
     size.height,
     size.width,
+    threeDScaleFactor,
     viewRotation,
   ]);
   const stageScale = baseScale * displayViewport.zoom;
