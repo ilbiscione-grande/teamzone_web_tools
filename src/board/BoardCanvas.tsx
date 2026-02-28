@@ -1102,6 +1102,7 @@ export default function BoardCanvas({
   const {
     draft,
     marquee,
+    marqueeMode,
     isPanning,
     handleWheel,
     handleMouseDown,
@@ -3516,10 +3517,14 @@ export default function BoardCanvas({
                 y={Math.min(marquee.start.y, marquee.current.y)}
                 width={Math.abs(marquee.current.x - marquee.start.x)}
                 height={Math.abs(marquee.current.y - marquee.start.y)}
-                stroke="#f9bf4a"
+                stroke={marqueeMode === "zoom" ? "#7dd3fc" : "#f9bf4a"}
                 dash={[1, 1]}
                 strokeWidth={0.3}
-                fill="rgba(249,191,74,0.08)"
+                fill={
+                  marqueeMode === "zoom"
+                    ? "rgba(125,211,252,0.12)"
+                    : "rgba(249,191,74,0.08)"
+                }
               />
             )}
           </Group>

@@ -17,7 +17,8 @@ export type Tool =
   | "arrow"
   | "arrow_dashed"
   | "freehand"
-  | "text";
+  | "text"
+  | "zoom";
 
 type Viewport = {
   zoom: number;

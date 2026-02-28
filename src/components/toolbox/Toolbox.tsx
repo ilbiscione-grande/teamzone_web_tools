@@ -90,6 +90,13 @@ const FreehandIcon = () => (
     <path d="M4 15c2.5-4 4.5-6 7-5 2.3 1 2 4 4 4 1.6 0 2.4-1.2 5-4" />
   </svg>
 );
+const ZoomIcon = () => (
+  <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
+    <rect x="4.5" y="4.5" width="10.5" height="10.5" rx="2" strokeDasharray="2 2" />
+    <circle cx="10" cy="10" r="2.2" />
+    <path d="M14.5 14.5L20 20" />
+  </svg>
+);
 const CircleIcon = () => (
   <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
     <circle cx="12" cy="12" r="6" />
@@ -125,6 +132,7 @@ const itemTools: { id: Tool; label: string; hint: string; icon: ReactNode }[] = 
 ];
 
 const lineTools: { id: Tool; label: string; hint: string; icon: ReactNode }[] = [
+  { id: "zoom", label: "Zoom area", hint: "Drag to zoom", icon: <ZoomIcon /> },
   { id: "line", label: "Solid line", hint: "Drag to draw", icon: <LineIcon /> },
   { id: "line_dashed", label: "Dashed line", hint: "Drag to draw", icon: <DashedLineIcon /> },
   { id: "arrow", label: "Arrow", hint: "Drag to draw", icon: <ArrowIcon /> },
