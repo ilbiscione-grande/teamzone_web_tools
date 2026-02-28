@@ -22,6 +22,7 @@ export type DrawableAnimation =
   | "fadeOut"
   | "pop"
   | "pulse"
+  | "zoom"
   | "highlight"
   | "lightning"
   | "lightPulse"

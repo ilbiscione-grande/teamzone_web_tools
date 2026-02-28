@@ -236,8 +236,6 @@ export default function Toolbox({
   const setTool = useEditorStore((state) => state.setTool);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
-  const viewport = useEditorStore((state) => state.viewport);
-  const setViewport = useEditorStore((state) => state.setViewport);
   const [activeTab, setActiveTab] = useState<
     "items" | "draw" | "squad" | "notes" | "frames" | "shared"
   >("items");
@@ -615,36 +613,6 @@ export default function Toolbox({
       index === frameIndex ? { ...frame, ...payload } : frame
     );
     updateBoard(board.id, { frames: nextFrames });
-  };
-  const saveCurrentViewportAsFrameZoom = () => {
-    if (!activeFrame) {
-      return;
-    }
-    updateFrameMeta({
-      zoomEffect: {
-        zoom: Math.max(0.5, Math.min(2.5, viewport.zoom)),
-        offsetX: viewport.offsetX,
-        offsetY: viewport.offsetY,
-      },
-    });
-  };
-  const clearFrameZoomEffect = () => {
-    if (!activeFrame) {
-      return;
-    }
-    updateFrameMeta({ zoomEffect: undefined });
-  };
-  const previewFrameZoomEffect = () => {
-    const zoom = activeFrame?.zoomEffect;
-    if (!zoom) {
-      setViewport({ zoom: 1, offsetX: 0, offsetY: 0 });
-      return;
-    }
-    setViewport({
-      zoom: zoom.zoom,
-      offsetX: zoom.offsetX,
-      offsetY: zoom.offsetY,
-    });
   };
 
   useEffect(() => {
@@ -1545,45 +1513,6 @@ export default function Toolbox({
                   Use 0 to keep the default playback speed.
                 </span>
               </label>
-              <div className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/60 p-2">
-                <p className="text-[11px] uppercase text-[var(--ink-1)]">
-                  Frame zoom effect
-                </p>
-                <p className="mt-1 text-[10px] text-[var(--ink-1)]">
-                  Applies during playback/export between frames.
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                    onClick={saveCurrentViewportAsFrameZoom}
-                  >
-                    Use current zoom
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                    onClick={previewFrameZoomEffect}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                    onClick={clearFrameZoomEffect}
-                    disabled={!activeFrame.zoomEffect}
-                  >
-                    Clear
-                  </button>
-                </div>
-                <p className="mt-2 text-[10px] text-[var(--ink-1)]">
-                  {activeFrame.zoomEffect
-                    ? `Zoom ${activeFrame.zoomEffect.zoom.toFixed(2)} | X ${Math.round(
-                        activeFrame.zoomEffect.offsetX
-                      )} | Y ${Math.round(activeFrame.zoomEffect.offsetY)}`
-                    : "No zoom effect set for this frame."}
-                </p>
-              </div>
             </div>
           </div>
         ) : (

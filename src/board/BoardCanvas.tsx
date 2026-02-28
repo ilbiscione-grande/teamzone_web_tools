@@ -874,60 +874,6 @@ export default function BoardCanvas({
     forcePortrait || isThreeDView
       ? { zoom: 1, offsetX: 0, offsetY: 0 }
       : viewport;
-  const hasFrameZoomEffects = useMemo(
-    () => board.frames.some((frame) => Boolean(frame.zoomEffect)),
-    [board.frames]
-  );
-  const playbackViewport = useMemo(() => {
-    if (
-      board.mode !== "DYNAMIC" ||
-      !isPlaying ||
-      !hasFrameZoomEffects ||
-      board.frames.length === 0
-    ) {
-      return lockedViewport;
-    }
-    const fallback = { zoom: 1, offsetX: 0, offsetY: 0 };
-    const resolveFrameViewport = (index: number) => {
-      const zoom = board.frames[index]?.zoomEffect;
-      if (!zoom) {
-        return fallback;
-      }
-      const safeZoom = Number.isFinite(zoom.zoom) ? zoom.zoom : 1;
-      const safeOffsetX = Number.isFinite(zoom.offsetX) ? zoom.offsetX : 0;
-      const safeOffsetY = Number.isFinite(zoom.offsetY) ? zoom.offsetY : 0;
-      return {
-        zoom: Math.max(0.5, Math.min(2.5, safeZoom)),
-        offsetX: safeOffsetX,
-        offsetY: safeOffsetY,
-      };
-    };
-    const lastIndex = Math.max(0, board.frames.length - 1);
-    const baseIndex = Math.min(Math.floor(playheadFrame), lastIndex);
-    if (!loopPlayback && baseIndex === lastIndex) {
-      return resolveFrameViewport(lastIndex);
-    }
-    const nextIndex = loopPlayback
-      ? (baseIndex + 1) % board.frames.length
-      : Math.min(baseIndex + 1, lastIndex);
-    const t = Math.max(0, Math.min(1, playheadFrame - baseIndex));
-    const from = resolveFrameViewport(baseIndex);
-    const to = resolveFrameViewport(nextIndex);
-    return {
-      zoom: from.zoom + (to.zoom - from.zoom) * t,
-      offsetX: from.offsetX + (to.offsetX - from.offsetX) * t,
-      offsetY: from.offsetY + (to.offsetY - from.offsetY) * t,
-    };
-  }, [
-    board.frames,
-    board.mode,
-    hasFrameZoomEffects,
-    isPlaying,
-    lockedViewport,
-    loopPlayback,
-    playheadFrame,
-  ]);
-  const displayViewport = playbackViewport;
   const setViewportSafe = forcePortrait
     ? (_value: Partial<typeof viewport>) => {}
     : setViewport;
@@ -1138,12 +1084,12 @@ export default function BoardCanvas({
     size.width / effectiveWidth,
     size.height / effectiveHeight
   );
-  const stageScale = baseScale * displayViewport.zoom;
-  // In 3D preview we leave extra headroom so the full pitch stays visible.
   const threeDNormalized = threeDStrength / 100;
   const threeDScaleFactor = 1 - threeDNormalized * 0.3;
-  const effectiveStageScale = stageScale * (isThreeDView ? threeDScaleFactor : 1);
-  const centeringScale = isThreeDView ? effectiveStageScale : baseScale;
+  const centeringStageScale = baseScale * lockedViewport.zoom;
+  const centeringEffectiveScale =
+    centeringStageScale * (isThreeDView ? threeDScaleFactor : 1);
+  const centeringScale = isThreeDView ? centeringEffectiveScale : baseScale;
   const baseOffsetX = forcePortrait
     ? -rotatedBounds.minX * centeringScale
     : (size.width - effectiveWidth * centeringScale) / 2 -
@@ -1152,6 +1098,126 @@ export default function BoardCanvas({
   const baseOffsetY =
     (size.height - effectiveHeight * centeringScale) / 2 -
     rotatedBounds.minY * centeringScale;
+  const displayViewport = useMemo(() => {
+    if (
+      board.mode !== "DYNAMIC" ||
+      !isPlaying ||
+      forcePortrait ||
+      isThreeDView ||
+      board.frames.length === 0
+    ) {
+      return lockedViewport;
+    }
+    const ZOOM_EFFECT_LEVEL = 1.8;
+    const fallback = { zoom: 1, offsetX: 0, offsetY: 0 };
+    const getFocusPoint = (item: DrawableObject) => {
+      if (item.type === "arrow" || item.type === "path") {
+        const points = item.points ?? [];
+        if (points.length < 2) {
+          return item.position;
+        }
+        let minX = item.position.x + points[0]!;
+        let maxX = minX;
+        let minY = item.position.y + points[1]!;
+        let maxY = minY;
+        for (let index = 2; index < points.length; index += 2) {
+          const x = item.position.x + (points[index] ?? 0);
+          const y = item.position.y + (points[index + 1] ?? 0);
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+        return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+      }
+      if (item.type === "circle") {
+        return item.position;
+      }
+      if (
+        item.type === "rect" ||
+        item.type === "triangle" ||
+        item.type === "goal" ||
+        item.type === "cone" ||
+        item.type === "pole" ||
+        item.type === "mannequin" ||
+        item.type === "text"
+      ) {
+        const height = item.type === "text" ? item.height ?? 1.2 : item.height;
+        return {
+          x: item.position.x + item.width / 2,
+          y: item.position.y + height / 2,
+        };
+      }
+      return item.position;
+    };
+    const toViewportForObject = (item: DrawableObject) => {
+      const focusPoint = getFocusPoint(item);
+      const displayedPoint =
+        viewRotation === 0
+          ? focusPoint
+          : rotatePointAround(focusPoint, rotationPivot, viewRotation);
+      return {
+        zoom: ZOOM_EFFECT_LEVEL,
+        offsetX:
+          size.width / 2 -
+          displayedPoint.x * baseScale * ZOOM_EFFECT_LEVEL -
+          baseOffsetX,
+        offsetY:
+          size.height / 2 -
+          displayedPoint.y * baseScale * ZOOM_EFFECT_LEVEL -
+          baseOffsetY,
+      };
+    };
+    const findZoomObject = (items: DrawableObject[]) =>
+      items.find((item) => item.animation === "zoom");
+    const lastIndex = Math.max(0, board.frames.length - 1);
+    const baseIndex = Math.min(Math.floor(playheadFrame), lastIndex);
+    const baseObjects = board.frames[baseIndex]?.objects ?? [];
+    const baseZoomObject = findZoomObject(baseObjects);
+    if (!loopPlayback && baseIndex === lastIndex) {
+      return baseZoomObject ? toViewportForObject(baseZoomObject) : fallback;
+    }
+    const nextIndex = loopPlayback
+      ? (baseIndex + 1) % board.frames.length
+      : Math.min(baseIndex + 1, lastIndex);
+    const nextObjects = board.frames[nextIndex]?.objects ?? [];
+    const nextZoomObject = findZoomObject(nextObjects);
+    const tRaw = Math.max(0, Math.min(1, playheadFrame - baseIndex));
+    const t = tRaw * tRaw * (3 - 2 * tRaw);
+    const baseMatchForNext = nextZoomObject
+      ? baseObjects.find((item) => item.id === nextZoomObject.id)
+      : undefined;
+    const from =
+      nextZoomObject && baseMatchForNext
+        ? toViewportForObject(baseMatchForNext)
+        : baseZoomObject
+          ? toViewportForObject(baseZoomObject)
+          : fallback;
+    const to = nextZoomObject ? toViewportForObject(nextZoomObject) : fallback;
+    return {
+      zoom: from.zoom + (to.zoom - from.zoom) * t,
+      offsetX: from.offsetX + (to.offsetX - from.offsetX) * t,
+      offsetY: from.offsetY + (to.offsetY - from.offsetY) * t,
+    };
+  }, [
+    baseOffsetX,
+    baseOffsetY,
+    baseScale,
+    board.frames,
+    board.mode,
+    forcePortrait,
+    isPlaying,
+    isThreeDView,
+    lockedViewport,
+    loopPlayback,
+    playheadFrame,
+    rotationPivot,
+    size.height,
+    size.width,
+    viewRotation,
+  ]);
+  const stageScale = baseScale * displayViewport.zoom;
+  const effectiveStageScale = stageScale * (isThreeDView ? threeDScaleFactor : 1);
 
   const {
     draft,

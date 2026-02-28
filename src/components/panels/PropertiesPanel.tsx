@@ -44,6 +44,7 @@ const drawableAnimationOptions: Array<{
   { value: "fadeOut", label: "Fade out" },
   { value: "pop", label: "Pop" },
   { value: "pulse", label: "Pulse" },
+  { value: "zoom", label: "Zoom" },
   { value: "highlight", label: "Highlight" },
   { value: "lightning", label: "Lightning" },
   { value: "lightPulse", label: "Light Pulse" },
