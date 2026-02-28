@@ -1144,7 +1144,25 @@ export default function BoardCanvas({
     }
     const ZOOM_EFFECT_LEVEL = 1.8;
     const fallback = { zoom: 1, offsetX: 0, offsetY: 0 };
-    const getFocusPoint = (item: DrawableObject) => {
+    const getFocusPoint = (
+      item: DrawableObject,
+      frameObjects: DrawableObject[]
+    ) => {
+      if (item.type === "ball") {
+        const attachedId = item.attachedToId;
+        if (attachedId) {
+          const player = frameObjects.find(
+            (entry) => entry.id === attachedId && entry.type === "player"
+          );
+          if (player) {
+            const offset = item.offset ?? { x: 1.5, y: -1.5 };
+            return {
+              x: player.position.x + offset.x,
+              y: player.position.y + offset.y,
+            };
+          }
+        }
+      }
       if (item.type === "arrow" || item.type === "path") {
         const points = item.points ?? [];
         if (points.length < 2) {
@@ -1184,8 +1202,11 @@ export default function BoardCanvas({
       }
       return item.position;
     };
-    const toViewportForObject = (item: DrawableObject) => {
-      const focusPoint = getFocusPoint(item);
+    const toViewportForObject = (
+      item: DrawableObject,
+      frameObjects: DrawableObject[]
+    ) => {
+      const focusPoint = getFocusPoint(item, frameObjects);
       const displayedPoint =
         viewRotation === 0
           ? focusPoint
@@ -1212,7 +1233,9 @@ export default function BoardCanvas({
     const baseObjects = board.frames[baseIndex]?.objects ?? [];
     const baseZoomObject = findZoomObject(baseObjects);
     if (!loopPlayback && baseIndex === lastIndex) {
-      return baseZoomObject ? toViewportForObject(baseZoomObject) : fallback;
+      return baseZoomObject
+        ? toViewportForObject(baseZoomObject, baseObjects)
+        : fallback;
     }
     const nextIndex = loopPlayback
       ? (baseIndex + 1) % board.frames.length
@@ -1221,8 +1244,12 @@ export default function BoardCanvas({
     const nextZoomObject = findZoomObject(nextObjects);
     const tRaw = Math.max(0, Math.min(1, playheadFrame - baseIndex));
     const t = tRaw * tRaw * (3 - 2 * tRaw);
-    const from = baseZoomObject ? toViewportForObject(baseZoomObject) : fallback;
-    const to = nextZoomObject ? toViewportForObject(nextZoomObject) : fallback;
+    const from = baseZoomObject
+      ? toViewportForObject(baseZoomObject, baseObjects)
+      : fallback;
+    const to = nextZoomObject
+      ? toViewportForObject(nextZoomObject, nextObjects)
+      : fallback;
     return {
       zoom: from.zoom + (to.zoom - from.zoom) * t,
       offsetX: from.offsetX + (to.offsetX - from.offsetX) * t,
