@@ -9,6 +9,7 @@ import { fetchProjectShareLink } from "@/persistence/projectShareLinks";
 import BoardCanvas from "@/board/BoardCanvas";
 import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import type { Project } from "@/models";
+import NotesMarkdown from "@/components/notes/NotesMarkdown";
 
 type ProjectShareViewProps = {
   token?: string;
@@ -415,8 +416,8 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
           <p className="mb-2 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
             Notes
           </p>
-          <div className="max-h-40 overflow-auto whitespace-pre-wrap rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-[11px]">
-            {board.notes}
+          <div className="max-h-40 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-[11px]">
+            <NotesMarkdown text={board.notes ?? ""} />
           </div>
         </div>
       )}
