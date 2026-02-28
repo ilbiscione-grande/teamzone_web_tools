@@ -61,22 +61,33 @@ export const createBoardActions: StateCreator<
       }
       const homeKit = state.project.settings?.homeKit ?? defaultHomeKit();
       const awayKit = state.project.settings?.awayKit ?? defaultAwayKit();
-      const homeSquadId = createId();
-      const awaySquadId = createId();
-      state.project.squads.push({
-        id: homeSquadId,
-        name: `Home ${state.project.boards.length + 1}`,
-        clubLogo: undefined,
-        kit: { ...homeKit },
-        players: [],
-      });
-      state.project.squads.push({
-        id: awaySquadId,
-        name: `Away ${state.project.boards.length + 1}`,
-        clubLogo: undefined,
-        kit: { ...awayKit },
-        players: [],
-      });
+      const activeBoard = state.project.boards.find(
+        (item) => item.id === state.project?.activeBoardId
+      );
+      let homeSquadId =
+        activeBoard?.homeSquadId ?? state.project.squads[0]?.id;
+      let awaySquadId =
+        activeBoard?.awaySquadId ?? state.project.squads[1]?.id;
+      if (!homeSquadId) {
+        homeSquadId = createId();
+        state.project.squads.push({
+          id: homeSquadId,
+          name: "Home",
+          clubLogo: undefined,
+          kit: { ...homeKit },
+          players: [],
+        });
+      }
+      if (!awaySquadId) {
+        awaySquadId = createId();
+        state.project.squads.push({
+          id: awaySquadId,
+          name: "Away",
+          clubLogo: undefined,
+          kit: { ...awayKit },
+          players: [],
+        });
+      }
       const board = createEmptyBoard(
         name,
         { homeSquadId, awaySquadId },

@@ -265,7 +265,14 @@ export default function SquadEditor() {
                 className="grid grid-cols-[28px_minmax(0,_1fr)_52px_32px_40px] items-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5"
               >
                 <span className="text-center text-[11px] text-[var(--ink-1)]">{player.number ?? ""}</span>
-                <span className="min-w-0 truncate text-[11px] text-[var(--ink-0)]">{player.name}</span>
+                <span className="min-w-0 truncate text-[11px] text-[var(--ink-0)]">
+                  {player.name}
+                  {player.guest ? (
+                    <span className="ml-1 rounded-full border border-[var(--accent-0)] px-1 text-[9px] uppercase text-[var(--accent-0)]">
+                      Guest
+                    </span>
+                  ) : null}
+                </span>
                 <span className="min-w-0 truncate text-[10px] text-[var(--ink-1)]">
                   {toPositionAbbreviation(player.positionLabel)}
                 </span>

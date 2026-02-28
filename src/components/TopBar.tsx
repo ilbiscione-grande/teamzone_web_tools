@@ -102,9 +102,6 @@ export default function TopBar() {
   const [managePresetStatus, setManagePresetStatus] = useState<string | null>(
     null
   );
-  const [manageAutoAppliedKey, setManageAutoAppliedKey] = useState<string | null>(
-    null
-  );
   const [jerseyType, setJerseyType] = useState<
     "solid" | "split" | "stripe" | "sash" | "pinstripe"
   >("solid");
@@ -151,9 +148,6 @@ export default function TopBar() {
     2.4,
     2.6,
   ];
-  const autoTeamPresetKey = authUser?.id
-    ? `tacticsboard:autoTeamPreset:${authUser.id}`
-    : "tacticsboard:autoTeamPreset";
 
   const refreshTemplates = () => {
     if (!canUseTemplates) {
@@ -404,53 +398,6 @@ export default function TopBar() {
       cancelled = true;
     };
   }, [authUser, plan, project, shareLinkOpen]);
-  useEffect(() => {
-    if (!squadPresetsOpen) {
-      setManageAutoAppliedKey(null);
-      return;
-    }
-    if (!canUsePresetStorage || !manageSquad || squadPresets.length === 0) {
-      return;
-    }
-    const savedPresetId =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem(autoTeamPresetKey)
-        : null;
-    const preferredPreset =
-      squadPresets.find((team) => team.id === savedPresetId) ?? squadPresets[0];
-    if (!preferredPreset) {
-      return;
-    }
-    const key = `${project?.id ?? ""}:${manageSide}:${preferredPreset.id}`;
-    if (manageAutoAppliedKey === key) {
-      return;
-    }
-    updateSquad(manageSquad.id, {
-      name: preferredPreset.squad.name,
-      clubLogo: preferredPreset.squad.clubLogo,
-      kit: { ...preferredPreset.squad.kit },
-      captainId: preferredPreset.squad.captainId,
-      substituteIds: [...(preferredPreset.squad.substituteIds ?? [])],
-      players: preferredPreset.squad.players.map((player) => ({ ...player })),
-    });
-    setManageAutoAppliedKey(key);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(autoTeamPresetKey, preferredPreset.id);
-    }
-    setManagePresetStatus(
-      `Loaded team: ${preferredPreset.name} (${manageSide === "home" ? "Home" : "Away"}).`
-    );
-  }, [
-    autoTeamPresetKey,
-    canUsePresetStorage,
-    manageAutoAppliedKey,
-    manageSide,
-    manageSquad,
-    project?.id,
-    squadPresets,
-    squadPresetsOpen,
-    updateSquad,
-  ]);
   const closeSquadPresetsModal = () => {
     setSquadPresetsOpen(false);
   };
@@ -465,9 +412,10 @@ export default function TopBar() {
       return;
     }
     setManagePresetStatus(null);
-    const existingTeam = squadPresets.find(
-      (item) => item.name.trim().toLowerCase() === nextName.toLowerCase()
-    );
+    const existingTeam =
+      squadPresets.find(
+        (item) => item.name.trim().toLowerCase() === nextName.toLowerCase()
+      ) ?? squadPresets[0];
     if (existingTeam) {
       const result = await updateTeamWithSquad({
         id: existingTeam.id,
@@ -481,7 +429,7 @@ export default function TopBar() {
       setSquadPresets((prev) =>
         prev.map((item) => (item.id === result.team.id ? result.team : item))
       );
-      setManagePresetStatus("Team updated.");
+      setManagePresetStatus("Team saved to DB.");
       return;
     }
     const result = await createTeamWithSquad({
@@ -2168,21 +2116,40 @@ export default function TopBar() {
                         <span className="text-[11px] uppercase text-[var(--ink-1)]">
                           Players
                         </span>
-                        <button
-                          className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                          onClick={() =>
-                            addSquadPlayer(manageSquad.id, {
-                              id: createId(),
-                              name: "New Player",
-                              positionLabel: "",
-                              active: true,
-                              number: undefined,
-                              vestColor: undefined,
-                            })
-                          }
-                        >
-                          Add player
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                            onClick={() =>
+                              addSquadPlayer(manageSquad.id, {
+                                id: createId(),
+                                name: "New Player",
+                                positionLabel: "",
+                                guest: false,
+                                active: true,
+                                number: undefined,
+                                vestColor: undefined,
+                              })
+                            }
+                          >
+                            Add player
+                          </button>
+                          <button
+                            className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
+                            onClick={() =>
+                              addSquadPlayer(manageSquad.id, {
+                                id: createId(),
+                                name: "Guest Player",
+                                positionLabel: "",
+                                guest: true,
+                                active: true,
+                                number: undefined,
+                                vestColor: undefined,
+                              })
+                            }
+                          >
+                            Add guest
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                         <button
@@ -2240,15 +2207,33 @@ export default function TopBar() {
                                 })
                               }
                             />
-                            <input
-                              className="h-7 w-full rounded-md border border-[var(--line)] bg-transparent px-1 text-[11px] text-[var(--ink-0)]"
-                              value={player.name}
-                              onChange={(event) =>
-                                updateSquadPlayer(manageSquad.id, player.id, {
-                                  name: event.target.value,
-                                })
-                              }
-                            />
+                            <div className="flex items-center gap-1">
+                              <input
+                                className="h-7 w-full rounded-md border border-[var(--line)] bg-transparent px-1 text-[11px] text-[var(--ink-0)]"
+                                value={player.name}
+                                onChange={(event) =>
+                                  updateSquadPlayer(manageSquad.id, player.id, {
+                                    name: event.target.value,
+                                  })
+                                }
+                              />
+                              <button
+                                className={`h-7 min-w-[30px] rounded-md border px-1 text-[10px] font-semibold ${
+                                  player.guest
+                                    ? "border-[var(--accent-0)] bg-[var(--accent-0)] text-black"
+                                    : "border-[var(--line)] text-[var(--ink-1)]"
+                                }`}
+                                onClick={() =>
+                                  updateSquadPlayer(manageSquad.id, player.id, {
+                                    guest: !player.guest,
+                                  })
+                                }
+                                title="Guest player"
+                                aria-label="Guest player"
+                              >
+                                G
+                              </button>
+                            </div>
                             <select
                               className="h-7 w-full rounded-md border border-[var(--line)] bg-[var(--panel-2)] px-2 text-[10px] text-[var(--ink-0)]"
                               value={player.positionLabel}

@@ -469,15 +469,15 @@ export const ensureBoardSquads = (project: Project): Project => {
     project.sessionNotesFields = {};
   }
   const squads = project.squads ?? [];
-  const getSquad = (id?: string) =>
-    id ? squads.find((item) => item.id === id) : undefined;
   const createSquad = (name: string, kit?: Squad["kit"]) => {
     const squad = createTeamSquad(name, kit ? { kit } : undefined);
     squads.push(squad);
     return squad;
   };
+  const primaryHome = squads[0] ?? createSquad("Home");
+  const primaryAway = squads[1] ?? createSquad("Away", defaultAwayKit());
 
-  project.boards.forEach((board, index) => {
+  project.boards.forEach((board) => {
     if (
       board.pitchRotation == null &&
       project.settings?.mode === "match" &&
@@ -485,25 +485,10 @@ export const ensureBoardSquads = (project: Project): Project => {
     ) {
       board.pitchRotation = 180;
     }
-    let home = getSquad(board.homeSquadId);
-    let away = getSquad(board.awaySquadId);
-
-    if (!home && squads[0]) {
-      home = squads[0];
-    }
-    if (!away && squads[1]) {
-      away = squads[1];
-    }
-
-    if (!home) {
-      home = createSquad(`Home ${index + 1}`);
-    }
-    if (!away || away.id === home.id) {
-      away = createSquad(`Away ${index + 1}`, defaultAwayKit());
-    }
-
-    board.homeSquadId = home.id;
-    board.awaySquadId = away.id;
+    // Normalize all boards to shared squads in the project to avoid board-local
+    // empty squads replacing linked players in older projects.
+    board.homeSquadId = primaryHome.id;
+    board.awaySquadId = primaryAway.id;
 
     if (!project.settings) {
       project.settings = {
@@ -521,11 +506,14 @@ export const ensureBoardSquads = (project: Project): Project => {
         },
       };
     }
-    if (home.kit.shirt === "#f9bf4a") {
-      home.kit.shirt = project.settings.homeKit.shirt;
+    if (primaryHome.kit.shirt === "#f9bf4a") {
+      primaryHome.kit.shirt = project.settings.homeKit.shirt;
     }
-    if (away.kit.shirt === "#f9bf4a" || away.kit.shirt === "#4aa8f9") {
-      away.kit.shirt = project.settings.awayKit.shirt;
+    if (
+      primaryAway.kit.shirt === "#f9bf4a" ||
+      primaryAway.kit.shirt === "#4aa8f9"
+    ) {
+      primaryAway.kit.shirt = project.settings.awayKit.shirt;
     }
 
     const normalizeConeObject = (object: DrawableObject) => {

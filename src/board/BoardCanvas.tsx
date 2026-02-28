@@ -902,9 +902,7 @@ export default function BoardCanvas({
     board.pitchView === "FULL" &&
     (isForcedPortrait || (readOnly && size.height > size.width));
   const lockedViewport =
-    forcePortrait || isThreeDView
-      ? { zoom: 1, offsetX: 0, offsetY: 0 }
-      : viewport;
+    isThreeDView ? { zoom: 1, offsetX: 0, offsetY: 0 } : viewport;
   const setViewportSafe = forcePortrait
     ? (_value: Partial<typeof viewport>) => {}
     : setViewport;
@@ -1141,7 +1139,6 @@ export default function BoardCanvas({
       board.mode !== "DYNAMIC" ||
       (!isPlaying && !isStoppedAtTimelineEnd) ||
       forcePortrait ||
-      isThreeDView ||
       board.frames.length === 0
     ) {
       return lockedViewport;
@@ -1236,7 +1233,6 @@ export default function BoardCanvas({
     board.mode,
     forcePortrait,
     isPlaying,
-    isThreeDView,
     lockedViewport,
     loopPlayback,
     playheadFrame,
