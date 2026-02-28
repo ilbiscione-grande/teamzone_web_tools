@@ -1263,6 +1263,14 @@ export default function BoardObject({
             listening={false}
           />
         )}
+        <Line
+          points={flatPoints}
+          stroke="rgba(0,0,0,0.001)"
+          strokeWidth={Math.max(0.2, arrowStrokeWidth)}
+          hitStrokeWidth={Math.max(1.6, arrowStrokeWidth * 5)}
+          lineCap="round"
+          lineJoin="round"
+        />
       </Group>
     );
   }
