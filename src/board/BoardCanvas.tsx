@@ -2236,26 +2236,30 @@ export default function BoardCanvas({
             ))}
             {selectedArrows.map((arrow) => {
               const start = arrow.position;
+              const endLocal = {
+                x: (arrow as { points: number[] }).points[2],
+                y: (arrow as { points: number[] }).points[3],
+              };
               const end = {
-                x: arrow.position.x + (arrow as { points: number[] }).points[2],
-                y: arrow.position.y + (arrow as { points: number[] }).points[3],
+                x: arrow.position.x + endLocal.x,
+                y: arrow.position.y + endLocal.y,
               };
               const control = arrow.curved
                 ? arrow.control ?? {
-                    x: (arrow as { points: number[] }).points[2] / 2,
-                    y: (arrow as { points: number[] }).points[3] / 2,
+                    x: endLocal.x / 2,
+                    y: endLocal.y / 2,
                   }
                 : null;
               const controlWorld = control
                 ? (() => {
                     const cp1 = { x: (2 * control.x) / 3, y: (2 * control.y) / 3 };
                     const cp2 = {
-                      x: (end.x + 2 * control.x) / 3,
-                      y: (end.y + 2 * control.y) / 3,
+                      x: (endLocal.x + 2 * control.x) / 3,
+                      y: (endLocal.y + 2 * control.y) / 3,
                     };
                     const mid = {
-                      x: (3 * cp1.x + 3 * cp2.x + end.x) / 8,
-                      y: (3 * cp1.y + 3 * cp2.y + end.y) / 8,
+                      x: (3 * cp1.x + 3 * cp2.x + endLocal.x) / 8,
+                      y: (3 * cp1.y + 3 * cp2.y + endLocal.y) / 8,
                     };
                     return {
                       x: arrow.position.x + mid.x,
@@ -2344,8 +2348,8 @@ export default function BoardCanvas({
                           y: event.target.y() - start.y,
                         };
                         const next = {
-                          x: 2 * localMid.x - end.x / 2,
-                          y: 2 * localMid.y - end.y / 2,
+                          x: 2 * localMid.x - endLocal.x / 2,
+                          y: 2 * localMid.y - endLocal.y / 2,
                         };
                         updateObject(board.id, frameIndex, arrow.id, {
                           control: next,
