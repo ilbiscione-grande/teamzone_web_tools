@@ -419,11 +419,14 @@ export const createCoreActions: StateCreator<
   closeProject: async () => {
     const snapshot = get();
     const active = snapshot.project;
-    if (
-      active &&
+    const canPersist =
+      !!active &&
       !active.isSample &&
       !active.isShared &&
-      can(snapshot.plan, "project.save")
+      can(snapshot.plan, "project.save");
+    if (
+      canPersist &&
+      active
     ) {
       const userId = snapshot.authUser?.id ?? null;
       saveProject(active, userId);
@@ -434,19 +437,29 @@ export const createCoreActions: StateCreator<
         snapshot.plan === "PAID" &&
         (typeof window === "undefined" || window.navigator.onLine)
       ) {
+        const authUserId = snapshot.authUser.id;
         get().setSyncStatus({
           state: "syncing",
           updatedAt: new Date().toISOString(),
         });
-        const ok = await saveProjectCloud(active);
-        if (ok) {
-          clearOfflineDirtyProject(snapshot.authUser.id, active.id);
-        }
-        get().setSyncStatus({
-          state: ok ? "saved" : "error",
-          message: ok ? undefined : "Cloud save failed.",
-          updatedAt: new Date().toISOString(),
-        });
+        void saveProjectCloud(active)
+          .then((ok) => {
+            if (ok) {
+              clearOfflineDirtyProject(authUserId, active.id);
+            }
+            get().setSyncStatus({
+              state: ok ? "saved" : "error",
+              message: ok ? undefined : "Cloud save failed.",
+              updatedAt: new Date().toISOString(),
+            });
+          })
+          .catch(() => {
+            get().setSyncStatus({
+              state: "error",
+              message: "Cloud save failed.",
+              updatedAt: new Date().toISOString(),
+            });
+          });
       }
     }
     set((state) => {

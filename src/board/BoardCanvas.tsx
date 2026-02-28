@@ -1394,6 +1394,53 @@ export default function BoardCanvas({
       });
   }, [objects, squadPlayerById]);
 
+  const renderObjectTypeIcon = (type: DrawableObject["type"]) => {
+    const base = "h-3.5 w-3.5";
+    if (type === "player" || type === "mannequin" || type === "pole") {
+      return (
+        <svg aria-hidden viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="6.5" r="2.5" />
+          <path d="M7.5 21l2-7h5l2 7" />
+          <path d="M9.5 14V10h5v4" />
+        </svg>
+      );
+    }
+    if (type === "ball" || type === "circle") {
+      return (
+        <svg aria-hidden viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="8" />
+        </svg>
+      );
+    }
+    if (type === "cone" || type === "triangle") {
+      return (
+        <svg aria-hidden viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 5l8 14H4L12 5z" />
+        </svg>
+      );
+    }
+    if (type === "goal" || type === "rect") {
+      return (
+        <svg aria-hidden viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="6" width="16" height="12" rx="1.5" />
+        </svg>
+      );
+    }
+    if (type === "arrow" || type === "path") {
+      return (
+        <svg aria-hidden viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 16c4-8 8-8 14-8" />
+          <path d="M14 6l4 2-2 4" />
+        </svg>
+      );
+    }
+    return (
+      <svg aria-hidden viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="5" y="5" width="14" height="14" rx="2" />
+      </svg>
+    );
+  };
+
   const filteredObjectListEntries = useMemo(() => {
     const query = objectListSearch.trim().toLowerCase();
     return objectListEntries.filter((entry) => {
@@ -1745,7 +1792,12 @@ export default function BoardCanvas({
                           setObjectListOpen(false);
                         }}
                       >
-                        {entry.label}
+                        <span className="inline-flex items-center gap-2">
+                          <span className="text-[var(--accent-0)]">
+                            {renderObjectTypeIcon(entry.type)}
+                          </span>
+                          <span className="truncate">{entry.displayName}</span>
+                        </span>
                       </button>
                       <button
                         className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
