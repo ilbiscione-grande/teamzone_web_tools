@@ -42,6 +42,7 @@ const drawableAnimationOptions: Array<{
   { value: "none", label: "None" },
   { value: "fadeIn", label: "Fade in" },
   { value: "fadeOut", label: "Fade out" },
+  { value: "draw", label: "Draw (Arrow)" },
   { value: "pop", label: "Pop" },
   { value: "pulse", label: "Pulse" },
   { value: "zoom", label: "Zoom" },

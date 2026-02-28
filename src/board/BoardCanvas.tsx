@@ -385,6 +385,22 @@ export default function BoardCanvas({
     next.style.outlineWidth = strength;
     return next;
   }, []);
+  const applyArrowDrawProgress = useCallback((
+    object: DrawableObject,
+    amount: number
+  ): DrawableObject => {
+    if (object.type !== "arrow") {
+      return object;
+    }
+    const progress = Math.max(0, Math.min(1, amount));
+    return {
+      ...object,
+      style: {
+        ...object.style,
+        fxDrawProgress: progress,
+      },
+    } as DrawableObject;
+  }, []);
   const getLightningAura = useCallback(
     (object: DrawableObject) => {
       const strength = Math.max(
@@ -555,7 +571,10 @@ export default function BoardCanvas({
     if (!loopPlayback && baseIndex === lastIndex) {
       // End of timeline should render final frame state, not restart transition effects.
       return (board.frames[lastIndex]?.objects ?? objects).map((item) =>
-        applyHighlightEffect(item, item.animation === "highlight" ? 1 : 0)
+        applyArrowDrawProgress(
+          applyHighlightEffect(item, item.animation === "highlight" ? 1 : 0),
+          1
+        )
       );
     }
     const nextIndex = loopPlayback
@@ -705,7 +724,7 @@ export default function BoardCanvas({
         // Transition effect ownership:
         // - fadeIn: target frame only
         // - fadeOut: source frame only
-        // - pop/pulse/lightning/lightPulse/shimmer: target frame (preview while entering)
+        // - draw/pop/pulse/lightning/lightPulse/shimmer: target frame (preview while entering)
         const transitionEffect = (() => {
           if (item.animation === "fadeOut") {
             return "fadeOut" as const;
@@ -714,6 +733,7 @@ export default function BoardCanvas({
             return "fadeIn" as const;
           }
           if (
+            next.animation === "draw" ||
             next.animation === "pop" ||
             next.animation === "pulse" ||
             next.animation === "lightning" ||
@@ -733,15 +753,21 @@ export default function BoardCanvas({
                 ? t
                 : 0;
         merged.push(
-          applyHighlightEffect(
-            applyPlaybackEffect(blended, t, transitionEffect),
-            highlightAmount
+          applyArrowDrawProgress(
+            applyHighlightEffect(
+              applyPlaybackEffect(blended, t, transitionEffect),
+              highlightAmount
+            ),
+            transitionEffect === "draw" ? t : 1
           )
         );
       } else {
         const highlightAmount = item.animation === "highlight" ? 1 - t : 0;
         merged.push(
-          applyHighlightEffect(applyPlaybackEffect(item, t), highlightAmount)
+          applyArrowDrawProgress(
+            applyHighlightEffect(applyPlaybackEffect(item, t), highlightAmount),
+            1
+          )
         );
       }
     });
@@ -749,6 +775,7 @@ export default function BoardCanvas({
       if (!baseObjects.find((current) => current.id === item.id)) {
         const entryEffect =
           item.animation === "fadeIn" ||
+          item.animation === "draw" ||
           item.animation === "pop" ||
           item.animation === "pulse" ||
           item.animation === "lightning" ||
@@ -758,9 +785,12 @@ export default function BoardCanvas({
             : "none";
         const highlightAmount = item.animation === "highlight" ? t : 0;
         merged.push(
-          applyHighlightEffect(
-            applyPlaybackEffect(item, t, entryEffect),
-            highlightAmount
+          applyArrowDrawProgress(
+            applyHighlightEffect(
+              applyPlaybackEffect(item, t, entryEffect),
+              highlightAmount
+            ),
+            entryEffect === "draw" ? t : 1
           )
         );
       }
@@ -776,6 +806,7 @@ export default function BoardCanvas({
     playheadFrame,
     applyPlaybackEffect,
     applyHighlightEffect,
+    applyArrowDrawProgress,
   ]);
   const lightningAuras = useMemo(
     () => renderObjects.map((item) => getLightningAura(item)).filter(Boolean),
@@ -1099,9 +1130,16 @@ export default function BoardCanvas({
     (size.height - effectiveHeight * centeringScale) / 2 -
     rotatedBounds.minY * centeringScale;
   const displayViewport = useMemo(() => {
+    const lastIndex = Math.max(0, board.frames.length - 1);
+    const isStoppedAtTimelineEnd =
+      !isPlaying &&
+      !loopPlayback &&
+      board.mode === "DYNAMIC" &&
+      board.frames.length > 0 &&
+      Math.floor(playheadFrame) >= lastIndex;
     if (
       board.mode !== "DYNAMIC" ||
-      !isPlaying ||
+      (!isPlaying && !isStoppedAtTimelineEnd) ||
       forcePortrait ||
       isThreeDView ||
       board.frames.length === 0
@@ -1170,7 +1208,6 @@ export default function BoardCanvas({
     };
     const findZoomObject = (items: DrawableObject[]) =>
       items.find((item) => item.animation === "zoom");
-    const lastIndex = Math.max(0, board.frames.length - 1);
     const baseIndex = Math.min(Math.floor(playheadFrame), lastIndex);
     const baseObjects = board.frames[baseIndex]?.objects ?? [];
     const baseZoomObject = findZoomObject(baseObjects);

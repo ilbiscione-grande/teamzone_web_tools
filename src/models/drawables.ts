@@ -14,12 +14,14 @@ export type Style = {
   fxLightningStrength?: number;
   fxShimmerStrength?: number;
   fxShimmerProgress?: number;
+  fxDrawProgress?: number;
 };
 
 export type DrawableAnimation =
   | "none"
   | "fadeIn"
   | "fadeOut"
+  | "draw"
   | "pop"
   | "pulse"
   | "zoom"

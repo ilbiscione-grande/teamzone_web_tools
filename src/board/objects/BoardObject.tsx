@@ -1096,24 +1096,94 @@ export default function BoardObject({
 
   if (object.type === "arrow") {
     const arrow = object as ArrowLine;
+    const drawProgress = Math.max(
+      0,
+      Math.min(1, Number(arrow.style.fxDrawProgress ?? 1))
+    );
     const end = {
       x: arrow.points[2],
       y: arrow.points[3],
     };
     const control = arrow.control ?? { x: end.x / 2, y: end.y / 2 };
-    const points = arrow.curved
-      ? (() => {
-          const cp1 = {
-            x: (0 + 2 * control.x) / 3,
-            y: (0 + 2 * control.y) / 3,
-          };
-          const cp2 = {
-            x: (end.x + 2 * control.x) / 3,
-            y: (end.y + 2 * control.y) / 3,
-          };
-          return [0, 0, cp1.x, cp1.y, cp2.x, cp2.y, end.x, end.y];
-        })()
-      : arrow.points;
+    const sampledPoints = (() => {
+      if (!arrow.curved) {
+        return [
+          { x: 0, y: 0 },
+          { x: end.x, y: end.y },
+        ];
+      }
+      const cp1 = {
+        x: (0 + 2 * control.x) / 3,
+        y: (0 + 2 * control.y) / 3,
+      };
+      const cp2 = {
+        x: (end.x + 2 * control.x) / 3,
+        y: (end.y + 2 * control.y) / 3,
+      };
+      const steps = 26;
+      const points: Array<{ x: number; y: number }> = [];
+      for (let index = 0; index <= steps; index += 1) {
+        const t = index / steps;
+        const mt = 1 - t;
+        const x =
+          mt * mt * mt * 0 +
+          3 * mt * mt * t * cp1.x +
+          3 * mt * t * t * cp2.x +
+          t * t * t * end.x;
+        const y =
+          mt * mt * mt * 0 +
+          3 * mt * mt * t * cp1.y +
+          3 * mt * t * t * cp2.y +
+          t * t * t * end.y;
+        points.push({ x, y });
+      }
+      return points;
+    })();
+    const partialPoints = (() => {
+      if (sampledPoints.length < 2 || drawProgress >= 0.999) {
+        return sampledPoints;
+      }
+      if (drawProgress <= 0.001) {
+        return [sampledPoints[0]!, sampledPoints[0]!];
+      }
+      let total = 0;
+      const lengths: number[] = [];
+      for (let index = 1; index < sampledPoints.length; index += 1) {
+        const from = sampledPoints[index - 1]!;
+        const to = sampledPoints[index]!;
+        const len = Math.hypot(to.x - from.x, to.y - from.y);
+        lengths.push(len);
+        total += len;
+      }
+      const target = total * drawProgress;
+      const result = [sampledPoints[0]!];
+      let traversed = 0;
+      for (let index = 1; index < sampledPoints.length; index += 1) {
+        const from = sampledPoints[index - 1]!;
+        const to = sampledPoints[index]!;
+        const len = lengths[index - 1] ?? 0;
+        if (traversed + len >= target) {
+          const remaining = Math.max(0, target - traversed);
+          const ratio = len > 0 ? remaining / len : 0;
+          result.push({
+            x: from.x + (to.x - from.x) * ratio,
+            y: from.y + (to.y - from.y) * ratio,
+          });
+          return result;
+        }
+        result.push(to);
+        traversed += len;
+      }
+      return result;
+    })();
+    const flatPoints = partialPoints.flatMap((point) => [point.x, point.y]);
+    const headSegment =
+      partialPoints.length >= 2
+        ? [
+            partialPoints[partialPoints.length - 2]!,
+            partialPoints[partialPoints.length - 1]!,
+          ]
+        : [partialPoints[0]!, partialPoints[0]!];
     const outlineStroke = arrow.style.outlineStroke;
     const arrowStrokeWidth = depthStroke(arrow.style.strokeWidth);
     const outlineWidth = outlineStroke
@@ -1121,42 +1191,78 @@ export default function BoardObject({
       : 0;
     const headSize = getArrowHeadSize(arrowStrokeWidth);
     return (
-      <Group>
+      <Group
+        {...commonProps}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
+      >
         {outlineStroke && outlineWidth > 0 && (
-          <Arrow
-            {...commonProps}
-            points={points}
-            bezier={arrow.curved ?? false}
-            stroke={outlineStroke}
-            strokeWidth={arrowStrokeWidth + outlineWidth * 2}
-            fill={outlineStroke}
-            pointerLength={arrow.head ? headSize.length + outlineWidth * 2 : 0}
-            pointerWidth={arrow.head ? headSize.width + outlineWidth * 2 : 0}
-            dash={arrow.dashed ? [1, 1] : []}
-            listening={false}
-          />
+          <>
+            <Line
+              points={flatPoints}
+              stroke={outlineStroke}
+              strokeWidth={arrowStrokeWidth + outlineWidth * 2}
+              dash={arrow.dashed ? [1, 1] : []}
+              lineCap="round"
+              lineJoin="round"
+              listening={false}
+            />
+            {arrow.head && drawProgress > 0.001 && (
+              <Arrow
+                points={[
+                  headSegment[0].x,
+                  headSegment[0].y,
+                  headSegment[1].x,
+                  headSegment[1].y,
+                ]}
+                stroke={outlineStroke}
+                strokeWidth={arrowStrokeWidth + outlineWidth * 2}
+                fill={outlineStroke}
+                pointerLength={headSize.length + outlineWidth * 2}
+                pointerWidth={headSize.width + outlineWidth * 2}
+                listening={false}
+              />
+            )}
+          </>
         )}
-        <Arrow
-          {...commonProps}
-          points={points}
-          bezier={arrow.curved ?? false}
+        <Line
+          points={flatPoints}
           stroke={arrow.style.stroke}
           strokeWidth={arrowStrokeWidth}
-          fill={arrow.style.stroke}
-          pointerLength={arrow.head ? headSize.length : 0}
-          pointerWidth={arrow.head ? headSize.width : 0}
           dash={arrow.dashed ? [1, 1] : []}
+          lineCap="round"
+          lineJoin="round"
           shadowEnabled={ambientShadowEnabled}
           shadowColor="#000000"
           shadowBlur={ambientShadowBlur}
           shadowOpacity={ambientShadowOpacity}
           shadowOffsetY={ambientShadowOffsetY}
-          ref={(node) => {
-            if (node) {
-              registerNode(object.id, node);
-            }
-          }}
+          listening={false}
         />
+        {arrow.head && drawProgress > 0.001 && (
+          <Arrow
+            points={[
+              headSegment[0].x,
+              headSegment[0].y,
+              headSegment[1].x,
+              headSegment[1].y,
+            ]}
+            stroke={arrow.style.stroke}
+            strokeWidth={arrowStrokeWidth}
+            fill={arrow.style.stroke}
+            pointerLength={headSize.length}
+            pointerWidth={headSize.width}
+            shadowEnabled={ambientShadowEnabled}
+            shadowColor="#000000"
+            shadowBlur={ambientShadowBlur}
+            shadowOpacity={ambientShadowOpacity}
+            shadowOffsetY={ambientShadowOffsetY}
+            listening={false}
+          />
+        )}
       </Group>
     );
   }
