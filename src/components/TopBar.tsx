@@ -28,7 +28,10 @@ import {
   fetchTeamsWithSquad,
   updateTeamWithSquad,
 } from "@/persistence/teamSquads";
-import { createProjectShareLink } from "@/persistence/projectShareLinks";
+import {
+  createProjectShareLink,
+  fetchProjectShareLinkForOwner,
+} from "@/persistence/projectShareLinks";
 import {
   deleteProjectTemplate,
   loadProjectTemplates,
@@ -364,6 +367,43 @@ export default function TopBar() {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "project"}-share-qr.png`;
+  useEffect(() => {
+    if (!shareLinkOpen || !project || !authUser || plan !== "PAID") {
+      return;
+    }
+    let cancelled = false;
+    setShareLinkStatus("Loading existing share link...");
+    setShareLinkCopied(false);
+    setShareLinkQrError(false);
+    fetchProjectShareLinkForOwner(project.id)
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        if (!result.ok) {
+          setShareLinkUrl(null);
+          setShareLinkStatus(result.error);
+          return;
+        }
+        if (!result.token) {
+          setShareLinkUrl(null);
+          setShareLinkStatus("No share link yet. Generate one below.");
+          return;
+        }
+        setShareLinkUrl(`${SHARE_LINK_BASE_URL}/share/${result.token}`);
+        setShareLinkStatus(null);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setShareLinkUrl(null);
+        setShareLinkStatus("Unable to load existing share link.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser, plan, project, shareLinkOpen]);
   useEffect(() => {
     if (!squadPresetsOpen) {
       setManageAutoAppliedKey(null);
