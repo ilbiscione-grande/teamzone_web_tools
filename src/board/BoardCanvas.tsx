@@ -1138,7 +1138,6 @@ export default function BoardCanvas({
     if (
       board.mode !== "DYNAMIC" ||
       (!isPlaying && !isStoppedAtTimelineEnd) ||
-      forcePortrait ||
       board.frames.length === 0
     ) {
       return lockedViewport;
@@ -1231,7 +1230,6 @@ export default function BoardCanvas({
     baseScale,
     board.frames,
     board.mode,
-    forcePortrait,
     isPlaying,
     lockedViewport,
     loopPlayback,
