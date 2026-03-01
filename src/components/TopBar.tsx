@@ -41,6 +41,7 @@ import {
 } from "@/persistence/projectTemplates";
 import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { getStageRef } from "@/utils/stageRef";
+import { clone } from "@/utils/clone";
 import ColorPalettePicker from "@/components/ColorPalettePicker";
 
 type ManagePlayersSortKey = "default" | "name" | "position" | "number";
@@ -61,6 +62,7 @@ export default function TopBar() {
   const updateSquadPlayer = useProjectStore((state) => state.updateSquadPlayer);
   const removeSquadPlayer = useProjectStore((state) => state.removeSquadPlayer);
   const openProject = useProjectStore((state) => state.openProject);
+  const openProjectFromData = useProjectStore((state) => state.openProjectFromData);
   const closeProject = useProjectStore((state) => state.closeProject);
   const addBoard = useProjectStore((state) => state.addBoard);
   const duplicateBoard = useProjectStore((state) => state.duplicateBoard);
@@ -124,6 +126,7 @@ export default function TopBar() {
   const [templateStatus, setTemplateStatus] = useState<string | null>(null);
   const [boardActionsOpen, setBoardActionsOpen] = useState(false);
   const [projectActionsOpen, setProjectActionsOpen] = useState(false);
+  const [newProjectChoiceOpen, setNewProjectChoiceOpen] = useState(false);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
   const showAds = plan === "FREE";
@@ -148,6 +151,39 @@ export default function TopBar() {
     2.4,
     2.6,
   ];
+
+  const createEmptyProjectFromCurrentDefaults = () => {
+    if (!project) {
+      return;
+    }
+    const name = window.prompt("New project name") ?? "";
+    if (!name.trim()) {
+      return;
+    }
+    createProject(name.trim(), {
+      homeKit: project.settings?.homeKit,
+      awayKit: project.settings?.awayKit,
+      attachBallToPlayer: project.settings?.attachBallToPlayer ?? false,
+    });
+  };
+
+  const duplicateCurrentProject = () => {
+    if (!project) {
+      return;
+    }
+    const suggestedName = `${project.name} (copy)`;
+    const name = window.prompt("Duplicate project name", suggestedName) ?? "";
+    if (!name.trim()) {
+      return;
+    }
+    const duplicated = clone(project);
+    const now = new Date().toISOString();
+    duplicated.id = createId();
+    duplicated.name = name.trim();
+    duplicated.createdAt = now;
+    duplicated.updatedAt = now;
+    openProjectFromData(duplicated);
+  };
 
   const refreshTemplates = () => {
     if (!canUseTemplates) {
@@ -1196,17 +1232,7 @@ export default function TopBar() {
             <div className="h-5 w-px bg-[var(--line)]" />
             <button
               className="hidden rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:inline-flex"
-              onClick={() => {
-                const name = window.prompt("New project name") ?? "";
-                if (name.trim()) {
-                  createProject(name.trim(), {
-                    homeKit: project.settings?.homeKit,
-                    awayKit: project.settings?.awayKit,
-                    attachBallToPlayer:
-                      project.settings?.attachBallToPlayer ?? false,
-                  });
-                }
-              }}
+              onClick={() => setNewProjectChoiceOpen(true)}
               aria-label="New project"
               disabled={projectLimitReached}
               data-locked={projectLimitReached}
@@ -1248,7 +1274,7 @@ export default function TopBar() {
               </svg>
             </button>
             {projectActionsOpen && (
-              <div className="fixed left-3 right-3 top-28 z-[420] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:hidden">
+              <div className="fixed left-3 right-3 top-28 z-[520] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:hidden">
                 <button
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                   onClick={() => {
@@ -1265,15 +1291,7 @@ export default function TopBar() {
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                   onClick={() => {
                     setProjectActionsOpen(false);
-                    const name = window.prompt("New project name") ?? "";
-                    if (name.trim()) {
-                      createProject(name.trim(), {
-                        homeKit: project.settings?.homeKit,
-                        awayKit: project.settings?.awayKit,
-                        attachBallToPlayer:
-                          project.settings?.attachBallToPlayer ?? false,
-                      });
-                    }
+                    setNewProjectChoiceOpen(true);
                   }}
                   disabled={projectLimitReached}
                   data-locked={projectLimitReached}
@@ -1351,7 +1369,7 @@ export default function TopBar() {
               </svg>
             </button>
             {boardActionsOpen && (
-              <div className="fixed left-3 right-3 top-28 z-[420] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:absolute md:left-auto md:right-0 md:top-10 md:z-[320] md:w-56">
+              <div className="fixed left-3 right-3 top-28 z-[520] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:absolute md:left-auto md:right-0 md:top-10 md:z-[320] md:w-56">
                 <div className="mb-2 space-y-1 border-b border-[var(--line)] pb-2 md:hidden">
                   {project.boards.map((item) => (
                     <button
@@ -1569,7 +1587,7 @@ export default function TopBar() {
                 Actions
               </span>
               {actionsOpen && (
-                <div className="fixed left-3 right-3 top-28 z-[420] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:absolute md:left-auto md:right-0 md:top-10 md:z-[320] md:w-44">
+                <div className="fixed left-3 right-3 top-28 z-[520] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:absolute md:left-auto md:right-0 md:top-10 md:z-[320] md:w-44">
                   <div className="space-y-2 px-3 py-2 md:hidden">
                     <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                       Board mode
@@ -1884,6 +1902,44 @@ export default function TopBar() {
       )}
 
       <PlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
+      {newProjectChoiceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="w-full max-w-md rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="space-y-1">
+              <h2 className="display-font text-lg text-[var(--accent-0)]">Create project</h2>
+              <p className="text-xs text-[var(--ink-1)]">
+                Choose if you want an empty project or a copy of the current one.
+              </p>
+            </div>
+            <div className="mt-4 grid gap-2">
+              <button
+                className="rounded-2xl border border-[var(--line)] px-4 py-3 text-left text-sm hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => {
+                  setNewProjectChoiceOpen(false);
+                  createEmptyProjectFromCurrentDefaults();
+                }}
+              >
+                New project
+              </button>
+              <button
+                className="rounded-2xl border border-[var(--line)] px-4 py-3 text-left text-sm hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => {
+                  setNewProjectChoiceOpen(false);
+                  duplicateCurrentProject();
+                }}
+              >
+                Duplicate current project
+              </button>
+            </div>
+            <button
+              className="mt-4 w-full rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+              onClick={() => setNewProjectChoiceOpen(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {squadPresetsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
           <div className="max-h-[84vh] w-full max-w-5xl overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">

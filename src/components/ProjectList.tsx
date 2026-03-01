@@ -613,6 +613,25 @@ export default function ProjectList() {
     void openPublicProject(projectId);
   };
 
+  const onDuplicateProject = async (projectId: string) => {
+    let sourceProject = loadProject(projectId, authUser?.id ?? null);
+    if (!sourceProject && authUser && typeof window !== "undefined" && navigator.onLine) {
+      sourceProject = await fetchProjectCloud(projectId);
+    }
+    if (!sourceProject) {
+      setError("Project is not available to duplicate.");
+      return;
+    }
+    const duplicate = clone(sourceProject);
+    duplicate.id = createId();
+    duplicate.name = `${sourceProject.name} (copy)`;
+    const now = new Date().toISOString();
+    duplicate.createdAt = now;
+    duplicate.updatedAt = now;
+    openProjectFromData(duplicate);
+    setError(null);
+  };
+
   const onShareProject = async () => {
     if (!can(plan, "board.share")) {
       setShareStatus("Sharing is available on paid plans only.");
@@ -959,7 +978,7 @@ export default function ProjectList() {
                     </div>
                     <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
                       <button
-                        className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                         onClick={() => {
                           if (typeof window !== "undefined" && !navigator.onLine) {
                             const cached = loadProject(project.id, authUser?.id ?? null);
@@ -973,24 +992,73 @@ export default function ProjectList() {
                           setError(null);
                           openProject(project.id);
                         }}
+                        aria-label="Open project"
+                        title="Open project"
                       >
-                        Open
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" />
+                          <circle cx="12" cy="12" r="2.5" />
+                        </svg>
                       </button>
                       <button
-                        className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        onClick={() => void onDuplicateProject(project.id)}
+                        aria-label="Duplicate project"
+                        title="Duplicate project"
+                      >
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="9" y="9" width="11" height="11" rx="2" />
+                          <rect x="4" y="4" width="11" height="11" rx="2" />
+                        </svg>
+                      </button>
+                      <button
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                         onClick={() => openProjectShare(project.id)}
                         disabled={!can(plan, "board.share")}
                         data-locked={!can(plan, "board.share")}
+                        aria-label="Share project"
                         title={
                           can(plan, "board.share")
                             ? "Share project boards"
                             : "Sharing is available on paid plans."
                         }
                       >
-                        Share
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="18" cy="5" r="3" />
+                          <circle cx="6" cy="12" r="3" />
+                          <circle cx="18" cy="19" r="3" />
+                          <path d="M8.6 10.8l6.8-3.6M8.6 13.2l6.8 3.6" />
+                        </svg>
                       </button>
                       <button
-                        className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
                         onClick={() => {
                           if (
                             window.confirm(
@@ -1000,8 +1068,23 @@ export default function ProjectList() {
                             deleteProject(project.id);
                           }
                         }}
+                        aria-label="Delete project"
+                        title="Delete project"
                       >
-                        Delete
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4h8v2" />
+                          <path d="M6 6l1 14h10l1-14" />
+                        </svg>
                       </button>
                     </div>
                   </div>
