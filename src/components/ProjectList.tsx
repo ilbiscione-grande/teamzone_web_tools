@@ -9,7 +9,6 @@ import type {
   BoardSharePermission,
   Project,
   PublicProject,
-  SquadPreset,
 } from "@/models";
 import { can, getPlanLimits } from "@/utils/plan";
 import { createId } from "@/utils/id";
@@ -28,7 +27,6 @@ import {
   unpublishPublicProject,
   reportPublicProject,
 } from "@/persistence/publicProjects";
-import { fetchTeamsWithSquad } from "@/persistence/teamSquads";
 import {
   createBoardShare,
   fetchLatestCommentsForShares,
@@ -152,14 +150,6 @@ export default function ProjectList() {
     []
   );
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
-  const [squadPresets, setSquadPresets] = useState<SquadPreset[]>([]);
-  const [squadPresetsLoading, setSquadPresetsLoading] = useState(false);
-  const [squadPresetsError, setSquadPresetsError] = useState<string | null>(null);
-  const [homeSquadPresetId, setHomeSquadPresetId] = useState("");
-  const [awaySquadPresetId, setAwaySquadPresetId] = useState("");
-  const autoTeamPresetKey = authUser?.id
-    ? `tacticsboard:autoTeamPreset:${authUser.id}`
-    : "tacticsboard:autoTeamPreset";
   const [consoleTab, setConsoleTab] = useState<
     "projects" | "shared" | "library"
   >("projects");
@@ -519,8 +509,6 @@ export default function ProjectList() {
       }, {})
     );
     setEditingCreateBoardId(null);
-    setHomeSquadPresetId("");
-    setAwaySquadPresetId("");
     setStartingFormation("none");
   }, [createMode, plan]);
   useEffect(() => {
@@ -544,65 +532,6 @@ export default function ProjectList() {
         : templates[0]!.id
     );
   }, [authUser?.id, createOpen, plan]);
-
-  useEffect(() => {
-    if (!authUser || plan !== "PAID") {
-      setSquadPresets([]);
-      setSquadPresetsError(null);
-      return;
-    }
-    setSquadPresetsLoading(true);
-    setSquadPresetsError(null);
-    fetchTeamsWithSquad()
-      .then((result) => {
-        if (!result.ok) {
-          setSquadPresetsError(result.error);
-          setSquadPresets([]);
-          return;
-        }
-        setSquadPresets(result.teams);
-        if (typeof window !== "undefined") {
-          const savedPresetId = window.localStorage.getItem(autoTeamPresetKey);
-          const preferredPreset =
-            result.teams.find((team) => team.id === savedPresetId) ??
-            result.teams[0];
-          if (preferredPreset?.id) {
-            setHomeSquadPresetId((current) => current || preferredPreset.id);
-            setAwaySquadPresetId((current) =>
-              current && current !== preferredPreset.id ? current : ""
-            );
-          }
-        }
-      })
-      .finally(() => setSquadPresetsLoading(false));
-  }, [authUser, autoTeamPresetKey, plan]);
-  useEffect(() => {
-    if (!createOpen || plan !== "PAID" || squadPresets.length === 0) {
-      return;
-    }
-    if (homeSquadPresetId) {
-      return;
-    }
-    const savedPresetId =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem(autoTeamPresetKey)
-        : null;
-    const preferredPreset =
-      squadPresets.find((team) => team.id === savedPresetId) ?? squadPresets[0];
-    if (!preferredPreset?.id) {
-      return;
-    }
-    setHomeSquadPresetId(preferredPreset.id);
-    setAwaySquadPresetId((current) =>
-      current && current !== preferredPreset.id ? current : ""
-    );
-  }, [
-    autoTeamPresetKey,
-    createOpen,
-    homeSquadPresetId,
-    plan,
-    squadPresets,
-  ]);
 
   const onCreate = () => {
     if (!name.trim()) {
@@ -1571,80 +1500,6 @@ export default function ProjectList() {
                 </div>
               </div>
               <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
-                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Match squad presets
-                </p>
-                {plan !== "PAID" ? (
-                  <p className="text-xs text-[var(--ink-1)]">
-                    Squad presets are available for paid plans.
-                  </p>
-                ) : squadPresetsLoading ? (
-                  <p className="text-xs text-[var(--ink-1)]">
-                    Loading presets...
-                  </p>
-                ) : squadPresetsError ? (
-                  <p className="text-xs text-[var(--accent-1)]">
-                    {squadPresetsError}
-                  </p>
-                ) : (
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <label className="space-y-1">
-                      <span className="text-[11px] uppercase text-[var(--ink-1)]">
-                        Home preset
-                      </span>
-                      <select
-                        className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-                        value={homeSquadPresetId}
-                        onChange={(event) => {
-                          const nextId = event.target.value;
-                          setHomeSquadPresetId(nextId);
-                          if (typeof window !== "undefined" && nextId) {
-                            window.localStorage.setItem(autoTeamPresetKey, nextId);
-                          }
-                        }}
-                        disabled={plan !== "PAID"}
-                        data-locked={plan !== "PAID"}
-                      >
-                        <option value="">No preset</option>
-                        {squadPresets.map((preset) => (
-                          <option key={preset.id} value={preset.id}>
-                            {preset.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-[11px] uppercase text-[var(--ink-1)]">
-                        Away preset
-                      </span>
-                      <select
-                        className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-                        value={awaySquadPresetId}
-                        onChange={(event) => {
-                          const nextId = event.target.value;
-                          setAwaySquadPresetId(nextId);
-                          if (typeof window !== "undefined" && nextId) {
-                            window.localStorage.setItem(autoTeamPresetKey, nextId);
-                          }
-                        }}
-                        disabled={plan !== "PAID"}
-                        data-locked={plan !== "PAID"}
-                      >
-                        <option value="">No preset</option>
-                        {squadPresets.map((preset) => (
-                          <option key={preset.id} value={preset.id}>
-                            {preset.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                )}
-                <p className="text-[10px] text-[var(--ink-1)]">
-                  Presets are copied into the new project. Editing squads inside a board does not update Team DB unless saved from Team manager.
-                </p>
-              </div>
-              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                 <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Team colors</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-2">
@@ -1800,12 +1655,6 @@ export default function ProjectList() {
                   const templates = createTemplateOptions.filter((board) =>
                     createBoards.includes(board.id)
                   );
-                  const homePreset = squadPresets.find(
-                    (preset) => preset.id === homeSquadPresetId
-                  );
-                  const awayPreset = squadPresets.find(
-                    (preset) => preset.id === awaySquadPresetId
-                  );
                   createProject(name.trim(), {
                     homeKit,
                     awayKit,
@@ -1825,8 +1674,6 @@ export default function ProjectList() {
                             pitchShape: board.pitchShape,
                           }))
                         : undefined,
-                    homeSquadPreset: homePreset?.squad,
-                    awaySquadPreset: awayPreset?.squad,
                     startingFormation:
                       startingFormation !== "none"
                         ? startingFormation
