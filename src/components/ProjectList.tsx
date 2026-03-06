@@ -42,9 +42,11 @@ import {
   type BugReportRow,
 } from "@/persistence/bugReports";
 import {
+  fetchAdminAnalytics,
   fetchAdminReports,
   fetchAdminUsers,
   updateAdminUserFlags,
+  type AdminAnalyticsResponse,
   type AdminUserRow,
 } from "@/persistence/admin";
 
@@ -141,12 +143,19 @@ export default function ProjectList() {
   const [adminReports, setAdminReports] = useState<BugReportRow[]>([]);
   const [adminReportsLoading, setAdminReportsLoading] = useState(false);
   const [adminReportsError, setAdminReportsError] = useState<string | null>(null);
+  const [adminAnalytics, setAdminAnalytics] =
+    useState<AdminAnalyticsResponse | null>(null);
+  const [adminAnalyticsLoading, setAdminAnalyticsLoading] = useState(false);
+  const [adminAnalyticsError, setAdminAnalyticsError] = useState<string | null>(
+    null
+  );
   const [adminUpdatingUserId, setAdminUpdatingUserId] = useState<string | null>(
     null
   );
   const [adminQuery, setAdminQuery] = useState("");
   const [adminUsersPage, setAdminUsersPage] = useState(1);
   const [recentProjectsPage, setRecentProjectsPage] = useState(1);
+  const [projectsQuery, setProjectsQuery] = useState("");
   const [favoriteProjectIds, setFavoriteProjectIds] = useState<string[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [createMode, setCreateMode] = useState<
@@ -188,11 +197,19 @@ export default function ProjectList() {
     consoleTab === "favourites"
       ? index.filter((item) => favouriteSet.has(item.id))
       : index;
+  const filteredProjects = visibleProjects.filter((item) => {
+    const query = projectsQuery.trim().toLowerCase();
+    if (!query) {
+      return true;
+    }
+    const haystack = [item.name, item.id, item.updatedAt].join(" ").toLowerCase();
+    return haystack.includes(query);
+  });
   const totalRecentProjectsPages = Math.max(
     1,
-    Math.ceil(visibleProjects.length / recentProjectsPageSize)
+    Math.ceil(filteredProjects.length / recentProjectsPageSize)
   );
-  const paginatedRecentProjects = visibleProjects.slice(
+  const paginatedRecentProjects = filteredProjects.slice(
     (recentProjectsPage - 1) * recentProjectsPageSize,
     recentProjectsPage * recentProjectsPageSize
   );
@@ -672,11 +689,14 @@ export default function ProjectList() {
   const refreshAdminData = async () => {
     setAdminUsersLoading(true);
     setAdminReportsLoading(true);
+    setAdminAnalyticsLoading(true);
     setAdminUsersError(null);
     setAdminReportsError(null);
-    const [usersResult, reportsResult] = await Promise.all([
+    setAdminAnalyticsError(null);
+    const [usersResult, reportsResult, analyticsResult] = await Promise.all([
       fetchAdminUsers(),
       fetchAdminReports(),
+      fetchAdminAnalytics(),
     ]);
     if (!usersResult.ok) {
       setAdminUsersError(usersResult.error);
@@ -690,8 +710,15 @@ export default function ProjectList() {
     } else {
       setAdminReports(reportsResult.reports);
     }
+    if (!analyticsResult.ok) {
+      setAdminAnalyticsError(analyticsResult.error);
+      setAdminAnalytics(null);
+    } else {
+      setAdminAnalytics(analyticsResult.analytics);
+    }
     setAdminUsersLoading(false);
     setAdminReportsLoading(false);
+    setAdminAnalyticsLoading(false);
   };
 
   useEffect(() => {
@@ -728,6 +755,10 @@ export default function ProjectList() {
       setRecentProjectsPage(1);
     }
   }, [consoleTab]);
+
+  useEffect(() => {
+    setRecentProjectsPage(1);
+  }, [projectsQuery]);
 
   const favoritesStorageKey = authUser?.id
     ? `tacticsboard:favourites:${authUser.id}`
@@ -886,7 +917,6 @@ export default function ProjectList() {
       { id: "favourites", label: "Favourites" },
       { id: "shared", label: "Shared" },
       { id: "library", label: "Library" },
-      ...(authUser?.isAdmin ? ([{ id: "admin", label: "Admin" }] as const) : []),
     ] as const
   );
 
@@ -900,6 +930,20 @@ export default function ProjectList() {
           <h1 className="display-font text-5xl text-[var(--ink-0)]">
             Project Console
           </h1>
+          {authUser?.isAdmin ? (
+            <div className="mt-1">
+              <button
+                className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-widest ${
+                  consoleTab === "admin"
+                    ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--accent-0)]"
+                    : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                }`}
+                onClick={() => setConsoleTab("admin")}
+              >
+                Admin
+              </button>
+            </div>
+          ) : null}
           {!can(plan, "project.save") && (
             <div className="inline-flex w-fit rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-1)]">
               Free mode - no save · Max {getPlanLimits(plan).maxProjects} project · Max{" "}
@@ -1018,7 +1062,7 @@ export default function ProjectList() {
         </header>
 
         {(consoleTab === "recent" || consoleTab === "favourites") && (
-        <section className="grid gap-6 rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40 md:grid-cols-[1.2fr_1fr]">
+        <section className="grid gap-6 rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40 md:grid-cols-[0.95fr_1.05fr]">
           <div className="space-y-4">
             <h2 className="display-font text-xl text-[var(--accent-0)]">
               New Project
@@ -1097,7 +1141,7 @@ export default function ProjectList() {
                 <button
                   key={tab.id}
                   className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
-                    consoleTab === tab.id
+                    String(consoleTab) === tab.id
                       ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
                       : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
                   }`}
@@ -1107,13 +1151,21 @@ export default function ProjectList() {
                 </button>
               ))}
             </div>
+            <input
+              className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)] placeholder:text-[var(--ink-1)]"
+              placeholder="Search projects"
+              value={projectsQuery}
+              onChange={(event) => setProjectsQuery(event.target.value)}
+            />
             {syncStatus.state === "syncing" ? (
               <p className="text-xs text-[var(--ink-1)]">Refreshing...</p>
             ) : null}
             <div className="space-y-2">
-              {visibleProjects.length === 0 ? (
+              {filteredProjects.length === 0 ? (
                 <p className="text-sm text-[var(--ink-1)]">
-                  {consoleTab === "favourites"
+                  {projectsQuery.trim()
+                    ? "No projects match your search."
+                    : consoleTab === "favourites"
                     ? "No favourite projects yet."
                     : "No saved projects yet."}
                 </p>
@@ -1278,7 +1330,7 @@ export default function ProjectList() {
                   </div>
                 ))
               )}
-              {visibleProjects.length > recentProjectsPageSize ? (
+              {filteredProjects.length > recentProjectsPageSize ? (
                 <div className="mt-2 flex items-center justify-between text-xs text-[var(--ink-1)]">
                   <button
                     className="rounded-full border border-[var(--line)] px-3 py-1 disabled:opacity-40"
@@ -1318,7 +1370,7 @@ export default function ProjectList() {
                 <button
                   key={tab.id}
                   className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
-                    consoleTab === tab.id
+                    String(consoleTab) === tab.id
                       ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
                       : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
                   }`}
@@ -1463,7 +1515,7 @@ export default function ProjectList() {
                   <button
                     key={tab.id}
                     className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
-                      consoleTab === tab.id
+                      String(consoleTab) === tab.id
                         ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
                         : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
                     }`}
@@ -1575,7 +1627,7 @@ export default function ProjectList() {
                 <button
                   key={tab.id}
                   className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
-                    consoleTab === tab.id
+                    String(consoleTab) === tab.id
                       ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
                       : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
                   }`}
@@ -1750,6 +1802,139 @@ export default function ProjectList() {
                   </div>
                 )}
               </div>
+            </div>
+            <div className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3">
+              <h4 className="text-xs uppercase tracking-widest text-[var(--ink-1)]">
+                Usage analytics (last 30 days)
+              </h4>
+              {adminAnalyticsLoading ? (
+                <p className="text-xs text-[var(--ink-1)]">Loading analytics...</p>
+              ) : adminAnalyticsError ? (
+                <p className="text-xs text-[var(--accent-1)]">{adminAnalyticsError}</p>
+              ) : !adminAnalytics ? (
+                <p className="text-xs text-[var(--ink-1)]">No analytics data yet.</p>
+              ) : (
+                <>
+                  <div className="grid gap-2 sm:grid-cols-5">
+                    {[
+                      { label: "Events", value: String(adminAnalytics.summary.totalEvents) },
+                      {
+                        label: "Active users",
+                        value: String(adminAnalytics.summary.activeUsers30d),
+                      },
+                      { label: "Logins", value: String(adminAnalytics.summary.loginCount30d) },
+                      {
+                        label: "Avg session (min)",
+                        value: String(adminAnalytics.summary.averageSessionMinutes),
+                      },
+                      {
+                        label: "Total hours",
+                        value: String(adminAnalytics.summary.totalHours30d),
+                      },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2"
+                      >
+                        <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                          {item.label}
+                        </p>
+                        <p className="text-sm font-semibold text-[var(--ink-0)]">
+                          {item.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Most used tools
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {adminAnalytics.toolUsage.slice(0, 8).map((entry) => {
+                          const max = adminAnalytics.toolUsage[0]?.count ?? 1;
+                          const pct = Math.max(4, Math.round((entry.count / max) * 100));
+                          return (
+                            <div key={entry.tool} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-[var(--ink-0)]">{entry.tool}</span>
+                                <span className="text-[var(--ink-1)]">{entry.count}</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-black/25">
+                                <div
+                                  className="h-2 rounded-full bg-[var(--accent-0)]"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Login methods
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {adminAnalytics.loginMethods.map((entry) => {
+                          const max = adminAnalytics.loginMethods[0]?.count ?? 1;
+                          const pct = Math.max(6, Math.round((entry.count / max) * 100));
+                          return (
+                            <div key={entry.method} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-[var(--ink-0)]">{entry.method}</span>
+                                <span className="text-[var(--ink-1)]">{entry.count}</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-black/25">
+                                <div
+                                  className="h-2 rounded-full bg-[var(--accent-2)]"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Daily activity (14d)
+                      </p>
+                      <div className="mt-2 max-h-48 space-y-1 overflow-y-auto">
+                        {adminAnalytics.dailyActivity.map((day) => (
+                          <div
+                            key={day.day}
+                            className="flex items-center justify-between text-xs text-[var(--ink-1)]"
+                          >
+                            <span>{day.day}</span>
+                            <span>
+                              {day.activeUsers} users · {day.events} events
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Recent logins
+                      </p>
+                      <div className="mt-2 max-h-48 space-y-2 overflow-y-auto">
+                        {adminAnalytics.recentLogins.slice(0, 20).map((item, index) => (
+                          <div
+                            key={`${item.at}-${index}`}
+                            className="rounded-lg border border-[var(--line)] px-2 py-1 text-xs text-[var(--ink-1)]"
+                          >
+                            <p className="text-[var(--ink-0)]">{item.userEmail ?? "unknown"}</p>
+                            <p>{new Date(item.at).toLocaleString()} · {item.provider}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </section>
         )}

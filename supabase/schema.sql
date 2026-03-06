@@ -431,6 +431,48 @@ on bug_reports
 for insert
 with check (true);
 
+create table if not exists app_analytics_events (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  user_email text,
+  session_key text,
+  event_type text not null,
+  tool text,
+  duration_ms integer,
+  path text,
+  metadata jsonb not null default '{}'::jsonb
+);
+
+create index if not exists app_analytics_events_user_id_idx
+  on app_analytics_events(user_id);
+create index if not exists app_analytics_events_event_type_idx
+  on app_analytics_events(event_type);
+create index if not exists app_analytics_events_created_at_idx
+  on app_analytics_events(created_at desc);
+
+alter table app_analytics_events enable row level security;
+
+drop policy if exists "Users can insert own analytics events" on app_analytics_events;
+drop policy if exists "Admins can view analytics events" on app_analytics_events;
+
+create policy "Users can insert own analytics events"
+on app_analytics_events
+for insert
+with check (auth.uid() = user_id);
+
+create policy "Admins can view analytics events"
+on app_analytics_events
+for select
+using (
+  exists (
+    select 1
+    from profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
 drop policy if exists "Admins can view bug reports" on bug_reports;
 
 create policy "Admins can view bug reports"

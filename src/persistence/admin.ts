@@ -77,3 +77,33 @@ export const fetchAdminReports = async () => {
   }
   return { ok: true as const, reports: result.payload.reports ?? [] };
 };
+
+export type AdminAnalyticsSummary = {
+  totalEvents: number;
+  activeUsers30d: number;
+  loginCount30d: number;
+  averageSessionMinutes: number;
+  totalHours30d: number;
+};
+
+export type AdminAnalyticsResponse = {
+  summary: AdminAnalyticsSummary;
+  toolUsage: { tool: string; count: number }[];
+  loginMethods: { method: string; count: number }[];
+  dailyActivity: { day: string; events: number; activeUsers: number }[];
+  recentLogins: {
+    at: string;
+    userEmail: string | null;
+    provider: string;
+    path: string;
+    device: string;
+  }[];
+};
+
+export const fetchAdminAnalytics = async () => {
+  const result = await adminFetch("/api/admin/analytics");
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const, analytics: result.payload as AdminAnalyticsResponse };
+};

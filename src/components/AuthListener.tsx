@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { supabase } from "@/utils/supabaseClient";
+import { trackAnalyticsEvent } from "@/persistence/analytics";
 import {
   hasEffectivePaidAccess,
   type ProfilePlanSnapshot,
@@ -299,6 +300,17 @@ export default function AuthListener() {
           betaUser: false,
           isAdmin: false,
         });
+        void trackAnalyticsEvent({
+          eventType: "login",
+          path: typeof window !== "undefined" ? window.location.pathname : "/",
+          metadata: {
+            provider: String(user.app_metadata?.provider ?? "unknown"),
+            device:
+              typeof window !== "undefined"
+                ? window.navigator.userAgent
+                : "unknown",
+          },
+        });
         syncProfilePlan(user.id).finally(() => hydrateIndex());
         claimSingleSession(user.id, session.access_token).then((allowed) => {
           if (allowed) {
@@ -337,6 +349,20 @@ export default function AuthListener() {
             betaUser: false,
             isAdmin: false,
           });
+          if (event === "SIGNED_IN") {
+            void trackAnalyticsEvent({
+              eventType: "login",
+              path:
+                typeof window !== "undefined" ? window.location.pathname : "/",
+              metadata: {
+                provider: String(user.app_metadata?.provider ?? "unknown"),
+                device:
+                  typeof window !== "undefined"
+                    ? window.navigator.userAgent
+                    : "unknown",
+              },
+            });
+          }
           syncProfilePlan(user.id).finally(() => hydrateIndex());
           claimSingleSession(user.id, session.access_token).then((allowed) => {
             if (allowed) {
