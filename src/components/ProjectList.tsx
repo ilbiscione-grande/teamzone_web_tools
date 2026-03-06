@@ -145,6 +145,9 @@ export default function ProjectList() {
     null
   );
   const [adminQuery, setAdminQuery] = useState("");
+  const [adminUsersPage, setAdminUsersPage] = useState(1);
+  const [recentProjectsPage, setRecentProjectsPage] = useState(1);
+  const [favoriteProjectIds, setFavoriteProjectIds] = useState<string[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [createMode, setCreateMode] = useState<
     "training" | "match" | "education" | "custom"
@@ -170,8 +173,8 @@ export default function ProjectList() {
   );
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [consoleTab, setConsoleTab] = useState<
-    "projects" | "shared" | "library" | "admin"
-  >("projects");
+    "recent" | "favourites" | "shared" | "library" | "admin"
+  >("recent");
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -179,6 +182,40 @@ export default function ProjectList() {
   ).size;
   const projectLimitReached =
     Number.isFinite(limits.maxProjects) && projectCount >= limits.maxProjects;
+  const recentProjectsPageSize = 8;
+  const favouriteSet = new Set(favoriteProjectIds);
+  const visibleProjects =
+    consoleTab === "favourites"
+      ? index.filter((item) => favouriteSet.has(item.id))
+      : index;
+  const totalRecentProjectsPages = Math.max(
+    1,
+    Math.ceil(visibleProjects.length / recentProjectsPageSize)
+  );
+  const paginatedRecentProjects = visibleProjects.slice(
+    (recentProjectsPage - 1) * recentProjectsPageSize,
+    recentProjectsPage * recentProjectsPageSize
+  );
+  const adminUsersPageSize = 15;
+  const filteredAdminUsers = adminUsers.filter((user) => {
+    const q = adminQuery.trim().toLowerCase();
+    if (!q) {
+      return true;
+    }
+    return (
+      user.id.toLowerCase().includes(q) ||
+      (user.email ?? "").toLowerCase().includes(q) ||
+      (user.name ?? "").toLowerCase().includes(q)
+    );
+  });
+  const totalAdminUsersPages = Math.max(
+    1,
+    Math.ceil(filteredAdminUsers.length / adminUsersPageSize)
+  );
+  const paginatedAdminUsers = filteredAdminUsers.slice(
+    (adminUsersPage - 1) * adminUsersPageSize,
+    adminUsersPage * adminUsersPageSize
+  );
 
   const getBoardTemplates = (
     mode: "training" | "match" | "education",
@@ -666,9 +703,66 @@ export default function ProjectList() {
 
   useEffect(() => {
     if (consoleTab === "admin" && !authUser?.isAdmin) {
-      setConsoleTab("projects");
+      setConsoleTab("recent");
     }
   }, [consoleTab, authUser?.isAdmin]);
+
+  useEffect(() => {
+    setAdminUsersPage(1);
+  }, [adminQuery]);
+
+  useEffect(() => {
+    if (adminUsersPage > totalAdminUsersPages) {
+      setAdminUsersPage(totalAdminUsersPages);
+    }
+  }, [adminUsersPage, totalAdminUsersPages]);
+
+  useEffect(() => {
+    if (recentProjectsPage > totalRecentProjectsPages) {
+      setRecentProjectsPage(totalRecentProjectsPages);
+    }
+  }, [recentProjectsPage, totalRecentProjectsPages]);
+
+  useEffect(() => {
+    if (consoleTab === "recent" || consoleTab === "favourites") {
+      setRecentProjectsPage(1);
+    }
+  }, [consoleTab]);
+
+  const favoritesStorageKey = authUser?.id
+    ? `tacticsboard:favourites:${authUser.id}`
+    : "tacticsboard:favourites:anon";
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const raw = window.localStorage.getItem(favoritesStorageKey);
+    if (!raw) {
+      setFavoriteProjectIds([]);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) {
+        setFavoriteProjectIds(parsed.filter((item) => typeof item === "string"));
+      } else {
+        setFavoriteProjectIds([]);
+      }
+    } catch {
+      setFavoriteProjectIds([]);
+    }
+  }, [favoritesStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      favoritesStorageKey,
+      JSON.stringify(favoriteProjectIds)
+    );
+  }, [favoriteProjectIds, favoritesStorageKey]);
 
   const onDuplicateProject = async (projectId: string) => {
     let sourceProject = loadProject(projectId, authUser?.id ?? null);
@@ -785,6 +879,16 @@ export default function ProjectList() {
         .toLowerCase();
       return haystack.includes(query);
     });
+
+  const consoleTabs = (
+    [
+      { id: "recent", label: "Recent" },
+      { id: "favourites", label: "Favourites" },
+      { id: "shared", label: "Shared" },
+      { id: "library", label: "Library" },
+      ...(authUser?.isAdmin ? ([{ id: "admin", label: "Admin" }] as const) : []),
+    ] as const
+  );
 
   return (
     <div className="h-screen overflow-y-auto px-8 py-12" data-scrollable>
@@ -913,32 +1017,7 @@ export default function ProjectList() {
           )}
         </header>
 
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              { id: "projects", label: "Projects" },
-              { id: "shared", label: "Shared" },
-              { id: "library", label: "Library" },
-              ...(authUser?.isAdmin
-                ? ([{ id: "admin", label: "Admin" }] as const)
-                : []),
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
-                consoleTab === tab.id
-                  ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
-                  : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-              }`}
-              onClick={() => setConsoleTab(tab.id as typeof consoleTab)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {consoleTab === "projects" && (
+        {(consoleTab === "recent" || consoleTab === "favourites") && (
         <section className="grid gap-6 rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40 md:grid-cols-[1.2fr_1fr]">
           <div className="space-y-4">
             <h2 className="display-font text-xl text-[var(--accent-0)]">
@@ -1013,19 +1092,33 @@ export default function ProjectList() {
           </div>
 
           <div className="space-y-3">
-            <h2 className="display-font text-xl text-[var(--accent-0)]">
-              Recent Projects
-            </h2>
+            <div className="flex flex-wrap gap-2">
+              {consoleTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
+                    consoleTab === tab.id
+                      ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                      : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                  }`}
+                  onClick={() => setConsoleTab(tab.id as typeof consoleTab)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
             {syncStatus.state === "syncing" ? (
               <p className="text-xs text-[var(--ink-1)]">Refreshing...</p>
             ) : null}
             <div className="space-y-2">
-              {index.length === 0 ? (
+              {visibleProjects.length === 0 ? (
                 <p className="text-sm text-[var(--ink-1)]">
-                  No saved projects yet.
+                  {consoleTab === "favourites"
+                    ? "No favourite projects yet."
+                    : "No saved projects yet."}
                 </p>
               ) : (
-                index.map((project) => (
+                paginatedRecentProjects.map((project) => (
                   <div
                     key={project.id}
                     className="flex flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
@@ -1039,6 +1132,39 @@ export default function ProjectList() {
                       </p>
                     </div>
                     <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
+                      <button
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-full border ${
+                          favouriteSet.has(project.id)
+                            ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                            : "border-[var(--line)] text-[var(--ink-0)]"
+                        } hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]`}
+                        onClick={() =>
+                          setFavoriteProjectIds((prev) =>
+                            prev.includes(project.id)
+                              ? prev.filter((id) => id !== project.id)
+                              : [...prev, project.id]
+                          )
+                        }
+                        aria-label="Toggle favourite"
+                        title={
+                          favouriteSet.has(project.id)
+                            ? "Remove from favourites"
+                            : "Add to favourites"
+                        }
+                      >
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill={favouriteSet.has(project.id) ? "currentColor" : "none"}
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M12 3l2.7 5.5 6 .9-4.3 4.2 1 5.9L12 16.8 6.6 19.5l1-5.9L3.3 9.4l6-.9z" />
+                        </svg>
+                      </button>
                       <button
                         className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                         onClick={() => {
@@ -1152,6 +1278,33 @@ export default function ProjectList() {
                   </div>
                 ))
               )}
+              {visibleProjects.length > recentProjectsPageSize ? (
+                <div className="mt-2 flex items-center justify-between text-xs text-[var(--ink-1)]">
+                  <button
+                    className="rounded-full border border-[var(--line)] px-3 py-1 disabled:opacity-40"
+                    onClick={() =>
+                      setRecentProjectsPage((prev) => Math.max(1, prev - 1))
+                    }
+                    disabled={recentProjectsPage <= 1}
+                  >
+                    Prev
+                  </button>
+                  <span>
+                    Page {recentProjectsPage} / {totalRecentProjectsPages}
+                  </span>
+                  <button
+                    className="rounded-full border border-[var(--line)] px-3 py-1 disabled:opacity-40"
+                    onClick={() =>
+                      setRecentProjectsPage((prev) =>
+                        Math.min(totalRecentProjectsPages, prev + 1)
+                      )
+                    }
+                    disabled={recentProjectsPage >= totalRecentProjectsPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
         </section>
@@ -1160,6 +1313,21 @@ export default function ProjectList() {
         {consoleTab === "shared" && (
         <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40">
           <div className="space-y-6">
+            <div className="flex flex-wrap gap-2">
+              {consoleTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
+                    consoleTab === tab.id
+                      ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                      : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                  }`}
+                  onClick={() => setConsoleTab(tab.id as typeof consoleTab)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="display-font text-lg text-[var(--accent-0)]">
@@ -1290,6 +1458,21 @@ export default function ProjectList() {
         {consoleTab === "library" && (
         <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40">
           <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {consoleTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
+                      consoleTab === tab.id
+                        ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                        : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                    }`}
+                    onClick={() => setConsoleTab(tab.id as typeof consoleTab)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
               <div className="flex items-center justify-between">
                 <h3 className="display-font text-lg text-[var(--accent-0)]">
                   Project library
@@ -1387,6 +1570,21 @@ export default function ProjectList() {
 
         {consoleTab === "admin" && authUser?.isAdmin && (
           <section className="space-y-4 rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40">
+            <div className="flex flex-wrap gap-2">
+              {consoleTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
+                    consoleTab === tab.id
+                      ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                      : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                  }`}
+                  onClick={() => setConsoleTab(tab.id as typeof consoleTab)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="display-font text-lg text-[var(--accent-0)]">
                 Admin
@@ -1417,19 +1615,7 @@ export default function ProjectList() {
                   <p className="text-xs text-[var(--accent-1)]">{adminUsersError}</p>
                 ) : (
                   <div className="max-h-[58vh] space-y-2 overflow-y-auto pr-1">
-                    {adminUsers
-                      .filter((user) => {
-                        const q = adminQuery.trim().toLowerCase();
-                        if (!q) {
-                          return true;
-                        }
-                        return (
-                          user.id.toLowerCase().includes(q) ||
-                          (user.email ?? "").toLowerCase().includes(q) ||
-                          (user.name ?? "").toLowerCase().includes(q)
-                        );
-                      })
-                      .map((user) => (
+                    {paginatedAdminUsers.map((user) => (
                         <article
                           key={user.id}
                           className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2"
@@ -1501,6 +1687,33 @@ export default function ProjectList() {
                           </div>
                         </article>
                       ))}
+                    {filteredAdminUsers.length > adminUsersPageSize ? (
+                      <div className="mt-2 flex items-center justify-between text-xs text-[var(--ink-1)]">
+                        <button
+                          className="rounded-full border border-[var(--line)] px-3 py-1 disabled:opacity-40"
+                          onClick={() =>
+                            setAdminUsersPage((prev) => Math.max(1, prev - 1))
+                          }
+                          disabled={adminUsersPage <= 1}
+                        >
+                          Prev
+                        </button>
+                        <span>
+                          Page {adminUsersPage} / {totalAdminUsersPages}
+                        </span>
+                        <button
+                          className="rounded-full border border-[var(--line)] px-3 py-1 disabled:opacity-40"
+                          onClick={() =>
+                            setAdminUsersPage((prev) =>
+                              Math.min(totalAdminUsersPages, prev + 1)
+                            )
+                          }
+                          disabled={adminUsersPage >= totalAdminUsersPages}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
