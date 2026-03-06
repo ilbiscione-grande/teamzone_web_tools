@@ -421,7 +421,7 @@ export default function AppShell() {
       )}
       {authUser?.betaUser ? (
         <button
-          className="fixed bottom-4 left-4 z-[480] rounded-full border border-black/30 bg-[#f9bf4a] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-black shadow-lg shadow-black/40 hover:brightness-110"
+          className="fixed left-4 top-[5.5rem] z-[480] rounded-full border border-black/30 bg-[#f9bf4a] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-black shadow-lg shadow-black/40 hover:brightness-110"
           onClick={() => setQuickFeedbackOpen(true)}
           title="Feedback / Bug report"
           aria-label="Feedback / Bug report"

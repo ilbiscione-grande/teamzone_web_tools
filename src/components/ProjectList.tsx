@@ -930,20 +930,6 @@ export default function ProjectList() {
           <h1 className="display-font text-5xl text-[var(--ink-0)]">
             Project Console
           </h1>
-          {authUser?.isAdmin ? (
-            <div className="mt-1">
-              <button
-                className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-widest ${
-                  consoleTab === "admin"
-                    ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--accent-0)]"
-                    : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                }`}
-                onClick={() => setConsoleTab("admin")}
-              >
-                Admin
-              </button>
-            </div>
-          ) : null}
           {!can(plan, "project.save") && (
             <div className="inline-flex w-fit rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-1)]">
               Free mode - no save · Max {getPlanLimits(plan).maxProjects} project · Max{" "}
@@ -1011,6 +997,18 @@ export default function ProjectList() {
             >
               Account
             </button>
+            {authUser?.isAdmin ? (
+              <button
+                className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-widest ${
+                  consoleTab === "admin"
+                    ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--accent-0)]"
+                    : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                }`}
+                onClick={() => setConsoleTab("admin")}
+              >
+                Admin
+              </button>
+            ) : null}
           </div>
           <p className="max-w-2xl text-sm text-[var(--ink-1)]">
             Create a new tactics project, resume from local storage, or import a
