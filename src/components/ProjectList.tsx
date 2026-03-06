@@ -38,6 +38,10 @@ import {
   loadProjectTemplates,
   type ProjectTemplate,
 } from "@/persistence/projectTemplates";
+import {
+  fetchBugReports,
+  type BugReportRow,
+} from "@/persistence/bugReports";
 
 export default function ProjectList() {
   const showBetaUi = process.env.NEXT_PUBLIC_BETA_UI === "true";
@@ -126,6 +130,10 @@ export default function ProjectList() {
   const [contactMessage, setContactMessage] = useState("");
   const [contactStatus, setContactStatus] = useState<string | null>(null);
   const [contactSending, setContactSending] = useState(false);
+  const [feedbackInboxOpen, setFeedbackInboxOpen] = useState(false);
+  const [feedbackInboxLoading, setFeedbackInboxLoading] = useState(false);
+  const [feedbackInboxError, setFeedbackInboxError] = useState<string | null>(null);
+  const [feedbackInboxRows, setFeedbackInboxRows] = useState<BugReportRow[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [createMode, setCreateMode] = useState<
     "training" | "match" | "education" | "custom"
@@ -613,6 +621,21 @@ export default function ProjectList() {
     void openPublicProject(projectId);
   };
 
+  const openFeedbackInbox = async () => {
+    setFeedbackInboxOpen(true);
+    setFeedbackInboxLoading(true);
+    setFeedbackInboxError(null);
+    const result = await fetchBugReports(300);
+    if (!result.ok) {
+      setFeedbackInboxError(result.error);
+      setFeedbackInboxRows([]);
+      setFeedbackInboxLoading(false);
+      return;
+    }
+    setFeedbackInboxRows(result.reports);
+    setFeedbackInboxLoading(false);
+  };
+
   const onDuplicateProject = async (projectId: string) => {
     let sourceProject = loadProject(projectId, authUser?.id ?? null);
     if (!sourceProject && authUser && typeof window !== "undefined" && navigator.onLine) {
@@ -806,6 +829,14 @@ export default function ProjectList() {
             >
               Account
             </button>
+            {authUser?.isAdmin ? (
+              <button
+                className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--accent-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => void openFeedbackInbox()}
+              >
+                Feedback inbox
+              </button>
+            ) : null}
           </div>
           <p className="max-w-2xl text-sm text-[var(--ink-1)]">
             Create a new tactics project, resume from local storage, or import a
@@ -1773,6 +1804,75 @@ export default function ProjectList() {
         </div>
       )}
       <PlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
+      {feedbackInboxOpen && authUser?.isAdmin ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="max-h-[84vh] w-full max-w-5xl overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="display-font text-xl text-[var(--accent-0)]">
+                  Feedback inbox
+                </h2>
+                <p className="text-xs text-[var(--ink-1)]">
+                  Bug reports, feedback and suggestions from beta users.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={() => void openFeedbackInbox()}
+                >
+                  Refresh
+                </button>
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                  onClick={() => setFeedbackInboxOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 max-h-[calc(84vh-92px)] space-y-3 overflow-y-auto pr-1">
+              {feedbackInboxLoading ? (
+                <p className="text-sm text-[var(--ink-1)]">Loading reports...</p>
+              ) : feedbackInboxError ? (
+                <p className="text-sm text-[var(--accent-1)]">{feedbackInboxError}</p>
+              ) : feedbackInboxRows.length === 0 ? (
+                <p className="text-sm text-[var(--ink-1)]">No reports yet.</p>
+              ) : (
+                feedbackInboxRows.map((row) => (
+                  <article
+                    key={row.id}
+                    className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-4 py-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                      <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                        {row.report_type}
+                      </span>
+                      <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                        {row.context}
+                      </span>
+                      <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                        {row.plan}
+                      </span>
+                      <span>{new Date(row.created_at).toLocaleString()}</span>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--ink-0)]">
+                      {row.body}
+                    </p>
+                    <div className="mt-2 text-xs text-[var(--ink-1)]">
+                      <p>User: {row.user_email || "anonymous"}</p>
+                      <p>
+                        Project/Board: {row.project_name || "n/a"} /{" "}
+                        {row.board_name || "n/a"}
+                      </p>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
       {showBetaUi && (
         <BetaNoticeModal
           open={betaOpen}

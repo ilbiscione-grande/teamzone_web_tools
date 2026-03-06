@@ -11,6 +11,7 @@ import { getActiveBoard } from "@/utils/board";
 import { useEditorStore } from "@/state/useEditorStore";
 import { clone } from "@/utils/clone";
 import { createId } from "@/utils/id";
+import BetaNoticeModal from "@/components/BetaNoticeModal";
 import {
   registerSyncConflictHandler,
   type SyncConflictChoice,
@@ -18,6 +19,7 @@ import {
 
 export default function AppShell() {
   const project = useProjectStore((state) => state.project);
+  const authUser = useProjectStore((state) => state.authUser);
   const hydrateIndex = useProjectStore((state) => state.hydrateIndex);
   const [pullDistance, setPullDistance] = useState(0);
   const [pullReady, setPullReady] = useState(false);
@@ -29,6 +31,7 @@ export default function AppShell() {
     projectName: string;
     resolve: (choice: SyncConflictChoice) => void;
   } | null>(null);
+  const [quickFeedbackOpen, setQuickFeedbackOpen] = useState(false);
 
   const runSoftRefresh = async () => {
     const state = useProjectStore.getState();
@@ -330,7 +333,22 @@ export default function AppShell() {
           </svg>
         </button>
       )}
+      {authUser?.betaUser ? (
+        <button
+          className="fixed bottom-4 left-4 z-[480] rounded-full border border-black/30 bg-[#f9bf4a] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-black shadow-lg shadow-black/40 hover:brightness-110"
+          onClick={() => setQuickFeedbackOpen(true)}
+          title="Feedback / Bug report"
+          aria-label="Feedback / Bug report"
+        >
+          Feedback
+        </button>
+      ) : null}
       {project ? <EditorLayout /> : <ProjectList />}
+      <BetaNoticeModal
+        open={quickFeedbackOpen}
+        onClose={() => setQuickFeedbackOpen(false)}
+        context={project ? "board" : "console"}
+      />
       {syncConflict && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4 py-6">
           <div className="w-full max-w-md rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-5 text-[var(--ink-0)] shadow-2xl shadow-black/40">

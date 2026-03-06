@@ -2,7 +2,10 @@
 
 import { useEffect } from "react";
 import { supabase } from "@/utils/supabaseClient";
-import { hasEffectivePaidAccess, type ProfilePlanSnapshot } from "@/utils/effectivePlan";
+import {
+  hasEffectivePaidAccess,
+  type ProfilePlanSnapshot,
+} from "@/utils/effectivePlan";
 import {
   useProjectStore,
   persistActiveProject,
@@ -23,6 +26,10 @@ const SESSION_KEY_STORAGE = "tacticsboard:sessionKey";
 const SESSION_NONCE_STORAGE = "tacticsboard:sessionNonce";
 const SESSION_DEVICE_ID_STORAGE = "tacticsboard:deviceId";
 const ACTIVE_SESSION_WINDOW_MS = 5 * 60 * 1000;
+type ProfileAuthSnapshot = ProfilePlanSnapshot & {
+  beta_user?: boolean | null;
+  is_admin?: boolean | null;
+};
 
 const safeSetLocalStorageItem = (key: string, value: string) => {
   if (typeof window === "undefined") {
@@ -219,15 +226,15 @@ export default function AuthListener() {
       if (typeof window !== "undefined" && !window.navigator.onLine) {
         return;
       }
-      let data: ProfilePlanSnapshot | null = null;
+      let data: ProfileAuthSnapshot | null = null;
       let error: unknown = null;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         const result = await supabase
           .from("profiles")
-          .select("plan,manual_paid_override")
+          .select("plan,manual_paid_override,beta_user,is_admin")
           .eq("id", userId)
           .single();
-        data = result.data as ProfilePlanSnapshot | null;
+        data = result.data as ProfileAuthSnapshot | null;
         error = result.error;
         if (!error && data) {
           break;
@@ -238,6 +245,14 @@ export default function AuthListener() {
         return;
       }
       const plan = hasEffectivePaidAccess(data) ? "PAID" : "AUTH";
+      const currentUser = useProjectStore.getState().authUser;
+      if (currentUser?.id === userId) {
+        setAuthUser({
+          ...currentUser,
+          betaUser: data.beta_user === true,
+          isAdmin: data.is_admin === true,
+        });
+      }
       setPlanFromProfile(plan);
       persistPlanCheck();
     };
@@ -281,6 +296,8 @@ export default function AuthListener() {
               null
           ),
           createdAt: user.created_at ?? new Date().toISOString(),
+          betaUser: false,
+          isAdmin: false,
         });
         syncProfilePlan(user.id).finally(() => hydrateIndex());
         claimSingleSession(user.id, session.access_token).then((allowed) => {
@@ -317,6 +334,8 @@ export default function AuthListener() {
                 null
             ),
             createdAt: user.created_at ?? new Date().toISOString(),
+            betaUser: false,
+            isAdmin: false,
           });
           syncProfilePlan(user.id).finally(() => hydrateIndex());
           claimSingleSession(user.id, session.access_token).then((allowed) => {

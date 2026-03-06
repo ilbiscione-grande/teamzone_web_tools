@@ -94,9 +94,14 @@ create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   plan text not null default 'FREE',
   stripe_customer_id text,
+  beta_user boolean not null default false,
+  is_admin boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table profiles add column if not exists beta_user boolean not null default false;
+alter table profiles add column if not exists is_admin boolean not null default false;
 
 alter table profiles enable row level security;
 
@@ -406,6 +411,7 @@ create table if not exists bug_reports (
   created_at timestamptz not null default now(),
   context text not null,
   plan text not null,
+  report_type text not null default 'bug',
   user_email text,
   project_name text,
   board_name text,
@@ -413,6 +419,8 @@ create table if not exists bug_reports (
   user_agent text,
   body text not null
 );
+
+alter table bug_reports add column if not exists report_type text not null default 'bug';
 
 alter table bug_reports enable row level security;
 
@@ -422,6 +430,20 @@ create policy "Anyone can submit bug reports"
 on bug_reports
 for insert
 with check (true);
+
+drop policy if exists "Admins can view bug reports" on bug_reports;
+
+create policy "Admins can view bug reports"
+on bug_reports
+for select
+using (
+  exists (
+    select 1
+    from profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
 
 create table if not exists contact_messages (
   id uuid primary key default gen_random_uuid(),
