@@ -469,7 +469,9 @@ export default function BoardObject({
           .join("")
           .slice(0, 2)
       : "PL";
-    const positionLabel = toPositionAbbreviation(squadPlayer?.positionLabel);
+    const positionLabel = toPositionAbbreviation(
+      player.boardPositionLabel ?? squadPlayer?.positionLabel
+    );
     const hasLabel = showPlayerName || showPlayerPosition || showPlayerNumber;
     const circleText = !hasLabel
       ? ""

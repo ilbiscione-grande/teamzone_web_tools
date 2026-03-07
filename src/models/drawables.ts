@@ -59,6 +59,8 @@ export type BaseDrawable = {
 export type PlayerToken = BaseDrawable & {
   type: "player";
   squadPlayerId?: string;
+  // Board-local position label for this token (independent of squad master data).
+  boardPositionLabel?: string;
   hasBall?: boolean;
   showName: boolean;
   showPosition: boolean;

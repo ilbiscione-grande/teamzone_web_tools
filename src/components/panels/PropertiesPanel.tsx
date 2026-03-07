@@ -906,9 +906,17 @@ export default function PropertiesPanel({
                   <select
                     className="h-8 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-2 text-xs text-[var(--ink-0)]"
                     value={target.squadPlayerId ?? ""}
-                    onChange={(event) =>
-                      update({ squadPlayerId: event.target.value || undefined })
-                    }
+                    onChange={(event) => {
+                      const nextSquadPlayerId = event.target.value || undefined;
+                      const linkedPlayer = nextSquadPlayerId
+                        ? squadPlayerById.get(nextSquadPlayerId)
+                        : undefined;
+                      update({
+                        squadPlayerId: nextSquadPlayerId,
+                        boardPositionLabel:
+                          target.boardPositionLabel ?? linkedPlayer?.positionLabel,
+                      });
+                    }}
                   >
                     <option
                       value=""
@@ -926,6 +934,37 @@ export default function PropertiesPanel({
                       </option>
                     ))}
                   </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[11px]">Position on board</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      className="h-8 w-full rounded-lg border border-[var(--line)] bg-transparent px-2 text-xs text-[var(--ink-0)]"
+                      value={target.boardPositionLabel ?? ""}
+                      placeholder={
+                        target.squadPlayerId
+                          ? squadPlayerById.get(target.squadPlayerId)?.positionLabel ||
+                            "e.g. CM"
+                          : "e.g. CM"
+                      }
+                      onChange={(event) =>
+                        update({ boardPositionLabel: event.target.value })
+                      }
+                    />
+                    <button
+                      className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                      onClick={() =>
+                        update({
+                          boardPositionLabel:
+                            target.squadPlayerId
+                              ? squadPlayerById.get(target.squadPlayerId)?.positionLabel
+                              : undefined,
+                        })
+                      }
+                    >
+                      Reset
+                    </button>
+                  </div>
                 </label>
                 <label className="space-y-1">
                   <span className="text-[11px]">Vest color</span>
