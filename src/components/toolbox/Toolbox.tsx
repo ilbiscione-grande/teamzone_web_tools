@@ -642,7 +642,12 @@ export default function Toolbox({
       return;
     }
     let cancelled = false;
+    const canPoll = () =>
+      typeof document === "undefined" || document.visibilityState === "visible";
     const refreshShares = async () => {
+      if (!canPoll()) {
+        return;
+      }
       const result = await fetchBoardSharesForOwner(board.id);
       if (!result.ok || cancelled) {
         return;
@@ -661,13 +666,20 @@ export default function Toolbox({
         return next[0]?.id ?? null;
       });
     };
-    refreshShares();
-    const interval = window.setInterval(refreshShares, 30000);
+    if (activeTab === "shared") {
+      refreshShares();
+    }
+    const interval = window.setInterval(() => {
+      if (activeTab !== "shared") {
+        return;
+      }
+      void refreshShares();
+    }, 120000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [authUser, board, plan, project?.sharedMeta]);
+  }, [authUser, board, plan, project?.sharedMeta, activeTab]);
 
   useEffect(() => {
     if (activeTab !== "shared") {
@@ -714,6 +726,9 @@ export default function Toolbox({
   }, [activeTab, activeSharedId, commentsSeenKey]);
 
   useEffect(() => {
+    if (activeTab !== "shared") {
+      return;
+    }
     const shareIds = project?.sharedMeta?.shareId
       ? [project.sharedMeta.shareId]
       : ownerShares.map((share) => share.id);
@@ -722,7 +737,12 @@ export default function Toolbox({
     }
     const sharedSeenKey = `tacticsboard:sharedSeenAt:${authUser.id}`;
     let cancelled = false;
+    const canPoll = () =>
+      typeof document === "undefined" || document.visibilityState === "visible";
     const checkUnread = async () => {
+      if (!canPoll()) {
+        return;
+      }
       const result = await fetchLatestCommentsForShares(shareIds);
       if (!result.ok || cancelled) {
         return;
@@ -752,21 +772,29 @@ export default function Toolbox({
       }
     };
     checkUnread();
-    const interval = window.setInterval(checkUnread, 30000);
+    const interval = window.setInterval(checkUnread, 120000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [commentsSeenKey, ownerShares, project?.sharedMeta?.shareId, authUser]);
+  }, [commentsSeenKey, ownerShares, project?.sharedMeta?.shareId, authUser, activeTab]);
 
   useEffect(() => {
+    if (activeTab !== "shared") {
+      return;
+    }
     const sharedMeta = project?.sharedMeta;
     if (!sharedMeta || !authUser) {
       return;
     }
     const sharedSeenKey = `tacticsboard:sharedSeenAt:${authUser.id}`;
     let cancelled = false;
+    const canPoll = () =>
+      typeof document === "undefined" || document.visibilityState === "visible";
     const checkShareActive = async () => {
+      if (!canPoll()) {
+        return;
+      }
       const result = await fetchLatestCommentsForShares([
         sharedMeta.shareId,
       ]);
@@ -782,12 +810,12 @@ export default function Toolbox({
       }
     };
     checkShareActive();
-    const interval = window.setInterval(checkShareActive, 30000);
+    const interval = window.setInterval(checkShareActive, 120000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [project?.sharedMeta, authUser]);
+  }, [project?.sharedMeta, authUser, activeTab]);
 
   useEffect(() => {
     if (

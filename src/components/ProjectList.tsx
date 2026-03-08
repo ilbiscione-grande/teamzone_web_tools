@@ -367,6 +367,9 @@ export default function ProjectList() {
   };
 
   const refreshShared = async () => {
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+      return;
+    }
     if (!authUser || !can(plan, "board.share")) {
       setSharedBoards([]);
       setSharedUnread(0);
@@ -397,10 +400,13 @@ export default function ProjectList() {
   };
 
   useEffect(() => {
+    if (consoleTab !== "shared") {
+      return;
+    }
     refreshShared();
-    const interval = window.setInterval(refreshShared, 30000);
+    const interval = window.setInterval(refreshShared, 120000);
     return () => window.clearInterval(interval);
-  }, [authUser, plan]);
+  }, [authUser, plan, consoleTab]);
 
   useEffect(() => {
     if (!authUser || !can(plan, "board.share")) {

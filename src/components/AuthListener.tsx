@@ -203,8 +203,17 @@ export default function AuthListener() {
       void checkSession();
       // Low-frequency heartbeat to reduce read load.
       sessionGuardTimer = setInterval(() => {
+        if (
+          typeof document !== "undefined" &&
+          document.visibilityState !== "visible"
+        ) {
+          return;
+        }
+        if (typeof window !== "undefined" && !window.navigator.onLine) {
+          return;
+        }
         void checkSession();
-      }, 10000);
+      }, 60000);
 
       const onFocus = () => void checkSession();
       const onVisible = () => {
@@ -381,12 +390,18 @@ export default function AuthListener() {
     );
 
     const planRefreshTimer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+      if (typeof window !== "undefined" && !window.navigator.onLine) {
+        return;
+      }
       const user = useProjectStore.getState().authUser;
       if (!user?.id) {
         return;
       }
       void syncProfilePlan(user.id);
-    }, 30_000);
+    }, 300_000);
 
     return () => {
       stopSingleSessionGuard();
