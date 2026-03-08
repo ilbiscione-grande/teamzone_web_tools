@@ -11,6 +11,8 @@ import { getActiveBoard } from "@/utils/board";
 import { useEditorStore } from "@/state/useEditorStore";
 import { clone } from "@/utils/clone";
 import { createId } from "@/utils/id";
+import BetaNoticeModal from "@/components/BetaNoticeModal";
+import { trackAnalyticsEvent } from "@/persistence/analytics";
 import {
   registerSyncConflictHandler,
   type SyncConflictChoice,
@@ -18,6 +20,8 @@ import {
 
 export default function AppShell() {
   const project = useProjectStore((state) => state.project);
+  const authUser = useProjectStore((state) => state.authUser);
+  const activeTool = useEditorStore((state) => state.activeTool);
   const hydrateIndex = useProjectStore((state) => state.hydrateIndex);
   const [pullDistance, setPullDistance] = useState(0);
   const [pullReady, setPullReady] = useState(false);
@@ -29,6 +33,10 @@ export default function AppShell() {
     projectName: string;
     resolve: (choice: SyncConflictChoice) => void;
   } | null>(null);
+  const [quickFeedbackOpen, setQuickFeedbackOpen] = useState(false);
+  const analyticsSessionKeyRef = useRef<string>("");
+  const analyticsStartRef = useRef<number>(0);
+  const analyticsLastBeatRef = useRef<number>(0);
 
   const runSoftRefresh = async () => {
     const state = useProjectStore.getState();
@@ -66,6 +74,87 @@ export default function AppShell() {
     );
     return () => unregister();
   }, []);
+
+  useEffect(() => {
+    if (!authUser?.id) {
+      analyticsSessionKeyRef.current = "";
+      analyticsStartRef.current = 0;
+      analyticsLastBeatRef.current = 0;
+      return;
+    }
+
+    const sessionKey =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    analyticsSessionKeyRef.current = sessionKey;
+    analyticsStartRef.current = Date.now();
+    analyticsLastBeatRef.current = Date.now();
+
+    void trackAnalyticsEvent({
+      eventType: "session_start",
+      sessionKey,
+      path: typeof window !== "undefined" ? window.location.pathname : "/",
+      metadata: {
+        standalone:
+          typeof window !== "undefined"
+            ? window.matchMedia("(display-mode: standalone)").matches
+            : false,
+      },
+    });
+
+    const heartbeat = window.setInterval(() => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+      const now = Date.now();
+      const delta = now - analyticsLastBeatRef.current;
+      analyticsLastBeatRef.current = now;
+      void trackAnalyticsEvent({
+        eventType: "session_heartbeat",
+        sessionKey,
+        durationMs: delta,
+        path: window.location.pathname,
+      });
+    }, 60_000);
+
+    const onBeforeUnload = () => {
+      const durationMs = Math.max(0, Date.now() - analyticsStartRef.current);
+      void trackAnalyticsEvent(
+        {
+          eventType: "session_end",
+          sessionKey,
+          durationMs,
+          path: window.location.pathname,
+        },
+        { keepalive: true }
+      );
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      window.clearInterval(heartbeat);
+      const durationMs = Math.max(0, Date.now() - analyticsStartRef.current);
+      void trackAnalyticsEvent({
+        eventType: "session_end",
+        sessionKey,
+        durationMs,
+        path: typeof window !== "undefined" ? window.location.pathname : "/",
+      });
+    };
+  }, [authUser?.id]);
+
+  useEffect(() => {
+    if (!authUser?.id || !activeTool) {
+      return;
+    }
+    void trackAnalyticsEvent({
+      eventType: "tool_selected",
+      tool: activeTool,
+      sessionKey: analyticsSessionKeyRef.current || undefined,
+      path: typeof window !== "undefined" ? window.location.pathname : "/",
+    });
+  }, [activeTool, authUser?.id]);
 
   useEffect(() => {
     const threshold = 80;
@@ -330,7 +419,22 @@ export default function AppShell() {
           </svg>
         </button>
       )}
+      {authUser?.betaUser ? (
+        <button
+          className="fixed bottom-20 left-4 z-[480] rounded-full border border-black/30 bg-[#f9bf4a] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-black shadow-lg shadow-black/40 hover:brightness-110"
+          onClick={() => setQuickFeedbackOpen(true)}
+          title="Feedback / Bug report"
+          aria-label="Feedback / Bug report"
+        >
+          Feedback
+        </button>
+      ) : null}
       {project ? <EditorLayout /> : <ProjectList />}
+      <BetaNoticeModal
+        open={quickFeedbackOpen}
+        onClose={() => setQuickFeedbackOpen(false)}
+        context={project ? "board" : "console"}
+      />
       {syncConflict && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4 py-6">
           <div className="w-full max-w-md rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-5 text-[var(--ink-0)] shadow-2xl shadow-black/40">

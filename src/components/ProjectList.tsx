@@ -9,7 +9,6 @@ import type {
   BoardSharePermission,
   Project,
   PublicProject,
-  SquadPreset,
 } from "@/models";
 import { can, getPlanLimits } from "@/utils/plan";
 import { createId } from "@/utils/id";
@@ -28,7 +27,6 @@ import {
   unpublishPublicProject,
   reportPublicProject,
 } from "@/persistence/publicProjects";
-import { fetchTeamsWithSquad } from "@/persistence/teamSquads";
 import {
   createBoardShare,
   fetchLatestCommentsForShares,
@@ -40,6 +38,17 @@ import {
   loadProjectTemplates,
   type ProjectTemplate,
 } from "@/persistence/projectTemplates";
+import {
+  type BugReportRow,
+} from "@/persistence/bugReports";
+import {
+  fetchAdminAnalytics,
+  fetchAdminReports,
+  fetchAdminUsers,
+  updateAdminUserFlags,
+  type AdminAnalyticsResponse,
+  type AdminUserRow,
+} from "@/persistence/admin";
 
 export default function ProjectList() {
   const showBetaUi = process.env.NEXT_PUBLIC_BETA_UI === "true";
@@ -128,6 +137,26 @@ export default function ProjectList() {
   const [contactMessage, setContactMessage] = useState("");
   const [contactStatus, setContactStatus] = useState<string | null>(null);
   const [contactSending, setContactSending] = useState(false);
+  const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+  const [adminUsersError, setAdminUsersError] = useState<string | null>(null);
+  const [adminReports, setAdminReports] = useState<BugReportRow[]>([]);
+  const [adminReportsLoading, setAdminReportsLoading] = useState(false);
+  const [adminReportsError, setAdminReportsError] = useState<string | null>(null);
+  const [adminAnalytics, setAdminAnalytics] =
+    useState<AdminAnalyticsResponse | null>(null);
+  const [adminAnalyticsLoading, setAdminAnalyticsLoading] = useState(false);
+  const [adminAnalyticsError, setAdminAnalyticsError] = useState<string | null>(
+    null
+  );
+  const [adminUpdatingUserId, setAdminUpdatingUserId] = useState<string | null>(
+    null
+  );
+  const [adminQuery, setAdminQuery] = useState("");
+  const [adminUsersPage, setAdminUsersPage] = useState(1);
+  const [recentProjectsPage, setRecentProjectsPage] = useState(1);
+  const [projectsQuery, setProjectsQuery] = useState("");
+  const [favoriteProjectIds, setFavoriteProjectIds] = useState<string[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [createMode, setCreateMode] = useState<
     "training" | "match" | "education" | "custom"
@@ -152,17 +181,9 @@ export default function ProjectList() {
     []
   );
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
-  const [squadPresets, setSquadPresets] = useState<SquadPreset[]>([]);
-  const [squadPresetsLoading, setSquadPresetsLoading] = useState(false);
-  const [squadPresetsError, setSquadPresetsError] = useState<string | null>(null);
-  const [homeSquadPresetId, setHomeSquadPresetId] = useState("");
-  const [awaySquadPresetId, setAwaySquadPresetId] = useState("");
-  const autoTeamPresetKey = authUser?.id
-    ? `tacticsboard:autoTeamPreset:${authUser.id}`
-    : "tacticsboard:autoTeamPreset";
   const [consoleTab, setConsoleTab] = useState<
-    "projects" | "shared" | "library"
-  >("projects");
+    "recent" | "favourites" | "shared" | "library" | "admin"
+  >("recent");
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -170,6 +191,48 @@ export default function ProjectList() {
   ).size;
   const projectLimitReached =
     Number.isFinite(limits.maxProjects) && projectCount >= limits.maxProjects;
+  const recentProjectsPageSize = 8;
+  const favouriteSet = new Set(favoriteProjectIds);
+  const visibleProjects =
+    consoleTab === "favourites"
+      ? index.filter((item) => favouriteSet.has(item.id))
+      : index;
+  const filteredProjects = visibleProjects.filter((item) => {
+    const query = projectsQuery.trim().toLowerCase();
+    if (!query) {
+      return true;
+    }
+    const haystack = [item.name, item.id, item.updatedAt].join(" ").toLowerCase();
+    return haystack.includes(query);
+  });
+  const totalRecentProjectsPages = Math.max(
+    1,
+    Math.ceil(filteredProjects.length / recentProjectsPageSize)
+  );
+  const paginatedRecentProjects = filteredProjects.slice(
+    (recentProjectsPage - 1) * recentProjectsPageSize,
+    recentProjectsPage * recentProjectsPageSize
+  );
+  const adminUsersPageSize = 15;
+  const filteredAdminUsers = adminUsers.filter((user) => {
+    const q = adminQuery.trim().toLowerCase();
+    if (!q) {
+      return true;
+    }
+    return (
+      user.id.toLowerCase().includes(q) ||
+      (user.email ?? "").toLowerCase().includes(q) ||
+      (user.name ?? "").toLowerCase().includes(q)
+    );
+  });
+  const totalAdminUsersPages = Math.max(
+    1,
+    Math.ceil(filteredAdminUsers.length / adminUsersPageSize)
+  );
+  const paginatedAdminUsers = filteredAdminUsers.slice(
+    (adminUsersPage - 1) * adminUsersPageSize,
+    adminUsersPage * adminUsersPageSize
+  );
 
   const getBoardTemplates = (
     mode: "training" | "match" | "education",
@@ -519,8 +582,6 @@ export default function ProjectList() {
       }, {})
     );
     setEditingCreateBoardId(null);
-    setHomeSquadPresetId("");
-    setAwaySquadPresetId("");
     setStartingFormation("none");
   }, [createMode, plan]);
   useEffect(() => {
@@ -544,65 +605,6 @@ export default function ProjectList() {
         : templates[0]!.id
     );
   }, [authUser?.id, createOpen, plan]);
-
-  useEffect(() => {
-    if (!authUser || plan !== "PAID") {
-      setSquadPresets([]);
-      setSquadPresetsError(null);
-      return;
-    }
-    setSquadPresetsLoading(true);
-    setSquadPresetsError(null);
-    fetchTeamsWithSquad()
-      .then((result) => {
-        if (!result.ok) {
-          setSquadPresetsError(result.error);
-          setSquadPresets([]);
-          return;
-        }
-        setSquadPresets(result.teams);
-        if (typeof window !== "undefined") {
-          const savedPresetId = window.localStorage.getItem(autoTeamPresetKey);
-          const preferredPreset =
-            result.teams.find((team) => team.id === savedPresetId) ??
-            result.teams[0];
-          if (preferredPreset?.id) {
-            setHomeSquadPresetId((current) => current || preferredPreset.id);
-            setAwaySquadPresetId((current) =>
-              current && current !== preferredPreset.id ? current : ""
-            );
-          }
-        }
-      })
-      .finally(() => setSquadPresetsLoading(false));
-  }, [authUser, autoTeamPresetKey, plan]);
-  useEffect(() => {
-    if (!createOpen || plan !== "PAID" || squadPresets.length === 0) {
-      return;
-    }
-    if (homeSquadPresetId) {
-      return;
-    }
-    const savedPresetId =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem(autoTeamPresetKey)
-        : null;
-    const preferredPreset =
-      squadPresets.find((team) => team.id === savedPresetId) ?? squadPresets[0];
-    if (!preferredPreset?.id) {
-      return;
-    }
-    setHomeSquadPresetId(preferredPreset.id);
-    setAwaySquadPresetId((current) =>
-      current && current !== preferredPreset.id ? current : ""
-    );
-  }, [
-    autoTeamPresetKey,
-    createOpen,
-    homeSquadPresetId,
-    plan,
-    squadPresets,
-  ]);
 
   const onCreate = () => {
     if (!name.trim()) {
@@ -682,6 +684,134 @@ export default function ProjectList() {
     );
     setShareProjectOpen(true);
     void openPublicProject(projectId);
+  };
+
+  const refreshAdminData = async () => {
+    setAdminUsersLoading(true);
+    setAdminReportsLoading(true);
+    setAdminAnalyticsLoading(true);
+    setAdminUsersError(null);
+    setAdminReportsError(null);
+    setAdminAnalyticsError(null);
+    const [usersResult, reportsResult, analyticsResult] = await Promise.all([
+      fetchAdminUsers(),
+      fetchAdminReports(),
+      fetchAdminAnalytics(),
+    ]);
+    if (!usersResult.ok) {
+      setAdminUsersError(usersResult.error);
+      setAdminUsers([]);
+    } else {
+      setAdminUsers(usersResult.users);
+    }
+    if (!reportsResult.ok) {
+      setAdminReportsError(reportsResult.error);
+      setAdminReports([]);
+    } else {
+      setAdminReports(reportsResult.reports);
+    }
+    if (!analyticsResult.ok) {
+      setAdminAnalyticsError(analyticsResult.error);
+      setAdminAnalytics(null);
+    } else {
+      setAdminAnalytics(analyticsResult.analytics);
+    }
+    setAdminUsersLoading(false);
+    setAdminReportsLoading(false);
+    setAdminAnalyticsLoading(false);
+  };
+
+  useEffect(() => {
+    if (consoleTab !== "admin" || !authUser?.isAdmin) {
+      return;
+    }
+    void refreshAdminData();
+  }, [consoleTab, authUser?.isAdmin]);
+
+  useEffect(() => {
+    if (consoleTab === "admin" && !authUser?.isAdmin) {
+      setConsoleTab("recent");
+    }
+  }, [consoleTab, authUser?.isAdmin]);
+
+  useEffect(() => {
+    setAdminUsersPage(1);
+  }, [adminQuery]);
+
+  useEffect(() => {
+    if (adminUsersPage > totalAdminUsersPages) {
+      setAdminUsersPage(totalAdminUsersPages);
+    }
+  }, [adminUsersPage, totalAdminUsersPages]);
+
+  useEffect(() => {
+    if (recentProjectsPage > totalRecentProjectsPages) {
+      setRecentProjectsPage(totalRecentProjectsPages);
+    }
+  }, [recentProjectsPage, totalRecentProjectsPages]);
+
+  useEffect(() => {
+    if (consoleTab === "recent" || consoleTab === "favourites") {
+      setRecentProjectsPage(1);
+    }
+  }, [consoleTab]);
+
+  useEffect(() => {
+    setRecentProjectsPage(1);
+  }, [projectsQuery]);
+
+  const favoritesStorageKey = authUser?.id
+    ? `tacticsboard:favourites:${authUser.id}`
+    : "tacticsboard:favourites:anon";
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const raw = window.localStorage.getItem(favoritesStorageKey);
+    if (!raw) {
+      setFavoriteProjectIds([]);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) {
+        setFavoriteProjectIds(parsed.filter((item) => typeof item === "string"));
+      } else {
+        setFavoriteProjectIds([]);
+      }
+    } catch {
+      setFavoriteProjectIds([]);
+    }
+  }, [favoritesStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      favoritesStorageKey,
+      JSON.stringify(favoriteProjectIds)
+    );
+  }, [favoriteProjectIds, favoritesStorageKey]);
+
+  const onDuplicateProject = async (projectId: string) => {
+    let sourceProject = loadProject(projectId, authUser?.id ?? null);
+    if (!sourceProject && authUser && typeof window !== "undefined" && navigator.onLine) {
+      sourceProject = await fetchProjectCloud(projectId);
+    }
+    if (!sourceProject) {
+      setError("Project is not available to duplicate.");
+      return;
+    }
+    const duplicate = clone(sourceProject);
+    duplicate.id = createId();
+    duplicate.name = `${sourceProject.name} (copy)`;
+    const now = new Date().toISOString();
+    duplicate.createdAt = now;
+    duplicate.updatedAt = now;
+    openProjectFromData(duplicate);
+    setError(null);
   };
 
   const onShareProject = async () => {
@@ -781,6 +911,15 @@ export default function ProjectList() {
       return haystack.includes(query);
     });
 
+  const consoleTabs = (
+    [
+      { id: "recent", label: "Recent" },
+      { id: "favourites", label: "Favourites" },
+      { id: "shared", label: "Shared" },
+      { id: "library", label: "Library" },
+    ] as const
+  );
+
   return (
     <div className="h-screen overflow-y-auto px-8 py-12" data-scrollable>
       <div className="mx-auto max-w-5xl space-y-8">
@@ -858,6 +997,18 @@ export default function ProjectList() {
             >
               Account
             </button>
+            {authUser?.isAdmin ? (
+              <button
+                className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-widest ${
+                  consoleTab === "admin"
+                    ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--accent-0)]"
+                    : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                }`}
+                onClick={() => setConsoleTab("admin")}
+              >
+                Admin
+              </button>
+            ) : null}
           </div>
           <p className="max-w-2xl text-sm text-[var(--ink-1)]">
             Create a new tactics project, resume from local storage, or import a
@@ -908,28 +1059,8 @@ export default function ProjectList() {
           )}
         </header>
 
-        <div className="flex flex-wrap gap-2">
-          {[
-            { id: "projects", label: "Projects" },
-            { id: "shared", label: "Shared" },
-            { id: "library", label: "Library" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
-                consoleTab === tab.id
-                  ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
-                  : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-              }`}
-              onClick={() => setConsoleTab(tab.id as typeof consoleTab)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {consoleTab === "projects" && (
-        <section className="grid gap-6 rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40 md:grid-cols-[1.2fr_1fr]">
+        {(consoleTab === "recent" || consoleTab === "favourites") && (
+        <section className="grid gap-6 rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40 md:grid-cols-[0.95fr_1.05fr]">
           <div className="space-y-4">
             <h2 className="display-font text-xl text-[var(--accent-0)]">
               New Project
@@ -1003,19 +1134,41 @@ export default function ProjectList() {
           </div>
 
           <div className="space-y-3">
-            <h2 className="display-font text-xl text-[var(--accent-0)]">
-              Recent Projects
-            </h2>
+            <div className="flex flex-wrap gap-2">
+              {consoleTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
+                    String(consoleTab) === tab.id
+                      ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                      : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                  }`}
+                  onClick={() => setConsoleTab(tab.id as typeof consoleTab)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <input
+              className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)] placeholder:text-[var(--ink-1)]"
+              placeholder="Search projects"
+              value={projectsQuery}
+              onChange={(event) => setProjectsQuery(event.target.value)}
+            />
             {syncStatus.state === "syncing" ? (
               <p className="text-xs text-[var(--ink-1)]">Refreshing...</p>
             ) : null}
             <div className="space-y-2">
-              {index.length === 0 ? (
+              {filteredProjects.length === 0 ? (
                 <p className="text-sm text-[var(--ink-1)]">
-                  No saved projects yet.
+                  {projectsQuery.trim()
+                    ? "No projects match your search."
+                    : consoleTab === "favourites"
+                    ? "No favourite projects yet."
+                    : "No saved projects yet."}
                 </p>
               ) : (
-                index.map((project) => (
+                paginatedRecentProjects.map((project) => (
                   <div
                     key={project.id}
                     className="flex flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
@@ -1030,7 +1183,40 @@ export default function ProjectList() {
                     </div>
                     <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
                       <button
-                        className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-full border ${
+                          favouriteSet.has(project.id)
+                            ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                            : "border-[var(--line)] text-[var(--ink-0)]"
+                        } hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]`}
+                        onClick={() =>
+                          setFavoriteProjectIds((prev) =>
+                            prev.includes(project.id)
+                              ? prev.filter((id) => id !== project.id)
+                              : [...prev, project.id]
+                          )
+                        }
+                        aria-label="Toggle favourite"
+                        title={
+                          favouriteSet.has(project.id)
+                            ? "Remove from favourites"
+                            : "Add to favourites"
+                        }
+                      >
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill={favouriteSet.has(project.id) ? "currentColor" : "none"}
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M12 3l2.7 5.5 6 .9-4.3 4.2 1 5.9L12 16.8 6.6 19.5l1-5.9L3.3 9.4l6-.9z" />
+                        </svg>
+                      </button>
+                      <button
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                         onClick={() => {
                           if (typeof window !== "undefined" && !navigator.onLine) {
                             const cached = loadProject(project.id, authUser?.id ?? null);
@@ -1044,24 +1230,73 @@ export default function ProjectList() {
                           setError(null);
                           openProject(project.id);
                         }}
+                        aria-label="Open project"
+                        title="Open project"
                       >
-                        Open
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" />
+                          <circle cx="12" cy="12" r="2.5" />
+                        </svg>
                       </button>
                       <button
-                        className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        onClick={() => void onDuplicateProject(project.id)}
+                        aria-label="Duplicate project"
+                        title="Duplicate project"
+                      >
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="9" y="9" width="11" height="11" rx="2" />
+                          <rect x="4" y="4" width="11" height="11" rx="2" />
+                        </svg>
+                      </button>
+                      <button
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                         onClick={() => openProjectShare(project.id)}
                         disabled={!can(plan, "board.share")}
                         data-locked={!can(plan, "board.share")}
+                        aria-label="Share project"
                         title={
                           can(plan, "board.share")
                             ? "Share project boards"
                             : "Sharing is available on paid plans."
                         }
                       >
-                        Share
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="18" cy="5" r="3" />
+                          <circle cx="6" cy="12" r="3" />
+                          <circle cx="18" cy="19" r="3" />
+                          <path d="M8.6 10.8l6.8-3.6M8.6 13.2l6.8 3.6" />
+                        </svg>
                       </button>
                       <button
-                        className="rounded-full border border-[var(--line)] px-3 py-1 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line)] text-[var(--ink-0)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
                         onClick={() => {
                           if (
                             window.confirm(
@@ -1071,13 +1306,55 @@ export default function ProjectList() {
                             deleteProject(project.id);
                           }
                         }}
+                        aria-label="Delete project"
+                        title="Delete project"
                       >
-                        Delete
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4h8v2" />
+                          <path d="M6 6l1 14h10l1-14" />
+                        </svg>
                       </button>
                     </div>
                   </div>
                 ))
               )}
+              {filteredProjects.length > recentProjectsPageSize ? (
+                <div className="mt-2 flex items-center justify-between text-xs text-[var(--ink-1)]">
+                  <button
+                    className="rounded-full border border-[var(--line)] px-3 py-1 disabled:opacity-40"
+                    onClick={() =>
+                      setRecentProjectsPage((prev) => Math.max(1, prev - 1))
+                    }
+                    disabled={recentProjectsPage <= 1}
+                  >
+                    Prev
+                  </button>
+                  <span>
+                    Page {recentProjectsPage} / {totalRecentProjectsPages}
+                  </span>
+                  <button
+                    className="rounded-full border border-[var(--line)] px-3 py-1 disabled:opacity-40"
+                    onClick={() =>
+                      setRecentProjectsPage((prev) =>
+                        Math.min(totalRecentProjectsPages, prev + 1)
+                      )
+                    }
+                    disabled={recentProjectsPage >= totalRecentProjectsPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
         </section>
@@ -1086,6 +1363,21 @@ export default function ProjectList() {
         {consoleTab === "shared" && (
         <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40">
           <div className="space-y-6">
+            <div className="flex flex-wrap gap-2">
+              {consoleTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
+                    String(consoleTab) === tab.id
+                      ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                      : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                  }`}
+                  onClick={() => setConsoleTab(tab.id as typeof consoleTab)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="display-font text-lg text-[var(--accent-0)]">
@@ -1216,6 +1508,21 @@ export default function ProjectList() {
         {consoleTab === "library" && (
         <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40">
           <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {consoleTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
+                      String(consoleTab) === tab.id
+                        ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                        : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                    }`}
+                    onClick={() => setConsoleTab(tab.id as typeof consoleTab)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
               <div className="flex items-center justify-between">
                 <h3 className="display-font text-lg text-[var(--accent-0)]">
                   Project library
@@ -1309,6 +1616,325 @@ export default function ProjectList() {
               )}
             </div>
         </section>
+        )}
+
+        {consoleTab === "admin" && authUser?.isAdmin && (
+          <section className="space-y-4 rounded-3xl border border-[var(--line)] bg-[var(--panel)]/80 p-6 shadow-2xl shadow-black/40">
+            <div className="flex flex-wrap gap-2">
+              {consoleTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
+                    String(consoleTab) === tab.id
+                      ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                      : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                  }`}
+                  onClick={() => setConsoleTab(tab.id as typeof consoleTab)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="display-font text-lg text-[var(--accent-0)]">
+                Admin
+              </h3>
+              <div className="flex items-center gap-2">
+                <input
+                  className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                  placeholder="Search email/name/id"
+                  value={adminQuery}
+                  onChange={(event) => setAdminQuery(event.target.value)}
+                />
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={() => void refreshAdminData()}
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/50 p-3">
+                <h4 className="text-xs uppercase tracking-widest text-[var(--ink-1)]">
+                  Users
+                </h4>
+                {adminUsersLoading ? (
+                  <p className="text-xs text-[var(--ink-1)]">Loading users...</p>
+                ) : adminUsersError ? (
+                  <p className="text-xs text-[var(--accent-1)]">{adminUsersError}</p>
+                ) : (
+                  <div className="max-h-[58vh] space-y-2 overflow-y-auto pr-1">
+                    {paginatedAdminUsers.map((user) => (
+                        <article
+                          key={user.id}
+                          className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2"
+                        >
+                          <p className="text-xs font-semibold text-[var(--ink-0)]">
+                            {user.email ?? user.id}
+                          </p>
+                          <p className="text-[11px] text-[var(--ink-1)]">
+                            {user.name ?? "No name"} · {user.plan}
+                          </p>
+                          <p className="truncate text-[10px] text-[var(--ink-1)]">
+                            {user.id}
+                          </p>
+                          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                            <label className="inline-flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={user.betaUser}
+                                disabled={adminUpdatingUserId === user.id}
+                                onChange={async (event) => {
+                                  setAdminUpdatingUserId(user.id);
+                                  const result = await updateAdminUserFlags({
+                                    id: user.id,
+                                    betaUser: event.target.checked,
+                                  });
+                                  if (result.ok) {
+                                    setAdminUsers((prev) =>
+                                      prev.map((entry) =>
+                                        entry.id === user.id
+                                          ? { ...entry, betaUser: event.target.checked }
+                                          : entry
+                                      )
+                                    );
+                                  } else {
+                                    setAdminUsersError(result.error);
+                                  }
+                                  setAdminUpdatingUserId(null);
+                                }}
+                              />
+                              Beta user
+                            </label>
+                            <label className="inline-flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={user.isAdmin}
+                                disabled={adminUpdatingUserId === user.id}
+                                onChange={async (event) => {
+                                  setAdminUpdatingUserId(user.id);
+                                  const result = await updateAdminUserFlags({
+                                    id: user.id,
+                                    isAdmin: event.target.checked,
+                                  });
+                                  if (result.ok) {
+                                    setAdminUsers((prev) =>
+                                      prev.map((entry) =>
+                                        entry.id === user.id
+                                          ? { ...entry, isAdmin: event.target.checked }
+                                          : entry
+                                      )
+                                    );
+                                  } else {
+                                    setAdminUsersError(result.error);
+                                  }
+                                  setAdminUpdatingUserId(null);
+                                }}
+                              />
+                              Admin
+                            </label>
+                          </div>
+                        </article>
+                      ))}
+                    {filteredAdminUsers.length > adminUsersPageSize ? (
+                      <div className="mt-2 flex items-center justify-between text-xs text-[var(--ink-1)]">
+                        <button
+                          className="rounded-full border border-[var(--line)] px-3 py-1 disabled:opacity-40"
+                          onClick={() =>
+                            setAdminUsersPage((prev) => Math.max(1, prev - 1))
+                          }
+                          disabled={adminUsersPage <= 1}
+                        >
+                          Prev
+                        </button>
+                        <span>
+                          Page {adminUsersPage} / {totalAdminUsersPages}
+                        </span>
+                        <button
+                          className="rounded-full border border-[var(--line)] px-3 py-1 disabled:opacity-40"
+                          onClick={() =>
+                            setAdminUsersPage((prev) =>
+                              Math.min(totalAdminUsersPages, prev + 1)
+                            )
+                          }
+                          disabled={adminUsersPage >= totalAdminUsersPages}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/50 p-3">
+                <h4 className="text-xs uppercase tracking-widest text-[var(--ink-1)]">
+                  Feedback / Bug reports
+                </h4>
+                {adminReportsLoading ? (
+                  <p className="text-xs text-[var(--ink-1)]">Loading reports...</p>
+                ) : adminReportsError ? (
+                  <p className="text-xs text-[var(--accent-1)]">{adminReportsError}</p>
+                ) : (
+                  <div className="max-h-[58vh] space-y-2 overflow-y-auto pr-1">
+                    {adminReports.map((row) => (
+                      <article
+                        key={row.id}
+                        className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2"
+                      >
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                          <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                            {row.report_type}
+                          </span>
+                          <span>{new Date(row.created_at).toLocaleString()}</span>
+                        </div>
+                        <p className="mt-2 whitespace-pre-wrap text-xs text-[var(--ink-0)]">
+                          {row.body}
+                        </p>
+                        <p className="mt-2 text-[10px] text-[var(--ink-1)]">
+                          {row.user_email ?? "anonymous"} · {row.project_name ?? "n/a"} /{" "}
+                          {row.board_name ?? "n/a"}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3">
+              <h4 className="text-xs uppercase tracking-widest text-[var(--ink-1)]">
+                Usage analytics (last 30 days)
+              </h4>
+              {adminAnalyticsLoading ? (
+                <p className="text-xs text-[var(--ink-1)]">Loading analytics...</p>
+              ) : adminAnalyticsError ? (
+                <p className="text-xs text-[var(--accent-1)]">{adminAnalyticsError}</p>
+              ) : !adminAnalytics ? (
+                <p className="text-xs text-[var(--ink-1)]">No analytics data yet.</p>
+              ) : (
+                <>
+                  <div className="grid gap-2 sm:grid-cols-5">
+                    {[
+                      { label: "Events", value: String(adminAnalytics.summary.totalEvents) },
+                      {
+                        label: "Active users",
+                        value: String(adminAnalytics.summary.activeUsers30d),
+                      },
+                      { label: "Logins", value: String(adminAnalytics.summary.loginCount30d) },
+                      {
+                        label: "Avg session (min)",
+                        value: String(adminAnalytics.summary.averageSessionMinutes),
+                      },
+                      {
+                        label: "Total hours",
+                        value: String(adminAnalytics.summary.totalHours30d),
+                      },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2"
+                      >
+                        <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                          {item.label}
+                        </p>
+                        <p className="text-sm font-semibold text-[var(--ink-0)]">
+                          {item.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Most used tools
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {adminAnalytics.toolUsage.slice(0, 8).map((entry) => {
+                          const max = adminAnalytics.toolUsage[0]?.count ?? 1;
+                          const pct = Math.max(4, Math.round((entry.count / max) * 100));
+                          return (
+                            <div key={entry.tool} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-[var(--ink-0)]">{entry.tool}</span>
+                                <span className="text-[var(--ink-1)]">{entry.count}</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-black/25">
+                                <div
+                                  className="h-2 rounded-full bg-[var(--accent-0)]"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Login methods
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {adminAnalytics.loginMethods.map((entry) => {
+                          const max = adminAnalytics.loginMethods[0]?.count ?? 1;
+                          const pct = Math.max(6, Math.round((entry.count / max) * 100));
+                          return (
+                            <div key={entry.method} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-[var(--ink-0)]">{entry.method}</span>
+                                <span className="text-[var(--ink-1)]">{entry.count}</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-black/25">
+                                <div
+                                  className="h-2 rounded-full bg-[var(--accent-2)]"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Daily activity (14d)
+                      </p>
+                      <div className="mt-2 max-h-48 space-y-1 overflow-y-auto">
+                        {adminAnalytics.dailyActivity.map((day) => (
+                          <div
+                            key={day.day}
+                            className="flex items-center justify-between text-xs text-[var(--ink-1)]"
+                          >
+                            <span>{day.day}</span>
+                            <span>
+                              {day.activeUsers} users · {day.events} events
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Recent logins
+                      </p>
+                      <div className="mt-2 max-h-48 space-y-2 overflow-y-auto">
+                        {adminAnalytics.recentLogins.slice(0, 20).map((item, index) => (
+                          <div
+                            key={`${item.at}-${index}`}
+                            className="rounded-lg border border-[var(--line)] px-2 py-1 text-xs text-[var(--ink-1)]"
+                          >
+                            <p className="text-[var(--ink-0)]">{item.userEmail ?? "unknown"}</p>
+                            <p>{new Date(item.at).toLocaleString()} · {item.provider}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
         )}
       </div>
       {createOpen && (
@@ -1571,80 +2197,6 @@ export default function ProjectList() {
                 </div>
               </div>
               <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
-                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Match squad presets
-                </p>
-                {plan !== "PAID" ? (
-                  <p className="text-xs text-[var(--ink-1)]">
-                    Squad presets are available for paid plans.
-                  </p>
-                ) : squadPresetsLoading ? (
-                  <p className="text-xs text-[var(--ink-1)]">
-                    Loading presets...
-                  </p>
-                ) : squadPresetsError ? (
-                  <p className="text-xs text-[var(--accent-1)]">
-                    {squadPresetsError}
-                  </p>
-                ) : (
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <label className="space-y-1">
-                      <span className="text-[11px] uppercase text-[var(--ink-1)]">
-                        Home preset
-                      </span>
-                      <select
-                        className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-                        value={homeSquadPresetId}
-                        onChange={(event) => {
-                          const nextId = event.target.value;
-                          setHomeSquadPresetId(nextId);
-                          if (typeof window !== "undefined" && nextId) {
-                            window.localStorage.setItem(autoTeamPresetKey, nextId);
-                          }
-                        }}
-                        disabled={plan !== "PAID"}
-                        data-locked={plan !== "PAID"}
-                      >
-                        <option value="">No preset</option>
-                        {squadPresets.map((preset) => (
-                          <option key={preset.id} value={preset.id}>
-                            {preset.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-[11px] uppercase text-[var(--ink-1)]">
-                        Away preset
-                      </span>
-                      <select
-                        className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-                        value={awaySquadPresetId}
-                        onChange={(event) => {
-                          const nextId = event.target.value;
-                          setAwaySquadPresetId(nextId);
-                          if (typeof window !== "undefined" && nextId) {
-                            window.localStorage.setItem(autoTeamPresetKey, nextId);
-                          }
-                        }}
-                        disabled={plan !== "PAID"}
-                        data-locked={plan !== "PAID"}
-                      >
-                        <option value="">No preset</option>
-                        {squadPresets.map((preset) => (
-                          <option key={preset.id} value={preset.id}>
-                            {preset.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                )}
-                <p className="text-[10px] text-[var(--ink-1)]">
-                  Presets are copied into the new project. Editing squads inside a board does not update Team DB unless saved from Team manager.
-                </p>
-              </div>
-              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                 <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Team colors</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-2">
@@ -1800,12 +2352,6 @@ export default function ProjectList() {
                   const templates = createTemplateOptions.filter((board) =>
                     createBoards.includes(board.id)
                   );
-                  const homePreset = squadPresets.find(
-                    (preset) => preset.id === homeSquadPresetId
-                  );
-                  const awayPreset = squadPresets.find(
-                    (preset) => preset.id === awaySquadPresetId
-                  );
                   createProject(name.trim(), {
                     homeKit,
                     awayKit,
@@ -1825,8 +2371,6 @@ export default function ProjectList() {
                             pitchShape: board.pitchShape,
                           }))
                         : undefined,
-                    homeSquadPreset: homePreset?.squad,
-                    awaySquadPreset: awayPreset?.squad,
                     startingFormation:
                       startingFormation !== "none"
                         ? startingFormation

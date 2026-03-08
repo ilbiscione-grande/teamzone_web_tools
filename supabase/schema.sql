@@ -94,9 +94,14 @@ create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   plan text not null default 'FREE',
   stripe_customer_id text,
+  beta_user boolean not null default false,
+  is_admin boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table profiles add column if not exists beta_user boolean not null default false;
+alter table profiles add column if not exists is_admin boolean not null default false;
 
 alter table profiles enable row level security;
 
@@ -406,6 +411,7 @@ create table if not exists bug_reports (
   created_at timestamptz not null default now(),
   context text not null,
   plan text not null,
+  report_type text not null default 'bug',
   user_email text,
   project_name text,
   board_name text,
@@ -413,6 +419,8 @@ create table if not exists bug_reports (
   user_agent text,
   body text not null
 );
+
+alter table bug_reports add column if not exists report_type text not null default 'bug';
 
 alter table bug_reports enable row level security;
 
@@ -422,6 +430,62 @@ create policy "Anyone can submit bug reports"
 on bug_reports
 for insert
 with check (true);
+
+create table if not exists app_analytics_events (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  user_email text,
+  session_key text,
+  event_type text not null,
+  tool text,
+  duration_ms integer,
+  path text,
+  metadata jsonb not null default '{}'::jsonb
+);
+
+create index if not exists app_analytics_events_user_id_idx
+  on app_analytics_events(user_id);
+create index if not exists app_analytics_events_event_type_idx
+  on app_analytics_events(event_type);
+create index if not exists app_analytics_events_created_at_idx
+  on app_analytics_events(created_at desc);
+
+alter table app_analytics_events enable row level security;
+
+drop policy if exists "Users can insert own analytics events" on app_analytics_events;
+drop policy if exists "Admins can view analytics events" on app_analytics_events;
+
+create policy "Users can insert own analytics events"
+on app_analytics_events
+for insert
+with check (auth.uid() = user_id);
+
+create policy "Admins can view analytics events"
+on app_analytics_events
+for select
+using (
+  exists (
+    select 1
+    from profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+drop policy if exists "Admins can view bug reports" on bug_reports;
+
+create policy "Admins can view bug reports"
+on bug_reports
+for select
+using (
+  exists (
+    select 1
+    from profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
 
 create table if not exists contact_messages (
   id uuid primary key default gen_random_uuid(),

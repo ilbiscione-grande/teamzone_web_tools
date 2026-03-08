@@ -3,4 +3,6 @@ export type AuthUser = {
   email: string;
   name: string;
   createdAt: string;
+  betaUser?: boolean;
+  isAdmin?: boolean;
 };

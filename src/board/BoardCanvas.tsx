@@ -157,6 +157,7 @@ export default function BoardCanvas({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const controlsMenuRef = useRef<HTMLDivElement | null>(null);
   const rotationSnapStateRef = useRef<Record<string, number>>({});
+  const wasPlayingRef = useRef(false);
   const [size, setSize] = useState({ width: 800, height: 500 });
   const [controlsMenuOpen, setControlsMenuOpen] = useState(false);
   const [objectActionMenuId, setObjectActionMenuId] = useState<string | null>(
@@ -168,6 +169,7 @@ export default function BoardCanvas({
     "all" | DrawableObject["type"]
   >("all");
   const [objectListStatus, setObjectListStatus] = useState<string | null>(null);
+  const [holdZoomAtTimelineEnd, setHoldZoomAtTimelineEnd] = useState(false);
 
   const activeTool = useEditorStore((state) => state.activeTool);
   const playerTokenSize = useEditorStore((state) => state.playerTokenSize);
@@ -241,6 +243,22 @@ export default function BoardCanvas({
       ) as PlayerToken[],
     [objects, selection]
   );
+  useEffect(() => {
+    const lastIndex = Math.max(0, board.frames.length - 1);
+    const atTimelineEnd =
+      board.mode === "DYNAMIC" &&
+      board.frames.length > 1 &&
+      Math.floor(playheadFrame) >= lastIndex;
+    if (isPlaying) {
+      setHoldZoomAtTimelineEnd(false);
+    } else if (wasPlayingRef.current && !loopPlayback && atTimelineEnd) {
+      setHoldZoomAtTimelineEnd(true);
+    } else if (!atTimelineEnd) {
+      setHoldZoomAtTimelineEnd(false);
+    }
+    wasPlayingRef.current = isPlaying;
+  }, [board.mode, board.frames.length, isPlaying, loopPlayback, playheadFrame]);
+
   const applyPlaybackEffect = useCallback((
     object: DrawableObject,
     progress: number,
@@ -902,9 +920,7 @@ export default function BoardCanvas({
     board.pitchView === "FULL" &&
     (isForcedPortrait || (readOnly && size.height > size.width));
   const lockedViewport =
-    forcePortrait || isThreeDView
-      ? { zoom: 1, offsetX: 0, offsetY: 0 }
-      : viewport;
+    isThreeDView ? { zoom: 1, offsetX: 0, offsetY: 0 } : viewport;
   const setViewportSafe = forcePortrait
     ? (_value: Partial<typeof viewport>) => {}
     : setViewport;
@@ -1131,24 +1147,35 @@ export default function BoardCanvas({
     rotatedBounds.minY * centeringScale;
   const displayViewport = useMemo(() => {
     const lastIndex = Math.max(0, board.frames.length - 1);
-    const isStoppedAtTimelineEnd =
-      !isPlaying &&
-      !loopPlayback &&
-      board.mode === "DYNAMIC" &&
-      board.frames.length > 0 &&
-      Math.floor(playheadFrame) >= lastIndex;
+    const isStoppedAtTimelineEnd = holdZoomAtTimelineEnd;
     if (
       board.mode !== "DYNAMIC" ||
       (!isPlaying && !isStoppedAtTimelineEnd) ||
-      forcePortrait ||
-      isThreeDView ||
       board.frames.length === 0
     ) {
       return lockedViewport;
     }
     const ZOOM_EFFECT_LEVEL = 1.8;
     const fallback = { zoom: 1, offsetX: 0, offsetY: 0 };
-    const getFocusPoint = (item: DrawableObject) => {
+    const getFocusPoint = (
+      item: DrawableObject,
+      frameObjects: DrawableObject[]
+    ) => {
+      if (item.type === "ball") {
+        const attachedId = item.attachedToId;
+        if (attachedId) {
+          const player = frameObjects.find(
+            (entry) => entry.id === attachedId && entry.type === "player"
+          );
+          if (player) {
+            const offset = item.offset ?? { x: 1.5, y: -1.5 };
+            return {
+              x: player.position.x + offset.x,
+              y: player.position.y + offset.y,
+            };
+          }
+        }
+      }
       if (item.type === "arrow" || item.type === "path") {
         const points = item.points ?? [];
         if (points.length < 2) {
@@ -1188,21 +1215,28 @@ export default function BoardCanvas({
       }
       return item.position;
     };
-    const toViewportForObject = (item: DrawableObject) => {
-      const focusPoint = getFocusPoint(item);
+    const toViewportForObject = (
+      item: DrawableObject,
+      frameObjects: DrawableObject[]
+    ) => {
+      const focusPoint = getFocusPoint(item, frameObjects);
       const displayedPoint =
         viewRotation === 0
           ? focusPoint
           : rotatePointAround(focusPoint, rotationPivot, viewRotation);
+      const effectiveZoomScale =
+        baseScale *
+        ZOOM_EFFECT_LEVEL *
+        (isThreeDView ? threeDScaleFactor : 1);
       return {
         zoom: ZOOM_EFFECT_LEVEL,
         offsetX:
           size.width / 2 -
-          displayedPoint.x * baseScale * ZOOM_EFFECT_LEVEL -
+          displayedPoint.x * effectiveZoomScale -
           baseOffsetX,
         offsetY:
           size.height / 2 -
-          displayedPoint.y * baseScale * ZOOM_EFFECT_LEVEL -
+          displayedPoint.y * effectiveZoomScale -
           baseOffsetY,
       };
     };
@@ -1212,7 +1246,9 @@ export default function BoardCanvas({
     const baseObjects = board.frames[baseIndex]?.objects ?? [];
     const baseZoomObject = findZoomObject(baseObjects);
     if (!loopPlayback && baseIndex === lastIndex) {
-      return baseZoomObject ? toViewportForObject(baseZoomObject) : fallback;
+      return baseZoomObject
+        ? toViewportForObject(baseZoomObject, baseObjects)
+        : fallback;
     }
     const nextIndex = loopPlayback
       ? (baseIndex + 1) % board.frames.length
@@ -1221,8 +1257,12 @@ export default function BoardCanvas({
     const nextZoomObject = findZoomObject(nextObjects);
     const tRaw = Math.max(0, Math.min(1, playheadFrame - baseIndex));
     const t = tRaw * tRaw * (3 - 2 * tRaw);
-    const from = baseZoomObject ? toViewportForObject(baseZoomObject) : fallback;
-    const to = nextZoomObject ? toViewportForObject(nextZoomObject) : fallback;
+    const from = baseZoomObject
+      ? toViewportForObject(baseZoomObject, baseObjects)
+      : fallback;
+    const to = nextZoomObject
+      ? toViewportForObject(nextZoomObject, nextObjects)
+      : fallback;
     return {
       zoom: from.zoom + (to.zoom - from.zoom) * t,
       offsetX: from.offsetX + (to.offsetX - from.offsetX) * t,
@@ -1234,15 +1274,16 @@ export default function BoardCanvas({
     baseScale,
     board.frames,
     board.mode,
-    forcePortrait,
     isPlaying,
     isThreeDView,
+    holdZoomAtTimelineEnd,
     lockedViewport,
     loopPlayback,
     playheadFrame,
     rotationPivot,
     size.height,
     size.width,
+    threeDScaleFactor,
     viewRotation,
   ]);
   const stageScale = baseScale * displayViewport.zoom;

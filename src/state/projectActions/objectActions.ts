@@ -1,6 +1,6 @@
 import type { StateCreator } from "zustand";
 import type { ProjectActions, ProjectStore } from "./types";
-import type { DrawableObject } from "@/models";
+import type { DrawableObject, PlayerToken } from "@/models";
 
 type ObjectActionSlice = Pick<
   ProjectActions,
@@ -69,11 +69,32 @@ export const createObjectActions: StateCreator<
         Object.prototype.hasOwnProperty.call(payload, "squadPlayerId") &&
         board
       ) {
+        const nextSquadPlayerId = (payload as { squadPlayerId?: string })
+          .squadPlayerId;
+        const linkedSquadPlayerPosition = nextSquadPlayerId
+          ? state.project?.squads
+              .flatMap((squad) => squad.players)
+              .find((player) => player.id === nextSquadPlayerId)?.positionLabel
+          : undefined;
+        if (
+          nextSquadPlayerId &&
+          !(target as PlayerToken).boardPositionLabel &&
+          linkedSquadPlayerPosition
+        ) {
+          (target as PlayerToken).boardPositionLabel = linkedSquadPlayerPosition;
+        }
         board.frames.forEach((entry) => {
           const match = entry.objects.find((item) => item.id === objectId);
           if (match && match.type === "player") {
-            match.squadPlayerId = (payload as { squadPlayerId?: string })
-              .squadPlayerId;
+            match.squadPlayerId = nextSquadPlayerId;
+            if (
+              nextSquadPlayerId &&
+              !(match as PlayerToken).boardPositionLabel &&
+              linkedSquadPlayerPosition
+            ) {
+              (match as PlayerToken).boardPositionLabel =
+                linkedSquadPlayerPosition;
+            }
           }
         });
       }

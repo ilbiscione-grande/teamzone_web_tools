@@ -3,7 +3,10 @@
 import { useMemo, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { getActiveBoard } from "@/utils/board";
-import { submitBugReport } from "@/persistence/bugReports";
+import {
+  submitBugReport,
+  type BugReportType,
+} from "@/persistence/bugReports";
 
 type BetaNoticeModalProps = {
   open: boolean;
@@ -21,6 +24,7 @@ export default function BetaNoticeModal({
   const project = useProjectStore((state) => state.project);
   const board = getActiveBoard(project);
   const [reportBody, setReportBody] = useState("");
+  const [reportType, setReportType] = useState<BugReportType>("bug");
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -34,6 +38,7 @@ export default function BetaNoticeModal({
       "Teamzone Web Tools · Beta bug report",
       "",
       `Context: ${context}`,
+      `Type: ${reportType}`,
       `Plan: ${plan}`,
       `User: ${authUser?.email ?? "anonymous"}`,
       `Project: ${project?.name ?? "n/a"}`,
@@ -44,7 +49,15 @@ export default function BetaNoticeModal({
       "Report:",
       reportBody.trim() || "(describe the issue here)",
     ].join("\n");
-  }, [authUser?.email, board?.name, context, plan, project?.name, reportBody]);
+  }, [
+    authUser?.email,
+    board?.name,
+    context,
+    plan,
+    project?.name,
+    reportBody,
+    reportType,
+  ]);
 
   if (!open) {
     return null;
@@ -65,6 +78,7 @@ export default function BetaNoticeModal({
     const result = await submitBugReport({
       context,
       plan,
+      reportType,
       userEmail: authUser?.email ?? null,
       projectName: project?.name ?? null,
       boardName: board?.name ?? null,
@@ -105,11 +119,30 @@ export default function BetaNoticeModal({
         <p className="mt-3 text-sm text-[var(--ink-1)]">{description}</p>
         <div className="mt-5 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-4">
           <p className="text-[11px] uppercase text-[var(--ink-1)]">
-            Report a bug
+            Report
           </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {[
+              { id: "bug", label: "Bug" },
+              { id: "feedback", label: "Feedback" },
+              { id: "suggestion", label: "Suggestion" },
+            ].map((item) => (
+              <button
+                key={item.id}
+                className={`rounded-full border px-3 py-1 text-[11px] ${
+                  reportType === item.id
+                    ? "border-[var(--accent-0)] bg-[var(--panel)] text-[var(--ink-0)]"
+                    : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                }`}
+                onClick={() => setReportType(item.id as BugReportType)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
           <textarea
             className="mt-3 h-32 w-full rounded-2xl border border-[var(--line)] bg-transparent p-3 text-xs text-[var(--ink-0)] placeholder:text-[var(--ink-1)]"
-            placeholder="Describe what happened, what you expected, and how to reproduce it."
+            placeholder="Describe the issue or idea clearly, with steps/examples when relevant."
             value={reportBody}
             onChange={(event) => setReportBody(event.target.value)}
           />

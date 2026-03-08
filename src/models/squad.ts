@@ -2,6 +2,7 @@ export type SquadPlayer = {
   id: string;
   name: string;
   positionLabel: string;
+  guest?: boolean;
   active?: boolean;
   number?: number;
   vestColor?: string;

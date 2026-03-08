@@ -41,6 +41,7 @@ import {
 } from "@/persistence/projectTemplates";
 import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { getStageRef } from "@/utils/stageRef";
+import { clone } from "@/utils/clone";
 import ColorPalettePicker from "@/components/ColorPalettePicker";
 
 type ManagePlayersSortKey = "default" | "name" | "position" | "number";
@@ -61,6 +62,7 @@ export default function TopBar() {
   const updateSquadPlayer = useProjectStore((state) => state.updateSquadPlayer);
   const removeSquadPlayer = useProjectStore((state) => state.removeSquadPlayer);
   const openProject = useProjectStore((state) => state.openProject);
+  const openProjectFromData = useProjectStore((state) => state.openProjectFromData);
   const closeProject = useProjectStore((state) => state.closeProject);
   const addBoard = useProjectStore((state) => state.addBoard);
   const duplicateBoard = useProjectStore((state) => state.duplicateBoard);
@@ -102,9 +104,6 @@ export default function TopBar() {
   const [managePresetStatus, setManagePresetStatus] = useState<string | null>(
     null
   );
-  const [manageAutoAppliedKey, setManageAutoAppliedKey] = useState<string | null>(
-    null
-  );
   const [jerseyType, setJerseyType] = useState<
     "solid" | "split" | "stripe" | "sash" | "pinstripe"
   >("solid");
@@ -127,6 +126,7 @@ export default function TopBar() {
   const [templateStatus, setTemplateStatus] = useState<string | null>(null);
   const [boardActionsOpen, setBoardActionsOpen] = useState(false);
   const [projectActionsOpen, setProjectActionsOpen] = useState(false);
+  const [newProjectChoiceOpen, setNewProjectChoiceOpen] = useState(false);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
   const showAds = plan === "FREE";
@@ -151,9 +151,39 @@ export default function TopBar() {
     2.4,
     2.6,
   ];
-  const autoTeamPresetKey = authUser?.id
-    ? `tacticsboard:autoTeamPreset:${authUser.id}`
-    : "tacticsboard:autoTeamPreset";
+
+  const createEmptyProjectFromCurrentDefaults = () => {
+    if (!project) {
+      return;
+    }
+    const name = window.prompt("New project name") ?? "";
+    if (!name.trim()) {
+      return;
+    }
+    createProject(name.trim(), {
+      homeKit: project.settings?.homeKit,
+      awayKit: project.settings?.awayKit,
+      attachBallToPlayer: project.settings?.attachBallToPlayer ?? false,
+    });
+  };
+
+  const duplicateCurrentProject = () => {
+    if (!project) {
+      return;
+    }
+    const suggestedName = `${project.name} (copy)`;
+    const name = window.prompt("Duplicate project name", suggestedName) ?? "";
+    if (!name.trim()) {
+      return;
+    }
+    const duplicated = clone(project);
+    const now = new Date().toISOString();
+    duplicated.id = createId();
+    duplicated.name = name.trim();
+    duplicated.createdAt = now;
+    duplicated.updatedAt = now;
+    openProjectFromData(duplicated);
+  };
 
   const refreshTemplates = () => {
     if (!canUseTemplates) {
@@ -404,53 +434,6 @@ export default function TopBar() {
       cancelled = true;
     };
   }, [authUser, plan, project, shareLinkOpen]);
-  useEffect(() => {
-    if (!squadPresetsOpen) {
-      setManageAutoAppliedKey(null);
-      return;
-    }
-    if (!canUsePresetStorage || !manageSquad || squadPresets.length === 0) {
-      return;
-    }
-    const savedPresetId =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem(autoTeamPresetKey)
-        : null;
-    const preferredPreset =
-      squadPresets.find((team) => team.id === savedPresetId) ?? squadPresets[0];
-    if (!preferredPreset) {
-      return;
-    }
-    const key = `${project?.id ?? ""}:${manageSide}:${preferredPreset.id}`;
-    if (manageAutoAppliedKey === key) {
-      return;
-    }
-    updateSquad(manageSquad.id, {
-      name: preferredPreset.squad.name,
-      clubLogo: preferredPreset.squad.clubLogo,
-      kit: { ...preferredPreset.squad.kit },
-      captainId: preferredPreset.squad.captainId,
-      substituteIds: [...(preferredPreset.squad.substituteIds ?? [])],
-      players: preferredPreset.squad.players.map((player) => ({ ...player })),
-    });
-    setManageAutoAppliedKey(key);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(autoTeamPresetKey, preferredPreset.id);
-    }
-    setManagePresetStatus(
-      `Loaded team: ${preferredPreset.name} (${manageSide === "home" ? "Home" : "Away"}).`
-    );
-  }, [
-    autoTeamPresetKey,
-    canUsePresetStorage,
-    manageAutoAppliedKey,
-    manageSide,
-    manageSquad,
-    project?.id,
-    squadPresets,
-    squadPresetsOpen,
-    updateSquad,
-  ]);
   const closeSquadPresetsModal = () => {
     setSquadPresetsOpen(false);
   };
@@ -465,9 +448,10 @@ export default function TopBar() {
       return;
     }
     setManagePresetStatus(null);
-    const existingTeam = squadPresets.find(
-      (item) => item.name.trim().toLowerCase() === nextName.toLowerCase()
-    );
+    const existingTeam =
+      squadPresets.find(
+        (item) => item.name.trim().toLowerCase() === nextName.toLowerCase()
+      ) ?? squadPresets[0];
     if (existingTeam) {
       const result = await updateTeamWithSquad({
         id: existingTeam.id,
@@ -481,7 +465,7 @@ export default function TopBar() {
       setSquadPresets((prev) =>
         prev.map((item) => (item.id === result.team.id ? result.team : item))
       );
-      setManagePresetStatus("Team updated.");
+      setManagePresetStatus("Team saved to DB.");
       return;
     }
     const result = await createTeamWithSquad({
@@ -1248,17 +1232,7 @@ export default function TopBar() {
             <div className="h-5 w-px bg-[var(--line)]" />
             <button
               className="hidden rounded-full border border-[var(--line)] p-1 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] md:inline-flex"
-              onClick={() => {
-                const name = window.prompt("New project name") ?? "";
-                if (name.trim()) {
-                  createProject(name.trim(), {
-                    homeKit: project.settings?.homeKit,
-                    awayKit: project.settings?.awayKit,
-                    attachBallToPlayer:
-                      project.settings?.attachBallToPlayer ?? false,
-                  });
-                }
-              }}
+              onClick={() => setNewProjectChoiceOpen(true)}
               aria-label="New project"
               disabled={projectLimitReached}
               data-locked={projectLimitReached}
@@ -1300,7 +1274,7 @@ export default function TopBar() {
               </svg>
             </button>
             {projectActionsOpen && (
-              <div className="fixed left-3 right-3 top-28 z-[420] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:hidden">
+              <div className="fixed left-3 right-3 top-28 z-[520] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:hidden">
                 <button
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                   onClick={() => {
@@ -1317,15 +1291,7 @@ export default function TopBar() {
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                   onClick={() => {
                     setProjectActionsOpen(false);
-                    const name = window.prompt("New project name") ?? "";
-                    if (name.trim()) {
-                      createProject(name.trim(), {
-                        homeKit: project.settings?.homeKit,
-                        awayKit: project.settings?.awayKit,
-                        attachBallToPlayer:
-                          project.settings?.attachBallToPlayer ?? false,
-                      });
-                    }
+                    setNewProjectChoiceOpen(true);
                   }}
                   disabled={projectLimitReached}
                   data-locked={projectLimitReached}
@@ -1403,7 +1369,7 @@ export default function TopBar() {
               </svg>
             </button>
             {boardActionsOpen && (
-              <div className="fixed left-3 right-3 top-28 z-[420] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:absolute md:left-auto md:right-0 md:top-10 md:z-[320] md:w-56">
+              <div className="fixed left-3 right-3 top-28 z-[520] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:absolute md:left-auto md:right-0 md:top-10 md:z-[320] md:w-56">
                 <div className="mb-2 space-y-1 border-b border-[var(--line)] pb-2 md:hidden">
                   {project.boards.map((item) => (
                     <button
@@ -1621,7 +1587,7 @@ export default function TopBar() {
                 Actions
               </span>
               {actionsOpen && (
-                <div className="fixed left-3 right-3 top-28 z-[420] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:absolute md:left-auto md:right-0 md:top-10 md:z-[320] md:w-44">
+                <div className="fixed left-3 right-3 top-28 z-[520] w-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 text-[11px] text-[var(--ink-0)] shadow-xl shadow-black/30 md:absolute md:left-auto md:right-0 md:top-10 md:z-[320] md:w-44">
                   <div className="space-y-2 px-3 py-2 md:hidden">
                     <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                       Board mode
@@ -1936,6 +1902,44 @@ export default function TopBar() {
       )}
 
       <PlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
+      {newProjectChoiceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="w-full max-w-md rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="space-y-1">
+              <h2 className="display-font text-lg text-[var(--accent-0)]">Create project</h2>
+              <p className="text-xs text-[var(--ink-1)]">
+                Choose if you want an empty project or a copy of the current one.
+              </p>
+            </div>
+            <div className="mt-4 grid gap-2">
+              <button
+                className="rounded-2xl border border-[var(--line)] px-4 py-3 text-left text-sm hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => {
+                  setNewProjectChoiceOpen(false);
+                  createEmptyProjectFromCurrentDefaults();
+                }}
+              >
+                New project
+              </button>
+              <button
+                className="rounded-2xl border border-[var(--line)] px-4 py-3 text-left text-sm hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={() => {
+                  setNewProjectChoiceOpen(false);
+                  duplicateCurrentProject();
+                }}
+              >
+                Duplicate current project
+              </button>
+            </div>
+            <button
+              className="mt-4 w-full rounded-full border border-[var(--line)] px-4 py-2 text-xs hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+              onClick={() => setNewProjectChoiceOpen(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {squadPresetsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
           <div className="max-h-[84vh] w-full max-w-5xl overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
@@ -2168,21 +2172,40 @@ export default function TopBar() {
                         <span className="text-[11px] uppercase text-[var(--ink-1)]">
                           Players
                         </span>
-                        <button
-                          className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                          onClick={() =>
-                            addSquadPlayer(manageSquad.id, {
-                              id: createId(),
-                              name: "New Player",
-                              positionLabel: "",
-                              active: true,
-                              number: undefined,
-                              vestColor: undefined,
-                            })
-                          }
-                        >
-                          Add player
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                            onClick={() =>
+                              addSquadPlayer(manageSquad.id, {
+                                id: createId(),
+                                name: "New Player",
+                                positionLabel: "",
+                                guest: false,
+                                active: true,
+                                number: undefined,
+                                vestColor: undefined,
+                              })
+                            }
+                          >
+                            Add player
+                          </button>
+                          <button
+                            className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
+                            onClick={() =>
+                              addSquadPlayer(manageSquad.id, {
+                                id: createId(),
+                                name: "Guest Player",
+                                positionLabel: "",
+                                guest: true,
+                                active: true,
+                                number: undefined,
+                                vestColor: undefined,
+                              })
+                            }
+                          >
+                            Add guest
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                         <button
@@ -2240,15 +2263,33 @@ export default function TopBar() {
                                 })
                               }
                             />
-                            <input
-                              className="h-7 w-full rounded-md border border-[var(--line)] bg-transparent px-1 text-[11px] text-[var(--ink-0)]"
-                              value={player.name}
-                              onChange={(event) =>
-                                updateSquadPlayer(manageSquad.id, player.id, {
-                                  name: event.target.value,
-                                })
-                              }
-                            />
+                            <div className="flex items-center gap-1">
+                              <input
+                                className="h-7 w-full rounded-md border border-[var(--line)] bg-transparent px-1 text-[11px] text-[var(--ink-0)]"
+                                value={player.name}
+                                onChange={(event) =>
+                                  updateSquadPlayer(manageSquad.id, player.id, {
+                                    name: event.target.value,
+                                  })
+                                }
+                              />
+                              <button
+                                className={`h-7 min-w-[30px] rounded-md border px-1 text-[10px] font-semibold ${
+                                  player.guest
+                                    ? "border-[var(--accent-0)] bg-[var(--accent-0)] text-black"
+                                    : "border-[var(--line)] text-[var(--ink-1)]"
+                                }`}
+                                onClick={() =>
+                                  updateSquadPlayer(manageSquad.id, player.id, {
+                                    guest: !player.guest,
+                                  })
+                                }
+                                title="Guest player"
+                                aria-label="Guest player"
+                              >
+                                G
+                              </button>
+                            </div>
                             <select
                               className="h-7 w-full rounded-md border border-[var(--line)] bg-[var(--panel-2)] px-2 text-[10px] text-[var(--ink-0)]"
                               value={player.positionLabel}
