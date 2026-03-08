@@ -157,6 +157,7 @@ export default function BoardCanvas({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const controlsMenuRef = useRef<HTMLDivElement | null>(null);
   const rotationSnapStateRef = useRef<Record<string, number>>({});
+  const wasPlayingRef = useRef(false);
   const [size, setSize] = useState({ width: 800, height: 500 });
   const [controlsMenuOpen, setControlsMenuOpen] = useState(false);
   const [objectActionMenuId, setObjectActionMenuId] = useState<string | null>(
@@ -168,6 +169,7 @@ export default function BoardCanvas({
     "all" | DrawableObject["type"]
   >("all");
   const [objectListStatus, setObjectListStatus] = useState<string | null>(null);
+  const [holdZoomAtTimelineEnd, setHoldZoomAtTimelineEnd] = useState(false);
 
   const activeTool = useEditorStore((state) => state.activeTool);
   const playerTokenSize = useEditorStore((state) => state.playerTokenSize);
@@ -241,6 +243,22 @@ export default function BoardCanvas({
       ) as PlayerToken[],
     [objects, selection]
   );
+  useEffect(() => {
+    const lastIndex = Math.max(0, board.frames.length - 1);
+    const atTimelineEnd =
+      board.mode === "DYNAMIC" &&
+      board.frames.length > 1 &&
+      Math.floor(playheadFrame) >= lastIndex;
+    if (isPlaying) {
+      setHoldZoomAtTimelineEnd(false);
+    } else if (wasPlayingRef.current && !loopPlayback && atTimelineEnd) {
+      setHoldZoomAtTimelineEnd(true);
+    } else if (!atTimelineEnd) {
+      setHoldZoomAtTimelineEnd(false);
+    }
+    wasPlayingRef.current = isPlaying;
+  }, [board.mode, board.frames.length, isPlaying, loopPlayback, playheadFrame]);
+
   const applyPlaybackEffect = useCallback((
     object: DrawableObject,
     progress: number,
@@ -1129,12 +1147,7 @@ export default function BoardCanvas({
     rotatedBounds.minY * centeringScale;
   const displayViewport = useMemo(() => {
     const lastIndex = Math.max(0, board.frames.length - 1);
-    const isStoppedAtTimelineEnd =
-      !isPlaying &&
-      !loopPlayback &&
-      board.mode === "DYNAMIC" &&
-      board.frames.length > 0 &&
-      Math.floor(playheadFrame) >= lastIndex;
+    const isStoppedAtTimelineEnd = holdZoomAtTimelineEnd;
     if (
       board.mode !== "DYNAMIC" ||
       (!isPlaying && !isStoppedAtTimelineEnd) ||
@@ -1263,6 +1276,7 @@ export default function BoardCanvas({
     board.mode,
     isPlaying,
     isThreeDView,
+    holdZoomAtTimelineEnd,
     lockedViewport,
     loopPlayback,
     playheadFrame,
