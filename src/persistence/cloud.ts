@@ -6,6 +6,7 @@ import {
   saveProject,
   saveProjectIndex,
 } from "@/persistence/storage";
+import { recordNetworkCall } from "@/persistence/networkCounters";
 
 const TABLE = "projects";
 const BOARDS_TABLE = "project_boards";
@@ -14,6 +15,7 @@ const SESSION_NONCE_STORAGE = "tacticsboard:sessionNonce";
 const SESSION_DEVICE_ID_STORAGE = "tacticsboard:deviceId";
 const saveQueueByProject = new Map<string, Promise<boolean>>();
 const pendingByProject = new Map<string, Project>();
+const lastCloudSavedUpdatedAtByProject = new Map<string, string>();
 type BoardSyncSnapshot = {
   signature: string;
   orderIndex: number;
@@ -109,17 +111,18 @@ export const touchSessionActivityCloud = async (): Promise<void> => {
   if (!sessionKey) {
     return;
   }
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("user_sessions")
     .select("session_key")
     .eq("user_id", userId)
     .maybeSingle();
+  recordNetworkCall("supabase.user_sessions.get", !existingError);
   // Never steal session ownership from a newer login on another device.
   if (existing?.session_key && existing.session_key !== sessionKey) {
     return;
   }
   sessionTouchByUser.set(userId, now);
-  await supabase.from("user_sessions").upsert(
+  const { error: touchError } = await supabase.from("user_sessions").upsert(
     {
       user_id: userId,
       session_key: sessionKey,
@@ -127,6 +130,7 @@ export const touchSessionActivityCloud = async (): Promise<void> => {
     },
     { onConflict: "user_id" }
   );
+  recordNetworkCall("supabase.user_sessions.upsert", !touchError);
 };
 
 export const fetchProjectIndexCloud = async (): Promise<ProjectSummary[]> => {
@@ -142,6 +146,7 @@ export const fetchProjectIndexCloud = async (): Promise<ProjectSummary[]> => {
     .select("id,name,updated_at,created_at")
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
+  recordNetworkCall("supabase.projects.index", !error);
   if (error || !data) {
     return [];
   }
@@ -162,6 +167,7 @@ export const fetchProjectCloud = async (id: string): Promise<Project | null> => 
     .eq("id", id)
     .eq("user_id", userId)
     .single();
+  recordNetworkCall("supabase.projects.get", !error);
   if (error || !data) {
     return null;
   }
@@ -173,6 +179,7 @@ export const fetchProjectCloud = async (id: string): Promise<Project | null> => 
     .eq("project_id", id)
     .eq("user_id", userId)
     .order("order_index", { ascending: true });
+  recordNetworkCall("supabase.project_boards.list", !boardsError);
 
   // Backward compatibility: if board rows are missing, keep boards from legacy project payload.
   if (boardsError || !boardRows || boardRows.length === 0) {
@@ -201,6 +208,10 @@ export const fetchProjectCloud = async (id: string): Promise<Project | null> => 
 };
 
 const saveProjectCloudNow = async (project: Project): Promise<boolean> => {
+  const lastSavedUpdatedAt = lastCloudSavedUpdatedAtByProject.get(project.id);
+  if (lastSavedUpdatedAt && lastSavedUpdatedAt === project.updatedAt) {
+    return true;
+  }
   if (!supabase) {
     return false;
   }
@@ -225,6 +236,7 @@ const saveProjectCloudNow = async (project: Project): Promise<boolean> => {
   const { error } = await supabase.from(TABLE).upsert(payload, {
     onConflict: "id",
   });
+  recordNetworkCall("supabase.projects.upsert", !error);
   if (error) {
     return false;
   }
@@ -261,6 +273,7 @@ const saveProjectCloudNow = async (project: Project): Promise<boolean> => {
     const { error: upsertBoardsError } = await supabase
       .from(BOARDS_TABLE)
       .upsert(changedPayloads, { onConflict: "id" });
+    recordNetworkCall("supabase.project_boards.upsert", !upsertBoardsError);
     if (upsertBoardsError) {
       return false;
     }
@@ -274,12 +287,14 @@ const saveProjectCloudNow = async (project: Project): Promise<boolean> => {
       .eq("project_id", project.id)
       .eq("user_id", userId)
       .in("id", removedIds);
+    recordNetworkCall("supabase.project_boards.delete", !removeBoardsError);
     if (removeBoardsError) {
       return false;
     }
   }
 
   boardCacheByProject.set(project.id, next);
+  lastCloudSavedUpdatedAtByProject.set(project.id, project.updatedAt);
 
   return true;
 };
@@ -326,6 +341,7 @@ export const deleteProjectCloud = async (id: string): Promise<boolean> => {
     .delete()
     .eq("id", id)
     .eq("user_id", userId);
+  recordNetworkCall("supabase.projects.delete", !error);
   if (error) {
     return false;
   }
@@ -334,7 +350,9 @@ export const deleteProjectCloud = async (id: string): Promise<boolean> => {
     .delete()
     .eq("project_id", id)
     .eq("user_id", userId);
+  recordNetworkCall("supabase.project_boards.delete", !boardsError);
   boardCacheByProject.delete(id);
+  lastCloudSavedUpdatedAtByProject.delete(id);
   return !boardsError;
 };
 

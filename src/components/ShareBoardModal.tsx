@@ -15,6 +15,7 @@ import {
   revokeBoardShare,
 } from "@/persistence/shares";
 import {
+  fetchPublicBoardData,
   fetchPublicBoardForOwner,
   fetchPublicBoards,
   publishPublicBoard,
@@ -374,8 +375,17 @@ export default function ShareBoardModal({
     setStatus("Report submitted.");
   };
 
-  const onImport = (entry: PublicBoard) => {
-    addBoardFromSnapshot(entry.boardData, entry.boardName);
+  const onImport = async (entry: PublicBoard) => {
+    let boardData = entry.boardData;
+    if (!boardData) {
+      const result = await fetchPublicBoardData(entry.id);
+      if (!result.ok) {
+        setStatus(result.error);
+        return;
+      }
+      boardData = result.boardData;
+    }
+    addBoardFromSnapshot(boardData, entry.boardName);
     setStatus(`Imported "${entry.boardName}".`);
   };
 
@@ -685,7 +695,9 @@ export default function ShareBoardModal({
                         <div className="flex flex-col items-end gap-2">
                           <button
                             className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                            onClick={() => onImport(entry)}
+                          onClick={() => {
+                            void onImport(entry);
+                          }}
                           >
                             Import
                           </button>

@@ -5,9 +5,12 @@ import type {
   PublicProjectStatus,
 } from "@/models";
 import { supabase } from "@/utils/supabaseClient";
+import { recordNetworkCall } from "@/persistence/networkCounters";
 
 const PUBLIC_TABLE = "public_projects";
 const REPORT_TABLE = "public_project_reports";
+const PUBLIC_PROJECT_COLUMNS_MIN =
+  "id,owner_id,owner_email,project_id,project_name,title,description,category,tags,status,created_at,updated_at";
 
 type PublicProjectRow = {
   id: string;
@@ -65,10 +68,9 @@ export const fetchPublicProjects = async () => {
   }
   const { data, error } = await supabase
     .from(PUBLIC_TABLE)
-    .select(
-      "id,owner_id,owner_email,project_id,project_name,title,description,category,tags,status,created_at,updated_at"
-    )
+    .select(PUBLIC_PROJECT_COLUMNS_MIN)
     .order("updated_at", { ascending: false });
+  recordNetworkCall("supabase.public_projects.list", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -85,12 +87,11 @@ export const fetchPublicProjectForOwner = async (projectId: string) => {
   }
   const { data, error } = await supabase
     .from(PUBLIC_TABLE)
-    .select(
-      "id,owner_id,owner_email,project_id,project_name,title,description,category,tags,status,created_at,updated_at"
-    )
+    .select(PUBLIC_PROJECT_COLUMNS_MIN)
     .eq("project_id", projectId)
     .eq("owner_id", userData.user.id)
     .maybeSingle();
+  recordNetworkCall("supabase.public_projects.by_owner_project", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -130,13 +131,16 @@ export const publishPublicProject = async (payload: {
       },
       { onConflict: "owner_id,project_id" }
     )
-    .select("*")
+    .select(PUBLIC_PROJECT_COLUMNS_MIN)
     .single();
+  recordNetworkCall("supabase.public_projects.publish", !error);
   if (error || !data) {
     return { ok: false, error: error?.message ?? "Unable to publish." } as const;
   }
   return { ok: true, project: mapPublicProject(data) } as const;
 };
+const PUBLIC_PROJECT_REPORT_COLUMNS =
+  "id,project_id,reporter_id,reporter_email,reason,created_at";
 
 export const fetchPublicProjectData = async (publicId: string) => {
   if (!supabase) {
@@ -147,6 +151,7 @@ export const fetchPublicProjectData = async (publicId: string) => {
     .select("project_data")
     .eq("id", publicId)
     .maybeSingle<{ project_data: Project }>();
+  recordNetworkCall("supabase.public_projects.get_data", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -161,6 +166,7 @@ export const unpublishPublicProject = async (publicId: string) => {
     return { ok: false, error: "Supabase not configured." } as const;
   }
   const { error } = await supabase.from(PUBLIC_TABLE).delete().eq("id", publicId);
+  recordNetworkCall("supabase.public_projects.unpublish", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -186,8 +192,9 @@ export const reportPublicProject = async (payload: {
       reporter_email: userData.user.email ?? "",
       reason: payload.reason,
     })
-    .select("*")
+    .select(PUBLIC_PROJECT_REPORT_COLUMNS)
     .single();
+  recordNetworkCall("supabase.public_project_reports.create", !error);
   if (error || !data) {
     return { ok: false, error: error?.message ?? "Unable to report." } as const;
   }

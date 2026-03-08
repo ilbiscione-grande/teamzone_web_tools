@@ -2,6 +2,7 @@ import { supabase } from "@/utils/supabaseClient";
 import type { Project } from "@/models";
 import { createId } from "@/utils/id";
 import { hasEffectivePaidAccess, type ProfilePlanSnapshot } from "@/utils/effectivePlan";
+import { recordNetworkCall } from "@/persistence/networkCounters";
 
 const TABLE = "project_share_links";
 
@@ -27,6 +28,7 @@ export const createProjectShareLink = async (project: Project) => {
     .select("plan,manual_paid_override")
     .eq("id", userData.user.id)
     .maybeSingle<ProfilePlanSnapshot>();
+  recordNetworkCall("supabase.profiles.plan_check", !profileError);
   if (profileError || !profile) {
     return { ok: false as const, error: "Unable to verify plan." };
   }
@@ -43,6 +45,7 @@ export const createProjectShareLink = async (project: Project) => {
     .eq("user_id", userData.user.id)
     .order("created_at", { ascending: false })
     .limit(1);
+  recordNetworkCall("supabase.project_share_links.by_owner_project", !existingError);
   if (existingError) {
     return {
       ok: false as const,
@@ -57,6 +60,7 @@ export const createProjectShareLink = async (project: Project) => {
       .delete()
       .eq("id", existingRow.id)
       .eq("user_id", userData.user.id);
+    recordNetworkCall("supabase.project_share_links.replace_delete", !deleteError);
     if (deleteError) {
       return {
         ok: false as const,
@@ -75,6 +79,7 @@ export const createProjectShareLink = async (project: Project) => {
     })
     .select("token")
     .single();
+  recordNetworkCall("supabase.project_share_links.create", !error);
   if (error || !data) {
     return { ok: false as const, error: error?.message ?? "Failed to share." };
   }
@@ -88,6 +93,7 @@ export const fetchProjectShareLink = async (token: string) => {
   const { data, error } = await supabase
     .rpc("get_project_share_link", { p_token: token })
     .maybeSingle<ProjectShareRow>();
+  recordNetworkCall("supabase.project_share_links.get_by_token", !error);
   if (error) {
     return {
       ok: false as const,
@@ -121,6 +127,7 @@ export const fetchProjectShareLinkForOwner = async (projectId: string) => {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle<{ token: string; created_at: string }>();
+  recordNetworkCall("supabase.project_share_links.owner_existing", !error);
   if (error) {
     return {
       ok: false as const,

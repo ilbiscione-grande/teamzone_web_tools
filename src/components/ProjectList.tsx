@@ -1982,6 +1982,42 @@ export default function ProjectList() {
                       </div>
                     </div>
                   </div>
+                  <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                    <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                      Network calls (aggregated)
+                    </p>
+                    <div className="mt-2 max-h-56 space-y-2 overflow-y-auto">
+                      {adminAnalytics.networkCounters.length === 0 ? (
+                        <p className="text-xs text-[var(--ink-1)]">No network counters yet.</p>
+                      ) : (
+                        adminAnalytics.networkCounters.slice(0, 20).map((entry) => (
+                          <div
+                            key={entry.key}
+                            className="rounded-lg border border-[var(--line)] px-2 py-1"
+                          >
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <span className="truncate text-[var(--ink-0)]">{entry.key}</span>
+                              <span className="text-[var(--ink-1)]">{entry.calls} calls</span>
+                            </div>
+                            <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--ink-1)]">
+                              <span>
+                                ok: {entry.ok} · error: {entry.error}
+                              </span>
+                              <span
+                                className={
+                                  entry.errorRate > 5
+                                    ? "text-[var(--accent-1)]"
+                                    : "text-[var(--ink-1)]"
+                                }
+                              >
+                                {entry.errorRate}% errors
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </>
               )}
             </div>

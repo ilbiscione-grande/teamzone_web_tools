@@ -37,6 +37,13 @@ const adminFetch = async (path: string, init?: RequestInit) => {
     error?: string;
     users?: AdminUserRow[];
     reports?: BugReportRow[];
+    networkCounters?: {
+      key: string;
+      calls: number;
+      ok: number;
+      error: number;
+      errorRate: number;
+    }[];
   };
   if (!response.ok) {
     return {
@@ -97,6 +104,13 @@ export type AdminAnalyticsResponse = {
     provider: string;
     path: string;
     device: string;
+  }[];
+  networkCounters: {
+    key: string;
+    calls: number;
+    ok: number;
+    error: number;
+    errorRate: number;
   }[];
 };
 

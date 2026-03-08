@@ -7,9 +7,15 @@ import type {
   SharedBoardSnapshot,
 } from "@/models";
 import { supabase } from "@/utils/supabaseClient";
+import { recordNetworkCall } from "@/persistence/networkCounters";
 
 const SHARE_TABLE = "board_shares";
 const COMMENT_TABLE = "board_comments";
+const SHARE_COLUMNS_MIN =
+  "id,owner_id,owner_email,recipient_email,board_id,board_name,project_name,permission,created_at,updated_at";
+const SHARE_COLUMNS_FULL = `${SHARE_COLUMNS_MIN},board_data`;
+const COMMENT_COLUMNS =
+  "id,share_id,board_id,frame_id,object_id,author_id,author_email,body,created_at";
 
 type BoardShareRow = {
   id: string;
@@ -109,12 +115,16 @@ export const createBoardShare = async (payload: {
       permission: payload.permission,
       board_data: snapshot,
     })
-    .select("*")
+    .select(SHARE_COLUMNS_MIN)
     .single();
+  recordNetworkCall("supabase.board_shares.create", !error);
   if (error || !data) {
     return { ok: false, error: error?.message ?? "Unable to share board." } as const;
   }
-  return { ok: true, share: mapShare(data) } as const;
+  return {
+    ok: true,
+    share: mapShareSummary(data as BoardShareSummaryRow),
+  } as const;
 };
 
 export const fetchBoardSharesForOwner = async (boardId: string) => {
@@ -123,11 +133,10 @@ export const fetchBoardSharesForOwner = async (boardId: string) => {
   }
   const { data, error } = await supabase
     .from(SHARE_TABLE)
-    .select(
-      "id,owner_id,owner_email,recipient_email,board_id,board_name,project_name,permission,created_at,updated_at"
-    )
+    .select(SHARE_COLUMNS_MIN)
     .eq("board_id", boardId)
     .order("created_at", { ascending: false });
+  recordNetworkCall("supabase.board_shares.by_board", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -144,11 +153,10 @@ export const fetchSharesByOwner = async () => {
   }
   const { data, error } = await supabase
     .from(SHARE_TABLE)
-    .select(
-      "id,owner_id,owner_email,recipient_email,board_id,board_name,project_name,permission,created_at,updated_at"
-    )
+    .select(SHARE_COLUMNS_MIN)
     .eq("owner_id", userData.user.id)
     .order("created_at", { ascending: false });
+  recordNetworkCall("supabase.board_shares.by_owner", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -160,6 +168,7 @@ export const revokeBoardShare = async (shareId: string) => {
     return { ok: false, error: "Supabase not configured." } as const;
   }
   const { error } = await supabase.from(SHARE_TABLE).delete().eq("id", shareId);
+  recordNetworkCall("supabase.board_shares.revoke", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -177,11 +186,10 @@ export const fetchSharedBoards = async () => {
   const email = userData.user.email.toLowerCase();
   const { data, error } = await supabase
     .from(SHARE_TABLE)
-    .select(
-      "id,owner_id,owner_email,recipient_email,board_id,board_name,project_name,permission,created_at,updated_at"
-    )
+    .select(SHARE_COLUMNS_MIN)
     .eq("recipient_email", email)
     .order("created_at", { ascending: false });
+  recordNetworkCall("supabase.board_shares.by_recipient", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -194,9 +202,10 @@ export const fetchBoardShareById = async (shareId: string) => {
   }
   const { data, error } = await supabase
     .from(SHARE_TABLE)
-    .select("*")
+    .select(SHARE_COLUMNS_FULL)
     .eq("id", shareId)
     .maybeSingle();
+  recordNetworkCall("supabase.board_shares.get", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -212,9 +221,10 @@ export const fetchBoardComments = async (shareId: string) => {
   }
   const { data, error } = await supabase
     .from(COMMENT_TABLE)
-    .select("*")
+    .select(COMMENT_COLUMNS)
     .eq("share_id", shareId)
     .order("created_at", { ascending: true });
+  recordNetworkCall("supabase.board_comments.by_share", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -233,6 +243,7 @@ export const fetchLatestCommentsForShares = async (shareIds: string[]) => {
     .select("share_id, created_at")
     .in("share_id", shareIds)
     .order("created_at", { ascending: false });
+  recordNetworkCall("supabase.board_comments.latest", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -268,8 +279,9 @@ export const addBoardComment = async (payload: {
       author_email: userData.user.email ?? "",
       body: payload.body,
     })
-    .select("*")
+    .select(COMMENT_COLUMNS)
     .single();
+  recordNetworkCall("supabase.board_comments.add", !error);
   if (error || !data) {
     return { ok: false, error: error?.message ?? "Unable to add comment." } as const;
   }

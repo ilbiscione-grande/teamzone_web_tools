@@ -14,6 +14,10 @@ import { createId } from "@/utils/id";
 import BetaNoticeModal from "@/components/BetaNoticeModal";
 import { trackAnalyticsEvent } from "@/persistence/analytics";
 import {
+  consumeNetworkCounters,
+  resetNetworkCounters,
+} from "@/persistence/networkCounters";
+import {
   registerSyncConflictHandler,
   type SyncConflictChoice,
 } from "@/persistence/syncConflictBridge";
@@ -80,9 +84,11 @@ export default function AppShell() {
       analyticsSessionKeyRef.current = "";
       analyticsStartRef.current = 0;
       analyticsLastBeatRef.current = 0;
+      resetNetworkCounters();
       return;
     }
 
+    resetNetworkCounters();
     const sessionKey =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
@@ -100,6 +106,7 @@ export default function AppShell() {
           typeof window !== "undefined"
             ? window.matchMedia("(display-mode: standalone)").matches
             : false,
+        networkCounters: consumeNetworkCounters(),
       },
     });
 
@@ -115,6 +122,9 @@ export default function AppShell() {
         sessionKey,
         durationMs: delta,
         path: window.location.pathname,
+        metadata: {
+          networkCounters: consumeNetworkCounters(),
+        },
       });
     }, 60_000);
 
@@ -126,6 +136,9 @@ export default function AppShell() {
           sessionKey,
           durationMs,
           path: window.location.pathname,
+          metadata: {
+            networkCounters: consumeNetworkCounters(),
+          },
         },
         { keepalive: true }
       );
@@ -140,6 +153,9 @@ export default function AppShell() {
         sessionKey,
         durationMs,
         path: typeof window !== "undefined" ? window.location.pathname : "/",
+        metadata: {
+          networkCounters: consumeNetworkCounters(),
+        },
       });
     };
   }, [authUser?.id]);

@@ -7,9 +7,12 @@ import type {
   SharedBoardSnapshot,
 } from "@/models";
 import { supabase } from "@/utils/supabaseClient";
+import { recordNetworkCall } from "@/persistence/networkCounters";
 
 const PUBLIC_TABLE = "public_boards";
 const REPORT_TABLE = "public_board_reports";
+const PUBLIC_BOARD_COLUMNS_MIN =
+  "id,owner_id,owner_email,board_id,board_name,project_name,title,description,category,tags,formation,thumbnail,status,created_at,updated_at";
 
 type PublicBoardRow = {
   id: string;
@@ -27,7 +30,7 @@ type PublicBoardRow = {
   status: PublicBoardStatus;
   created_at: string;
   updated_at: string;
-  board_data: SharedBoardSnapshot;
+  board_data?: SharedBoardSnapshot;
 };
 
 type PublicBoardReportRow = {
@@ -73,8 +76,9 @@ export const fetchPublicBoards = async () => {
   }
   const { data, error } = await supabase
     .from(PUBLIC_TABLE)
-    .select("*")
+    .select(PUBLIC_BOARD_COLUMNS_MIN)
     .order("updated_at", { ascending: false });
+  recordNetworkCall("supabase.public_boards.list", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -91,10 +95,11 @@ export const fetchPublicBoardForOwner = async (boardId: string) => {
   }
   const { data, error } = await supabase
     .from(PUBLIC_TABLE)
-    .select("*")
+    .select(PUBLIC_BOARD_COLUMNS_MIN)
     .eq("board_id", boardId)
     .eq("owner_id", userData.user.id)
     .maybeSingle();
+  recordNetworkCall("supabase.public_boards.by_owner_board", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -146,12 +151,34 @@ export const publishPublicBoard = async (payload: {
       },
       { onConflict: "owner_id,board_id" }
     )
-    .select("*")
+    .select(PUBLIC_BOARD_COLUMNS_MIN)
     .single();
+  recordNetworkCall("supabase.public_boards.publish", !error);
   if (error || !data) {
     return { ok: false, error: error?.message ?? "Unable to publish." } as const;
   }
   return { ok: true, board: mapPublicBoard(data) } as const;
+};
+const PUBLIC_BOARD_REPORT_COLUMNS =
+  "id,board_id,reporter_id,reporter_email,reason,created_at";
+
+export const fetchPublicBoardData = async (publicId: string) => {
+  if (!supabase) {
+    return { ok: false, error: "Supabase not configured." } as const;
+  }
+  const { data, error } = await supabase
+    .from(PUBLIC_TABLE)
+    .select("board_data")
+    .eq("id", publicId)
+    .maybeSingle<{ board_data: SharedBoardSnapshot }>();
+  recordNetworkCall("supabase.public_boards.get_data", !error);
+  if (error) {
+    return { ok: false, error: error.message } as const;
+  }
+  if (!data?.board_data) {
+    return { ok: false, error: "Board data not found." } as const;
+  }
+  return { ok: true, boardData: data.board_data } as const;
 };
 
 export const unpublishPublicBoard = async (publicId: string) => {
@@ -159,6 +186,7 @@ export const unpublishPublicBoard = async (publicId: string) => {
     return { ok: false, error: "Supabase not configured." } as const;
   }
   const { error } = await supabase.from(PUBLIC_TABLE).delete().eq("id", publicId);
+  recordNetworkCall("supabase.public_boards.unpublish", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
   }
@@ -184,8 +212,9 @@ export const reportPublicBoard = async (payload: {
       reporter_email: userData.user.email ?? "",
       reason: payload.reason,
     })
-    .select("*")
+    .select(PUBLIC_BOARD_REPORT_COLUMNS)
     .single();
+  recordNetworkCall("supabase.public_board_reports.create", !error);
   if (error || !data) {
     return { ok: false, error: error?.message ?? "Unable to report." } as const;
   }

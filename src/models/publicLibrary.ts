@@ -18,7 +18,7 @@ export type PublicBoard = {
   status: PublicBoardStatus;
   createdAt: string;
   updatedAt: string;
-  boardData: SharedBoardSnapshot;
+  boardData?: SharedBoardSnapshot;
 };
 
 export type PublicBoardReport = {
