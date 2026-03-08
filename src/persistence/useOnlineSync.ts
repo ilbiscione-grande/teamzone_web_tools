@@ -20,6 +20,9 @@ import {
 
 const sameProjectContent = (a: Project, b: Project) =>
   serializeProject(a) === serializeProject(b);
+const DEEP_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
+const getDeepSyncKey = (userId: string) =>
+  `tacticsboard:lastDeepSyncAt:${userId}`;
 
 const downloadBackup = (project: Project) => {
   const data = serializeProject(project);
@@ -128,6 +131,22 @@ export const useOnlineSync = () => {
           if (!ok) {
             return null;
           }
+          const userId = authUser.id;
+          if (!userId) {
+            return syncProjects();
+          }
+          const dirtyIds = userId ? getOfflineDirtyProjectIds(userId) : [];
+          if (
+            typeof window !== "undefined" &&
+            dirtyIds.length === 0
+          ) {
+            const last = Number(
+              window.localStorage.getItem(getDeepSyncKey(userId)) ?? 0
+            );
+            if (Number.isFinite(last) && Date.now() - last < DEEP_SYNC_COOLDOWN_MS) {
+              return [];
+            }
+          }
           return syncProjects();
         })
         .then((index) => {
@@ -137,6 +156,12 @@ export const useOnlineSync = () => {
           const userId = authUser.id;
           if (userId) {
             clearAllOfflineDirtyProjects(userId);
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem(
+                getDeepSyncKey(userId),
+                String(Date.now())
+              );
+            }
           }
           hydrateIndex();
           setSyncStatus({

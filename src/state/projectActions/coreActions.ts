@@ -168,16 +168,6 @@ export const createCoreActions: StateCreator<
             state: "saved",
             updatedAt: new Date().toISOString(),
           });
-          // Deep local/cloud reconciliation can be expensive; run it in background.
-          void syncProjects()
-            .then((syncedIndex) => {
-              set((state) => {
-                state.index = syncedIndex;
-              });
-            })
-            .catch(() => {
-              // Keep fast merged index if deep sync fails.
-            });
         })
         .catch(() => {
           get().setSyncStatus({

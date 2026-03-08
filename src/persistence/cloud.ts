@@ -422,6 +422,8 @@ export const syncProjects = async (): Promise<ProjectSummary[]> => {
 
   const localIndex = loadProjectIndex(userId);
   const cloudIndex = await fetchProjectIndexCloud();
+  const localSummaryById = new Map(localIndex.map((item) => [item.id, item]));
+  const cloudSummaryById = new Map(cloudIndex.map((item) => [item.id, item]));
   const localIdSet = new Set(localIndex.map((item) => item.id));
   const cloudIdSet = new Set(cloudIndex.map((item) => item.id));
   const allIds = new Set<string>([...localIdSet, ...cloudIdSet]);
@@ -430,8 +432,30 @@ export const syncProjects = async (): Promise<ProjectSummary[]> => {
 
   for (const id of allIds) {
     const localProject = loadProject(id, userId);
-    const cloudProject = cloudIdSet.has(id) ? await fetchProjectCloud(id) : null;
-    const best = chooseBestProject(localProject, cloudProject);
+    const localSummary = localSummaryById.get(id) ?? null;
+    const cloudSummary = cloudSummaryById.get(id) ?? null;
+    let cloudProject: Project | null = null;
+    let best: Project | null = null;
+
+    if (localProject && !cloudSummary) {
+      best = localProject;
+    } else if (!localProject && cloudSummary) {
+      cloudProject = await fetchProjectCloud(id);
+      best = cloudProject;
+    } else if (localProject && cloudSummary) {
+      const localAt = localProject.updatedAt ?? localProject.createdAt ?? "";
+      const cloudAt = cloudSummary.updatedAt ?? "";
+      if (localAt === cloudAt) {
+        best = localProject;
+      } else if (compareUpdatedAt(localAt, cloudAt) > 0) {
+        best = localProject;
+      } else {
+        cloudProject = await fetchProjectCloud(id);
+        best = chooseBestProject(localProject, cloudProject);
+      }
+    } else {
+      best = null;
+    }
 
     if (!best) {
       continue;
