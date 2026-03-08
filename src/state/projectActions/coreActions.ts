@@ -68,6 +68,65 @@ const mergeProjectSummaries = (
   );
 };
 
+const getProjectShapeScore = (project: Project | null) => {
+  if (!project) {
+    return { boards: 0, frames: 0, objects: 0 };
+  }
+  let frames = 0;
+  let objects = 0;
+  for (const board of project.boards ?? []) {
+    frames += board.frames?.length ?? 0;
+    for (const frame of board.frames ?? []) {
+      objects += frame.objects?.length ?? 0;
+    }
+  }
+  return {
+    boards: project.boards?.length ?? 0,
+    frames,
+    objects,
+  };
+};
+
+const pickSaferProject = (
+  preferredLocal: Project | null,
+  incomingCloud: Project | null
+) => {
+  if (preferredLocal && !incomingCloud) {
+    return preferredLocal;
+  }
+  if (incomingCloud && !preferredLocal) {
+    return incomingCloud;
+  }
+  if (!preferredLocal && !incomingCloud) {
+    return null;
+  }
+  const local = preferredLocal as Project;
+  const cloud = incomingCloud as Project;
+  const localShape = getProjectShapeScore(local);
+  const cloudShape = getProjectShapeScore(cloud);
+  const localHasMoreData =
+    localShape.boards > cloudShape.boards ||
+    localShape.frames > cloudShape.frames ||
+    localShape.objects > cloudShape.objects;
+  const cloudHasMoreData =
+    cloudShape.boards > localShape.boards ||
+    cloudShape.frames > localShape.frames ||
+    cloudShape.objects > localShape.objects;
+  if (localHasMoreData && !cloudHasMoreData) {
+    return local;
+  }
+  if (cloudHasMoreData && !localHasMoreData) {
+    return cloud;
+  }
+  const localAt = Date.parse(local.updatedAt || local.createdAt || "");
+  const cloudAt = Date.parse(cloud.updatedAt || cloud.createdAt || "");
+  const localNewer =
+    Number.isFinite(localAt) &&
+    Number.isFinite(cloudAt) &&
+    localAt >= cloudAt;
+  return localNewer ? local : cloud;
+};
+
 export const createCoreActions: StateCreator<
   ProjectStore,
   [["zustand/immer", never]],
@@ -281,21 +340,8 @@ export const createCoreActions: StateCreator<
     if (get().authUser && get().plan === "PAID") {
       const localProject = loadProject(id, get().authUser?.id ?? null);
       const legacyLocalProject = loadProject(id, null);
-      const pickPreferredLocal = (a: Project | null, b: Project | null) => {
-        if (a && b) {
-          const aAt = Date.parse(a.updatedAt || a.createdAt || "");
-          const bAt = Date.parse(b.updatedAt || b.createdAt || "");
-          const aNewer =
-            Number.isFinite(aAt) &&
-            Number.isFinite(bAt) &&
-            aAt >= bAt;
-          if (a.boards.length !== b.boards.length) {
-            return a.boards.length > b.boards.length ? a : b;
-          }
-          return aNewer ? a : b;
-        }
-        return a ?? b;
-      };
+      const pickPreferredLocal = (a: Project | null, b: Project | null) =>
+        pickSaferProject(a, b);
       const applyOpenedProject = (project: Project) => {
         ensureBoardSquads(project);
         set((state) => {
@@ -326,29 +372,11 @@ export const createCoreActions: StateCreator<
         if (!project && !bestLocal) {
           return;
         }
-        let opened: Project | null = null;
-        if (project && bestLocal) {
-          const cloudAt = Date.parse(project.updatedAt || project.createdAt || "");
-          const localAt = Date.parse(
-            bestLocal.updatedAt || bestLocal.createdAt || ""
-          );
-          const localIsNewer =
-            Number.isFinite(localAt) &&
-            Number.isFinite(cloudAt) &&
-            localAt >= cloudAt;
-          const localHasMoreBoards =
-            bestLocal.boards.length > project.boards.length;
-          opened =
-            localIsNewer || localHasMoreBoards
-              ? bestLocal
-              : project;
-          if (opened === bestLocal) {
-            saveProjectCloud(bestLocal);
-          } else {
-            saveProject(project, get().authUser?.id ?? null);
-          }
-        } else {
-          opened = project ?? bestLocal;
+        const opened = pickSaferProject(bestLocal, project);
+        if (opened === bestLocal && bestLocal) {
+          saveProjectCloud(bestLocal);
+        } else if (opened === project && project) {
+          saveProject(project, get().authUser?.id ?? null);
         }
         if (!opened) {
           return;

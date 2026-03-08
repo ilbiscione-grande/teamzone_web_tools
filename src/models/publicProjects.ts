@@ -15,7 +15,7 @@ export type PublicProject = {
   status: PublicProjectStatus;
   createdAt: string;
   updatedAt: string;
-  projectData: Project;
+  projectData?: Project;
 };
 
 export type PublicProjectReport = {

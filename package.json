@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "audit:projects": "node --env-file=.env.local scripts/audit-project-integrity.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.1",

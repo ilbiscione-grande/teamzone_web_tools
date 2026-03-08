@@ -603,6 +603,40 @@ export const updateIndex = (
   );
 };
 
+export const duplicateProjectWithFreshIds = (
+  source: Project,
+  name: string
+): Project => {
+  const duplicate = JSON.parse(JSON.stringify(source)) as Project;
+  const now = new Date().toISOString();
+  const boardIdMap = new Map<string, string>();
+  duplicate.id = createId();
+  duplicate.name = name;
+  duplicate.createdAt = now;
+  duplicate.updatedAt = now;
+  duplicate.isShared = false;
+  duplicate.sharedMeta = undefined;
+  duplicate.boards = (duplicate.boards ?? []).map((board) => {
+    const nextBoardId = createId();
+    boardIdMap.set(board.id, nextBoardId);
+    return {
+      ...board,
+      id: nextBoardId,
+      frames: (board.frames ?? []).map((frame) => ({
+        ...frame,
+        id: createId(),
+      })),
+    };
+  });
+  if (duplicate.activeBoardId) {
+    duplicate.activeBoardId =
+      boardIdMap.get(duplicate.activeBoardId) ?? duplicate.boards[0]?.id;
+  } else {
+    duplicate.activeBoardId = duplicate.boards[0]?.id;
+  }
+  return duplicate;
+};
+
 export const cloneFrame = (frame: BoardFrame): BoardFrame => ({
   ...frame,
   id: createId(),

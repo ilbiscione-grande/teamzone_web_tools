@@ -24,6 +24,7 @@ type BoardShareRow = {
   updated_at: string;
   board_data: SharedBoardSnapshot;
 };
+type BoardShareSummaryRow = Omit<BoardShareRow, "board_data">;
 
 type BoardCommentRow = {
   id: string;
@@ -49,6 +50,18 @@ const mapShare = (row: BoardShareRow): BoardShare => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   boardData: row.board_data,
+});
+const mapShareSummary = (row: BoardShareSummaryRow) => ({
+  id: row.id,
+  ownerId: row.owner_id,
+  ownerEmail: row.owner_email,
+  recipientEmail: row.recipient_email,
+  boardId: row.board_id,
+  boardName: row.board_name,
+  projectName: row.project_name,
+  permission: row.permission,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
 });
 
 const mapComment = (row: BoardCommentRow): BoardComment => ({
@@ -110,13 +123,15 @@ export const fetchBoardSharesForOwner = async (boardId: string) => {
   }
   const { data, error } = await supabase
     .from(SHARE_TABLE)
-    .select("*")
+    .select(
+      "id,owner_id,owner_email,recipient_email,board_id,board_name,project_name,permission,created_at,updated_at"
+    )
     .eq("board_id", boardId)
     .order("created_at", { ascending: false });
   if (error) {
     return { ok: false, error: error.message } as const;
   }
-  return { ok: true, shares: (data ?? []).map(mapShare) } as const;
+  return { ok: true, shares: (data ?? []).map(mapShareSummary) } as const;
 };
 
 export const fetchSharesByOwner = async () => {
@@ -129,13 +144,15 @@ export const fetchSharesByOwner = async () => {
   }
   const { data, error } = await supabase
     .from(SHARE_TABLE)
-    .select("*")
+    .select(
+      "id,owner_id,owner_email,recipient_email,board_id,board_name,project_name,permission,created_at,updated_at"
+    )
     .eq("owner_id", userData.user.id)
     .order("created_at", { ascending: false });
   if (error) {
     return { ok: false, error: error.message } as const;
   }
-  return { ok: true, shares: (data ?? []).map(mapShare) } as const;
+  return { ok: true, shares: (data ?? []).map(mapShareSummary) } as const;
 };
 
 export const revokeBoardShare = async (shareId: string) => {
@@ -160,13 +177,33 @@ export const fetchSharedBoards = async () => {
   const email = userData.user.email.toLowerCase();
   const { data, error } = await supabase
     .from(SHARE_TABLE)
-    .select("*")
+    .select(
+      "id,owner_id,owner_email,recipient_email,board_id,board_name,project_name,permission,created_at,updated_at"
+    )
     .eq("recipient_email", email)
     .order("created_at", { ascending: false });
   if (error) {
     return { ok: false, error: error.message } as const;
   }
-  return { ok: true, shares: (data ?? []).map(mapShare) } as const;
+  return { ok: true, shares: (data ?? []).map(mapShareSummary) } as const;
+};
+
+export const fetchBoardShareById = async (shareId: string) => {
+  if (!supabase) {
+    return { ok: false, error: "Supabase not configured." } as const;
+  }
+  const { data, error } = await supabase
+    .from(SHARE_TABLE)
+    .select("*")
+    .eq("id", shareId)
+    .maybeSingle();
+  if (error) {
+    return { ok: false, error: error.message } as const;
+  }
+  if (!data) {
+    return { ok: false, error: "Share not found." } as const;
+  }
+  return { ok: true, share: mapShare(data as BoardShareRow) } as const;
 };
 
 export const fetchBoardComments = async (shareId: string) => {

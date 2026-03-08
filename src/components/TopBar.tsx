@@ -42,6 +42,7 @@ import {
 import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { getStageRef } from "@/utils/stageRef";
 import { clone } from "@/utils/clone";
+import { duplicateProjectWithFreshIds } from "@/state/projectHelpers";
 import ColorPalettePicker from "@/components/ColorPalettePicker";
 
 type ManagePlayersSortKey = "default" | "name" | "position" | "number";
@@ -176,12 +177,7 @@ export default function TopBar() {
     if (!name.trim()) {
       return;
     }
-    const duplicated = clone(project);
-    const now = new Date().toISOString();
-    duplicated.id = createId();
-    duplicated.name = name.trim();
-    duplicated.createdAt = now;
-    duplicated.updatedAt = now;
+    const duplicated = duplicateProjectWithFreshIds(project, name.trim());
     openProjectFromData(duplicated);
   };
 

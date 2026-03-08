@@ -22,7 +22,7 @@ type PublicProjectRow = {
   status: PublicProjectStatus;
   created_at: string;
   updated_at: string;
-  project_data: Project;
+  project_data?: Project;
 };
 
 type PublicProjectReportRow = {
@@ -65,7 +65,9 @@ export const fetchPublicProjects = async () => {
   }
   const { data, error } = await supabase
     .from(PUBLIC_TABLE)
-    .select("*")
+    .select(
+      "id,owner_id,owner_email,project_id,project_name,title,description,category,tags,status,created_at,updated_at"
+    )
     .order("updated_at", { ascending: false });
   if (error) {
     return { ok: false, error: error.message } as const;
@@ -83,7 +85,9 @@ export const fetchPublicProjectForOwner = async (projectId: string) => {
   }
   const { data, error } = await supabase
     .from(PUBLIC_TABLE)
-    .select("*")
+    .select(
+      "id,owner_id,owner_email,project_id,project_name,title,description,category,tags,status,created_at,updated_at"
+    )
     .eq("project_id", projectId)
     .eq("owner_id", userData.user.id)
     .maybeSingle();
@@ -132,6 +136,24 @@ export const publishPublicProject = async (payload: {
     return { ok: false, error: error?.message ?? "Unable to publish." } as const;
   }
   return { ok: true, project: mapPublicProject(data) } as const;
+};
+
+export const fetchPublicProjectData = async (publicId: string) => {
+  if (!supabase) {
+    return { ok: false, error: "Supabase not configured." } as const;
+  }
+  const { data, error } = await supabase
+    .from(PUBLIC_TABLE)
+    .select("project_data")
+    .eq("id", publicId)
+    .maybeSingle<{ project_data: Project }>();
+  if (error) {
+    return { ok: false, error: error.message } as const;
+  }
+  if (!data?.project_data) {
+    return { ok: false, error: "Project data not found." } as const;
+  }
+  return { ok: true, projectData: data.project_data } as const;
 };
 
 export const unpublishPublicProject = async (publicId: string) => {

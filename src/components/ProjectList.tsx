@@ -5,7 +5,6 @@ import { useProjectStore } from "@/state/useProjectStore";
 import { deserializeProject } from "@/persistence/serialize";
 import { loadProject } from "@/persistence/storage";
 import type {
-  BoardShare,
   BoardSharePermission,
   Project,
   PublicProject,
@@ -13,7 +12,11 @@ import type {
 import { can, getPlanLimits } from "@/utils/plan";
 import { createId } from "@/utils/id";
 import { clone } from "@/utils/clone";
-import { FORMATION_PRESETS, getDefaultBoardSettings } from "@/state/projectHelpers";
+import {
+  duplicateProjectWithFreshIds,
+  FORMATION_PRESETS,
+  getDefaultBoardSettings,
+} from "@/state/projectHelpers";
 import AdBanner from "@/components/AdBanner";
 import PlanModal from "@/components/PlanModal";
 import BetaNoticeModal from "@/components/BetaNoticeModal";
@@ -22,6 +25,7 @@ import { fetchProjectCloud } from "@/persistence/cloud";
 import { submitContactMessage } from "@/persistence/contact";
 import {
   fetchPublicProjects,
+  fetchPublicProjectData,
   fetchPublicProjectForOwner,
   publishPublicProject,
   unpublishPublicProject,
@@ -29,6 +33,7 @@ import {
 } from "@/persistence/publicProjects";
 import {
   createBoardShare,
+  fetchBoardShareById,
   fetchLatestCommentsForShares,
   fetchSharedBoards,
   fetchSharesByOwner,
@@ -51,6 +56,18 @@ import {
 } from "@/persistence/admin";
 
 export default function ProjectList() {
+  type ShareListItem = {
+    id: string;
+    ownerId: string;
+    ownerEmail: string;
+    recipientEmail: string;
+    boardId: string;
+    boardName: string;
+    projectName: string;
+    permission: BoardSharePermission;
+    createdAt: string;
+    updatedAt: string;
+  };
   const showBetaUi = process.env.NEXT_PUBLIC_BETA_UI === "true";
   const categoryOptions = [
     "Warmup",
@@ -98,12 +115,12 @@ export default function ProjectList() {
   const [attachBallToPlayer, setAttachBallToPlayer] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
-  const [sharedBoards, setSharedBoards] = useState<BoardShare[]>([]);
+  const [sharedBoards, setSharedBoards] = useState<ShareListItem[]>([]);
   const [sharedLoading, setSharedLoading] = useState(false);
   const [sharedError, setSharedError] = useState<string | null>(null);
   const [sharedUnread, setSharedUnread] = useState(0);
   const [commentUnread, setCommentUnread] = useState(0);
-  const [sharedByMe, setSharedByMe] = useState<BoardShare[]>([]);
+  const [sharedByMe, setSharedByMe] = useState<ShareListItem[]>([]);
   const [sharedByMeLoading, setSharedByMeLoading] = useState(false);
   const [sharedByMeError, setSharedByMeError] = useState<string | null>(null);
   const [publicProjects, setPublicProjects] = useState<PublicProject[]>([]);
@@ -549,13 +566,31 @@ export default function ProjectList() {
     setPublicProjectsError("Report submitted.");
   };
 
-  const onImportProject = (entry: PublicProject) => {
-    const nextProject = clone(entry.projectData);
+  const onImportProject = async (entry: PublicProject) => {
+    let projectData = entry.projectData;
+    if (!projectData) {
+      const result = await fetchPublicProjectData(entry.id);
+      if (!result.ok) {
+        setPublicProjectsError(result.error);
+        return;
+      }
+      projectData = result.projectData;
+    }
+    const nextProject = clone(projectData);
     nextProject.id = createId();
     nextProject.name = entry.title || entry.projectName;
     nextProject.createdAt = new Date().toISOString();
     nextProject.updatedAt = nextProject.createdAt;
     openProjectFromData(nextProject);
+  };
+
+  const openSharedBoardById = async (shareId: string) => {
+    const result = await fetchBoardShareById(shareId);
+    if (!result.ok) {
+      setSharedError(result.error);
+      return;
+    }
+    openSharedBoard(result.share);
   };
 
   useEffect(() => {
@@ -804,12 +839,14 @@ export default function ProjectList() {
       setError("Project is not available to duplicate.");
       return;
     }
-    const duplicate = clone(sourceProject);
-    duplicate.id = createId();
-    duplicate.name = `${sourceProject.name} (copy)`;
-    const now = new Date().toISOString();
-    duplicate.createdAt = now;
-    duplicate.updatedAt = now;
+    if (!Array.isArray(sourceProject.boards) || sourceProject.boards.length === 0) {
+      setError("Project data is incomplete. Open the source project once and try again.");
+      return;
+    }
+    const duplicate = duplicateProjectWithFreshIds(
+      sourceProject,
+      `${sourceProject.name} (copy)`
+    );
     openProjectFromData(duplicate);
     setError(null);
   };
@@ -1438,7 +1475,7 @@ export default function ProjectList() {
                           nextSeen[share.id] = Date.now();
                           persistCommentsSeen(nextSeen);
                         }
-                        openSharedBoard(share);
+                        void openSharedBoardById(share.id);
                       }}
                     >
                       Open
@@ -1492,7 +1529,7 @@ export default function ProjectList() {
                           nextSeen[share.id] = Date.now();
                           persistCommentsSeen(nextSeen);
                         }
-                        openSharedBoard(share);
+                        void openSharedBoardById(share.id);
                       }}
                     >
                       Open
