@@ -52,10 +52,12 @@ export default function ProjectShareView({ token }: ProjectShareViewProps) {
     }
     const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
     const update = () => {
+      const hasCoarsePointer = coarsePointerQuery.matches;
+      const narrowViewport = window.innerWidth <= 1024;
+      const portraitViewport = window.innerHeight > window.innerWidth;
+      // Force portrait only for true mobile/touch layouts.
       const isMobileLayout =
-        window.innerWidth <= 1024 ||
-        coarsePointerQuery.matches ||
-        window.innerHeight <= 860;
+        hasCoarsePointer && (narrowViewport || portraitViewport);
       setForcePortrait(isMobileLayout);
     };
     update();
