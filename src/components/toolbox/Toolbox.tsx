@@ -17,6 +17,7 @@ import {
   fetchLatestCommentsForShares,
 } from "@/persistence/shares";
 import { can } from "@/utils/plan";
+import { usePollLeader } from "@/hooks/usePollLeader";
 
 const iconClass = "h-4 w-4";
 const iconStroke = "2";
@@ -252,6 +253,10 @@ export default function Toolbox({
   const project = useProjectStore((state) => state.project);
   const plan = useProjectStore((state) => state.plan);
   const authUser = useProjectStore((state) => state.authUser);
+  const isSharedPollLeader = usePollLeader(
+    `shared:${authUser?.id ?? "anon"}`,
+    !!authUser?.id
+  );
   const commentsSeenKey = authUser
     ? `tacticsboard:commentsSeen:${authUser.id}`
     : null;
@@ -645,6 +650,9 @@ export default function Toolbox({
     const canPoll = () =>
       typeof document === "undefined" || document.visibilityState === "visible";
     const refreshShares = async () => {
+      if (!isSharedPollLeader) {
+        return;
+      }
       if (!canPoll()) {
         return;
       }
@@ -679,7 +687,7 @@ export default function Toolbox({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [authUser, board, plan, project?.sharedMeta, activeTab]);
+  }, [authUser, board, plan, project?.sharedMeta, activeTab, isSharedPollLeader]);
 
   useEffect(() => {
     if (activeTab !== "shared") {
@@ -740,6 +748,9 @@ export default function Toolbox({
     const canPoll = () =>
       typeof document === "undefined" || document.visibilityState === "visible";
     const checkUnread = async () => {
+      if (!isSharedPollLeader) {
+        return;
+      }
       if (!canPoll()) {
         return;
       }
@@ -777,7 +788,14 @@ export default function Toolbox({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [commentsSeenKey, ownerShares, project?.sharedMeta?.shareId, authUser, activeTab]);
+  }, [
+    commentsSeenKey,
+    ownerShares,
+    project?.sharedMeta?.shareId,
+    authUser,
+    activeTab,
+    isSharedPollLeader,
+  ]);
 
   useEffect(() => {
     if (activeTab !== "shared") {
@@ -792,6 +810,9 @@ export default function Toolbox({
     const canPoll = () =>
       typeof document === "undefined" || document.visibilityState === "visible";
     const checkShareActive = async () => {
+      if (!isSharedPollLeader) {
+        return;
+      }
       if (!canPoll()) {
         return;
       }
@@ -815,7 +836,7 @@ export default function Toolbox({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [project?.sharedMeta, authUser, activeTab]);
+  }, [project?.sharedMeta, authUser, activeTab, isSharedPollLeader]);
 
   useEffect(() => {
     if (

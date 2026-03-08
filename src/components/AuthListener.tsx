@@ -13,6 +13,7 @@ import {
   persistActiveProjectLocal,
   persistPlanCheck,
 } from "@/state/useProjectStore";
+import { usePollLeader } from "@/hooks/usePollLeader";
 
 const getDisplayName = (email: string | null, fullName?: string | null) => {
   if (fullName && fullName.trim().length > 0) {
@@ -45,11 +46,16 @@ const safeSetLocalStorageItem = (key: string, value: string) => {
 
 export default function AuthListener() {
   const setAuthUser = useProjectStore((state) => state.setAuthUser);
+  const authUser = useProjectStore((state) => state.authUser);
   const setPlanFromProfile = useProjectStore(
     (state) => state.setPlanFromProfile
   );
   const clearAuthUser = useProjectStore((state) => state.clearAuthUser);
   const hydrateIndex = useProjectStore((state) => state.hydrateIndex);
+  const isAuthPollLeader = usePollLeader(
+    `auth:${authUser?.id ?? "anon"}`,
+    !!authUser?.id
+  );
 
   useEffect(() => {
     const sb = supabase;
@@ -203,6 +209,9 @@ export default function AuthListener() {
       void checkSession();
       // Low-frequency heartbeat to reduce read load.
       sessionGuardTimer = setInterval(() => {
+        if (!isAuthPollLeader) {
+          return;
+        }
         if (
           typeof document !== "undefined" &&
           document.visibilityState !== "visible"
@@ -390,6 +399,9 @@ export default function AuthListener() {
     );
 
     const planRefreshTimer = window.setInterval(() => {
+      if (!isAuthPollLeader) {
+        return;
+      }
       if (document.visibilityState !== "visible") {
         return;
       }
@@ -408,7 +420,7 @@ export default function AuthListener() {
       window.clearInterval(planRefreshTimer);
       subscription.subscription.unsubscribe();
     };
-  }, [setAuthUser, clearAuthUser]);
+  }, [setAuthUser, clearAuthUser, isAuthPollLeader]);
 
   return null;
 }

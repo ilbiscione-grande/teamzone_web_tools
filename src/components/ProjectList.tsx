@@ -54,6 +54,7 @@ import {
   type AdminAnalyticsResponse,
   type AdminUserRow,
 } from "@/persistence/admin";
+import { usePollLeader } from "@/hooks/usePollLeader";
 
 export default function ProjectList() {
   type ShareListItem = {
@@ -96,6 +97,10 @@ export default function ProjectList() {
   const plan = useProjectStore((state) => state.plan);
   const project = useProjectStore((state) => state.project);
   const authUser = useProjectStore((state) => state.authUser);
+  const isSharedPollLeader = usePollLeader(
+    `shared:${authUser?.id ?? "anon"}`,
+    !!authUser?.id
+  );
   const [planOpen, setPlanOpen] = useState(false);
   const [betaOpen, setBetaOpen] = useState(false);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
@@ -367,6 +372,9 @@ export default function ProjectList() {
   };
 
   const refreshShared = async () => {
+    if (!isSharedPollLeader) {
+      return;
+    }
     if (typeof document !== "undefined" && document.visibilityState !== "visible") {
       return;
     }
@@ -406,7 +414,7 @@ export default function ProjectList() {
     refreshShared();
     const interval = window.setInterval(refreshShared, 120000);
     return () => window.clearInterval(interval);
-  }, [authUser, plan, consoleTab]);
+  }, [authUser, plan, consoleTab, isSharedPollLeader]);
 
   useEffect(() => {
     if (!authUser || !can(plan, "board.share")) {
