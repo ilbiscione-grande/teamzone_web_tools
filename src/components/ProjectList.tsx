@@ -1864,6 +1864,10 @@ export default function ProjectList() {
                 <p className="text-xs text-[var(--ink-1)]">No analytics data yet.</p>
               ) : (
                 <>
+                  {(() => {
+                    const networkCounters = adminAnalytics.networkCounters ?? [];
+                    return (
+                      <>
                   <div className="grid gap-2 sm:grid-cols-5">
                     {[
                       { label: "Events", value: String(adminAnalytics.summary.totalEvents) },
@@ -1987,10 +1991,10 @@ export default function ProjectList() {
                       Network calls (aggregated)
                     </p>
                     <div className="mt-2 max-h-56 space-y-2 overflow-y-auto">
-                      {adminAnalytics.networkCounters.length === 0 ? (
+                      {networkCounters.length === 0 ? (
                         <p className="text-xs text-[var(--ink-1)]">No network counters yet.</p>
                       ) : (
-                        adminAnalytics.networkCounters.slice(0, 20).map((entry) => (
+                        networkCounters.slice(0, 20).map((entry) => (
                           <div
                             key={entry.key}
                             className="rounded-lg border border-[var(--line)] px-2 py-1"
@@ -2018,6 +2022,9 @@ export default function ProjectList() {
                       )}
                     </div>
                   </div>
+                      </>
+                    );
+                  })()}
                 </>
               )}
             </div>

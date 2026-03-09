@@ -119,5 +119,22 @@ export const fetchAdminAnalytics = async () => {
   if (!result.ok) {
     return result;
   }
-  return { ok: true as const, analytics: result.payload as AdminAnalyticsResponse };
+  const analytics = result.payload as Partial<AdminAnalyticsResponse>;
+  return {
+    ok: true as const,
+    analytics: {
+      summary: analytics.summary ?? {
+        totalEvents: 0,
+        activeUsers30d: 0,
+        loginCount30d: 0,
+        averageSessionMinutes: 0,
+        totalHours30d: 0,
+      },
+      toolUsage: analytics.toolUsage ?? [],
+      loginMethods: analytics.loginMethods ?? [],
+      dailyActivity: analytics.dailyActivity ?? [],
+      recentLogins: analytics.recentLogins ?? [],
+      networkCounters: analytics.networkCounters ?? [],
+    } satisfies AdminAnalyticsResponse,
+  };
 };
