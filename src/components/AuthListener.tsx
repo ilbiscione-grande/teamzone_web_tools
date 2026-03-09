@@ -276,6 +276,31 @@ export default function AuthListener() {
       persistPlanCheck();
     };
 
+    const trackLoginIfNeeded = (params: {
+      event: string;
+      previousUserId: string | null;
+      currentUserId: string;
+      provider: string;
+    }) => {
+      if (params.event !== "SIGNED_IN") {
+        return;
+      }
+      if (params.previousUserId === params.currentUserId) {
+        return;
+      }
+      void trackAnalyticsEvent({
+        eventType: "login",
+        path: typeof window !== "undefined" ? window.location.pathname : "/",
+        metadata: {
+          provider: params.provider,
+          device:
+            typeof window !== "undefined"
+              ? window.navigator.userAgent
+              : "unknown",
+        },
+      });
+    };
+
     const shouldRouteToResetPassword = (event?: string) => {
       if (typeof window === "undefined") {
         return false;
@@ -318,17 +343,6 @@ export default function AuthListener() {
           betaUser: false,
           isAdmin: false,
         });
-        void trackAnalyticsEvent({
-          eventType: "login",
-          path: typeof window !== "undefined" ? window.location.pathname : "/",
-          metadata: {
-            provider: String(user.app_metadata?.provider ?? "unknown"),
-            device:
-              typeof window !== "undefined"
-                ? window.navigator.userAgent
-                : "unknown",
-          },
-        });
         syncProfilePlan(user.id).finally(() => hydrateIndex());
         claimSingleSession(user.id, session.access_token).then((allowed) => {
           if (allowed) {
@@ -349,6 +363,7 @@ export default function AuthListener() {
       (event, session) => {
         persistActiveProject();
         if (session?.user) {
+          const previousUserId = useProjectStore.getState().authUser?.id ?? null;
           if (shouldRouteToResetPassword(event)) {
             window.location.replace("/reset-password");
             return;
@@ -367,20 +382,12 @@ export default function AuthListener() {
             betaUser: false,
             isAdmin: false,
           });
-          if (event === "SIGNED_IN") {
-            void trackAnalyticsEvent({
-              eventType: "login",
-              path:
-                typeof window !== "undefined" ? window.location.pathname : "/",
-              metadata: {
-                provider: String(user.app_metadata?.provider ?? "unknown"),
-                device:
-                  typeof window !== "undefined"
-                    ? window.navigator.userAgent
-                    : "unknown",
-              },
-            });
-          }
+          trackLoginIfNeeded({
+            event,
+            previousUserId,
+            currentUserId: user.id,
+            provider: String(user.app_metadata?.provider ?? "unknown"),
+          });
           syncProfilePlan(user.id).finally(() => hydrateIndex());
           claimSingleSession(user.id, session.access_token).then((allowed) => {
             if (allowed) {
