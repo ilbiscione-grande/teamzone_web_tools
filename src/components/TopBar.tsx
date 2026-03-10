@@ -11,6 +11,7 @@ import type {
   PitchOverlay,
   PitchView,
   ProjectMode,
+  SquadPlayer,
   SquadPreset,
 } from "@/models";
 import FormationMenu from "@/components/FormationMenu";
@@ -46,6 +47,8 @@ import { duplicateProjectWithFreshIds } from "@/state/projectHelpers";
 import ColorPalettePicker from "@/components/ColorPalettePicker";
 
 type ManagePlayersSortKey = "default" | "name" | "position" | "number";
+type ManageRosterFilter = "all" | "visible" | "hidden" | "guests" | "regular";
+type ManageRosterView = "base" | "board";
 const SHARE_LINK_BASE_URL = "https://webtools.teamzoneapp.se";
 
 export default function TopBar() {
@@ -102,6 +105,15 @@ export default function TopBar() {
   const [managePlayersSortDir, setManagePlayersSortDir] = useState<"asc" | "desc">(
     "asc"
   );
+  const [manageRosterView, setManageRosterView] =
+    useState<ManageRosterView>("base");
+  const [manageBoardSearch, setManageBoardSearch] = useState("");
+  const [manageBaseSearch, setManageBaseSearch] = useState("");
+  const [manageBoardFilter, setManageBoardFilter] =
+    useState<ManageRosterFilter>("all");
+  const [manageGuestName, setManageGuestName] = useState("");
+  const [manageGuestPosition, setManageGuestPosition] = useState("");
+  const [manageGuestNumber, setManageGuestNumber] = useState("");
   const [managePresetStatus, setManagePresetStatus] = useState<string | null>(
     null
   );
@@ -301,8 +313,14 @@ export default function TopBar() {
   const activeBoard = useMemo(() => getActiveBoard(project ?? null), [project]);
   const activeBoardId = activeBoard?.id ?? project?.activeBoardId ?? project?.boards[0]?.id;
   const boardSquads = getBoardSquads(project ?? null, activeBoard ?? null);
-  const manageSquad = manageSide === "home" ? boardSquads.home : boardSquads.away;
-  const editableSquad = manageSquad;
+  const manageSquadId =
+    manageSide === "home" ? activeBoard?.homeSquadId : activeBoard?.awaySquadId;
+  const manageBaseSquad =
+    project?.squads.find((item) => item.id === manageSquadId) ?? null;
+  const manageBoardSquad =
+    manageSide === "home" ? boardSquads.home : boardSquads.away;
+  const manageSquad = manageBaseSquad;
+  const editableSquad = manageBaseSquad;
   const sortedManagePlayers = useMemo(() => {
     if (!manageSquad) {
       return [];
@@ -369,6 +387,68 @@ export default function TopBar() {
       updateSquad(manageSquad.id, payload);
     }
   };
+  const updateManageBoardOverride = (
+    updater: (current: {
+      hiddenPlayerIds?: string[];
+      guestPlayers?: SquadPlayer[];
+      positionOverrides?: Record<string, string>;
+    }) => {
+      hiddenPlayerIds?: string[];
+      guestPlayers?: SquadPlayer[];
+      positionOverrides?: Record<string, string>;
+    }
+  ) => {
+    if (!activeBoard || !manageBaseSquad) {
+      return;
+    }
+    const current = activeBoard.squadOverrides?.[manageBaseSquad.id] ?? {
+      hiddenPlayerIds: [],
+      guestPlayers: [],
+      positionOverrides: {},
+    };
+    const next = updater(current);
+    updateBoard(activeBoard.id, {
+      squadOverrides: {
+        ...(activeBoard.squadOverrides ?? {}),
+        [manageBaseSquad.id]: next,
+      },
+    });
+  };
+  const sortedManageBoardPlayers = useMemo(() => {
+    const list = manageBoardSquad?.players ?? [];
+    const needle = manageBoardSearch.trim().toLowerCase();
+    return list.filter((player) => {
+      if (manageBoardFilter === "visible" && player.active === false) {
+        return false;
+      }
+      if (manageBoardFilter === "hidden" && player.active !== false) {
+        return false;
+      }
+      if (manageBoardFilter === "guests" && !player.guest) {
+        return false;
+      }
+      if (manageBoardFilter === "regular" && player.guest) {
+        return false;
+      }
+      if (!needle) {
+        return true;
+      }
+      const haystack =
+        `${player.name} ${player.positionLabel} ${player.number ?? ""}`.toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [manageBoardFilter, manageBoardSearch, manageBoardSquad?.players]);
+  const filteredManageBasePlayers = useMemo(() => {
+    const needle = manageBaseSearch.trim().toLowerCase();
+    if (!needle) {
+      return sortedManagePlayers;
+    }
+    return sortedManagePlayers.filter((player) => {
+      const haystack =
+        `${player.name} ${player.positionLabel} ${player.number ?? ""}`.toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [manageBaseSearch, sortedManagePlayers]);
   const isSharedView = project?.isShared ?? false;
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -481,7 +561,10 @@ export default function TopBar() {
       setManagePresetStatus("No team data available.");
       return;
     }
-    const targetSquad = side === "home" ? boardSquads.home : boardSquads.away;
+    const targetSquadId =
+      side === "home" ? activeBoard?.homeSquadId : activeBoard?.awaySquadId;
+    const targetSquad =
+      project?.squads.find((item) => item.id === targetSquadId) ?? null;
     if (!targetSquad) {
       setManagePresetStatus("No target squad available on this board.");
       return;
@@ -520,6 +603,98 @@ export default function TopBar() {
       return " •";
     }
     return managePlayersSortDir === "asc" ? " ↑" : " ↓";
+  };
+  const manageToggleBoardPlayerVisible = (playerId: string, nextVisible: boolean) => {
+    updateManageBoardOverride((current) => {
+      const hidden = new Set(current.hiddenPlayerIds ?? []);
+      if (nextVisible) {
+        hidden.delete(playerId);
+      } else {
+        hidden.add(playerId);
+      }
+      return {
+        ...current,
+        hiddenPlayerIds: Array.from(hidden),
+      };
+    });
+  };
+  const manageSetBoardPlayerPosition = (playerId: string, value: string) => {
+    const trimmed = value.trim();
+    updateManageBoardOverride((current) => {
+      const guests = [...(current.guestPlayers ?? [])];
+      const guestIndex = guests.findIndex((item) => item.id === playerId);
+      if (guestIndex >= 0) {
+        guests[guestIndex] = {
+          ...guests[guestIndex],
+          positionLabel: trimmed,
+        };
+        return { ...current, guestPlayers: guests };
+      }
+      const nextOverrides = { ...(current.positionOverrides ?? {}) };
+      const basePosition =
+        manageBaseSquad?.players.find((item) => item.id === playerId)?.positionLabel ?? "";
+      if (!trimmed || trimmed === basePosition) {
+        delete nextOverrides[playerId];
+      } else {
+        nextOverrides[playerId] = trimmed;
+      }
+      return { ...current, positionOverrides: nextOverrides };
+    });
+  };
+  const manageAddBoardGuest = () => {
+    if (!manageGuestName.trim()) {
+      return;
+    }
+    const parsedNumber = Number(manageGuestNumber);
+    updateManageBoardOverride((current) => ({
+      ...current,
+      guestPlayers: [
+        ...(current.guestPlayers ?? []),
+        {
+          id: createId(),
+          name: manageGuestName.trim(),
+          positionLabel: manageGuestPosition.trim() || "Guest",
+          guest: true,
+          active: true,
+          number:
+            Number.isFinite(parsedNumber) && parsedNumber > 0
+              ? parsedNumber
+              : undefined,
+        },
+      ],
+    }));
+    setManageGuestName("");
+    setManageGuestPosition("");
+    setManageGuestNumber("");
+  };
+  const manageRemoveBoardGuest = (playerId: string) => {
+    updateManageBoardOverride((current) => {
+      const nextGuests = (current.guestPlayers ?? []).filter(
+        (item) => item.id !== playerId
+      );
+      const nextHidden = (current.hiddenPlayerIds ?? []).filter((id) => id !== playerId);
+      const nextPositionOverrides = { ...(current.positionOverrides ?? {}) };
+      delete nextPositionOverrides[playerId];
+      return {
+        ...current,
+        guestPlayers: nextGuests,
+        hiddenPlayerIds: nextHidden,
+        positionOverrides: nextPositionOverrides,
+      };
+    });
+  };
+  const managePromoteBoardGuest = (player: SquadPlayer) => {
+    if (!manageBaseSquad || !player.guest) {
+      return;
+    }
+    if (!manageBaseSquad.players.some((item) => item.id === player.id)) {
+      addSquadPlayer(manageBaseSquad.id, {
+        ...player,
+        guest: false,
+        active: true,
+      });
+    }
+    manageRemoveBoardGuest(player.id);
   };
   const shirtTypes: Array<{
     id: "solid" | "split" | "stripe" | "sash" | "pinstripe";
@@ -2170,6 +2345,67 @@ export default function TopBar() {
                         </span>
                         <div className="flex items-center gap-2">
                           <button
+                            className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-wide ${
+                              manageRosterView === "base"
+                                ? "border-[var(--accent-0)] text-[var(--ink-0)]"
+                                : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                            }`}
+                            onClick={() => setManageRosterView("base")}
+                          >
+                            Base
+                          </button>
+                          <button
+                            className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-wide ${
+                              manageRosterView === "board"
+                                ? "border-[var(--accent-0)] text-[var(--ink-0)]"
+                                : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                            }`}
+                            onClick={() => setManageRosterView("board")}
+                          >
+                            Board
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          className="h-8 flex-1 rounded-full border border-[var(--line)] bg-transparent px-3 text-[11px] text-[var(--ink-0)]"
+                          placeholder={
+                            manageRosterView === "base"
+                              ? "Search base squad..."
+                              : "Search board roster..."
+                          }
+                          value={
+                            manageRosterView === "base"
+                              ? manageBaseSearch
+                              : manageBoardSearch
+                          }
+                          onChange={(event) =>
+                            manageRosterView === "base"
+                              ? setManageBaseSearch(event.target.value)
+                              : setManageBoardSearch(event.target.value)
+                          }
+                        />
+                        {manageRosterView === "board" ? (
+                          <select
+                            className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-[11px]"
+                            value={manageBoardFilter}
+                            onChange={(event) =>
+                              setManageBoardFilter(
+                                event.target.value as ManageRosterFilter
+                              )
+                            }
+                          >
+                            <option value="all">All</option>
+                            <option value="visible">Visible</option>
+                            <option value="hidden">Hidden</option>
+                            <option value="guests">Guests</option>
+                            <option value="regular">Regular</option>
+                          </select>
+                        ) : null}
+                      </div>
+                      {manageRosterView === "base" ? (
+                        <div className="flex items-center gap-2">
+                          <button
                             className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                             onClick={() =>
                               addSquadPlayer(manageSquad.id, {
@@ -2202,212 +2438,349 @@ export default function TopBar() {
                             Add guest
                           </button>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                        <button
-                          className="text-left hover:text-[var(--accent-2)]"
-                          onClick={() => toggleManagePlayersSort("number")}
-                          title="Sort by number"
-                        >
-                          #{manageSortIndicator("number")}
-                        </button>
-                        <button
-                          className="text-left hover:text-[var(--accent-2)]"
-                          onClick={() => toggleManagePlayersSort("name")}
-                          title="Sort by name"
-                        >
-                          Name{manageSortIndicator("name")}
-                        </button>
-                        <button
-                          className="text-left hover:text-[var(--accent-2)]"
-                          onClick={() => toggleManagePlayersSort("position")}
-                          title="Sort by position"
-                        >
-                          Position{manageSortIndicator("position")}
-                        </button>
-                        <span className="text-center">Show in Squad</span>
-                        <span className="text-center">Captain</span>
-                        <span className="text-center">Substitute</span>
-                        <span />
-                      </div>
-                      <p className="text-[10px] text-[var(--ink-1)]">
-                        All players are listed here. Use &quot;Show in Squad&quot; to control who appears in the Squad tab.
-                      </p>
-                      <div className="flex justify-end">
-                        <button
-                          className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                          onClick={() => toggleManagePlayersSort("default")}
-                          title="Reset to default sort"
-                        >
-                          Default sort{manageSortIndicator("default")}
-                        </button>
-                      </div>
-                      <div className="max-h-56 space-y-2 overflow-auto pr-1" data-scrollable>
-                        {sortedManagePlayers.map((player) => (
-                          <div
-                            key={player.id}
-                            className="grid grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2"
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          <input
+                            className="h-8 rounded-md border border-[var(--line)] bg-transparent px-2 text-[11px] text-[var(--ink-0)]"
+                            placeholder="Guest name"
+                            value={manageGuestName}
+                            onChange={(event) => setManageGuestName(event.target.value)}
+                          />
+                          <input
+                            className="h-8 rounded-md border border-[var(--line)] bg-transparent px-2 text-[11px] text-[var(--ink-0)]"
+                            placeholder="Position"
+                            value={manageGuestPosition}
+                            onChange={(event) => setManageGuestPosition(event.target.value)}
+                          />
+                          <input
+                            className="h-8 rounded-md border border-[var(--line)] bg-transparent px-2 text-[11px] text-[var(--ink-0)]"
+                            placeholder="#"
+                            value={manageGuestNumber}
+                            onChange={(event) => setManageGuestNumber(event.target.value)}
+                          />
+                        </div>
+                      )}
+                      {manageRosterView === "board" ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                            onClick={manageAddBoardGuest}
                           >
-                            <input
-                              className="h-7 rounded-md border border-[var(--line)] bg-transparent px-1 text-center text-[11px] text-[var(--ink-0)]"
-                              value={player.number ?? ""}
-                              onChange={(event) =>
-                                updateSquadPlayer(manageSquad.id, player.id, {
-                                  number: event.target.value
-                                    ? Number(event.target.value)
-                                    : undefined,
-                                })
-                              }
-                            />
-                            <div className="flex items-center gap-1">
-                              <input
-                                className="h-7 w-full rounded-md border border-[var(--line)] bg-transparent px-1 text-[11px] text-[var(--ink-0)]"
-                                value={player.name}
-                                onChange={(event) =>
-                                  updateSquadPlayer(manageSquad.id, player.id, {
-                                    name: event.target.value,
-                                  })
-                                }
-                              />
-                              <button
-                                className={`h-7 min-w-[30px] rounded-md border px-1 text-[10px] font-semibold ${
-                                  player.guest
-                                    ? "border-[var(--accent-0)] bg-[var(--accent-0)] text-black"
-                                    : "border-[var(--line)] text-[var(--ink-1)]"
-                                }`}
-                                onClick={() =>
-                                  updateSquadPlayer(manageSquad.id, player.id, {
-                                    guest: !player.guest,
-                                  })
-                                }
-                                title="Guest player"
-                                aria-label="Guest player"
-                              >
-                                G
-                              </button>
-                            </div>
-                            <select
-                              className="h-7 w-full rounded-md border border-[var(--line)] bg-[var(--panel-2)] px-2 text-[10px] text-[var(--ink-0)]"
-                              value={player.positionLabel}
-                              onChange={(event) =>
-                                updateSquadPlayer(manageSquad.id, player.id, {
-                                  positionLabel: event.target.value,
-                                })
-                              }
-                            >
-                              <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
-                                
-                              </option>
-                              {[
-                                "Goalkeeper (GK)",
-                                "Right Back (RB)",
-                                "Right Center Back (RCB)",
-                                "Center Back (CB)",
-                                "Left Center Back (LCB)",
-                                "Left Back (LB)",
-                                "Right Wing Back (RWB)",
-                                "Left Wing Back (LWB)",
-                                "Defensive Midfielder (DM)",
-                                "Central Defensive Midfielder (CDM)",
-                                "Central Midfielder (CM)",
-                                "Attacking Midfielder (AM)",
-                                "Central Attacking Midfielder (CAM)",
-                                "Right Midfielder (RM)",
-                                "Left Midfielder (LM)",
-                                "Right Winger (RW)",
-                                "Left Winger (LW)",
-                                "Striker (ST)",
-                                "Center Forward (CF)",
-                                "Second Striker (SS)",
-                              ].map((pos) => (
-                                <option
-                                  key={pos}
-                                  value={pos}
-                                  className="bg-[var(--panel-2)] text-[var(--ink-0)]"
-                                >
-                                  {pos}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="flex h-full w-full items-center justify-center">
-                              <input
-                                type="checkbox"
-                                checked={player.active !== false}
-                                onChange={(event) =>
-                                  updateSquadPlayer(manageSquad.id, player.id, {
-                                    active: event.target.checked,
-                                  })
-                                }
-                                title="Show in Squad"
-                                aria-label="Show in Squad"
-                              />
-                            </div>
-                            {(() => {
-                              const substitutes = editableSquad?.substituteIds ?? [];
-                              const isCaptain = editableSquad?.captainId === player.id;
-                              const isSub = substitutes.includes(player.id);
-                              return (
-                                <>
-                                <div className="flex h-full w-full items-center justify-center">
-                                  <button
-                                    className={`h-4 w-4 rounded-full border ${
-                                      isCaptain
-                                        ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
-                                        : "border-[var(--line)]"
-                                    }`}
-                                    onClick={() =>
-                                      updateEditableSquad({
-                                        captainId: isCaptain ? undefined : player.id,
-                                      })
-                                    }
-                                    title="Captain"
-                                    aria-label="Captain"
-                                  />
-                                </div>
-                                <div className="flex h-full w-full items-center justify-center">
-                                  <button
-                                    className={`h-4 w-4 rounded-full border ${
-                                      isSub
-                                        ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
-                                        : "border-[var(--line)]"
-                                    }`}
-                                    onClick={() => {
-                                      const next = isSub
-                                        ? substitutes.filter((id) => id !== player.id)
-                                        : [...substitutes, player.id];
-                                      updateEditableSquad({ substituteIds: next });
-                                    }}
-                                    title="Substitute"
-                                    aria-label="Substitute"
-                                  />
-                                </div>
-                                </>
-                              );
-                            })()}
+                            Add board guest
+                          </button>
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                            onClick={() =>
+                              updateManageBoardOverride((current) => ({
+                                ...current,
+                                hiddenPlayerIds: [],
+                              }))
+                            }
+                          >
+                            Show all
+                          </button>
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                            onClick={() =>
+                              updateManageBoardOverride((current) => ({
+                                ...current,
+                                positionOverrides: {},
+                              }))
+                            }
+                          >
+                            Reset positions
+                          </button>
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                            onClick={() =>
+                              updateManageBoardOverride(() => ({
+                                hiddenPlayerIds: [],
+                                guestPlayers: [],
+                                positionOverrides: {},
+                              }))
+                            }
+                          >
+                            Reset board roster
+                          </button>
+                        </div>
+                      ) : null}
+                      {manageRosterView === "base" ? (
+                        <>
+                          <div className="grid grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                             <button
-                              className="rounded-full border border-[var(--line)] p-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                              onClick={() => removeSquadPlayer(manageSquad.id, player.id)}
-                              title="Delete"
-                              aria-label="Delete"
+                              className="text-left hover:text-[var(--accent-2)]"
+                              onClick={() => toggleManagePlayersSort("number")}
+                              title="Sort by number"
                             >
-                              <svg
-                                aria-hidden
-                                viewBox="0 0 24 24"
-                                className="h-3 w-3"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <path d="M4 7h16" />
-                                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                                <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
-                              </svg>
+                              #{manageSortIndicator("number")}
+                            </button>
+                            <button
+                              className="text-left hover:text-[var(--accent-2)]"
+                              onClick={() => toggleManagePlayersSort("name")}
+                              title="Sort by name"
+                            >
+                              Name{manageSortIndicator("name")}
+                            </button>
+                            <button
+                              className="text-left hover:text-[var(--accent-2)]"
+                              onClick={() => toggleManagePlayersSort("position")}
+                              title="Sort by position"
+                            >
+                              Position{manageSortIndicator("position")}
+                            </button>
+                            <span className="text-center">Show in Squad</span>
+                            <span className="text-center">Captain</span>
+                            <span className="text-center">Substitute</span>
+                            <span />
+                          </div>
+                          <p className="text-[10px] text-[var(--ink-1)]">
+                            All players are listed here. Use &quot;Show in Squad&quot; to control who appears in the Squad tab.
+                          </p>
+                          <div className="flex justify-end">
+                            <button
+                              className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                              onClick={() => toggleManagePlayersSort("default")}
+                              title="Reset to default sort"
+                            >
+                              Default sort{manageSortIndicator("default")}
                             </button>
                           </div>
-                        ))}
-                      </div>
+                          <div className="max-h-56 space-y-2 overflow-auto pr-1" data-scrollable>
+                            {filteredManageBasePlayers.map((player) => (
+                              <div
+                                key={player.id}
+                                className="grid grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2"
+                              >
+                                <input
+                                  className="h-7 rounded-md border border-[var(--line)] bg-transparent px-1 text-center text-[11px] text-[var(--ink-0)]"
+                                  value={player.number ?? ""}
+                                  onChange={(event) =>
+                                    updateSquadPlayer(manageSquad.id, player.id, {
+                                      number: event.target.value
+                                        ? Number(event.target.value)
+                                        : undefined,
+                                    })
+                                  }
+                                />
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    className="h-7 w-full rounded-md border border-[var(--line)] bg-transparent px-1 text-[11px] text-[var(--ink-0)]"
+                                    value={player.name}
+                                    onChange={(event) =>
+                                      updateSquadPlayer(manageSquad.id, player.id, {
+                                        name: event.target.value,
+                                      })
+                                    }
+                                  />
+                                  <button
+                                    className={`h-7 min-w-[30px] rounded-md border px-1 text-[10px] font-semibold ${
+                                      player.guest
+                                        ? "border-[var(--accent-0)] bg-[var(--accent-0)] text-black"
+                                        : "border-[var(--line)] text-[var(--ink-1)]"
+                                    }`}
+                                    onClick={() =>
+                                      updateSquadPlayer(manageSquad.id, player.id, {
+                                        guest: !player.guest,
+                                      })
+                                    }
+                                    title="Guest player"
+                                    aria-label="Guest player"
+                                  >
+                                    G
+                                  </button>
+                                </div>
+                                <select
+                                  className="h-7 w-full rounded-md border border-[var(--line)] bg-[var(--panel-2)] px-2 text-[10px] text-[var(--ink-0)]"
+                                  value={player.positionLabel}
+                                  onChange={(event) =>
+                                    updateSquadPlayer(manageSquad.id, player.id, {
+                                      positionLabel: event.target.value,
+                                    })
+                                  }
+                                >
+                                  <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
+                                    
+                                  </option>
+                                  {[
+                                    "Goalkeeper (GK)",
+                                    "Right Back (RB)",
+                                    "Right Center Back (RCB)",
+                                    "Center Back (CB)",
+                                    "Left Center Back (LCB)",
+                                    "Left Back (LB)",
+                                    "Right Wing Back (RWB)",
+                                    "Left Wing Back (LWB)",
+                                    "Defensive Midfielder (DM)",
+                                    "Central Defensive Midfielder (CDM)",
+                                    "Central Midfielder (CM)",
+                                    "Attacking Midfielder (AM)",
+                                    "Central Attacking Midfielder (CAM)",
+                                    "Right Midfielder (RM)",
+                                    "Left Midfielder (LM)",
+                                    "Right Winger (RW)",
+                                    "Left Winger (LW)",
+                                    "Striker (ST)",
+                                    "Center Forward (CF)",
+                                    "Second Striker (SS)",
+                                  ].map((pos) => (
+                                    <option
+                                      key={pos}
+                                      value={pos}
+                                      className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                                    >
+                                      {pos}
+                                    </option>
+                                  ))}
+                                </select>
+                                <div className="flex h-full w-full items-center justify-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={player.active !== false}
+                                    onChange={(event) =>
+                                      updateSquadPlayer(manageSquad.id, player.id, {
+                                        active: event.target.checked,
+                                      })
+                                    }
+                                    title="Show in Squad"
+                                    aria-label="Show in Squad"
+                                  />
+                                </div>
+                                {(() => {
+                                  const substitutes = editableSquad?.substituteIds ?? [];
+                                  const isCaptain = editableSquad?.captainId === player.id;
+                                  const isSub = substitutes.includes(player.id);
+                                  return (
+                                    <>
+                                    <div className="flex h-full w-full items-center justify-center">
+                                      <button
+                                        className={`h-4 w-4 rounded-full border ${
+                                          isCaptain
+                                            ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
+                                            : "border-[var(--line)]"
+                                        }`}
+                                        onClick={() =>
+                                          updateEditableSquad({
+                                            captainId: isCaptain ? undefined : player.id,
+                                          })
+                                        }
+                                        title="Captain"
+                                        aria-label="Captain"
+                                      />
+                                    </div>
+                                    <div className="flex h-full w-full items-center justify-center">
+                                      <button
+                                        className={`h-4 w-4 rounded-full border ${
+                                          isSub
+                                            ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
+                                            : "border-[var(--line)]"
+                                        }`}
+                                        onClick={() => {
+                                          const next = isSub
+                                            ? substitutes.filter((id) => id !== player.id)
+                                            : [...substitutes, player.id];
+                                          updateEditableSquad({ substituteIds: next });
+                                        }}
+                                        title="Substitute"
+                                        aria-label="Substitute"
+                                      />
+                                    </div>
+                                    </>
+                                  );
+                                })()}
+                                <button
+                                  className="rounded-full border border-[var(--line)] p-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                                  onClick={() => removeSquadPlayer(manageSquad.id, player.id)}
+                                  title="Delete"
+                                  aria-label="Delete"
+                                >
+                                  <svg
+                                    aria-hidden
+                                    viewBox="0 0 24 24"
+                                    className="h-3 w-3"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M4 7h16" />
+                                    <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                    <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
+                                  </svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-[minmax(0,1fr)_130px_170px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                            <span>Name</span>
+                            <span>Position on board</span>
+                            <span>Actions</span>
+                          </div>
+                          <div className="max-h-56 space-y-2 overflow-auto pr-1" data-scrollable>
+                            {sortedManageBoardPlayers.map((player) => (
+                              <div
+                                key={player.id}
+                                className="grid grid-cols-[minmax(0,1fr)_130px_170px] items-center gap-2"
+                              >
+                                <div className="truncate text-[11px] text-[var(--ink-0)]">
+                                  {player.name}
+                                  {player.guest ? (
+                                    <span className="ml-1 rounded-full border border-[var(--accent-0)] px-1 text-[9px] uppercase text-[var(--accent-0)]">
+                                      Guest
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <input
+                                  className="h-7 rounded-md border border-[var(--line)] bg-transparent px-2 text-[11px] text-[var(--ink-0)]"
+                                  value={player.positionLabel}
+                                  onChange={(event) =>
+                                    manageSetBoardPlayerPosition(
+                                      player.id,
+                                      event.target.value
+                                    )
+                                  }
+                                />
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    className={`rounded-full border px-2 py-1 text-[10px] ${
+                                      player.active === false
+                                        ? "border-[var(--line)] text-[var(--ink-1)]"
+                                        : "border-[var(--accent-0)] text-[var(--accent-0)]"
+                                    }`}
+                                    onClick={() =>
+                                      manageToggleBoardPlayerVisible(
+                                        player.id,
+                                        player.active === false
+                                      )
+                                    }
+                                  >
+                                    {player.active === false ? "Show" : "Hide"}
+                                  </button>
+                                  {player.guest ? (
+                                    <>
+                                      <button
+                                        className="rounded-full border border-[var(--accent-2)] px-2 py-1 text-[10px] text-[var(--accent-2)]"
+                                        onClick={() => managePromoteBoardGuest(player)}
+                                      >
+                                        Promote
+                                      </button>
+                                      <button
+                                        className="rounded-full border border-[var(--accent-1)] px-2 py-1 text-[10px] text-[var(--accent-1)]"
+                                        onClick={() => manageRemoveBoardGuest(player.id)}
+                                      >
+                                        Remove
+                                      </button>
+                                    </>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </>
                   ) : (
                     <p className="text-xs text-[var(--ink-1)]">

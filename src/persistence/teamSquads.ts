@@ -257,15 +257,16 @@ const createOrReplaceTeamSquad = async (params: {
     return { ok: false as const, error: clearRelationsError.message };
   }
 
-  const { error: clearPlayersError } = await supabase
+  const { data: existingPlayersData, error: existingPlayersError } = await supabase
     .from(TEAM_PLAYERS_TABLE)
-    .delete()
+    .select("id")
     .eq("team_id", params.teamId);
-  if (clearPlayersError) {
-    return { ok: false as const, error: clearPlayersError.message };
+  if (existingPlayersError) {
+    return { ok: false as const, error: existingPlayersError.message };
   }
 
-  const insertPlayersPayload = params.players.map((player) => ({
+  const upsertPlayersPayload = params.players.map((player) => ({
+    id: player.id,
     team_id: params.teamId,
     name: player.name,
     position_label: player.positionLabel,
@@ -277,10 +278,10 @@ const createOrReplaceTeamSquad = async (params: {
   }));
 
   const { data: insertedPlayers, error: insertPlayersError } =
-    insertPlayersPayload.length > 0
+    upsertPlayersPayload.length > 0
       ? await supabase
           .from(TEAM_PLAYERS_TABLE)
-          .insert(insertPlayersPayload)
+          .upsert(upsertPlayersPayload, { onConflict: "id" })
           .select(
             "id, team_id, name, position_label, is_active, number, vest_color, photo_url"
           )
@@ -288,6 +289,21 @@ const createOrReplaceTeamSquad = async (params: {
 
   if (insertPlayersError) {
     return { ok: false as const, error: insertPlayersError.message };
+  }
+
+  const keepIds = new Set(params.players.map((player) => player.id));
+  const removedIds = ((existingPlayersData ?? []) as Array<{ id: string }>)
+    .map((entry) => entry.id)
+    .filter((id) => !keepIds.has(id));
+  if (removedIds.length > 0) {
+    const { error: deleteRemovedError } = await supabase
+      .from(TEAM_PLAYERS_TABLE)
+      .delete()
+      .eq("team_id", params.teamId)
+      .in("id", removedIds);
+    if (deleteRemovedError) {
+      return { ok: false as const, error: deleteRemovedError.message };
+    }
   }
 
   const originalToInserted = new Map<string, TeamPlayerRow>();

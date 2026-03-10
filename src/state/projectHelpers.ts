@@ -271,6 +271,7 @@ export const createEmptyBoard = (
   notesFields: {},
   homeSquadId: squadIds?.homeSquadId,
   awaySquadId: squadIds?.awaySquadId,
+  squadOverrides: {},
   playerLabel:
     overrides?.playerLabel ?? {
       showName: true,
@@ -489,6 +490,9 @@ export const ensureBoardSquads = (project: Project): Project => {
     // empty squads replacing linked players in older projects.
     board.homeSquadId = primaryHome.id;
     board.awaySquadId = primaryAway.id;
+    if (!board.squadOverrides) {
+      board.squadOverrides = {};
+    }
 
     if (!project.settings) {
       project.settings = {

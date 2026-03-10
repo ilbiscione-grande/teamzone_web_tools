@@ -169,11 +169,15 @@ export default function PropertiesPanel({
     return map;
   })();
   const playerOptions = [
-    ...(memoBoardSquads.home?.players.map((player) => ({
+    ...(memoBoardSquads.home?.players
+      .filter((player) => player.active !== false)
+      .map((player) => ({
       id: player.id,
       label: `Home: ${player.name} (${player.positionLabel})`,
     })) ?? []),
-    ...(memoBoardSquads.away?.players.map((player) => ({
+    ...(memoBoardSquads.away?.players
+      .filter((player) => player.active !== false)
+      .map((player) => ({
       id: player.id,
       label: `Away: ${player.name} (${player.positionLabel})`,
     })) ?? []),

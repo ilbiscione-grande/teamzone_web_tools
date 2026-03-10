@@ -1,4 +1,5 @@
 import type { DrawableObject, Style } from "./drawables";
+import type { SquadPlayer } from "./squad";
 
 export type BoardMode = "STATIC" | "DYNAMIC";
 export type PitchView = "FULL" | "DEF_HALF" | "OFF_HALF" | "GREEN_EMPTY";
@@ -19,6 +20,12 @@ export type PlayerLink = {
   id: string;
   playerIds: string[];
   style?: Style;
+};
+
+export type BoardSquadOverride = {
+  hiddenPlayerIds?: string[];
+  guestPlayers?: SquadPlayer[];
+  positionOverrides?: Record<string, string>;
 };
 
 export type Board = {
@@ -67,6 +74,7 @@ export type Board = {
   };
   homeSquadId?: string;
   awaySquadId?: string;
+  squadOverrides?: Record<string, BoardSquadOverride>;
   playerLabel: {
     showName: boolean;
     showPosition: boolean;

@@ -1,5 +1,41 @@
 import type { Board, Project, Squad } from "@/models";
 
+const applyBoardOverride = (board: Board, squad: Squad): Squad => {
+  const override = board.squadOverrides?.[squad.id];
+  if (!override) {
+    return squad;
+  }
+  const hiddenIds = new Set(override.hiddenPlayerIds ?? []);
+  const positionOverrides = override.positionOverrides ?? {};
+  const basePlayers = squad.players.map((player) => {
+    const nextPosition = positionOverrides[player.id];
+    return {
+      ...player,
+      positionLabel:
+        typeof nextPosition === "string" && nextPosition.trim().length > 0
+          ? nextPosition
+          : player.positionLabel,
+      active: hiddenIds.has(player.id) ? false : player.active ?? true,
+    };
+  });
+  const guestPlayers = (override.guestPlayers ?? []).map((guest) => {
+    const nextPosition = positionOverrides[guest.id];
+    return {
+      ...guest,
+      guest: true,
+      positionLabel:
+        typeof nextPosition === "string" && nextPosition.trim().length > 0
+          ? nextPosition
+          : guest.positionLabel,
+      active: hiddenIds.has(guest.id) ? false : guest.active ?? true,
+    };
+  });
+  return {
+    ...squad,
+    players: [...basePlayers, ...guestPlayers],
+  };
+};
+
 export const getActiveBoard = (project: Project | null): Board | null => {
   if (!project || !Array.isArray(project.boards) || project.boards.length === 0) {
     return null;
@@ -31,6 +67,12 @@ export const getBoardSquads = (
   const away = board.awaySquadId
     ? project.squads.find((item) => item.id === board.awaySquadId)
     : undefined;
-  const all = [home, away].filter(Boolean) as Squad[];
-  return { home, away, all };
+  const homeWithOverride = home ? applyBoardOverride(board, home) : undefined;
+  const awayWithOverride = away ? applyBoardOverride(board, away) : undefined;
+  const all = [homeWithOverride, awayWithOverride].filter(Boolean) as Squad[];
+  return {
+    home: homeWithOverride,
+    away: awayWithOverride,
+    all,
+  };
 };

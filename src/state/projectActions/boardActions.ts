@@ -144,6 +144,37 @@ export const createBoardActions: StateCreator<
       clonedBoard.awaySquadId = snapshot.board.awaySquadId
         ? squadIdMap.get(snapshot.board.awaySquadId)
         : undefined;
+      if (clonedBoard.squadOverrides) {
+        const nextOverrides: NonNullable<Board["squadOverrides"]> = {};
+        Object.entries(clonedBoard.squadOverrides).forEach(
+          ([originalSquadId, override]) => {
+            const mappedSquadId = squadIdMap.get(originalSquadId);
+            if (!mappedSquadId || !override) {
+              return;
+            }
+            const mappedHidden = (override.hiddenPlayerIds ?? [])
+              .map((id) => playerIdMap.get(id) ?? id)
+              .filter((id): id is string => Boolean(id));
+            const mappedGuests = (override.guestPlayers ?? []).map((guest) => ({
+              ...guest,
+              id: playerIdMap.get(guest.id) ?? createId(),
+            }));
+            const mappedPositions: Record<string, string> = {};
+            Object.entries(override.positionOverrides ?? {}).forEach(
+              ([playerId, positionLabel]) => {
+                const mappedPlayerId = playerIdMap.get(playerId) ?? playerId;
+                mappedPositions[mappedPlayerId] = positionLabel;
+              }
+            );
+            nextOverrides[mappedSquadId] = {
+              hiddenPlayerIds: mappedHidden,
+              guestPlayers: mappedGuests,
+              positionOverrides: mappedPositions,
+            };
+          }
+        );
+        clonedBoard.squadOverrides = nextOverrides;
+      }
       clonedBoard.frames = clonedBoard.frames.map((frame) => ({
         ...frame,
         id: createId(),
