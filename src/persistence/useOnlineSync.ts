@@ -11,7 +11,10 @@ import {
 import { loadProject, loadProjectIndex, saveProject } from "@/persistence/storage";
 import { serializeProject } from "@/persistence/serialize";
 import type { Project } from "@/models";
-import { requestSyncConflictResolution } from "@/persistence/syncConflictBridge";
+import {
+  requestSyncConflictResolution,
+  type SyncConflictChoice,
+} from "@/persistence/syncConflictBridge";
 import {
   clearAllOfflineDirtyProjects,
   clearOfflineDirtyProject,
@@ -35,6 +38,103 @@ const downloadBackup = (project: Project) => {
   URL.revokeObjectURL(url);
 };
 
+type ResolveSyncConflictsDeps = {
+  authUserId: string | null | undefined;
+  getDirtyProjectIds: (userId: string) => string[];
+  loadLocalIndex: (userId: string) => { id: string; name: string; updatedAt: string }[];
+  fetchCloudIndex: () => Promise<{ id: string; name: string; updatedAt: string }[]>;
+  loadLocalProject: (projectId: string, userId: string) => Project | null;
+  fetchCloudProject: (projectId: string) => Promise<Project | null>;
+  requestResolution: (payload: { projectName: string }) => Promise<SyncConflictChoice>;
+  saveCloudProject: (project: Project) => Promise<boolean>;
+  saveLocalProject: (project: Project, userId: string) => void;
+  clearDirtyProject: (userId: string, projectId: string) => void;
+  setSyncStatus: (status: {
+    state: "idle" | "syncing" | "saved" | "error" | "offline";
+    message?: string;
+    updatedAt: string;
+  }) => void;
+  exportBackup: (project: Project) => void;
+};
+
+export const resolveSyncConflictsBeforeSync = async ({
+  authUserId,
+  getDirtyProjectIds,
+  loadLocalIndex,
+  fetchCloudIndex,
+  loadLocalProject,
+  fetchCloudProject,
+  requestResolution,
+  saveCloudProject,
+  saveLocalProject,
+  clearDirtyProject,
+  setSyncStatus,
+  exportBackup,
+}: ResolveSyncConflictsDeps): Promise<boolean> => {
+  if (!authUserId) {
+    return true;
+  }
+  const userId = authUserId;
+  const dirtyIds = new Set(getDirtyProjectIds(userId));
+  if (dirtyIds.size === 0) {
+    return true;
+  }
+  const localIndex = loadLocalIndex(userId);
+  const cloudIndex = await fetchCloudIndex();
+  const cloudIds = new Set(cloudIndex.map((item) => item.id));
+
+  for (const localSummary of localIndex) {
+    if (!dirtyIds.has(localSummary.id)) {
+      continue;
+    }
+    if (!cloudIds.has(localSummary.id)) {
+      continue;
+    }
+    const local = loadLocalProject(localSummary.id, userId);
+    const cloud = await fetchCloudProject(localSummary.id);
+    if (!local || !cloud) {
+      continue;
+    }
+    if (sameProjectContent(local, cloud)) {
+      clearDirtyProject(userId, localSummary.id);
+      continue;
+    }
+
+    const choice = await requestResolution({
+      projectName: local.name,
+    });
+
+    if (choice === "local") {
+      const ok = await saveCloudProject(local);
+      if (!ok) {
+        setSyncStatus({
+          state: "error",
+          message: `Kunde inte skriva över cloud för ${local.name}.`,
+          updatedAt: new Date().toISOString(),
+        });
+        return false;
+      }
+      clearDirtyProject(userId, localSummary.id);
+      continue;
+    }
+
+    if (choice === "export") {
+      exportBackup(local);
+      setSyncStatus({
+        state: "error",
+        message: `Sync avbruten. Lokal backup exporterad för ${local.name}.`,
+        updatedAt: new Date().toISOString(),
+      });
+      return false;
+    }
+
+    saveLocalProject(cloud, userId);
+    clearDirtyProject(userId, localSummary.id);
+  }
+
+  return true;
+};
+
 export const useOnlineSync = () => {
   const authUser = useProjectStore((state) => state.authUser);
   const plan = useProjectStore((state) => state.plan);
@@ -48,75 +148,6 @@ export const useOnlineSync = () => {
 
     let resolving = false;
 
-    const resolveConflictsBeforeSync = async () => {
-      if (!authUser) {
-        return true;
-      }
-      const userId = authUser.id;
-      if (!userId) {
-        return true;
-      }
-      const dirtyIds = new Set(getOfflineDirtyProjectIds(userId));
-      if (dirtyIds.size === 0) {
-        return true;
-      }
-      const localIndex = loadProjectIndex(userId);
-      const cloudIndex = await fetchProjectIndexCloud();
-      const cloudIds = new Set(cloudIndex.map((item) => item.id));
-
-      for (const localSummary of localIndex) {
-        if (!dirtyIds.has(localSummary.id)) {
-          continue;
-        }
-        if (!cloudIds.has(localSummary.id)) {
-          continue;
-        }
-        const local = loadProject(localSummary.id, userId);
-        const cloud = await fetchProjectCloud(localSummary.id);
-        if (!local || !cloud) {
-          continue;
-        }
-        if (sameProjectContent(local, cloud)) {
-          clearOfflineDirtyProject(userId, localSummary.id);
-          continue;
-        }
-
-        const choice = await requestSyncConflictResolution({
-          projectName: local.name,
-        });
-
-        if (choice === "local") {
-          const ok = await saveProjectCloud(local);
-          if (!ok) {
-            setSyncStatus({
-              state: "error",
-              message: `Kunde inte skriva över cloud för ${local.name}.`,
-              updatedAt: new Date().toISOString(),
-            });
-            return false;
-          }
-          clearOfflineDirtyProject(userId, localSummary.id);
-          continue;
-        }
-
-        if (choice === "export") {
-          downloadBackup(local);
-          setSyncStatus({
-            state: "error",
-            message: `Sync avbruten. Lokal backup exporterad för ${local.name}.`,
-            updatedAt: new Date().toISOString(),
-          });
-          return false;
-        }
-
-        // Default: keep cloud; replace local cache for this project.
-        saveProject(cloud, userId);
-        clearOfflineDirtyProject(userId, localSummary.id);
-      }
-
-      return true;
-    };
-
     const handleOnline = () => {
       if (resolving) {
         return;
@@ -126,7 +157,20 @@ export const useOnlineSync = () => {
         state: "syncing",
         updatedAt: new Date().toISOString(),
       });
-      resolveConflictsBeforeSync()
+      resolveSyncConflictsBeforeSync({
+        authUserId: authUser?.id,
+        getDirtyProjectIds: getOfflineDirtyProjectIds,
+        loadLocalIndex: loadProjectIndex,
+        fetchCloudIndex: fetchProjectIndexCloud,
+        loadLocalProject: loadProject,
+        fetchCloudProject: fetchProjectCloud,
+        requestResolution: requestSyncConflictResolution,
+        saveCloudProject: saveProjectCloud,
+        saveLocalProject: saveProject,
+        clearDirtyProject: clearOfflineDirtyProject,
+        setSyncStatus,
+        exportBackup: downloadBackup,
+      })
         .then((ok) => {
           if (!ok) {
             return null;

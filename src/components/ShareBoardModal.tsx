@@ -25,6 +25,7 @@ import {
 import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { useEditorStore } from "@/state/useEditorStore";
 import { getStageRef } from "@/utils/stageRef";
+import { withTemporaryBoardCaptureState } from "@/utils/temporaryBoardCapture";
 
 type ShareBoardModalProps = {
   open: boolean;
@@ -92,93 +93,76 @@ export default function ShareBoardModal({
       return null;
     }
     const editorState = useEditorStore.getState();
-    const previousFrameIndex = board.activeFrameIndex;
-    const previousPlayhead = editorState.playheadFrame;
-    const previousViewport = editorState.viewport;
-    const wasPlaying = editorState.isPlaying;
-    editorState.setPlaying(false);
+    return withTemporaryBoardCaptureState({
+      board,
+      editorState,
+      setActiveFrameIndex,
+      run: async () => {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-    const shouldResetFrame = board.mode === "DYNAMIC";
-    if (shouldResetFrame) {
-      if (previousFrameIndex !== 0) {
-        setActiveFrameIndex(board.id, 0);
-      }
-      if (previousPlayhead !== 0) {
-        editorState.setPlayheadFrame(0);
-      }
-    }
-    editorState.setViewport({ zoom: 1, offsetX: 0, offsetY: 0 });
-
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-    const pitchBounds = getPitchViewBounds(board.pitchView);
-    const viewRotation =
-      board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF" ? -90 : 0;
-    const effectiveBounds =
-      viewRotation === 0
-        ? pitchBounds
-        : {
-            x: pitchBounds.x + pitchBounds.width / 2 - pitchBounds.height / 2,
-            y: pitchBounds.y + pitchBounds.height / 2 - pitchBounds.width / 2,
-            width: pitchBounds.height,
-            height: pitchBounds.width,
+        const pitchBounds = getPitchViewBounds(board.pitchView);
+        const viewRotation =
+          board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF"
+            ? -90
+            : 0;
+        const effectiveBounds =
+          viewRotation === 0
+            ? pitchBounds
+            : {
+                x:
+                  pitchBounds.x +
+                  pitchBounds.width / 2 -
+                  pitchBounds.height / 2,
+                y:
+                  pitchBounds.y +
+                  pitchBounds.height / 2 -
+                  pitchBounds.width / 2,
+                width: pitchBounds.height,
+                height: pitchBounds.width,
+              };
+        const pixelRatio = window.devicePixelRatio ?? 1;
+        const stageScale = stage.scaleX();
+        const stageOffsetX = stage.x();
+        const stageOffsetY = stage.y();
+        const srcX = (effectiveBounds.x * stageScale + stageOffsetX) * pixelRatio;
+        const srcY = (effectiveBounds.y * stageScale + stageOffsetY) * pixelRatio;
+        const srcW = effectiveBounds.width * stageScale * pixelRatio;
+        const srcH = effectiveBounds.height * stageScale * pixelRatio;
+        const targetW = Math.max(1, Math.round(srcW));
+        const targetH = Math.max(1, Math.round(srcH));
+        const canvas = document.createElement("canvas");
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          return null;
+        }
+        ctx.fillStyle = "#1f5f3f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        stage.getLayers().forEach((layer) => {
+          const layerCanvasWrapper = layer.getCanvas() as {
+            _canvas?: HTMLCanvasElement;
           };
-    const pixelRatio = window.devicePixelRatio ?? 1;
-    const stageScale = stage.scaleX();
-    const stageOffsetX = stage.x();
-    const stageOffsetY = stage.y();
-    const srcX = (effectiveBounds.x * stageScale + stageOffsetX) * pixelRatio;
-    const srcY = (effectiveBounds.y * stageScale + stageOffsetY) * pixelRatio;
-    const srcW = effectiveBounds.width * stageScale * pixelRatio;
-    const srcH = effectiveBounds.height * stageScale * pixelRatio;
-    const targetW = Math.max(1, Math.round(srcW));
-    const targetH = Math.max(1, Math.round(srcH));
-    const canvas = document.createElement("canvas");
-    canvas.width = targetW;
-    canvas.height = targetH;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      return null;
-    }
-    ctx.fillStyle = "#1f5f3f";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    stage.getLayers().forEach((layer) => {
-      const layerCanvasWrapper = layer.getCanvas() as {
-        _canvas?: HTMLCanvasElement;
-      };
-      const layerCanvas = layerCanvasWrapper?._canvas;
-      if (!layerCanvas) {
-        return;
-      }
-      ctx.drawImage(
-        layerCanvas,
-        srcX,
-        srcY,
-        srcW,
-        srcH,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
+          const layerCanvas = layerCanvasWrapper?._canvas;
+          if (!layerCanvas) {
+            return;
+          }
+          ctx.drawImage(
+            layerCanvas,
+            srcX,
+            srcY,
+            srcW,
+            srcH,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          );
+        });
+        return canvas.toDataURL("image/png");
+      },
     });
-    const dataUrl = canvas.toDataURL("image/png");
-
-    editorState.setViewport(previousViewport);
-    if (shouldResetFrame) {
-      if (previousFrameIndex !== 0) {
-        setActiveFrameIndex(board.id, previousFrameIndex);
-      }
-      if (previousPlayhead !== 0) {
-        editorState.setPlayheadFrame(previousPlayhead);
-      }
-    }
-    if (wasPlaying) {
-      editorState.setPlaying(true);
-    }
-
-    return dataUrl;
   };
 
   useEffect(() => {

@@ -147,6 +147,11 @@ export default function EditorLayout() {
     drawingStrokeIndexRef.current = null;
   }, [isMaximized]);
   useEffect(() => {
+    setIsMaximizedPenMode(false);
+    setMaximizedInkStrokes([]);
+    drawingStrokeIndexRef.current = null;
+  }, [board?.id]);
+  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }

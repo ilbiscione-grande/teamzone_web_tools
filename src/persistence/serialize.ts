@@ -8,17 +8,182 @@ export type ValidationResult =
 export const serializeProject = (project: Project) =>
   JSON.stringify(project, null, 2);
 
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object";
+
+const isString = (value: unknown): value is string => typeof value === "string";
+const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every(isString);
+
+const isPoint = (value: unknown) =>
+  isObject(value) && isFiniteNumber(value.x) && isFiniteNumber(value.y);
+
+const isStyle = (value: unknown) =>
+  isObject(value) &&
+  isString(value.stroke) &&
+  isString(value.fill) &&
+  isFiniteNumber(value.strokeWidth) &&
+  Array.isArray(value.dash) &&
+  value.dash.every(isFiniteNumber) &&
+  isFiniteNumber(value.opacity);
+
+const isDrawable = (value: unknown): boolean => {
+  if (!isObject(value)) {
+    return false;
+  }
+  if (
+    !isString(value.id) ||
+    !isString(value.type) ||
+    !isPoint(value.position) ||
+    !isFiniteNumber(value.rotation) ||
+    !isPoint(value.scale) ||
+    !isStyle(value.style) ||
+    !isFiniteNumber(value.zIndex) ||
+    !isBoolean(value.locked) ||
+    !isBoolean(value.visible)
+  ) {
+    return false;
+  }
+
+  switch (value.type) {
+    case "player":
+      return (
+        isBoolean(value.showName) &&
+        isBoolean(value.showPosition) &&
+        isBoolean(value.showNumber) &&
+        isFiniteNumber(value.tokenSize) &&
+        (value.moveControl === undefined || isPoint(value.moveControl))
+      );
+    case "ball":
+      return value.offset === undefined || isPoint(value.offset);
+    case "cone":
+    case "pole":
+    case "mannequin":
+    case "goal":
+      return isFiniteNumber(value.width) && isFiniteNumber(value.height);
+    case "circle":
+      return isFiniteNumber(value.radius);
+    case "rect":
+      return (
+        isFiniteNumber(value.width) &&
+        isFiniteNumber(value.height) &&
+        isFiniteNumber(value.cornerRadius)
+      );
+    case "triangle":
+      return isFiniteNumber(value.width) && isFiniteNumber(value.height);
+    case "arrow":
+      return (
+        Array.isArray(value.points) &&
+        value.points.every(isFiniteNumber) &&
+        isBoolean(value.head) &&
+        isBoolean(value.dashed) &&
+        (value.control === undefined || isPoint(value.control))
+      );
+    case "text":
+      return (
+        isString(value.text) &&
+        isFiniteNumber(value.fontSize) &&
+        isBoolean(value.bold) &&
+        isBoolean(value.background) &&
+        (value.align === "left" ||
+          value.align === "center" ||
+          value.align === "right") &&
+        isFiniteNumber(value.width) &&
+        (value.height === undefined || isFiniteNumber(value.height))
+      );
+    case "path":
+      return Array.isArray(value.points) && value.points.every(isFiniteNumber);
+    default:
+      return false;
+  }
+};
+
+const isSquadPlayer = (value: unknown) =>
+  isObject(value) &&
+  isString(value.id) &&
+  isString(value.name) &&
+  isString(value.positionLabel) &&
+  (value.number === undefined || isFiniteNumber(value.number));
+
+const isSquad = (value: unknown) =>
+  isObject(value) &&
+  isString(value.id) &&
+  isString(value.name) &&
+  isObject(value.kit) &&
+  isString(value.kit.shirt) &&
+  isString(value.kit.shorts) &&
+  isString(value.kit.socks) &&
+  Array.isArray(value.players) &&
+  value.players.every(isSquadPlayer) &&
+  (value.substituteIds === undefined || isStringArray(value.substituteIds));
+
+const isPlayerLink = (value: unknown) =>
+  isObject(value) &&
+  isString(value.id) &&
+  isStringArray(value.playerIds) &&
+  (value.style === undefined || isStyle(value.style));
+
+const isBoardFrame = (value: unknown) =>
+  isObject(value) &&
+  isString(value.id) &&
+  isString(value.name) &&
+  Array.isArray(value.objects) &&
+  value.objects.every(isDrawable) &&
+  (value.durationMs === undefined || isFiniteNumber(value.durationMs)) &&
+  (value.playerHighlights === undefined || isStringArray(value.playerHighlights)) &&
+  (value.playerLinks === undefined ||
+    (Array.isArray(value.playerLinks) && value.playerLinks.every(isPlayerLink)));
+
+const isBoard = (value: unknown) =>
+  isObject(value) &&
+  isString(value.id) &&
+  isString(value.name) &&
+  (value.mode === "STATIC" || value.mode === "DYNAMIC") &&
+  (value.pitchView === "FULL" ||
+    value.pitchView === "DEF_HALF" ||
+    value.pitchView === "OFF_HALF" ||
+    value.pitchView === "GREEN_EMPTY") &&
+  (value.pitchOverlay === "NONE" ||
+    value.pitchOverlay === "CORRIDORS" ||
+    value.pitchOverlay === "THIRDS" ||
+    value.pitchOverlay === "ZONES_18") &&
+  isBoolean(value.pitchOverlayText) &&
+  isString(value.notes) &&
+  isObject(value.playerLabel) &&
+  isBoolean(value.playerLabel.showName) &&
+  isBoolean(value.playerLabel.showPosition) &&
+  isBoolean(value.playerLabel.showNumber) &&
+  Array.isArray(value.playerHighlights) &&
+  value.playerHighlights.every(isString) &&
+  Array.isArray(value.playerLinks) &&
+  value.playerLinks.every(isPlayerLink) &&
+  Array.isArray(value.layers) &&
+  value.layers.every(isDrawable) &&
+  Array.isArray(value.frames) &&
+  value.frames.every(isBoardFrame) &&
+  isFiniteNumber(value.activeFrameIndex);
+
 const isProject = (value: unknown): value is Project => {
-  if (!value || typeof value !== "object") {
+  if (!isObject(value)) {
     return false;
   }
   const candidate = value as Project;
   return (
     typeof candidate.id === "string" &&
     typeof candidate.name === "string" &&
+    typeof candidate.createdAt === "string" &&
+    typeof candidate.updatedAt === "string" &&
     typeof candidate.schemaVersion === "number" &&
+    typeof candidate.sessionNotes === "string" &&
+    isObject(candidate.settings) &&
     Array.isArray(candidate.boards) &&
-    Array.isArray(candidate.squads)
+    candidate.boards.every(isBoard) &&
+    Array.isArray(candidate.squads) &&
+    candidate.squads.every(isSquad)
   );
 };
 

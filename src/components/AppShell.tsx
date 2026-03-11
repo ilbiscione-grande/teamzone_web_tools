@@ -18,6 +18,11 @@ import {
   resetNetworkCounters,
 } from "@/persistence/networkCounters";
 import {
+  consumeStorageNotice,
+  storageNoticeEventName,
+  type StorageNotice,
+} from "@/persistence/storage";
+import {
   registerSyncConflictHandler,
   type SyncConflictChoice,
 } from "@/persistence/syncConflictBridge";
@@ -38,6 +43,7 @@ export default function AppShell() {
     resolve: (choice: SyncConflictChoice) => void;
   } | null>(null);
   const [quickFeedbackOpen, setQuickFeedbackOpen] = useState(false);
+  const [storageNotice, setStorageNotice] = useState<StorageNotice | null>(null);
   const analyticsSessionKeyRef = useRef<string>("");
   const analyticsStartRef = useRef<number>(0);
   const analyticsLastBeatRef = useRef<number>(0);
@@ -68,6 +74,23 @@ export default function AppShell() {
 
   useAutosave();
   useOnlineSync();
+
+  useEffect(() => {
+    const loadNotice = () => {
+      const next = consumeStorageNotice();
+      if (next) {
+        setStorageNotice(next);
+      }
+    };
+    loadNotice();
+    window.addEventListener(storageNoticeEventName, loadNotice as EventListener);
+    return () => {
+      window.removeEventListener(
+        storageNoticeEventName,
+        loadNotice as EventListener
+      );
+    };
+  }, []);
 
   useEffect(() => {
     const unregister = registerSyncConflictHandler(
@@ -409,6 +432,30 @@ export default function AppShell() {
           {pullReady ? "Release to refresh" : "Pull to refresh"}
         </div>
       </div>
+      {storageNotice ? (
+        <div className="fixed inset-x-0 top-3 z-[65] flex justify-center px-3">
+          <div
+            className={`flex w-full max-w-2xl items-start gap-3 rounded-2xl border px-4 py-3 text-sm shadow-xl shadow-black/30 ${
+              storageNotice.level === "error"
+                ? "border-[#f06d4f] bg-[#2a1714] text-[#ffe7de]"
+                : "border-[#f9bf4a] bg-[#2b2414] text-[#fff2cf]"
+            }`}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] uppercase tracking-widest opacity-80">
+                Local storage notice
+              </p>
+              <p className="mt-1">{storageNotice.message}</p>
+            </div>
+            <button
+              className="rounded-full border border-white/20 px-3 py-1 text-xs"
+              onClick={() => setStorageNotice(null)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      ) : null}
       {isStandalone && (
         <button
           className="fixed right-4 top-4 z-50 rounded-full border border-white/20 bg-black/40 p-2 text-[var(--ink-0)] shadow-lg shadow-black/30 backdrop-blur"

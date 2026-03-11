@@ -2,6 +2,14 @@ import type { Project, ProjectSummary } from "@/models";
 
 const INDEX_KEY = "tacticsboard:projects";
 const PROJECT_PREFIX = "tacticsboard:project:";
+const STORAGE_NOTICE_KEY = "tacticsboard:storageNotice";
+const STORAGE_NOTICE_EVENT = "tacticsboard:storage-notice";
+
+export type StorageNotice = {
+  level: "warning" | "error";
+  message: string;
+  createdAt: string;
+};
 
 const getIndexKey = (userId?: string | null) =>
   userId ? `${INDEX_KEY}:${userId}` : INDEX_KEY;
@@ -15,6 +23,45 @@ const isQuotaExceededError = (error: unknown) =>
 
 const sortByUpdatedAtDescending = (index: ProjectSummary[]) =>
   [...index].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+const emitStorageNotice = (notice: StorageNotice) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(STORAGE_NOTICE_KEY, JSON.stringify(notice));
+  } catch (error) {
+    console.warn("Could not persist storage notice.", error);
+  }
+  window.dispatchEvent(new CustomEvent(STORAGE_NOTICE_EVENT));
+};
+
+export const consumeStorageNotice = (): StorageNotice | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const raw = window.localStorage.getItem(STORAGE_NOTICE_KEY);
+  if (!raw) {
+    return null;
+  }
+  window.localStorage.removeItem(STORAGE_NOTICE_KEY);
+  try {
+    const parsed = JSON.parse(raw) as StorageNotice;
+    if (
+      parsed &&
+      (parsed.level === "warning" || parsed.level === "error") &&
+      typeof parsed.message === "string" &&
+      typeof parsed.createdAt === "string"
+    ) {
+      return parsed;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
+export const storageNoticeEventName = STORAGE_NOTICE_EVENT;
 
 const freeSpaceForProject = (projectId: string, userId?: string | null) => {
   if (typeof window === "undefined") {
@@ -40,6 +87,11 @@ const freeSpaceForProject = (projectId: string, userId?: string | null) => {
     }
     try {
       window.localStorage.setItem(getIndexKey(userId), JSON.stringify(nextIndex));
+      emitStorageNotice({
+        level: "warning",
+        message: `Lokal lagring var full. Projektet "${item.name}" togs bort lokalt for att gora plats.`,
+        createdAt: new Date().toISOString(),
+      });
       return true;
     } catch (error) {
       if (!isQuotaExceededError(error)) {
@@ -92,6 +144,13 @@ export const saveProjectIndex = (
       }
       try {
         window.localStorage.setItem(getIndexKey(userId), JSON.stringify(shrink));
+        if (removed) {
+          emitStorageNotice({
+            level: "warning",
+            message: `Lokal lagring var full. Projektet "${removed.name}" togs bort lokalt for att gora plats.`,
+            createdAt: new Date().toISOString(),
+          });
+        }
         return;
       } catch (retryError) {
         if (!isQuotaExceededError(retryError)) {
@@ -101,6 +160,11 @@ export const saveProjectIndex = (
       }
     }
 
+    emitStorageNotice({
+      level: "error",
+      message: "Kunde inte spara projektlistan lokalt eftersom lagringen ar full.",
+      createdAt: new Date().toISOString(),
+    });
     console.warn("Could not persist project index to local storage.", error);
   }
 };
@@ -140,10 +204,20 @@ export const saveProject = (project: Project, userId?: string | null) => {
         window.localStorage.setItem(projectKey, data);
         return;
       } catch (retryError) {
+        emitStorageNotice({
+          level: "error",
+          message: `Kunde inte spara projektet "${project.name}" lokalt efter att plats frigjorts.`,
+          createdAt: new Date().toISOString(),
+        });
         console.warn("Could not persist project to local storage.", retryError);
         return;
       }
     }
+    emitStorageNotice({
+      level: "error",
+      message: `Kunde inte spara projektet "${project.name}" lokalt eftersom lagringen ar full.`,
+      createdAt: new Date().toISOString(),
+    });
     console.warn("Could not persist project to local storage.", error);
   }
 };

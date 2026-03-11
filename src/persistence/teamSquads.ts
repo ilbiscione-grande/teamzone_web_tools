@@ -48,6 +48,31 @@ const TEAM_MEMBERS_TABLE = "team_members";
 const TEAM_SQUADS_TABLE = "team_squads";
 const TEAM_PLAYERS_TABLE = "team_players";
 const TEAM_SQUAD_PLAYERS_TABLE = "team_squad_players";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const isUuid = (value: string | null | undefined): value is string =>
+  typeof value === "string" && UUID_PATTERN.test(value);
+
+export const toPersistedTeamPlayerId = (playerId: string) => {
+  if (isUuid(playerId)) {
+    return playerId;
+  }
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  const randomChunk = () =>
+    Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .slice(1);
+  return `${randomChunk()}${randomChunk()}-${randomChunk()}-4${randomChunk().slice(
+    0,
+    3
+  )}-${((8 + Math.random() * 4) | 0).toString(16)}${randomChunk().slice(
+    0,
+    3
+  )}-${randomChunk()}${randomChunk()}${randomChunk()}`;
+};
 
 const getAuthUser = async () => {
   if (!supabase) {
@@ -266,7 +291,7 @@ const createOrReplaceTeamSquad = async (params: {
   }
 
   const upsertPlayersPayload = params.players.map((player) => ({
-    id: player.id,
+    id: toPersistedTeamPlayerId(player.id),
     team_id: params.teamId,
     name: player.name,
     position_label: player.positionLabel,
@@ -306,11 +331,19 @@ const createOrReplaceTeamSquad = async (params: {
     }
   }
 
+  const insertedById = new Map<string, TeamPlayerRow>();
+  ((insertedPlayers ?? []) as TeamPlayerRow[]).forEach((player) => {
+    insertedById.set(player.id, player);
+  });
   const originalToInserted = new Map<string, TeamPlayerRow>();
   params.players.forEach((player, index) => {
-    const inserted = (insertedPlayers ?? [])[index];
+    const persistedId = upsertPlayersPayload[index]?.id;
+    if (!persistedId) {
+      return;
+    }
+    const inserted = insertedById.get(persistedId);
     if (inserted) {
-      originalToInserted.set(player.id, inserted as TeamPlayerRow);
+      originalToInserted.set(player.id, inserted);
     }
   });
 
@@ -333,8 +366,10 @@ const createOrReplaceTeamSquad = async (params: {
         order_index: orderIndex,
         is_captain: captainTarget ? captainTarget === inserted.id : false,
         is_substitute: substituteTargets.includes(inserted.id),
-        source_team_id: player.sourceTeamId ?? null,
-        source_player_id: player.sourcePlayerId ?? null,
+        source_team_id: isUuid(player.sourceTeamId) ? player.sourceTeamId : null,
+        source_player_id: isUuid(player.sourcePlayerId)
+          ? player.sourcePlayerId
+          : null,
         updated_at: new Date().toISOString(),
       };
     })
