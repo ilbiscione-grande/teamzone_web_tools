@@ -182,17 +182,6 @@ export default function PropertiesPanel({
         label: `Away: ${player.name} (${player.positionLabel})`,
       })) ?? []),
   ];
-  const linkedSquadPlayerIdsOnBoard = new Set(
-    board.frames.flatMap((frame) =>
-      frame.objects.flatMap((item) =>
-        item.type === "player" &&
-        item.id !== target?.id &&
-        item.squadPlayerId
-          ? [item.squadPlayerId]
-          : []
-      )
-    )
-  );
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [copyTargetMode, setCopyTargetMode] = useState<"same" | "other">(
     "same"
@@ -206,6 +195,18 @@ export default function PropertiesPanel({
   if (!board) {
     return null;
   }
+
+  const linkedSquadPlayerIdsOnBoard = new Set(
+    board.frames.flatMap((frame) =>
+      frame.objects.flatMap((item) =>
+        item.type === "player" &&
+        item.id !== target?.id &&
+        item.squadPlayerId
+          ? [item.squadPlayerId]
+          : []
+      )
+    )
+  );
 
   const update = (payload: Partial<DrawableObject>) => {
     if (!target) {
