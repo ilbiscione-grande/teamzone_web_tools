@@ -96,6 +96,18 @@ export const createObjectActions: StateCreator<
                 linkedSquadPlayerPosition;
             }
           }
+          if (!nextSquadPlayerId) {
+            return;
+          }
+          entry.objects.forEach((item) => {
+            if (
+              item.id !== objectId &&
+              item.type === "player" &&
+              item.squadPlayerId === nextSquadPlayerId
+            ) {
+              item.squadPlayerId = undefined;
+            }
+          });
         });
       }
       if (board.mode === "STATIC") {

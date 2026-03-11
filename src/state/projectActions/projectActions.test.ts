@@ -180,9 +180,57 @@ describe("project actions", () => {
     ).toBe("CM");
   });
 
+  it("moves a squad player link from another board token when reassigned", () => {
+    const useStore = createTestStore();
+    const project = createDefaultProject("Linked Players");
+    const squad = project.squads[0]!;
+    squad.players = [
+      {
+        id: "squad-player-1",
+        name: "Player One",
+        positionLabel: "RB",
+      },
+      {
+        id: "squad-player-2",
+        name: "Player Two",
+        positionLabel: "CM",
+      },
+    ];
+    const board = project.boards[0]!;
+    board.mode = "STATIC";
+    board.frames[0]!.objects = [
+      createPlayerObject("player-a", "squad-player-1"),
+      createPlayerObject("player-b", "squad-player-2"),
+    ];
+    useStore.setState({
+      project,
+      activeProjectId: project.id,
+    });
+
+    useStore
+      .getState()
+      .updateObject(board.id, 0, "player-b", {
+        squadPlayerId: "squad-player-1",
+      } as Partial<DrawableObject>);
+
+    const objects = useStore.getState().project?.boards[0]?.frames[0]?.objects ?? [];
+    expect(
+      objects.find((item) => item.id === "player-b" && item.type === "player")
+    ).toMatchObject({
+      squadPlayerId: "squad-player-1",
+      boardPositionLabel: "RB",
+    });
+    expect(
+      objects.find((item) => item.id === "player-a" && item.type === "player")
+    ).toMatchObject({
+      squadPlayerId: undefined,
+    });
+  });
+
   it("adds, updates and removes squad players while updating project timestamp", () => {
     const useStore = createTestStore();
     const project = createDefaultProject("Squad Project");
+    project.updatedAt = "2026-03-01T00:00:00.000Z";
     useStore.setState({
       project,
       activeProjectId: project.id,

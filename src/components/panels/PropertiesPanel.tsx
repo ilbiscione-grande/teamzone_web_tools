@@ -172,16 +172,27 @@ export default function PropertiesPanel({
     ...(memoBoardSquads.home?.players
       .filter((player) => player.active !== false)
       .map((player) => ({
-      id: player.id,
-      label: `Home: ${player.name} (${player.positionLabel})`,
-    })) ?? []),
+        id: player.id,
+        label: `Home: ${player.name} (${player.positionLabel})`,
+      })) ?? []),
     ...(memoBoardSquads.away?.players
       .filter((player) => player.active !== false)
       .map((player) => ({
-      id: player.id,
-      label: `Away: ${player.name} (${player.positionLabel})`,
-    })) ?? []),
+        id: player.id,
+        label: `Away: ${player.name} (${player.positionLabel})`,
+      })) ?? []),
   ];
+  const linkedSquadPlayerIdsOnBoard = new Set(
+    board.frames.flatMap((frame) =>
+      frame.objects.flatMap((item) =>
+        item.type === "player" &&
+        item.id !== target?.id &&
+        item.squadPlayerId
+          ? [item.squadPlayerId]
+          : []
+      )
+    )
+  );
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [copyTargetMode, setCopyTargetMode] = useState<"same" | "other">(
     "same"
@@ -932,9 +943,17 @@ export default function PropertiesPanel({
                       <option
                         key={player.id}
                         value={player.id}
-                        className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                        className="bg-[var(--panel-2)]"
+                        style={{
+                          color: linkedSquadPlayerIdsOnBoard.has(player.id)
+                            ? "var(--ink-1)"
+                            : "var(--ink-0)",
+                        }}
                       >
                         {player.label}
+                        {linkedSquadPlayerIdsOnBoard.has(player.id)
+                          ? " [Linked]"
+                          : ""}
                       </option>
                     ))}
                   </select>
