@@ -8,6 +8,7 @@ import type {
 } from "@/models";
 import { supabase } from "@/utils/supabaseClient";
 import { recordNetworkCall } from "@/persistence/networkCounters";
+import { validatePublicBoardPayload } from "@/persistence/sharePublishingValidation";
 
 const PUBLIC_TABLE = "public_boards";
 const REPORT_TABLE = "public_board_reports";
@@ -116,6 +117,10 @@ export const publishPublicBoard = async (payload: {
   formation?: string;
   thumbnail?: string | null;
 }) => {
+  const validated = validatePublicBoardPayload(payload);
+  if (!validated.ok) {
+    return validated;
+  }
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
@@ -140,12 +145,12 @@ export const publishPublicBoard = async (payload: {
         board_id: payload.board.id,
         board_name: payload.board.name,
         project_name: payload.project.name,
-        title: payload.title,
-        description: payload.description,
-        category: payload.category,
-        tags: payload.tags,
-        formation: payload.formation ?? null,
-        thumbnail: payload.thumbnail ?? null,
+        title: validated.value.title,
+        description: validated.value.description,
+        category: validated.value.category,
+        tags: validated.value.tags,
+        formation: validated.value.formation ?? null,
+        thumbnail: validated.value.thumbnail,
         status: "unverified",
         board_data: snapshot,
       },

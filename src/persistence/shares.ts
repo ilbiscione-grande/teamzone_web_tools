@@ -8,6 +8,7 @@ import type {
 } from "@/models";
 import { supabase } from "@/utils/supabaseClient";
 import { recordNetworkCall } from "@/persistence/networkCounters";
+import { validateBoardSharePayload } from "@/persistence/sharePublishingValidation";
 
 const SHARE_TABLE = "board_shares";
 const COMMENT_TABLE = "board_comments";
@@ -88,6 +89,10 @@ export const createBoardShare = async (payload: {
   recipientEmail: string;
   permission: BoardSharePermission;
 }) => {
+  const validated = validateBoardSharePayload(payload);
+  if (!validated.ok) {
+    return validated;
+  }
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
@@ -108,7 +113,7 @@ export const createBoardShare = async (payload: {
     .insert({
       owner_id: ownerId,
       owner_email: ownerEmail,
-      recipient_email: payload.recipientEmail.toLowerCase(),
+      recipient_email: validated.recipientEmail,
       board_id: payload.board.id,
       board_name: payload.board.name,
       project_name: payload.project.name,

@@ -28,6 +28,7 @@ const SESSION_KEY_STORAGE = "tacticsboard:sessionKey";
 const SESSION_NONCE_STORAGE = "tacticsboard:sessionNonce";
 const SESSION_DEVICE_ID_STORAGE = "tacticsboard:deviceId";
 const ACTIVE_SESSION_WINDOW_MS = 5 * 60 * 1000;
+const SESSION_GUARD_CONFIRM_WINDOW_MS = 90 * 1000;
 type ProfileAuthSnapshot = ProfilePlanSnapshot & {
   beta_user?: boolean | null;
   is_admin?: boolean | null;
@@ -91,7 +92,27 @@ export default function AuthListener() {
       return parts.length >= 3 ? parts[1] : null;
     };
 
+    const parseNonceFromSessionKey = (sessionKey: string | null | undefined) => {
+      if (!sessionKey) {
+        return null;
+      }
+      const parts = sessionKey.split(":");
+      return parts.length >= 3 ? parts[2] : null;
+    };
+
+    const readStoredSessionKey = (userId: string) => {
+      if (typeof window === "undefined") {
+        return null;
+      }
+      const stored = window.localStorage.getItem(SESSION_KEY_STORAGE);
+      return stored && stored.startsWith(`${userId}:`) ? stored : null;
+    };
+
     const buildSessionKey = (userId: string, accessToken?: string | null) => {
+      const existingSessionKey = readStoredSessionKey(userId);
+      if (existingSessionKey) {
+        return existingSessionKey;
+      }
       const deviceId = getDeviceId();
       const existingNonce =
         typeof window !== "undefined"
@@ -191,6 +212,8 @@ export default function AuthListener() {
         return;
       }
       stopSingleSessionGuard();
+      let lastMismatchKey: string | null = null;
+      let lastMismatchAt = 0;
       const checkSession = async () => {
         const { data } = await sb
           .from("user_sessions")
@@ -199,6 +222,29 @@ export default function AuthListener() {
           .single();
         const activeKey = data?.session_key;
         if (activeKey && activeKey !== currentKey) {
+          const currentDeviceId = parseDeviceIdFromSessionKey(currentKey);
+          const activeDeviceId = parseDeviceIdFromSessionKey(activeKey);
+          if (
+            currentDeviceId &&
+            activeDeviceId &&
+            currentDeviceId === activeDeviceId
+          ) {
+            safeSetLocalStorageItem(SESSION_KEY_STORAGE, activeKey);
+            const activeNonce = parseNonceFromSessionKey(activeKey);
+            if (activeNonce) {
+              safeSetLocalStorageItem(SESSION_NONCE_STORAGE, activeNonce);
+            }
+            return;
+          }
+          const now = Date.now();
+          if (
+            lastMismatchKey !== activeKey ||
+            now - lastMismatchAt > SESSION_GUARD_CONFIRM_WINDOW_MS
+          ) {
+            lastMismatchKey = activeKey;
+            lastMismatchAt = now;
+            return;
+          }
           // Keep local backup but do not push stale data to cloud
           // when another device has already taken over the session.
           persistActiveProjectLocal();

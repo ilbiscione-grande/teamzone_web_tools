@@ -6,6 +6,7 @@ import type {
 } from "@/models";
 import { supabase } from "@/utils/supabaseClient";
 import { recordNetworkCall } from "@/persistence/networkCounters";
+import { validatePublicProjectPayload } from "@/persistence/sharePublishingValidation";
 
 const PUBLIC_TABLE = "public_projects";
 const REPORT_TABLE = "public_project_reports";
@@ -105,6 +106,10 @@ export const publishPublicProject = async (payload: {
   category: string;
   tags: string[];
 }) => {
+  const validated = validatePublicProjectPayload(payload);
+  if (!validated.ok) {
+    return validated;
+  }
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
@@ -122,10 +127,10 @@ export const publishPublicProject = async (payload: {
         owner_email: ownerEmail,
         project_id: payload.project.id,
         project_name: payload.project.name,
-        title: payload.title,
-        description: payload.description,
-        category: payload.category,
-        tags: payload.tags,
+        title: validated.value.title,
+        description: validated.value.description,
+        category: validated.value.category,
+        tags: validated.value.tags,
         status: "unverified",
         project_data: payload.project,
       },

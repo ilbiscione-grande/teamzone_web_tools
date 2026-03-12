@@ -273,6 +273,107 @@ Denna etapp ror framst:
 - `src/persistence/publicProjects.ts`
 - Supabase-tabeller for shares, comments, public boards och public projects
 
+### Nulagesobservationer
+
+Efter genomgang av styrdokument och kodbas ar foljande tydligt i Etapp 2:
+
+- Delning, kommentarer och publicering ar produktkritiska men utspridda over flera komponenter och persistence-moduler.
+- Funktionerna ar beroende av korrekt auth-, permission- och felhantering snarare an bara UI-rendering.
+- Kommentarflodet och share/public flows maste skyddas bade mot tomma fellagen och mot att fel innehall exponeras.
+- Publikt bibliotek ar mer an en ren exportfunktion och kravjer darfor enklare regler for kvalitet och moderation.
+
+### Kodobservationer i Etapp 2
+
+Efter faktisk genomgang av `shares.ts`, `CommentsModal.tsx`, `publicLibrary.ts` och `publicProjects.ts` finns nu dessa konkreta observationer:
+
+- Det finns i praktiken ingen tydlig preflight-validering av payloads innan skrivning till Supabase utom grundkravet att anvandaren ska vara inloggad.
+- Delning normaliserar mottagarens e-post till lowercase, men validerar inte tomma eller uppenbart ogiltiga e-postadresser i persistence-lagret.
+- Kommentarflodet blockerar skrivning i UI om permission inte ar `comment`, men persistence-lagret gor ingen egen klientnara guard utover inloggning.
+- `CommentsModal.tsx` hanterar inte initial laddstatus tydligt vid fetch och skiljer inte klart mellan tomt lage och fellage.
+- Publiceringsflodena for boards och projekt skickar hela snapshots direkt utan tydlig kontroll av titel, kategori, tags eller minimikrav pa innehall.
+- Rapportering av publikt innehall har grundstod, men ingen tydlig moderationsmodell eller dokumenterad hantering efter skapad rapport.
+- Det finns inga tydliga tester i kodbasen idag for sharing, kommentarer eller publiceringsfloden.
+
+### Genomforandeordning for Etapp 2
+
+Vi genomfor Etapp 2 i foljande ordning for att minska risk:
+
+1. Kartlagga faktiska permission- och publiceringsfloden i kod och datalager.
+2. Satta upp testmatris for `view`, `comment`, publicering och felhantering.
+3. Harda persistence- och UI-floden dar tester eller kodgranskning visar luckor.
+4. Definiera en enkel moderations- och supportmodell for publikt innehall.
+
+### Delsteg for att starta Etapp 2
+
+- [x] Kartlagga Etapp 2 mot faktisk kodbas.
+  Vad det ar: En teknisk genomlysning av share-, comments- och publiceringsfloden i UI och persistence-lager.
+  Vad det innebar for koden: Ingen produktionskod andras i detta steg, men det definierar vilka skydd som saknas.
+  Varfor det behovs: Etapp 2 beror mer pa behorigheter och datakontrakt an pa isolerade UI-detaljer.
+
+- [ ] Ta fram en testmatris for sharing, kommentarer och publicering.
+  Vad det ar: En konkret lista over vilka regler och felutfall som maste verifieras.
+  Vad det innebar for koden: Nya tester ska formuleras for delning, kommentarer, publicering och permissions.
+  Varfor det behovs: Det gor Etapp 2 matbar och gor det tydligt vad som faktiskt ar klart.
+
+### Testmatris for Etapp 2
+
+Foljande matris definierar miniminivan for kvalitet i denna etapp.
+
+#### A. Delning av boards
+
+- [ ] Delning till mottagare validerar e-post, board-id och rattighetsniva innan skrivning.
+  Vad det ar: Basverifiering av forutsattningar innan en share skapas.
+  Vad det innebar for koden: `shares.ts` och `ShareBoardModal.tsx` maste ha tydliga guardvillkor och felmeddelanden.
+  Varfor det behovs: Delning ska inte misslyckas tyst eller skapa halvt giltiga poster.
+
+- [ ] Delning visar begripliga statusar for laddning, lyckad skrivning och fel.
+  Vad det ar: Kontroll av anvandarens feedback i share-flodet.
+  Vad det innebar for koden: UI-komponenten behover enhetliga status- och error-states.
+  Varfor det behovs: Premiumfunktioner maste upplevas som trygga och tydliga.
+
+#### B. Kommentarer
+
+- [ ] Kommentarflodet verifierar tomt lage, laddning, lyckad skrivning och fel vid hamtning eller skapande.
+  Vad det ar: Kontroll av de normala och trasiga tillstanden i kommentarsytan.
+  Vad det innebar for koden: `CommentsModal.tsx` och eventuella persistence-anrop maste kunna testas isolerat.
+  Varfor det behovs: Kommentarer ar en samarbetsfunktion och far inte hamna i otydliga mellanlagen.
+
+- [ ] Kommentarer respekterar rattigheten `comment` och blockerar skrivning for `view`.
+  Vad det ar: Kontroll av att kommentarsratten foljer delningens permission.
+  Vad det innebar for koden: Guardlogik behovs i UI och helst aven i persistence-lagret.
+  Varfor det behovs: Felaktiga kommentarstallstand skapar bade produkt- och supportproblem.
+
+#### C. Publik publicering
+
+- [ ] Publicering av board verifierar att snapshot, metadata och publika falt ar kompletta innan skrivning.
+  Vad det ar: En preflight-kontroll innan innehall skickas till publikt bibliotek.
+  Vad det innebar for koden: `publicLibrary.ts` och publicerings-UI maste gora tydlig validering fore save.
+  Varfor det behovs: Publikt innehall far inte bygga pa ofullstandiga eller ogiltiga snapshots.
+
+- [ ] Publicering av projekt verifierar att projektmetadata och publika falt ar konsistenta.
+  Vad det ar: Motsvarande kontroll for publika projekt.
+  Vad det innebar for koden: `publicProjects.ts` och tillhorande UI behover enhetlig validering och felhantering.
+  Varfor det behovs: Projektpublicering ar mer omfattande an boardpublicering och kravjer tydligare kontrakt.
+
+#### D. Permissions och auth
+
+- [ ] `view` och `comment` verifieras i tester pa persistence- eller guardniva.
+  Vad det ar: Testning av vem som far lasa respektive skriva i delade boards.
+  Vad det innebar for koden: Delnings- och kommentarsfloden behover isolerbara guardfunktioner eller mockbara adapters.
+  Varfor det behovs: Behörighetslogik ska vara testbar, inte bara antagen.
+
+- [ ] Delnings- och publiceringsfloden beter sig begripligt nar anvandaren ar utloggad, offline eller saknar plan.
+  Vad det ar: Kontroll av produktregler och fellagen runt auth och plan.
+  Vad det innebar for koden: UI och persistence-kod maste kunna returnera tydliga orsaker i stallet for generiska fel.
+  Varfor det behovs: De vanligaste supportfallen uppstar ofta i just dessa lag.
+
+#### E. Moderation och support
+
+- [ ] Rapportering och moderationsstatus definieras som ett minimiflod for publikt innehall.
+  Vad det ar: Ett enkelt forsta arbetsflode for hur rapporterat innehall ska hanteras.
+  Vad det innebar for koden: Kan borja som dokumenterat arbetssatt och sedan kompletteras med mindre adminstöd.
+  Varfor det behovs: Publikt innehall maste kunna forvaltas, inte bara publiceras.
+
 ### Uppgifter
 
 - [ ] Gora felhanteringen tydligare i board sharing och project sharing.
@@ -299,6 +400,18 @@ Denna etapp ror framst:
   Vad det ar: Ett forsta praktiskt arbetsflode for rapporterat innehall.
   Vad det innebar for koden: Kan innebara mindre adminforbattringar och tydligare statusfloden.
   Varfor det behovs: Publikt innehall utan moderation skapar kvalitetsrisker.
+
+### Rekommenderat forsta genomforande i Etapp 2
+
+- [x] Kartlagga exakt hur `shares.ts`, `CommentsModal.tsx`, `publicLibrary.ts` och `publicProjects.ts` hanterar fel, auth och permissions idag.
+  Vad det ar: En praktisk genomlysning av nuvarande floden innan vi skriver ny kod.
+  Vad det innebar for koden: Eventuella gemensamma helperfunktioner for permission- och felhantering kan identifieras tidigt.
+  Varfor det behovs: Vi borjar dar risken ar hogst och dar flera UI-komponenter sannolikt duplicerar logik.
+
+- [x] Bryta ut de forsta gemensamma reglerna for validering och felreturer i sharing/publicering.
+  Vad det ar: Ett forsta tekniskt steg for att standardisera hur write-floden avvisar ogiltig input.
+  Vad det innebar for koden: `shares.ts`, `publicLibrary.ts` och `publicProjects.ts` bor fa enkla guardfunktioner for tomma eller ogiltiga payloads.
+  Varfor det behovs: Det minskar duplicering, ger tydligare felmeddelanden och gor nasta teststeg enklare.
 
 ## Etapp 3: Refaktorering av stora komponenter
 
