@@ -53,6 +53,28 @@ type ManagePlayersSortKey = "default" | "name" | "position" | "number";
 type ManageRosterFilter = "all" | "visible" | "hidden" | "guests" | "regular";
 type ManageRosterView = "base" | "board";
 const SHARE_LINK_BASE_URL = "https://webtools.teamzoneapp.se";
+const MANAGE_POSITION_OPTIONS = [
+  "Goalkeeper (GK)",
+  "Right Back (RB)",
+  "Right Center Back (RCB)",
+  "Center Back (CB)",
+  "Left Center Back (LCB)",
+  "Left Back (LB)",
+  "Right Wing Back (RWB)",
+  "Left Wing Back (LWB)",
+  "Defensive Midfielder (DM)",
+  "Central Defensive Midfielder (CDM)",
+  "Central Midfielder (CM)",
+  "Attacking Midfielder (AM)",
+  "Central Attacking Midfielder (CAM)",
+  "Right Midfielder (RM)",
+  "Left Midfielder (LM)",
+  "Right Winger (RW)",
+  "Left Winger (LW)",
+  "Striker (ST)",
+  "Center Forward (CF)",
+  "Second Striker (SS)",
+] as const;
 
 type ManageDirectoryTeamOption = {
   clubId: string;
@@ -2301,59 +2323,93 @@ export default function TopBar() {
       )}
       {squadPresetsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-          <div className="max-h-[84vh] w-full max-w-5xl overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
-            <div className="flex items-start justify-between p-6 pb-0">
-              <div>
-                <h2 className="display-font text-xl text-[var(--accent-0)]">
-                  Team manager
-                </h2>
-                <p className="text-xs text-[var(--ink-1)]">
-                  Edit the board-local squad here. Database updates only happen when you press Save to Team DB.
-                </p>
-              </div>
-              <div className="flex items-start gap-2">
-                {canUsePresetStorage ? (
-                  <>
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[28px] border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="sticky top-0 z-10 border-b border-[var(--line)] bg-[color:color-mix(in_srgb,var(--panel)_92%,transparent)] px-4 py-4 backdrop-blur sm:px-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-3">
+                  <div>
+                    <h2 className="display-font text-xl text-[var(--accent-0)]">
+                      Team manager
+                    </h2>
+                    <p className="text-xs text-[var(--ink-1)]">
+                      Edit the board-local squad here. Database updates only happen when you press Save to Team DB.
+                    </p>
+                  </div>
+                  <div className="inline-flex rounded-full border border-[var(--line)] bg-[var(--panel-2)]/40 p-1 text-[11px] uppercase tracking-wide">
+                    {[
+                      { id: "home", label: "Home" },
+                      { id: "away", label: "Away" },
+                    ].map((side) => (
+                      <button
+                        key={side.id}
+                        className={`rounded-full px-4 py-2 ${
+                          manageSide === side.id
+                            ? "bg-[var(--accent-0)] text-black"
+                            : "text-[var(--ink-1)]"
+                        }`}
+                        onClick={() => setManageSide(side.id as "home" | "away")}
+                      >
+                        Editing {side.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 self-start lg:items-end">
+                  <div className="flex flex-wrap items-stretch gap-2">
                     <button
-                      className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      title="Save to Team DB"
-                      aria-label="Save to Team DB"
-                      onClick={saveManagePreset}
+                      className="rounded-full border border-[var(--line)] px-4 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={() => setManagedTeamToSide("home")}
+                    >
+                      Apply to Home
+                    </button>
+                    <button
+                      className="rounded-full border border-[var(--line)] px-4 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={() => setManagedTeamToSide("away")}
+                    >
+                      Apply to Away
+                    </button>
+                    {canUsePresetStorage ? (
+                      <button
+                        className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        title="Save to Team DB"
+                        aria-label="Save to Team DB"
+                        onClick={saveManagePreset}
+                      >
+                        <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 4h13l3 3v13H4z" />
+                          <path d="M8 4v6h8V4" />
+                          <path d="M8 20v-6h8v6" />
+                        </svg>
+                        <span className="text-[9px] uppercase tracking-wide">Save to DB</span>
+                      </button>
+                    ) : null}
+                    <button
+                      className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                      onClick={closeSquadPresetsModal}
+                      aria-label="Close"
+                      title="Close"
                     >
                       <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 4h13l3 3v13H4z" />
-                        <path d="M8 4v6h8V4" />
-                        <path d="M8 20v-6h8v6" />
+                        <path d="M6 6l12 12" />
+                        <path d="M18 6l-12 12" />
                       </svg>
-                      <span className="text-[9px] uppercase tracking-wide">Save to DB</span>
+                      <span className="text-[9px] uppercase tracking-wide">Close</span>
                     </button>
-                  </>
-                ) : null}
-                <button
-                  className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                  onClick={closeSquadPresetsModal}
-                  aria-label="Close"
-                  title="Close"
-                >
-                  <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 6l12 12" />
-                    <path d="M18 6l-12 12" />
-                  </svg>
-                  <span className="text-[9px] uppercase tracking-wide">Close</span>
-                </button>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="mt-4 max-h-[calc(84vh-96px)] space-y-4 overflow-y-auto p-6 pt-0 text-xs text-[var(--ink-1)]" data-scrollable>
+            <div className="max-h-[calc(92vh-128px)] space-y-4 overflow-y-auto px-4 py-4 text-xs text-[var(--ink-1)] sm:px-6" data-scrollable>
                 {!canUsePresetStorage ? (
                   <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/50 px-3 py-2 text-xs text-[var(--ink-1)]">
                     Free/Auth plans can edit teams locally in this project. Team presets are available on paid plans.
                   </p>
                 ) : null}
-                <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/35 px-3 py-2 text-[11px] text-[var(--ink-1)]">
+                <p className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 px-4 py-3 text-[11px] leading-relaxed text-[var(--ink-1)]">
                   Changes here affect this project/board first. Use <span className="text-[var(--accent-0)]">Save to DB</span> to save the current squad as a reusable team snapshot in the database.
                 </p>
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                  <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-3">
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+                  <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-4">
                     <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                       Current board squad
                     </p>
@@ -2397,7 +2453,7 @@ export default function TopBar() {
                       </p>
                     )}
                   </div>
-                  <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-3">
+                  <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-4">
                     <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                       Load club team
                     </p>
@@ -2425,7 +2481,7 @@ export default function TopBar() {
                               : ""}
                           </p>
                         ) : null}
-                        <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
                           <button
                             className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                             onClick={() =>
@@ -2451,13 +2507,13 @@ export default function TopBar() {
                     )}
                   </div>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3 rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                     Team details
                   </p>
-                  <div className="grid gap-3 lg:grid-cols-[200px_minmax(0,1fr)_220px]">
+                  <div className="grid gap-4 lg:grid-cols-[160px_minmax(0,1fr)] xl:grid-cols-[180px_minmax(0,1fr)_180px]">
                     <button
-                      className="flex h-56 w-full items-center justify-center overflow-hidden rounded-xl bg-[var(--panel-2)]/55 text-[11px] text-[var(--ink-1)]"
+                      className="flex h-40 w-full items-center justify-center overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/55 text-[11px] text-[var(--ink-1)] lg:h-full"
                       onClick={() => manageLogoRef.current?.click()}
                       title="Change club logo"
                     >
@@ -2471,7 +2527,7 @@ export default function TopBar() {
                         <span>Club Logo</span>
                       )}
                     </button>
-                    <div className="flex h-56 flex-col gap-2 rounded-xl bg-[var(--panel-2)]/35 p-3">
+                    <div className="flex min-h-[220px] flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-4">
                       <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                         Squad name
                       </span>
@@ -2565,7 +2621,7 @@ export default function TopBar() {
                         </>
                       ) : null}
                     </div>
-                    <div className="flex h-56 flex-col items-center justify-center rounded-xl bg-[var(--panel-2)]/35 p-3">
+                    <div className="hidden min-h-[220px] flex-col items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-4 xl:flex">
                       {editableSquad ? (
                         <div className="flex flex-col items-center gap-1">
                           {renderShirtIcon(
@@ -2623,14 +2679,14 @@ export default function TopBar() {
                     }}
                   />
                 </div>
-                <div className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3">
+                <div className="space-y-4 rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-4">
                   {manageSquad ? (
                     <>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] uppercase text-[var(--ink-1)]">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <span className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                           Players
                         </span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 self-start lg:self-auto">
                           <button
                             className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-wide ${
                               manageRosterView === "base"
@@ -2664,7 +2720,7 @@ export default function TopBar() {
                           Guests: {manageMembershipSummary.guests}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
                         <input
                           className="h-8 flex-1 rounded-full border border-[var(--line)] bg-transparent px-3 text-[11px] text-[var(--ink-0)]"
                           placeholder={
@@ -2702,7 +2758,7 @@ export default function TopBar() {
                         ) : null}
                       </div>
                       {manageRosterView === "base" ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                           <button
                             className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                             onClick={() =>
@@ -2737,7 +2793,7 @@ export default function TopBar() {
                           </button>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid gap-2 sm:grid-cols-3">
                           <input
                             className="h-8 rounded-md border border-[var(--line)] bg-transparent px-2 text-[11px] text-[var(--ink-0)]"
                             placeholder="Guest name"
@@ -2759,7 +2815,7 @@ export default function TopBar() {
                         </div>
                       )}
                       {manageRosterView === "board" ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                           <button
                             className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                             onClick={manageAddBoardGuest}
@@ -2804,7 +2860,164 @@ export default function TopBar() {
                       ) : null}
                       {manageRosterView === "base" ? (
                         <>
-                          <div className="grid grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                          <div className="space-y-3 lg:hidden">
+                            <p className="text-[10px] leading-relaxed text-[var(--ink-1)]">
+                              Edit members as cards on mobile. Visibility, captain and substitute remain available in each card.
+                            </p>
+                            <div className="max-h-[52vh] space-y-3 overflow-auto pr-1" data-scrollable>
+                              {filteredManageBasePlayers.map((player) => {
+                                const linkedMember =
+                                  managedDirectoryMemberMap.get(player.id) ??
+                                  (player.sourcePlayerId
+                                    ? managedDirectoryMemberMap.get(player.sourcePlayerId)
+                                    : undefined);
+                                const substitutes = editableSquad?.substituteIds ?? [];
+                                const isCaptain = editableSquad?.captainId === player.id;
+                                const isSub = substitutes.includes(player.id);
+                                return (
+                                  <div
+                                    key={player.id}
+                                    className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/60 p-3"
+                                  >
+                                    <div className="grid grid-cols-[64px_minmax(0,1fr)_36px] gap-2">
+                                      <input
+                                        className="h-10 rounded-xl border border-[var(--line)] bg-transparent px-2 text-center text-sm text-[var(--ink-0)]"
+                                        value={player.number ?? ""}
+                                        onChange={(event) =>
+                                          updateSquadPlayer(manageSquad.id, player.id, {
+                                            number: event.target.value
+                                              ? Number(event.target.value)
+                                              : undefined,
+                                          })
+                                        }
+                                      />
+                                      <input
+                                        className="h-10 rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                                        value={player.name}
+                                        onChange={(event) =>
+                                          updateSquadPlayer(manageSquad.id, player.id, {
+                                            name: event.target.value,
+                                          })
+                                        }
+                                      />
+                                      <button
+                                        className={`h-10 rounded-xl border text-[11px] font-semibold ${
+                                          player.guest
+                                            ? "border-[var(--accent-0)] bg-[var(--accent-0)] text-black"
+                                            : "border-[var(--line)] text-[var(--ink-1)]"
+                                        }`}
+                                        onClick={() =>
+                                          updateSquadPlayer(manageSquad.id, player.id, {
+                                            guest: !player.guest,
+                                          })
+                                        }
+                                      >
+                                        G
+                                      </button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1 text-[9px] uppercase tracking-wide">
+                                      {linkedMember ? (
+                                        <>
+                                          <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[var(--ink-1)]">
+                                            {linkedMember.memberRole}
+                                          </span>
+                                          {linkedMember.teamPosition ? (
+                                            <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[var(--ink-1)]">
+                                              {linkedMember.teamPosition}
+                                            </span>
+                                          ) : null}
+                                          {linkedMember.isTeamAdmin ? (
+                                            <span className="rounded-full border border-[var(--accent-2)] px-1.5 py-0.5 text-[var(--accent-2)]">
+                                              Team admin
+                                            </span>
+                                          ) : null}
+                                        </>
+                                      ) : (
+                                        <span className="rounded-full border border-[var(--accent-1)] px-1.5 py-0.5 text-[var(--accent-1)]">
+                                          Local only
+                                        </span>
+                                      )}
+                                      {player.guest ? (
+                                        <span className="rounded-full border border-[var(--accent-0)] px-1.5 py-0.5 text-[var(--accent-0)]">
+                                          Guest
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                    <select
+                                      className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 text-sm text-[var(--ink-0)]"
+                                      value={player.positionLabel}
+                                      onChange={(event) =>
+                                        updateSquadPlayer(manageSquad.id, player.id, {
+                                          positionLabel: event.target.value,
+                                        })
+                                      }
+                                    >
+                                      <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]" />
+                                      {MANAGE_POSITION_OPTIONS.map((pos) => (
+                                        <option
+                                          key={pos}
+                                          value={pos}
+                                          className="bg-[var(--panel-2)] text-[var(--ink-0)]"
+                                        >
+                                          {pos}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <div className="grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                                      <label className="flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] py-2">
+                                        <span>Visible</span>
+                                        <input
+                                          type="checkbox"
+                                          checked={player.active !== false}
+                                          onChange={(event) =>
+                                            updateSquadPlayer(manageSquad.id, player.id, {
+                                              active: event.target.checked,
+                                            })
+                                          }
+                                        />
+                                      </label>
+                                      <button
+                                        className={`rounded-xl border py-2 ${
+                                          isCaptain
+                                            ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                                            : "border-[var(--line)] text-[var(--ink-1)]"
+                                        }`}
+                                        onClick={() =>
+                                          updateEditableSquad({
+                                            captainId: isCaptain ? undefined : player.id,
+                                          })
+                                        }
+                                      >
+                                        Captain
+                                      </button>
+                                      <button
+                                        className={`rounded-xl border py-2 ${
+                                          isSub
+                                            ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                                            : "border-[var(--line)] text-[var(--ink-1)]"
+                                        }`}
+                                        onClick={() => {
+                                          const next = isSub
+                                            ? substitutes.filter((id) => id !== player.id)
+                                            : [...substitutes, player.id];
+                                          updateEditableSquad({ substituteIds: next });
+                                        }}
+                                      >
+                                        Sub
+                                      </button>
+                                      <button
+                                        className="rounded-xl border border-[var(--line)] py-2 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                                        onClick={() => removeSquadPlayer(manageSquad.id, player.id)}
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div className="hidden grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)] lg:grid">
                             <button
                               className="text-left hover:text-[var(--accent-2)]"
                               onClick={() => toggleManagePlayersSort("number")}
@@ -2843,7 +3056,7 @@ export default function TopBar() {
                               Default sort{manageSortIndicator("default")}
                             </button>
                           </div>
-                          <div className="max-h-56 space-y-2 overflow-auto pr-1" data-scrollable>
+                          <div className="hidden max-h-56 space-y-2 overflow-auto pr-1 lg:block" data-scrollable>
                             {filteredManageBasePlayers.map((player) => {
                               const linkedMember =
                                 managedDirectoryMemberMap.get(player.id) ??
@@ -2935,28 +3148,7 @@ export default function TopBar() {
                                   <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
                                     
                                   </option>
-                                  {[
-                                    "Goalkeeper (GK)",
-                                    "Right Back (RB)",
-                                    "Right Center Back (RCB)",
-                                    "Center Back (CB)",
-                                    "Left Center Back (LCB)",
-                                    "Left Back (LB)",
-                                    "Right Wing Back (RWB)",
-                                    "Left Wing Back (LWB)",
-                                    "Defensive Midfielder (DM)",
-                                    "Central Defensive Midfielder (CDM)",
-                                    "Central Midfielder (CM)",
-                                    "Attacking Midfielder (AM)",
-                                    "Central Attacking Midfielder (CAM)",
-                                    "Right Midfielder (RM)",
-                                    "Left Midfielder (LM)",
-                                    "Right Winger (RW)",
-                                    "Left Winger (LW)",
-                                    "Striker (ST)",
-                                    "Center Forward (CF)",
-                                    "Second Striker (SS)",
-                                  ].map((pos) => (
+                                  {MANAGE_POSITION_OPTIONS.map((pos) => (
                                     <option
                                       key={pos}
                                       value={pos}
@@ -3049,12 +3241,79 @@ export default function TopBar() {
                         </>
                       ) : (
                         <>
-                          <div className="grid grid-cols-[minmax(0,1fr)_130px_170px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                          <div className="space-y-3 lg:hidden">
+                            <div className="max-h-[52vh] space-y-3 overflow-auto pr-1" data-scrollable>
+                              {sortedManageBoardPlayers.map((player) => (
+                                <div
+                                  key={player.id}
+                                  className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/60 p-3"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm text-[var(--ink-0)]">
+                                        {player.name}
+                                      </p>
+                                      <div className="mt-1 flex flex-wrap gap-1 text-[9px] uppercase tracking-wide">
+                                        {player.guest ? (
+                                          <span className="rounded-full border border-[var(--accent-0)] px-1.5 py-0.5 text-[var(--accent-0)]">
+                                            Guest
+                                          </span>
+                                        ) : (
+                                          <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[var(--ink-1)]">
+                                            Team member
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <button
+                                      className={`rounded-full border px-2 py-1 text-[10px] ${
+                                        player.active === false
+                                          ? "border-[var(--line)] text-[var(--ink-1)]"
+                                          : "border-[var(--accent-0)] text-[var(--accent-0)]"
+                                      }`}
+                                      onClick={() =>
+                                        manageToggleBoardPlayerVisible(
+                                          player.id,
+                                          player.active === false
+                                        )
+                                      }
+                                    >
+                                      {player.active === false ? "Show" : "Hide"}
+                                    </button>
+                                  </div>
+                                  <input
+                                    className="h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                                    value={player.positionLabel}
+                                    onChange={(event) =>
+                                      manageSetBoardPlayerPosition(player.id, event.target.value)
+                                    }
+                                  />
+                                  {player.guest ? (
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <button
+                                        className="rounded-xl border border-[var(--accent-2)] px-3 py-2 text-[11px] text-[var(--accent-2)]"
+                                        onClick={() => managePromoteBoardGuest(player)}
+                                      >
+                                        Promote
+                                      </button>
+                                      <button
+                                        className="rounded-xl border border-[var(--accent-1)] px-3 py-2 text-[11px] text-[var(--accent-1)]"
+                                        onClick={() => manageRemoveBoardGuest(player.id)}
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="hidden grid-cols-[minmax(0,1fr)_130px_170px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)] lg:grid">
                             <span>Name</span>
                             <span>Position on board</span>
                             <span>Actions</span>
                           </div>
-                          <div className="max-h-56 space-y-2 overflow-auto pr-1" data-scrollable>
+                          <div className="hidden max-h-56 space-y-2 overflow-auto pr-1 lg:block" data-scrollable>
                             {sortedManageBoardPlayers.map((player) => (
                               <div
                                 key={player.id}
@@ -3123,37 +3382,8 @@ export default function TopBar() {
                     </p>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: "home", label: "Home team" },
-                    { id: "away", label: "Away team" },
-                  ].map((side) => (
-                    <button
-                      key={side.id}
-                      className={`rounded-full border px-3 py-2 text-[11px] uppercase tracking-wide ${
-                        manageSide === side.id
-                          ? "border-[var(--accent-0)] text-[var(--ink-0)]"
-                          : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-                      }`}
-                      onClick={() => setManageSide(side.id as "home" | "away")}
-                    >
-                      {side.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                    onClick={() => setManagedTeamToSide("home")}
-                  >
-                    Apply locally as Home
-                  </button>
-                  <button
-                    className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                    onClick={() => setManagedTeamToSide("away")}
-                  >
-                    Apply locally as Away
-                  </button>
+                <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25 px-4 py-3 text-[11px] text-[var(--ink-1)]">
+                  You are editing the <span className="text-[var(--accent-0)]">{manageSide === "home" ? "Home" : "Away"}</span> squad. Use the header actions to apply this edited squad to Home or Away.
                 </div>
                 {squadPresetsLoading ? (
                   <p className="text-xs text-[var(--ink-1)]">Loading teams...</p>
