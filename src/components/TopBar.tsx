@@ -425,6 +425,35 @@ export default function TopBar() {
   const selectedManageDirectoryTeam =
     manageDirectoryTeams.find((team) => team.teamId === manageSelectedDirectoryTeamId) ??
     null;
+  const managedDirectoryMemberMap = useMemo(() => {
+    const entries = new Map<string, (typeof managedDirectoryTeam.members)[number]>();
+    managedDirectoryTeam?.members.forEach((member) => {
+      entries.set(member.id, member);
+    });
+    return entries;
+  }, [managedDirectoryTeam]);
+  const manageMembershipSummary = useMemo(() => {
+    const players = manageSquad?.players ?? [];
+    let linkedMembers = 0;
+    let localOnly = 0;
+    let guests = 0;
+    players.forEach((player) => {
+      if (player.guest) {
+        guests += 1;
+      }
+      const member =
+        managedDirectoryMemberMap.get(player.id) ??
+        (player.sourcePlayerId
+          ? managedDirectoryMemberMap.get(player.sourcePlayerId)
+          : undefined);
+      if (member) {
+        linkedMembers += 1;
+      } else {
+        localOnly += 1;
+      }
+    });
+    return { linkedMembers, localOnly, guests };
+  }, [manageSquad?.players, managedDirectoryMemberMap]);
   useEffect(() => {
     if (!squadPresetsOpen) {
       return;
@@ -2616,6 +2645,17 @@ export default function TopBar() {
                           </button>
                         </div>
                       </div>
+                      <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                        <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                          Linked members: {manageMembershipSummary.linkedMembers}
+                        </span>
+                        <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                          Local only: {manageMembershipSummary.localOnly}
+                        </span>
+                        <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                          Guests: {manageMembershipSummary.guests}
+                        </span>
+                      </div>
                       <div className="flex items-center gap-2">
                         <input
                           className="h-8 flex-1 rounded-full border border-[var(--line)] bg-transparent px-3 text-[11px] text-[var(--ink-0)]"
@@ -2660,7 +2700,7 @@ export default function TopBar() {
                             onClick={() =>
                               addSquadPlayer(manageSquad.id, {
                                 id: createId(),
-                                name: "New Player",
+                                name: "New Member",
                                 positionLabel: "",
                                 guest: false,
                                 active: true,
@@ -2669,14 +2709,14 @@ export default function TopBar() {
                               })
                             }
                           >
-                            Add player
+                            Add member
                           </button>
                           <button
                             className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
                             onClick={() =>
                               addSquadPlayer(manageSquad.id, {
                                 id: createId(),
-                                name: "Guest Player",
+                                name: "Guest Member",
                                 positionLabel: "",
                                 guest: true,
                                 active: true,
@@ -2685,7 +2725,7 @@ export default function TopBar() {
                               })
                             }
                           >
-                            Add guest
+                            Add guest member
                           </button>
                         </div>
                       ) : (
@@ -2796,7 +2836,13 @@ export default function TopBar() {
                             </button>
                           </div>
                           <div className="max-h-56 space-y-2 overflow-auto pr-1" data-scrollable>
-                            {filteredManageBasePlayers.map((player) => (
+                            {filteredManageBasePlayers.map((player) => {
+                              const linkedMember =
+                                managedDirectoryMemberMap.get(player.id) ??
+                                (player.sourcePlayerId
+                                  ? managedDirectoryMemberMap.get(player.sourcePlayerId)
+                                  : undefined);
+                              return (
                               <div
                                 key={player.id}
                                 className="grid grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2"
@@ -2812,32 +2858,62 @@ export default function TopBar() {
                                     })
                                   }
                                 />
-                                <div className="flex items-center gap-1">
-                                  <input
-                                    className="h-7 w-full rounded-md border border-[var(--line)] bg-transparent px-1 text-[11px] text-[var(--ink-0)]"
-                                    value={player.name}
-                                    onChange={(event) =>
-                                      updateSquadPlayer(manageSquad.id, player.id, {
-                                        name: event.target.value,
-                                      })
-                                    }
-                                  />
-                                  <button
-                                    className={`h-7 min-w-[30px] rounded-md border px-1 text-[10px] font-semibold ${
-                                      player.guest
-                                        ? "border-[var(--accent-0)] bg-[var(--accent-0)] text-black"
-                                        : "border-[var(--line)] text-[var(--ink-1)]"
-                                    }`}
-                                    onClick={() =>
-                                      updateSquadPlayer(manageSquad.id, player.id, {
-                                        guest: !player.guest,
-                                      })
-                                    }
-                                    title="Guest player"
-                                    aria-label="Guest player"
-                                  >
-                                    G
-                                  </button>
+                                <div className="min-w-0 space-y-1">
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      className="h-7 w-full rounded-md border border-[var(--line)] bg-transparent px-1 text-[11px] text-[var(--ink-0)]"
+                                      value={player.name}
+                                      onChange={(event) =>
+                                        updateSquadPlayer(manageSquad.id, player.id, {
+                                          name: event.target.value,
+                                        })
+                                      }
+                                    />
+                                    <button
+                                      className={`h-7 min-w-[30px] rounded-md border px-1 text-[10px] font-semibold ${
+                                        player.guest
+                                          ? "border-[var(--accent-0)] bg-[var(--accent-0)] text-black"
+                                          : "border-[var(--line)] text-[var(--ink-1)]"
+                                      }`}
+                                      onClick={() =>
+                                        updateSquadPlayer(manageSquad.id, player.id, {
+                                          guest: !player.guest,
+                                        })
+                                      }
+                                      title="Guest player"
+                                      aria-label="Guest player"
+                                    >
+                                      G
+                                    </button>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1 text-[9px] uppercase tracking-wide">
+                                    {linkedMember ? (
+                                      <>
+                                        <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[var(--ink-1)]">
+                                          {linkedMember.memberRole}
+                                        </span>
+                                        {linkedMember.teamPosition ? (
+                                          <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[var(--ink-1)]">
+                                            {linkedMember.teamPosition}
+                                          </span>
+                                        ) : null}
+                                        {linkedMember.isTeamAdmin ? (
+                                          <span className="rounded-full border border-[var(--accent-2)] px-1.5 py-0.5 text-[var(--accent-2)]">
+                                            Team admin
+                                          </span>
+                                        ) : null}
+                                      </>
+                                    ) : (
+                                      <span className="rounded-full border border-[var(--accent-1)] px-1.5 py-0.5 text-[var(--accent-1)]">
+                                        Local only
+                                      </span>
+                                    )}
+                                    {player.guest ? (
+                                      <span className="rounded-full border border-[var(--accent-0)] px-1.5 py-0.5 text-[var(--accent-0)]">
+                                        Guest
+                                      </span>
+                                    ) : null}
+                                  </div>
                                 </div>
                                 <select
                                   className="h-7 w-full rounded-md border border-[var(--line)] bg-[var(--panel-2)] px-2 text-[10px] text-[var(--ink-0)]"
@@ -2959,7 +3035,8 @@ export default function TopBar() {
                                   </svg>
                                 </button>
                               </div>
-                            ))}
+                            );
+                            })}
                           </div>
                         </>
                       ) : (

@@ -76,6 +76,9 @@ const buildSquadFromMembers = (
       active: member.is_active ?? true,
       number: member.shirt_number ?? undefined,
       photoUrl: member.photo_url ?? undefined,
+      sourceTeamId: team.id,
+      sourceTeamName: team.name,
+      sourcePlayerId: member.id,
     }));
 
   return {

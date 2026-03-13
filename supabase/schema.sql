@@ -806,6 +806,8 @@ create table if not exists team_members (
 
 create index if not exists team_members_user_id_idx on team_members(user_id);
 
+alter table team_members alter column user_id drop not null;
+
 alter table team_members add column if not exists club_member_id uuid references club_members(id) on delete set null;
 alter table team_members add column if not exists display_name text;
 alter table team_members add column if not exists member_role text not null default 'other';
@@ -1435,9 +1437,9 @@ set
 from teams t
 join club_members cm
   on cm.club_id = t.club_id
- and cm.user_id = tm.user_id
 where tm.team_id = t.id
   and tm.user_id is not null
+  and cm.user_id = tm.user_id
   and tm.club_member_id is null;
 
 insert into team_members (
