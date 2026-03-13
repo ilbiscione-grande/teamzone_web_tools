@@ -293,6 +293,7 @@ Efter faktisk genomgang av `shares.ts`, `CommentsModal.tsx`, `publicLibrary.ts` 
 - Publiceringsflodena for boards och projekt skickar hela snapshots direkt utan tydlig kontroll av titel, kategori, tags eller minimikrav pa innehall.
 - Rapportering av publikt innehall har grundstod, men ingen tydlig moderationsmodell eller dokumenterad hantering efter skapad rapport.
 - Det finns inga tydliga tester i kodbasen idag for sharing, kommentarer eller publiceringsfloden.
+- Auth- och single-session-logik kan indirekt skapa trasiga delningsupplevelser om anvandaren loggas ut tyst mitt i ett share- eller publiceringsflode.
 
 ### Genomforandeordning for Etapp 2
 
@@ -311,6 +312,7 @@ Vi genomfor Etapp 2 i foljande ordning for att minska risk:
   Varfor det behovs: Etapp 2 beror mer pa behorigheter och datakontrakt an pa isolerade UI-detaljer.
 
 - [ ] Ta fram en testmatris for sharing, kommentarer och publicering.
+- [x] Ta fram en testmatris for sharing, kommentarer och publicering.
   Vad det ar: En konkret lista over vilka regler och felutfall som maste verifieras.
   Vad det innebar for koden: Nya tester ska formuleras for delning, kommentarer, publicering och permissions.
   Varfor det behovs: Det gor Etapp 2 matbar och gor det tydligt vad som faktiskt ar klart.
@@ -321,85 +323,137 @@ Foljande matris definierar miniminivan for kvalitet i denna etapp.
 
 #### A. Delning av boards
 
-- [ ] Delning till mottagare validerar e-post, board-id och rattighetsniva innan skrivning.
+- [x] Delning till mottagare validerar e-post, board-id och rattighetsniva innan skrivning.
   Vad det ar: Basverifiering av forutsattningar innan en share skapas.
   Vad det innebar for koden: `shares.ts` och `ShareBoardModal.tsx` maste ha tydliga guardvillkor och felmeddelanden.
   Varfor det behovs: Delning ska inte misslyckas tyst eller skapa halvt giltiga poster.
 
-- [ ] Delning visar begripliga statusar for laddning, lyckad skrivning och fel.
+- [x] Delning visar begripliga statusar for laddning, lyckad skrivning och fel.
   Vad det ar: Kontroll av anvandarens feedback i share-flodet.
   Vad det innebar for koden: UI-komponenten behover enhetliga status- och error-states.
   Varfor det behovs: Premiumfunktioner maste upplevas som trygga och tydliga.
 
 #### B. Kommentarer
 
-- [ ] Kommentarflodet verifierar tomt lage, laddning, lyckad skrivning och fel vid hamtning eller skapande.
+- [x] Kommentarflodet verifierar tomt lage, laddning, lyckad skrivning och fel vid hamtning eller skapande.
   Vad det ar: Kontroll av de normala och trasiga tillstanden i kommentarsytan.
   Vad det innebar for koden: `CommentsModal.tsx` och eventuella persistence-anrop maste kunna testas isolerat.
   Varfor det behovs: Kommentarer ar en samarbetsfunktion och far inte hamna i otydliga mellanlagen.
 
-- [ ] Kommentarer respekterar rattigheten `comment` och blockerar skrivning for `view`.
+- [x] Kommentarer respekterar rattigheten `comment` och blockerar skrivning for `view`.
   Vad det ar: Kontroll av att kommentarsratten foljer delningens permission.
   Vad det innebar for koden: Guardlogik behovs i UI och helst aven i persistence-lagret.
   Varfor det behovs: Felaktiga kommentarstallstand skapar bade produkt- och supportproblem.
 
 #### C. Publik publicering
 
-- [ ] Publicering av board verifierar att snapshot, metadata och publika falt ar kompletta innan skrivning.
+- [x] Publicering av board verifierar att snapshot, metadata och publika falt ar kompletta innan skrivning.
   Vad det ar: En preflight-kontroll innan innehall skickas till publikt bibliotek.
   Vad det innebar for koden: `publicLibrary.ts` och publicerings-UI maste gora tydlig validering fore save.
   Varfor det behovs: Publikt innehall far inte bygga pa ofullstandiga eller ogiltiga snapshots.
 
-- [ ] Publicering av projekt verifierar att projektmetadata och publika falt ar konsistenta.
+- [x] Publicering av projekt verifierar att projektmetadata och publika falt ar konsistenta.
   Vad det ar: Motsvarande kontroll for publika projekt.
   Vad det innebar for koden: `publicProjects.ts` och tillhorande UI behover enhetlig validering och felhantering.
   Varfor det behovs: Projektpublicering ar mer omfattande an boardpublicering och kravjer tydligare kontrakt.
 
 #### D. Permissions och auth
 
-- [ ] `view` och `comment` verifieras i tester pa persistence- eller guardniva.
+- [x] `view` och `comment` verifieras i tester pa persistence- eller guardniva.
   Vad det ar: Testning av vem som far lasa respektive skriva i delade boards.
   Vad det innebar for koden: Delnings- och kommentarsfloden behover isolerbara guardfunktioner eller mockbara adapters.
   Varfor det behovs: Behörighetslogik ska vara testbar, inte bara antagen.
 
-- [ ] Delnings- och publiceringsfloden beter sig begripligt nar anvandaren ar utloggad, offline eller saknar plan.
+- [x] Delnings- och publiceringsfloden beter sig begripligt nar anvandaren ar utloggad, offline eller saknar plan.
   Vad det ar: Kontroll av produktregler och fellagen runt auth och plan.
   Vad det innebar for koden: UI och persistence-kod maste kunna returnera tydliga orsaker i stallet for generiska fel.
   Varfor det behovs: De vanligaste supportfallen uppstar ofta i just dessa lag.
 
 #### E. Moderation och support
 
-- [ ] Rapportering och moderationsstatus definieras som ett minimiflod for publikt innehall.
+- [x] Rapportering och moderationsstatus definieras som ett minimiflod for publikt innehall.
   Vad det ar: Ett enkelt forsta arbetsflode for hur rapporterat innehall ska hanteras.
   Vad det innebar for koden: Kan borja som dokumenterat arbetssatt och sedan kompletteras med mindre adminstöd.
   Varfor det behovs: Publikt innehall maste kunna forvaltas, inte bara publiceras.
 
 ### Uppgifter
 
-- [ ] Gora felhanteringen tydligare i board sharing och project sharing.
+- [x] Gora felhanteringen tydligare i board sharing och project sharing.
   Vad det ar: Tydligare hantering av API-fel, offline-lage och valideringsfel.
   Vad det innebar for koden: Fler enhetliga felmeddelanden och tydligare statusflode i delningskomponenterna.
   Varfor det behovs: Delning ar en premiumfunktion och maste upplevas som stabil.
 
-- [ ] Hardna publiceringsflodet sa att ofullstandigt eller trasigt innehall inte kan publiceras.
+- [x] Hardna share-flodet med tydligare auth-, access- och revoke-regler i persistence-lagret.
+  Vad det ar: Ett forsta skydd sa att share-anrop inte bara forlitar sig pa UI eller databasregler.
+  Vad det innebar for koden: `shares.ts` verifierar nu inloggning, agarskap, mottagaratkomst och blockerar vissa ogiltiga anrop som self-share.
+  Varfor det behovs: Delning ska bete sig begripligt aven nar ett anrop kommer i fel kontext eller med otillracklig behorighet.
+
+- [x] Hardna publiceringsflodet sa att ofullstandigt eller trasigt innehall inte kan publiceras.
   Vad det ar: Validering innan board eller projekt skickas till publikt bibliotek.
   Vad det innebar for koden: Publiceringsfunktionerna bor fa tydligare preflight-kontroller.
   Varfor det behovs: Publikt innehall speglar produktens kvalitet utat.
 
-- [ ] Forbattra kommentarflodet for delade boards.
+- [x] Hardna public board/project-floden med tydligare auth-, owner- och report-regler i persistence-lagret.
+  Vad det ar: Ett skydd sa att publish-, unpublish- och report-anrop beter sig konsekvent utan att vara beroende av UI-kontroller.
+  Vad det innebar for koden: `publicLibrary.ts` och `publicProjects.ts` verifierar nu inloggning, agarskap, giltiga id:n och blockerar rapportering av eget publikt innehall.
+  Varfor det behovs: Publiceringsfloden ar produktens yttersta exponering och maste vara begripliga och defensiva.
+
+- [x] Forbattra kommentarflodet for delade boards.
   Vad det ar: Tydligare laddning, tomma lagen, permissionlogik och uppdatering av kommentarer.
   Vad det innebar for koden: Kommentarlogik bor brytas ut och goras mer robust.
   Varfor det behovs: Kommentarer ar samarbetsytan och far inte vara otydliga eller opalitliga.
 
-- [ ] Lagg till tester for behorighet och permissionfloden runt `view` och `comment`.
+- [x] Tydliggora `CommentsModal` for laddning, tomt lage och fetch-/save-fel.
+  Vad det ar: Ett forsta stabilitetssteg i kommentarflodet.
+  Vad det innebar for koden: Separata UI-states for loading, tom lista, fetch-fel och save-status.
+  Varfor det behovs: Kommentarer ska ga att forsta och felsoka utan att anvandaren maste gissa vad som hander.
+
+- [x] Lagg till tester for behorighet och permissionfloden runt `view` och `comment`.
   Vad det ar: Verifiering av vem som far lasa, kommentera och hantera delade boards.
   Vad det innebar for koden: Testning kring persistence-lager och eventuella guardfunktioner.
   Varfor det behovs: Behorighetsfel blir snabbt bade produkt- och supportproblem.
 
-- [ ] Definiera en enklare moderationsrutin for publikt bibliotek.
+- [x] Flytta grundlaggande `view`- och `comment`-regler till persistence-lagret for board shares.
+  Vad det ar: Ett forsta tekniskt skydd sa att permissions inte bara ligger i UI.
+  Vad det innebar for koden: `shares.ts` verifierar nu att anvandaren faktiskt far lasa eller kommentera en share innan kommentarer hamtas eller skrivs.
+  Varfor det behovs: Det minskar risken for felaktiga klientanrop och gor permissionlogiken mer enhetlig.
+
+- [x] Definiera en enklare moderationsrutin for publikt bibliotek.
   Vad det ar: Ett forsta praktiskt arbetsflode for rapporterat innehall.
   Vad det innebar for koden: Kan innebara mindre adminforbattringar och tydligare statusfloden.
   Varfor det behovs: Publikt innehall utan moderation skapar kvalitetsrisker.
+
+### Enkel moderationsrutin for Etapp 2
+
+Den moderationsrutin som galler efter Etapp 2 ar:
+
+1. Rapporter om publika boards och publika projekt samlas i adminytan tillsammans med vanliga buggrapporter.
+2. Admin granskar rapportens `source`, tidpunkt, reporter och text for att avgora om det ar missbruk, spam eller legitimt innehall.
+3. Om innehallet ar uppenbart olampligt eller felaktigt tas det bort via befintligt unpublish-flode.
+4. Om rapporten inte kraver atgard lamnas innehallet kvar och rapporten fungerar som loggunderlag tills mer avancerad statusmodell byggs.
+5. Upprepade rapporter mot samma innehall ska prioriteras manuellt i adminlistan tills dedikerad moderationsstatus finns.
+
+Vad det ar: En minimal men praktiskt anvandbar rutin for publika rapporter.
+Vad det innebar for koden: Adminytan kan redan visa rapportkallor, men statusmarkering, assignering och historik flyttas till senare etapp.
+Varfor det behovs: Etapp 2 ska stanga gapet mellan "det gar att rapportera" och "nagon kan faktiskt folja upp det".
+
+### Etapp 2 avslut
+
+Etapp 2 anses klar i nuvarande omfattning.
+
+Det som ar uppfyllt:
+
+- sharing/publicering har preflight-validering och tydligare felreturer
+- kommentarer har tydligare laddnings-, tom- och fellagen
+- permissionregler finns nu i persistence-lagret for board shares
+- public board/project-floden har auth-, owner- och report-skydd
+- adminytan kan nu se rapporter for publika boards och projekt som ett forsta moderationsflode
+
+Det som medvetet skjuts till senare etapper:
+
+- bredare automatiserade tester for hela UI-floden runt sharing/publicering
+- dedikerade moderationsstatusar som `open`, `reviewed` och `resolved`
+- mer avancerade adminatgarder som bulkhantering, noteringar eller assignment
 
 ### Rekommenderat forsta genomforande i Etapp 2
 
@@ -621,6 +675,11 @@ Denna etapp ar framtung och bor paborjas forst nar tidigare etapper ar tillrackl
   Vad det ar: Flera coacher, gemensamma arbetsytor och tydliga roller.
   Vad det innebar for koden: Datan, authfloden och behorighetsmodellen blir mer avancerade.
   Varfor det behovs: Det ar ett naturligt steg om produkten ska vaxa mot organisationer och klubbar.
+
+- [x] Forbereda klubb-, lag- och medlemskapsmodell som grund for framtida teamkonton.
+  Vad det ar: Ett forberedande steg dar klubbar, lag och lagmedlemskap borjar skiljas fran personliga anvandartrupper.
+  Vad det innebar for koden: Nytt schemaunderlag, adapterlager for `clubs -> teams -> team_members`, fallback mot legacyflodet och projektstart som kan valja `Home team`/`Away team`.
+  Varfor det behovs: Det skapar en migrationsbar vag mot riktiga klubbkonton, rollstyrning och flera lag per anvandare utan att bryta dagens produktflode.
 
 - [ ] Utred mer avancerad moderation och kvalitetssakring for publikt bibliotek.
   Vad det ar: Ett mer moget flode for granskning, flaggning och curatorarbete.

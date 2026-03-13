@@ -8,6 +8,8 @@ import type {
   BoardSharePermission,
   Project,
   PublicProject,
+  TeamDirectoryClub,
+  TeamDirectoryTeam,
 } from "@/models";
 import { can, getPlanLimits } from "@/utils/plan";
 import { createId } from "@/utils/id";
@@ -43,14 +45,14 @@ import {
   loadProjectTemplates,
   type ProjectTemplate,
 } from "@/persistence/projectTemplates";
-import {
-  type BugReportRow,
-} from "@/persistence/bugReports";
+import { loadDefaultTeamSquads } from "@/persistence/defaultTeamSquads";
+import { fetchClubTeamDirectory } from "@/persistence/teamDirectory";
 import {
   fetchAdminAnalytics,
   fetchAdminReports,
   fetchAdminUsers,
   updateAdminUserFlags,
+  type AdminReportRow,
   type AdminAnalyticsResponse,
   type AdminUserRow,
 } from "@/persistence/admin";
@@ -162,7 +164,7 @@ export default function ProjectList() {
   const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
   const [adminUsersLoading, setAdminUsersLoading] = useState(false);
   const [adminUsersError, setAdminUsersError] = useState<string | null>(null);
-  const [adminReports, setAdminReports] = useState<BugReportRow[]>([]);
+  const [adminReports, setAdminReports] = useState<AdminReportRow[]>([]);
   const [adminReportsLoading, setAdminReportsLoading] = useState(false);
   const [adminReportsError, setAdminReportsError] = useState<string | null>(null);
   const [adminAnalytics, setAdminAnalytics] =
@@ -202,6 +204,11 @@ export default function ProjectList() {
   const [projectTemplates, setProjectTemplates] = useState<ProjectTemplate[]>(
     []
   );
+  const [createTeamDirectory, setCreateTeamDirectory] = useState<TeamDirectoryClub[]>([]);
+  const [createTeamDirectoryLoading, setCreateTeamDirectoryLoading] = useState(false);
+  const [createTeamDirectoryError, setCreateTeamDirectoryError] = useState<string | null>(null);
+  const [selectedHomeTeamId, setSelectedHomeTeamId] = useState("");
+  const [selectedAwayTeamId, setSelectedAwayTeamId] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [consoleTab, setConsoleTab] = useState<
     "recent" | "favourites" | "shared" | "library" | "admin"
@@ -654,6 +661,85 @@ export default function ProjectList() {
         : templates[0]!.id
     );
   }, [authUser?.id, createOpen, plan]);
+  useEffect(() => {
+    if (!createOpen || !authUser) {
+      setCreateTeamDirectory([]);
+      setCreateTeamDirectoryError(null);
+      setSelectedHomeTeamId("");
+      setSelectedAwayTeamId("");
+      return;
+    }
+    let cancelled = false;
+    setCreateTeamDirectoryLoading(true);
+    setCreateTeamDirectoryError(null);
+    fetchClubTeamDirectory()
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        if (!result.ok) {
+          setCreateTeamDirectory([]);
+          setCreateTeamDirectoryError(result.error);
+          return;
+        }
+        setCreateTeamDirectory(result.clubs);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setCreateTeamDirectoryLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser, createOpen]);
+
+  const availableCreateTeams = createTeamDirectory.flatMap((club) =>
+    club.teams.map((team) => ({
+      club,
+      team,
+    }))
+  );
+
+  useEffect(() => {
+    if (availableCreateTeams.length === 0) {
+      return;
+    }
+    setSelectedHomeTeamId((current) =>
+      current && availableCreateTeams.some(({ team }) => team.id === current)
+        ? current
+        : availableCreateTeams[0]!.team.id
+    );
+    setSelectedAwayTeamId((current) =>
+      current && availableCreateTeams.some(({ team }) => team.id === current)
+        ? current
+        : availableCreateTeams[1]?.team.id ?? ""
+    );
+  }, [createOpen, availableCreateTeams]);
+
+  const getCreateTeamById = (teamId: string): TeamDirectoryTeam | null =>
+    availableCreateTeams.find(({ team }) => team.id === teamId)?.team ?? null;
+
+  const selectedHomeTeam = getCreateTeamById(selectedHomeTeamId);
+  const selectedAwayTeam = getCreateTeamById(selectedAwayTeamId);
+
+  useEffect(() => {
+    if (selectedHomeTeam) {
+      setHomeKit({
+        ...selectedHomeTeam.squad.kit,
+        vest: selectedHomeTeam.squad.kit.vest ?? "",
+      });
+    }
+  }, [selectedHomeTeam]);
+
+  useEffect(() => {
+    if (selectedAwayTeam) {
+      setAwayKit({
+        ...selectedAwayTeam.squad.kit,
+        vest: selectedAwayTeam.squad.kit.vest ?? "",
+      });
+    }
+  }, [selectedAwayTeam]);
 
   const onCreate = () => {
     if (!name.trim()) {
@@ -1820,7 +1906,7 @@ export default function ProjectList() {
               </div>
               <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/50 p-3">
                 <h4 className="text-xs uppercase tracking-widest text-[var(--ink-1)]">
-                  Feedback / Bug reports
+                  Reports / Moderation
                 </h4>
                 {adminReportsLoading ? (
                   <p className="text-xs text-[var(--ink-1)]">Loading reports...</p>
@@ -1836,6 +1922,9 @@ export default function ProjectList() {
                         <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                           <span className="rounded-full border border-[var(--line)] px-2 py-1">
                             {row.report_type}
+                          </span>
+                          <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                            {row.source}
                           </span>
                           <span>{new Date(row.created_at).toLocaleString()}</span>
                         </div>
@@ -2292,6 +2381,46 @@ export default function ProjectList() {
               </div>
               <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-3">
                 <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">Team colors</p>
+                {createTeamDirectoryLoading ? (
+                  <p className="text-[10px] text-[var(--ink-1)]">Loading club teams...</p>
+                ) : null}
+                {createTeamDirectoryError ? (
+                  <p className="text-[10px] text-[var(--accent-1)]">{createTeamDirectoryError}</p>
+                ) : null}
+                {availableCreateTeams.length > 0 ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="space-y-1">
+                      <span className="text-[11px] uppercase text-[var(--ink-1)]">Home team</span>
+                      <select
+                        className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                        value={selectedHomeTeamId}
+                        onChange={(event) => setSelectedHomeTeamId(event.target.value)}
+                      >
+                        <option value="">Use saved default</option>
+                        {availableCreateTeams.map(({ club, team }) => (
+                          <option key={`home-${team.id}`} value={team.id}>
+                            {club.name}: {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[11px] uppercase text-[var(--ink-1)]">Away team</span>
+                      <select
+                        className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                        value={selectedAwayTeamId}
+                        onChange={(event) => setSelectedAwayTeamId(event.target.value)}
+                      >
+                        <option value="">Use saved default</option>
+                        {availableCreateTeams.map(({ club, team }) => (
+                          <option key={`away-${team.id}`} value={team.id}>
+                            {club.name}: {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                ) : null}
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-2">
                     <p className="text-[11px] uppercase text-[var(--ink-1)]">Home kit</p>
@@ -2446,6 +2575,9 @@ export default function ProjectList() {
                   const templates = createTemplateOptions.filter((board) =>
                     createBoards.includes(board.id)
                   );
+                  const defaultTeamSquads = loadDefaultTeamSquads(authUser?.id ?? null);
+                  const homeSquadPreset = selectedHomeTeam?.squad ?? defaultTeamSquads.home;
+                  const awaySquadPreset = selectedAwayTeam?.squad ?? defaultTeamSquads.away;
                   createProject(name.trim(), {
                     homeKit,
                     awayKit,
@@ -2465,6 +2597,8 @@ export default function ProjectList() {
                             pitchShape: board.pitchShape,
                           }))
                         : undefined,
+                    homeSquadPreset,
+                    awaySquadPreset,
                     startingFormation:
                       startingFormation !== "none"
                         ? startingFormation

@@ -1,0 +1,111 @@
+import { describe, expect, it } from "vitest";
+import { buildTeamDirectory, mapLegacyPresetsToDirectory } from "./teamDirectory";
+import type { SquadPreset } from "@/models";
+
+describe("teamDirectory", () => {
+  it("maps legacy squad presets into a fallback club structure", () => {
+    const presets: SquadPreset[] = [
+      {
+        id: "preset-1",
+        userId: "user-1",
+        teamId: "team-1",
+        teamName: "Team One",
+        name: "Team One",
+        createdAt: "2026-03-13T00:00:00.000Z",
+        updatedAt: "2026-03-13T00:00:00.000Z",
+        squad: {
+          id: "squad-1",
+          name: "Team One",
+          kit: {
+            shirt: "#111111",
+            shorts: "#222222",
+            socks: "#333333",
+          },
+          players: [
+            {
+              id: "player-1",
+              name: "Player One",
+              positionLabel: "CM",
+            },
+          ],
+        },
+      },
+    ];
+
+    const clubs = mapLegacyPresetsToDirectory(presets);
+
+    expect(clubs[0]?.name).toBe("My teams");
+    expect(clubs[0]?.teams[0]?.squad.players[0]?.name).toBe("Player One");
+  });
+
+  it("builds club/team/member hierarchy from new schema rows", () => {
+    const clubs = buildTeamDirectory({
+      currentUserId: "user-1",
+      clubMemberships: [
+        {
+          club_id: "club-1",
+          membership_role: "staff",
+          is_club_admin: true,
+          clubs: {
+            id: "club-1",
+            name: "Club One",
+            slug: "club-one",
+            logo_url: null,
+            status: "active",
+          },
+        },
+      ],
+      teams: [
+        {
+          id: "team-1",
+          club_id: "club-1",
+          name: "Team One",
+          slug: "team-one",
+          team_type: "boys",
+          age_group: "U17",
+          season_label: "2026",
+          status: "active",
+          club_logo: null,
+        },
+      ],
+      teamMembers: [
+        {
+          id: "member-1",
+          team_id: "team-1",
+          user_id: "user-1",
+          display_name: "Head Coach",
+          member_role: "leader",
+          team_position: "head_coach",
+          is_team_admin: true,
+          is_guest: false,
+          is_active: true,
+          shirt_number: null,
+          photo_url: null,
+          sort_order: 0,
+        },
+        {
+          id: "member-2",
+          team_id: "team-1",
+          user_id: null,
+          display_name: "Goalkeeper",
+          member_role: "player",
+          team_position: "goalkeeper",
+          is_team_admin: false,
+          is_guest: false,
+          is_active: true,
+          shirt_number: 1,
+          photo_url: null,
+          sort_order: 1,
+        },
+      ],
+    });
+
+    expect(clubs[0]?.isCurrentUserClubAdmin).toBe(true);
+    expect(clubs[0]?.teams[0]?.isCurrentUserTeamAdmin).toBe(true);
+    expect(clubs[0]?.teams[0]?.squad.players[0]).toMatchObject({
+      name: "Goalkeeper",
+      positionLabel: "goalkeeper",
+      number: 1,
+    });
+  });
+});

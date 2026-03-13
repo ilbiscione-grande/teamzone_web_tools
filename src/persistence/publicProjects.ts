@@ -63,6 +63,43 @@ const mapReport = (row: PublicProjectReportRow): PublicProjectReport => ({
   createdAt: row.created_at,
 });
 
+const getCurrentUser = async (purpose: string) => {
+  if (!supabase) {
+    return { ok: false, error: "Supabase not configured." } as const;
+  }
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) {
+    return { ok: false, error: `Please sign in to ${purpose}.` } as const;
+  }
+  return { ok: true, user: userData.user } as const;
+};
+
+const getOwnedPublicProject = async (publicId: string) => {
+  if (!supabase) {
+    return { ok: false, error: "Supabase not configured." } as const;
+  }
+  if (!publicId.trim()) {
+    return { ok: false, error: "Public project id is required." } as const;
+  }
+  const userResult = await getCurrentUser("manage this public project");
+  if (!userResult.ok) {
+    return userResult;
+  }
+  const { data, error } = await supabase
+    .from(PUBLIC_TABLE)
+    .select("id,owner_id")
+    .eq("id", publicId)
+    .maybeSingle<{ id: string; owner_id: string }>();
+  recordNetworkCall("supabase.public_projects.access", !error);
+  if (error || !data) {
+    return { ok: false, error: error?.message ?? "Public project not found." } as const;
+  }
+  if (data.owner_id !== userResult.user.id) {
+    return { ok: false, error: "Only the owner can manage this public project." } as const;
+  }
+  return { ok: true, user: userResult.user } as const;
+};
+
 export const fetchPublicProjects = async () => {
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
@@ -79,18 +116,21 @@ export const fetchPublicProjects = async () => {
 };
 
 export const fetchPublicProjectForOwner = async (projectId: string) => {
+  if (!projectId.trim()) {
+    return { ok: false, error: "Project id is required." } as const;
+  }
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    return { ok: false, error: "Please sign in." } as const;
+  const userResult = await getCurrentUser("view your public projects");
+  if (!userResult.ok) {
+    return userResult;
   }
   const { data, error } = await supabase
     .from(PUBLIC_TABLE)
     .select(PUBLIC_PROJECT_COLUMNS_MIN)
     .eq("project_id", projectId)
-    .eq("owner_id", userData.user.id)
+    .eq("owner_id", userResult.user.id)
     .maybeSingle();
   recordNetworkCall("supabase.public_projects.by_owner_project", !error);
   if (error) {
@@ -113,12 +153,12 @@ export const publishPublicProject = async (payload: {
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    return { ok: false, error: "Please sign in to publish." } as const;
+  const userResult = await getCurrentUser("publish");
+  if (!userResult.ok) {
+    return userResult;
   }
-  const ownerId = userData.user.id;
-  const ownerEmail = userData.user.email ?? "";
+  const ownerId = userResult.user.id;
+  const ownerEmail = userResult.user.email ?? "";
   const { data, error } = await supabase
     .from(PUBLIC_TABLE)
     .upsert(
@@ -148,6 +188,9 @@ const PUBLIC_PROJECT_REPORT_COLUMNS =
   "id,project_id,reporter_id,reporter_email,reason,created_at";
 
 export const fetchPublicProjectData = async (publicId: string) => {
+  if (!publicId.trim()) {
+    return { ok: false, error: "Public project id is required." } as const;
+  }
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
@@ -167,10 +210,19 @@ export const fetchPublicProjectData = async (publicId: string) => {
 };
 
 export const unpublishPublicProject = async (publicId: string) => {
-  if (!supabase) {
+  const ownerResult = await getOwnedPublicProject(publicId);
+  if (!ownerResult.ok) {
+    return ownerResult;
+  }
+  const sb = supabase;
+  if (!sb) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
-  const { error } = await supabase.from(PUBLIC_TABLE).delete().eq("id", publicId);
+  const { error } = await sb
+    .from(PUBLIC_TABLE)
+    .delete()
+    .eq("id", publicId)
+    .eq("owner_id", ownerResult.user.id);
   recordNetworkCall("supabase.public_projects.unpublish", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
@@ -182,20 +234,43 @@ export const reportPublicProject = async (payload: {
   projectId: string;
   reason: string;
 }) => {
+  const projectId = payload.projectId.trim();
+  const reason = payload.reason.trim();
+  if (!projectId) {
+    return { ok: false, error: "Public project id is required." } as const;
+  }
+  if (!reason) {
+    return { ok: false, error: "Enter a report reason." } as const;
+  }
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    return { ok: false, error: "Please sign in to report." } as const;
+  const userResult = await getCurrentUser("report");
+  if (!userResult.ok) {
+    return userResult;
+  }
+  const { data: projectData, error: projectError } = await supabase
+    .from(PUBLIC_TABLE)
+    .select("owner_id")
+    .eq("id", projectId)
+    .maybeSingle<{ owner_id: string }>();
+  recordNetworkCall("supabase.public_projects.report_access", !projectError);
+  if (projectError || !projectData) {
+    return {
+      ok: false,
+      error: projectError?.message ?? "Public project not found.",
+    } as const;
+  }
+  if (projectData.owner_id === userResult.user.id) {
+    return { ok: false, error: "You cannot report your own public project." } as const;
   }
   const { data, error } = await supabase
     .from(REPORT_TABLE)
     .insert({
-      project_id: payload.projectId,
-      reporter_id: userData.user.id,
-      reporter_email: userData.user.email ?? "",
-      reason: payload.reason,
+      project_id: projectId,
+      reporter_id: userResult.user.id,
+      reporter_email: userResult.user.email ?? "",
+      reason,
     })
     .select(PUBLIC_PROJECT_REPORT_COLUMNS)
     .single();

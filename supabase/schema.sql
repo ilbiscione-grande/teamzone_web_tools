@@ -601,6 +601,178 @@ on board_comments
 for delete
 using (auth.uid() = author_id);
 
+-- Club + Team foundation (phase 1, backwards-compatible with current team model)
+create table if not exists clubs (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text unique,
+  logo_url text,
+  created_by_user_id uuid references auth.users(id) on delete set null,
+  primary_admin_user_id uuid references auth.users(id) on delete set null,
+  status text not null default 'active',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists clubs_primary_admin_idx on clubs(primary_admin_user_id);
+create index if not exists clubs_created_by_idx on clubs(created_by_user_id);
+
+create table if not exists club_members (
+  id uuid primary key default gen_random_uuid(),
+  club_id uuid not null references clubs(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  membership_role text not null default 'member',
+  is_club_admin boolean not null default false,
+  status text not null default 'active',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(club_id, user_id)
+);
+
+create index if not exists club_members_user_idx on club_members(user_id);
+create index if not exists club_members_club_idx on club_members(club_id);
+create index if not exists club_members_admin_idx on club_members(club_id, is_club_admin);
+
+alter table clubs enable row level security;
+alter table club_members enable row level security;
+
+drop policy if exists "Users can view their clubs" on clubs;
+drop policy if exists "Users can insert their clubs" on clubs;
+drop policy if exists "Club admins can update clubs" on clubs;
+drop policy if exists "Club admins can delete clubs" on clubs;
+
+create policy "Users can view their clubs"
+on clubs
+for select
+using (
+  exists (
+    select 1
+    from club_members cm
+    where cm.club_id = clubs.id
+      and cm.user_id = auth.uid()
+  )
+  or primary_admin_user_id = auth.uid()
+  or created_by_user_id = auth.uid()
+);
+
+create policy "Users can insert their clubs"
+on clubs
+for insert
+with check (
+  created_by_user_id = auth.uid()
+  or primary_admin_user_id = auth.uid()
+);
+
+create policy "Club admins can update clubs"
+on clubs
+for update
+using (
+  primary_admin_user_id = auth.uid()
+  or exists (
+    select 1
+    from club_members cm
+    where cm.club_id = clubs.id
+      and cm.user_id = auth.uid()
+      and cm.is_club_admin = true
+  )
+);
+
+create policy "Club admins can delete clubs"
+on clubs
+for delete
+using (
+  primary_admin_user_id = auth.uid()
+  or exists (
+    select 1
+    from club_members cm
+    where cm.club_id = clubs.id
+      and cm.user_id = auth.uid()
+      and cm.is_club_admin = true
+  )
+);
+
+drop policy if exists "Users can view club memberships" on club_members;
+drop policy if exists "Club admins can insert club memberships" on club_members;
+drop policy if exists "Club admins can update club memberships" on club_members;
+drop policy if exists "Club admins can delete club memberships" on club_members;
+
+create policy "Users can view club memberships"
+on club_members
+for select
+using (
+  user_id = auth.uid()
+  or exists (
+    select 1
+    from club_members cm
+    where cm.club_id = club_members.club_id
+      and cm.user_id = auth.uid()
+      and cm.is_club_admin = true
+  )
+  or exists (
+    select 1
+    from clubs c
+    where c.id = club_members.club_id
+      and c.primary_admin_user_id = auth.uid()
+  )
+);
+
+create policy "Club admins can insert club memberships"
+on club_members
+for insert
+with check (
+  exists (
+    select 1
+    from club_members cm
+    where cm.club_id = club_members.club_id
+      and cm.user_id = auth.uid()
+      and cm.is_club_admin = true
+  )
+  or exists (
+    select 1
+    from clubs c
+    where c.id = club_members.club_id
+      and c.primary_admin_user_id = auth.uid()
+  )
+);
+
+create policy "Club admins can update club memberships"
+on club_members
+for update
+using (
+  exists (
+    select 1
+    from club_members cm
+    where cm.club_id = club_members.club_id
+      and cm.user_id = auth.uid()
+      and cm.is_club_admin = true
+  )
+  or exists (
+    select 1
+    from clubs c
+    where c.id = club_members.club_id
+      and c.primary_admin_user_id = auth.uid()
+  )
+);
+
+create policy "Club admins can delete club memberships"
+on club_members
+for delete
+using (
+  exists (
+    select 1
+    from club_members cm
+    where cm.club_id = club_members.club_id
+      and cm.user_id = auth.uid()
+      and cm.is_club_admin = true
+  )
+  or exists (
+    select 1
+    from clubs c
+    where c.id = club_members.club_id
+      and c.primary_admin_user_id = auth.uid()
+  )
+);
+
 -- Team + Squad model (one squad per team, with loaned players support)
 create table if not exists teams (
   id uuid primary key default gen_random_uuid(),
@@ -613,6 +785,16 @@ create table if not exists teams (
 
 create index if not exists teams_owner_id_idx on teams(owner_id);
 
+alter table teams add column if not exists club_id uuid references clubs(id) on delete set null;
+alter table teams add column if not exists slug text;
+alter table teams add column if not exists team_type text not null default 'other';
+alter table teams add column if not exists age_group text;
+alter table teams add column if not exists season_label text;
+alter table teams add column if not exists status text not null default 'active';
+
+create index if not exists teams_club_id_idx on teams(club_id);
+create index if not exists teams_club_status_idx on teams(club_id, status);
+
 create table if not exists team_members (
   id uuid primary key default gen_random_uuid(),
   team_id uuid not null references teams(id) on delete cascade,
@@ -623,6 +805,26 @@ create table if not exists team_members (
 );
 
 create index if not exists team_members_user_id_idx on team_members(user_id);
+
+alter table team_members add column if not exists club_member_id uuid references club_members(id) on delete set null;
+alter table team_members add column if not exists display_name text;
+alter table team_members add column if not exists member_role text not null default 'other';
+alter table team_members add column if not exists team_position text;
+alter table team_members add column if not exists is_team_admin boolean not null default false;
+alter table team_members add column if not exists is_guest boolean not null default false;
+alter table team_members add column if not exists is_active boolean not null default true;
+alter table team_members add column if not exists shirt_number integer;
+alter table team_members add column if not exists photo_url text;
+alter table team_members add column if not exists email text;
+alter table team_members add column if not exists phone text;
+alter table team_members add column if not exists sort_order integer not null default 0;
+alter table team_members add column if not exists metadata jsonb not null default '{}'::jsonb;
+alter table team_members add column if not exists updated_at timestamptz not null default now();
+
+create index if not exists team_members_team_idx on team_members(team_id);
+create index if not exists team_members_team_role_idx on team_members(team_id, member_role);
+create index if not exists team_members_team_admin_idx on team_members(team_id, is_team_admin);
+create index if not exists team_members_club_member_idx on team_members(club_member_id);
 
 create table if not exists team_squads (
   id uuid primary key default gen_random_uuid(),
@@ -689,22 +891,68 @@ on teams
 for select
 using (
   owner_id = auth.uid()
+  or exists (
+    select 1
+    from team_members tm
+    where tm.team_id = teams.id
+      and tm.user_id = auth.uid()
+  )
+  or exists (
+    select 1
+    from club_members cm
+    where cm.club_id = teams.club_id
+      and cm.user_id = auth.uid()
+  )
 );
 
 create policy "Users can insert their teams"
 on teams
 for insert
-with check (owner_id = auth.uid());
+with check (
+  owner_id = auth.uid()
+  or exists (
+    select 1
+    from club_members cm
+    where cm.club_id = teams.club_id
+      and cm.user_id = auth.uid()
+      and cm.is_club_admin = true
+  )
+);
 
 create policy "Users can update owned teams"
 on teams
 for update
-using (owner_id = auth.uid());
+using (
+  owner_id = auth.uid()
+  or exists (
+    select 1
+    from team_members tm
+    where tm.team_id = teams.id
+      and tm.user_id = auth.uid()
+      and tm.is_team_admin = true
+  )
+  or exists (
+    select 1
+    from club_members cm
+    where cm.club_id = teams.club_id
+      and cm.user_id = auth.uid()
+      and cm.is_club_admin = true
+  )
+);
 
 create policy "Users can delete owned teams"
 on teams
 for delete
-using (owner_id = auth.uid());
+using (
+  owner_id = auth.uid()
+  or exists (
+    select 1
+    from club_members cm
+    where cm.club_id = teams.club_id
+      and cm.user_id = auth.uid()
+      and cm.is_club_admin = true
+  )
+);
 
 drop policy if exists "Users can view team memberships" on team_members;
 drop policy if exists "Owners can insert team memberships" on team_members;
@@ -722,6 +970,19 @@ using (
     where t.id = team_members.team_id
       and t.owner_id = auth.uid()
   )
+  or exists (
+    select 1
+    from team_members tm
+    where tm.team_id = team_members.team_id
+      and tm.user_id = auth.uid()
+  )
+  or exists (
+    select 1
+    from teams t
+    join club_members cm on cm.club_id = t.club_id
+    where t.id = team_members.team_id
+      and cm.user_id = auth.uid()
+  )
 );
 
 create policy "Owners can insert team memberships"
@@ -733,6 +994,21 @@ with check (
     from teams t
     where t.id = team_members.team_id
       and t.owner_id = auth.uid()
+  )
+  or exists (
+    select 1
+    from team_members tm
+    where tm.team_id = team_members.team_id
+      and tm.user_id = auth.uid()
+      and tm.is_team_admin = true
+  )
+  or exists (
+    select 1
+    from teams t
+    join club_members cm on cm.club_id = t.club_id
+    where t.id = team_members.team_id
+      and cm.user_id = auth.uid()
+      and cm.is_club_admin = true
   )
 );
 
@@ -746,6 +1022,21 @@ using (
     where t.id = team_members.team_id
       and t.owner_id = auth.uid()
   )
+  or exists (
+    select 1
+    from team_members tm
+    where tm.team_id = team_members.team_id
+      and tm.user_id = auth.uid()
+      and tm.is_team_admin = true
+  )
+  or exists (
+    select 1
+    from teams t
+    join club_members cm on cm.club_id = t.club_id
+    where t.id = team_members.team_id
+      and cm.user_id = auth.uid()
+      and cm.is_club_admin = true
+  )
 );
 
 create policy "Owners can delete team memberships"
@@ -757,6 +1048,21 @@ using (
     from teams t
     where t.id = team_members.team_id
       and t.owner_id = auth.uid()
+  )
+  or exists (
+    select 1
+    from team_members tm
+    where tm.team_id = team_members.team_id
+      and tm.user_id = auth.uid()
+      and tm.is_team_admin = true
+  )
+  or exists (
+    select 1
+    from teams t
+    join club_members cm on cm.club_id = t.club_id
+    where t.id = team_members.team_id
+      and cm.user_id = auth.uid()
+      and cm.is_club_admin = true
   )
 );
 
@@ -1017,4 +1323,169 @@ using (
         )
       )
   )
+);
+
+-- Phase 1 backfill for club + membership model
+--
+-- This section is intentionally non-destructive. It creates a default club
+-- for existing team owners, connects legacy teams to that club, creates club
+-- memberships, and backfills richer team membership records from the current
+-- team/player structure.
+
+insert into clubs (
+  name,
+  slug,
+  created_by_user_id,
+  primary_admin_user_id,
+  status
+)
+select
+  coalesce(nullif(trim(t.name), ''), 'Club') || ' Club' as name,
+  lower(
+    regexp_replace(
+      coalesce(nullif(trim(t.name), ''), 'club') || '-' || left(t.owner_id::text, 8),
+      '[^a-z0-9]+',
+      '-',
+      'g'
+    )
+  ) as slug,
+  t.owner_id,
+  t.owner_id,
+  'active'
+from (
+  select distinct owner_id, min(name) as name
+  from teams
+  where owner_id is not null
+  group by owner_id
+) t
+where not exists (
+  select 1
+  from clubs c
+  where c.created_by_user_id = t.owner_id
+);
+
+update teams
+set
+  club_id = c.id,
+  updated_at = now()
+from clubs c
+where teams.club_id is null
+  and c.created_by_user_id = teams.owner_id;
+
+insert into club_members (
+  club_id,
+  user_id,
+  membership_role,
+  is_club_admin,
+  status
+)
+select
+  c.id,
+  c.primary_admin_user_id,
+  'staff',
+  true,
+  'active'
+from clubs c
+where c.primary_admin_user_id is not null
+  and not exists (
+    select 1
+    from club_members cm
+    where cm.club_id = c.id
+      and cm.user_id = c.primary_admin_user_id
+  );
+
+insert into team_members (
+  team_id,
+  user_id,
+  role,
+  display_name,
+  member_role,
+  team_position,
+  is_team_admin,
+  is_guest,
+  is_active,
+  sort_order,
+  updated_at
+)
+select
+  t.id as team_id,
+  t.owner_id as user_id,
+  'owner' as role,
+  null as display_name,
+  'leader' as member_role,
+  'head_coach' as team_position,
+  true as is_team_admin,
+  false as is_guest,
+  true as is_active,
+  -1000 as sort_order,
+  now() as updated_at
+from teams t
+where t.owner_id is not null
+  and not exists (
+    select 1
+    from team_members tm
+    where tm.team_id = t.id
+      and tm.user_id = t.owner_id
+  );
+
+update team_members tm
+set
+  club_member_id = cm.id,
+  updated_at = now()
+from teams t
+join club_members cm
+  on cm.club_id = t.club_id
+ and cm.user_id = tm.user_id
+where tm.team_id = t.id
+  and tm.user_id is not null
+  and tm.club_member_id is null;
+
+insert into team_members (
+  team_id,
+  user_id,
+  role,
+  display_name,
+  member_role,
+  team_position,
+  is_team_admin,
+  is_guest,
+  is_active,
+  shirt_number,
+  photo_url,
+  sort_order,
+  metadata,
+  updated_at
+)
+select
+  tp.team_id,
+  null as user_id,
+  'member' as role,
+  tp.name as display_name,
+  'player' as member_role,
+  tp.position_label as team_position,
+  false as is_team_admin,
+  false as is_guest,
+  coalesce(tp.is_active, true) as is_active,
+  tp.number as shirt_number,
+  tp.photo_url,
+  coalesce(tsp.order_index, 0) as sort_order,
+  jsonb_build_object(
+    'legacy_team_player_id', tp.id,
+    'legacy_vest_color', tp.vest_color
+  ) as metadata,
+  now() as updated_at
+from team_players tp
+left join team_squads ts
+  on ts.team_id = tp.team_id
+left join team_squad_players tsp
+  on tsp.squad_id = ts.id
+ and tsp.player_id = tp.id
+where not exists (
+  select 1
+  from team_members tm
+  where tm.team_id = tp.team_id
+    and tm.user_id is null
+    and tm.display_name = tp.name
+    and coalesce(tm.shirt_number, -1) = coalesce(tp.number, -1)
+    and tm.member_role = 'player'
 );

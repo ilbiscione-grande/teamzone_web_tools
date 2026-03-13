@@ -13,6 +13,7 @@ import type {
   ProjectMode,
   SquadPlayer,
   SquadPreset,
+  TeamDirectoryClub,
 } from "@/models";
 import FormationMenu from "@/components/FormationMenu";
 import { can, getPlanLimits } from "@/utils/plan";
@@ -29,6 +30,8 @@ import {
   fetchTeamsWithSquad,
   updateTeamWithSquad,
 } from "@/persistence/teamSquads";
+import { fetchClubTeamDirectory } from "@/persistence/teamDirectory";
+import { saveDefaultTeamSquad } from "@/persistence/defaultTeamSquads";
 import {
   createProjectShareLink,
   fetchProjectShareLinkForOwner,
@@ -50,6 +53,35 @@ type ManagePlayersSortKey = "default" | "name" | "position" | "number";
 type ManageRosterFilter = "all" | "visible" | "hidden" | "guests" | "regular";
 type ManageRosterView = "base" | "board";
 const SHARE_LINK_BASE_URL = "https://webtools.teamzoneapp.se";
+
+type ManageDirectoryTeamOption = {
+  clubId: string;
+  clubName: string;
+  clubMembershipRole: string;
+  isCurrentUserClubAdmin: boolean;
+  teamId: string;
+  teamName: string;
+  teamType: string;
+  ageGroup?: string | null;
+  seasonLabel?: string | null;
+  status: string;
+  isCurrentUserTeamAdmin: boolean;
+  squad: SquadPreset["squad"];
+};
+
+const flattenDirectoryTeamsToPresets = (clubs: TeamDirectoryClub[]): SquadPreset[] =>
+  clubs.flatMap((club) =>
+    club.teams.map((team) => ({
+      id: team.id,
+      userId: "",
+      teamId: team.id,
+      teamName: team.name,
+      name: team.name,
+      squad: team.squad,
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString(),
+    }))
+  );
 
 export default function TopBar() {
   const project = useProjectStore((state) => state.project);
@@ -97,9 +129,11 @@ export default function TopBar() {
   const [betaOpen, setBetaOpen] = useState(false);
   const [squadPresetsOpen, setSquadPresetsOpen] = useState(false);
   const [squadPresets, setSquadPresets] = useState<SquadPreset[]>([]);
+  const [squadPresetDirectory, setSquadPresetDirectory] = useState<TeamDirectoryClub[]>([]);
   const [squadPresetsLoading, setSquadPresetsLoading] = useState(false);
   const [squadPresetsError, setSquadPresetsError] = useState<string | null>(null);
   const [manageSide, setManageSide] = useState<"home" | "away">("home");
+  const [manageSelectedDirectoryTeamId, setManageSelectedDirectoryTeamId] = useState("");
   const [managePlayersSortKey, setManagePlayersSortKey] =
     useState<ManagePlayersSortKey>("default");
   const [managePlayersSortDir, setManagePlayersSortDir] = useState<"asc" | "desc">(
@@ -271,23 +305,68 @@ export default function TopBar() {
 
   useEffect(() => {
     if (!squadPresetsOpen) {
+      setManageSelectedDirectoryTeamId("");
       return;
     }
     if (!authUser || plan !== "PAID") {
       setSquadPresets([]);
+      setSquadPresetDirectory([]);
       setSquadPresetsError(null);
       return;
     }
     setSquadPresetsLoading(true);
     setSquadPresetsError(null);
-    fetchTeamsWithSquad()
+    fetchClubTeamDirectory()
       .then((result) => {
         if (!result.ok) {
-          setSquadPresetsError(result.error);
-          setSquadPresets([]);
-          return;
+          return fetchTeamsWithSquad().then((legacyResult) => {
+            if (!legacyResult.ok) {
+              setSquadPresetsError(legacyResult.error);
+              setSquadPresets([]);
+              setSquadPresetDirectory([]);
+              return;
+            }
+            setSquadPresetDirectory([
+              {
+                id: "legacy-personal-club",
+                name: "My teams",
+                slug: "my-teams",
+                logoUrl: null,
+                status: "active",
+                membershipRole: "member",
+                isCurrentUserClubAdmin: true,
+                teams: legacyResult.teams.map((team) => ({
+                  id: team.id,
+                  clubId: "legacy-personal-club",
+                  name: team.name,
+                  slug: null,
+                  teamType: "other",
+                  ageGroup: null,
+                  seasonLabel: null,
+                  status: "active",
+                  squad: team.squad,
+                  members: team.squad.players.map((player, index) => ({
+                    id: player.id,
+                    userId: null,
+                    displayName: player.name,
+                    memberRole: "player",
+                    teamPosition: player.positionLabel,
+                    isTeamAdmin: false,
+                    isGuest: player.guest ?? false,
+                    isActive: player.active ?? true,
+                    shirtNumber: player.number ?? null,
+                    photoUrl: player.photoUrl ?? null,
+                    sortOrder: index,
+                  })),
+                  isCurrentUserTeamAdmin: true,
+                })),
+              },
+            ]);
+            setSquadPresets(legacyResult.teams);
+          });
         }
-        setSquadPresets(result.teams);
+        setSquadPresetDirectory(result.clubs);
+        setSquadPresets(flattenDirectoryTeamsToPresets(result.clubs));
       })
       .finally(() => setSquadPresetsLoading(false));
   }, [squadPresetsOpen, authUser, plan]);
@@ -321,6 +400,43 @@ export default function TopBar() {
     manageSide === "home" ? boardSquads.home : boardSquads.away;
   const manageSquad = manageBaseSquad;
   const editableSquad = manageBaseSquad;
+  const manageDirectoryTeams = useMemo<ManageDirectoryTeamOption[]>(
+    () =>
+      squadPresetDirectory.flatMap((club) =>
+        club.teams.map((team) => ({
+          clubId: club.id,
+          clubName: club.name,
+          clubMembershipRole: club.membershipRole,
+          isCurrentUserClubAdmin: club.isCurrentUserClubAdmin,
+          teamId: team.id,
+          teamName: team.name,
+          teamType: team.teamType,
+          ageGroup: team.ageGroup,
+          seasonLabel: team.seasonLabel,
+          status: team.status,
+          isCurrentUserTeamAdmin: team.isCurrentUserTeamAdmin,
+          squad: team.squad,
+        }))
+      ),
+    [squadPresetDirectory]
+  );
+  const managedDirectoryTeam =
+    manageDirectoryTeams.find((team) => team.teamId === manageSquad?.id) ?? null;
+  const selectedManageDirectoryTeam =
+    manageDirectoryTeams.find((team) => team.teamId === manageSelectedDirectoryTeamId) ??
+    null;
+  useEffect(() => {
+    if (!squadPresetsOpen) {
+      return;
+    }
+    if (managedDirectoryTeam) {
+      setManageSelectedDirectoryTeamId(managedDirectoryTeam.teamId);
+      return;
+    }
+    setManageSelectedDirectoryTeamId(
+      (current) => current || manageDirectoryTeams[0]?.teamId || ""
+    );
+  }, [manageDirectoryTeams, managedDirectoryTeam, squadPresetsOpen]);
   const sortedManagePlayers = useMemo(() => {
     if (!manageSquad) {
       return [];
@@ -525,6 +641,7 @@ export default function TopBar() {
     }
     setManagePresetStatus(null);
     const existingTeam =
+      (manageSquad ? squadPresets.find((item) => item.id === manageSquad.id) : null) ??
       squadPresets.find(
         (item) => item.name.trim().toLowerCase() === nextName.toLowerCase()
       ) ?? squadPresets[0];
@@ -541,7 +658,8 @@ export default function TopBar() {
       setSquadPresets((prev) =>
         prev.map((item) => (item.id === result.team.id ? result.team : item))
       );
-      setManagePresetStatus("Team saved to DB.");
+      saveDefaultTeamSquad(manageSide, result.team.squad, authUser?.id ?? null);
+      setManagePresetStatus("Team saved to DB and set as default.");
       return;
     }
     const result = await createTeamWithSquad({
@@ -553,7 +671,40 @@ export default function TopBar() {
       return;
     }
     setSquadPresets((prev) => [result.team, ...prev]);
-    setManagePresetStatus("Team saved.");
+    saveDefaultTeamSquad(manageSide, result.team.squad, authUser?.id ?? null);
+    setManagePresetStatus("Team saved and set as default.");
+  };
+
+  const loadDirectoryTeamIntoSide = (teamId: string, side: "home" | "away") => {
+    const selectedTeam =
+      manageDirectoryTeams.find((team) => team.teamId === teamId) ?? null;
+    if (!selectedTeam) {
+      setManagePresetStatus("Select a team to load.");
+      return;
+    }
+    const targetSquadId =
+      side === "home" ? activeBoard?.homeSquadId : activeBoard?.awaySquadId;
+    const targetSquad =
+      project?.squads.find((item) => item.id === targetSquadId) ?? null;
+    if (!targetSquad) {
+      setManagePresetStatus("No target squad available on this board.");
+      return;
+    }
+    updateSquad(targetSquad.id, {
+      name: selectedTeam.squad.name,
+      clubLogo: selectedTeam.squad.clubLogo,
+      kit: { ...selectedTeam.squad.kit },
+      captainId: selectedTeam.squad.captainId,
+      substituteIds: [...(selectedTeam.squad.substituteIds ?? [])],
+      players: selectedTeam.squad.players.map((player) => ({ ...player })),
+    });
+    setManageSide(side);
+    setManageSelectedDirectoryTeamId(teamId);
+    setManagePresetStatus(
+      `${selectedTeam.clubName} / ${selectedTeam.teamName} loaded as ${
+        side === "home" ? "Home" : "Away"
+      } team.`
+    );
   };
 
   const setManagedTeamToSide = (side: "home" | "away") => {
@@ -2164,6 +2315,105 @@ export default function TopBar() {
                 <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/35 px-3 py-2 text-[11px] text-[var(--ink-1)]">
                   Local changes affect only this project/board. Use <span className="text-[var(--accent-0)]">Save to DB</span> to update the team database.
                 </p>
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                  <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-3">
+                    <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                      Current source
+                    </p>
+                    {managedDirectoryTeam ? (
+                      <div className="mt-2 space-y-2">
+                        <p className="text-sm text-[var(--ink-0)]">
+                          {managedDirectoryTeam.clubName} / {managedDirectoryTeam.teamName}
+                        </p>
+                        <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                          <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                            Club role: {managedDirectoryTeam.clubMembershipRole}
+                          </span>
+                          <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                            Team type: {managedDirectoryTeam.teamType}
+                          </span>
+                          {managedDirectoryTeam.ageGroup ? (
+                            <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                              {managedDirectoryTeam.ageGroup}
+                            </span>
+                          ) : null}
+                          {managedDirectoryTeam.seasonLabel ? (
+                            <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                              {managedDirectoryTeam.seasonLabel}
+                            </span>
+                          ) : null}
+                          {managedDirectoryTeam.isCurrentUserClubAdmin ? (
+                            <span className="rounded-full border border-[var(--accent-2)] px-2 py-1 text-[var(--accent-2)]">
+                              Club admin
+                            </span>
+                          ) : null}
+                          {managedDirectoryTeam.isCurrentUserTeamAdmin ? (
+                            <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[var(--accent-0)]">
+                              Team admin
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs text-[var(--ink-1)]">
+                        This squad is currently local to the project, or not yet linked to a club team.
+                      </p>
+                    )}
+                  </div>
+                  <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-3">
+                    <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                      Load club team
+                    </p>
+                    {manageDirectoryTeams.length > 0 ? (
+                      <>
+                        <select
+                          className="mt-2 h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                          value={manageSelectedDirectoryTeamId}
+                          onChange={(event) => setManageSelectedDirectoryTeamId(event.target.value)}
+                        >
+                          {manageDirectoryTeams.map((team) => (
+                            <option key={team.teamId} value={team.teamId} className="bg-slate-900">
+                              {team.clubName} / {team.teamName}
+                            </option>
+                          ))}
+                        </select>
+                        {selectedManageDirectoryTeam ? (
+                          <p className="mt-2 text-[11px] text-[var(--ink-1)]">
+                            {selectedManageDirectoryTeam.teamType}
+                            {selectedManageDirectoryTeam.ageGroup
+                              ? ` • ${selectedManageDirectoryTeam.ageGroup}`
+                              : ""}
+                            {selectedManageDirectoryTeam.seasonLabel
+                              ? ` • ${selectedManageDirectoryTeam.seasonLabel}`
+                              : ""}
+                          </p>
+                        ) : null}
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                            onClick={() =>
+                              loadDirectoryTeamIntoSide(manageSelectedDirectoryTeamId, "home")
+                            }
+                          >
+                            Load as Home
+                          </button>
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                            onClick={() =>
+                              loadDirectoryTeamIntoSide(manageSelectedDirectoryTeamId, "away")
+                            }
+                          >
+                            Load as Away
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-xs text-[var(--ink-1)]">
+                        No club teams available yet for this account.
+                      </p>
+                    )}
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                     Team details

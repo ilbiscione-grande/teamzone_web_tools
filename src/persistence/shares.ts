@@ -9,6 +9,7 @@ import type {
 import { supabase } from "@/utils/supabaseClient";
 import { recordNetworkCall } from "@/persistence/networkCounters";
 import { validateBoardSharePayload } from "@/persistence/sharePublishingValidation";
+import { resolveBoardShareAccess } from "@/persistence/shareAccess";
 
 const SHARE_TABLE = "board_shares";
 const COMMENT_TABLE = "board_comments";
@@ -83,6 +84,52 @@ const mapComment = (row: BoardCommentRow): BoardComment => ({
   createdAt: row.created_at,
 });
 
+const getCurrentUser = async (purpose: string) => {
+  if (!supabase) {
+    return { ok: false, error: "Supabase not configured." } as const;
+  }
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) {
+    return { ok: false, error: `Please sign in to ${purpose}.` } as const;
+  }
+  return { ok: true, user: userData.user } as const;
+};
+
+const getCurrentShareAccess = async (shareId: string) => {
+  if (!supabase) {
+    return { ok: false, error: "Supabase not configured." } as const;
+  }
+  if (!shareId.trim()) {
+    return { ok: false, error: "Share id is required." } as const;
+  }
+  const userResult = await getCurrentUser("access this share");
+  if (!userResult.ok) {
+    return userResult;
+  }
+  const { data: shareData, error: shareError } = await supabase
+    .from(SHARE_TABLE)
+    .select(SHARE_COLUMNS_MIN)
+    .eq("id", shareId)
+    .maybeSingle();
+  recordNetworkCall("supabase.board_shares.access", !shareError);
+  if (shareError || !shareData) {
+    return { ok: false, error: shareError?.message ?? "Share not found." } as const;
+  }
+  const access = resolveBoardShareAccess({
+    ownerId: shareData.owner_id,
+    recipientEmail: shareData.recipient_email,
+    permission: shareData.permission,
+    currentUserId: userResult.user.id,
+    currentUserEmail: userResult.user.email ?? "",
+  });
+  return {
+    ok: true,
+    share: shareData as BoardShareSummaryRow,
+    user: userResult.user,
+    access,
+  } as const;
+};
+
 export const createBoardShare = async (payload: {
   project: Project;
   board: Board;
@@ -96,12 +143,15 @@ export const createBoardShare = async (payload: {
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    return { ok: false, error: "Please sign in to share." } as const;
+  const userResult = await getCurrentUser("share");
+  if (!userResult.ok) {
+    return userResult;
   }
-  const ownerId = userData.user.id;
-  const ownerEmail = userData.user.email ?? "";
+  if (validated.recipientEmail === (userResult.user.email ?? "").trim().toLowerCase()) {
+    return { ok: false, error: "You cannot share a board with yourself." } as const;
+  }
+  const ownerId = userResult.user.id;
+  const ownerEmail = userResult.user.email ?? "";
   const snapshot: SharedBoardSnapshot = {
     schemaVersion: payload.project.schemaVersion,
     board: payload.board,
@@ -133,13 +183,21 @@ export const createBoardShare = async (payload: {
 };
 
 export const fetchBoardSharesForOwner = async (boardId: string) => {
+  if (!boardId.trim()) {
+    return { ok: false, error: "Board id is required." } as const;
+  }
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
+  }
+  const userResult = await getCurrentUser("view shares");
+  if (!userResult.ok) {
+    return userResult;
   }
   const { data, error } = await supabase
     .from(SHARE_TABLE)
     .select(SHARE_COLUMNS_MIN)
     .eq("board_id", boardId)
+    .eq("owner_id", userResult.user.id)
     .order("created_at", { ascending: false });
   recordNetworkCall("supabase.board_shares.by_board", !error);
   if (error) {
@@ -152,14 +210,14 @@ export const fetchSharesByOwner = async () => {
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    return { ok: false, error: "Please sign in to view shares." } as const;
+  const userResult = await getCurrentUser("view shares");
+  if (!userResult.ok) {
+    return userResult;
   }
   const { data, error } = await supabase
     .from(SHARE_TABLE)
     .select(SHARE_COLUMNS_MIN)
-    .eq("owner_id", userData.user.id)
+    .eq("owner_id", userResult.user.id)
     .order("created_at", { ascending: false });
   recordNetworkCall("supabase.board_shares.by_owner", !error);
   if (error) {
@@ -169,10 +227,22 @@ export const fetchSharesByOwner = async () => {
 };
 
 export const revokeBoardShare = async (shareId: string) => {
-  if (!supabase) {
+  const accessResult = await getCurrentShareAccess(shareId);
+  if (!accessResult.ok) {
+    return accessResult;
+  }
+  if (!accessResult.access.isOwner) {
+    return { ok: false, error: "Only the share owner can revoke access." } as const;
+  }
+  const sb = supabase;
+  if (!sb) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
-  const { error } = await supabase.from(SHARE_TABLE).delete().eq("id", shareId);
+  const { error } = await sb
+    .from(SHARE_TABLE)
+    .delete()
+    .eq("id", shareId)
+    .eq("owner_id", accessResult.user.id);
   recordNetworkCall("supabase.board_shares.revoke", !error);
   if (error) {
     return { ok: false, error: error.message } as const;
@@ -184,11 +254,14 @@ export const fetchSharedBoards = async () => {
   if (!supabase) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user?.email) {
-    return { ok: false, error: "Please sign in to view shares." } as const;
+  const userResult = await getCurrentUser("view shares");
+  if (!userResult.ok) {
+    return userResult;
   }
-  const email = userData.user.email.toLowerCase();
+  const email = (userResult.user.email ?? "").toLowerCase();
+  if (!email) {
+    return { ok: false, error: "Your account is missing an email address." } as const;
+  }
   const { data, error } = await supabase
     .from(SHARE_TABLE)
     .select(SHARE_COLUMNS_MIN)
@@ -202,10 +275,18 @@ export const fetchSharedBoards = async () => {
 };
 
 export const fetchBoardShareById = async (shareId: string) => {
-  if (!supabase) {
+  const accessResult = await getCurrentShareAccess(shareId);
+  if (!accessResult.ok) {
+    return accessResult;
+  }
+  if (!accessResult.access.canView) {
+    return { ok: false, error: "You do not have access to this share." } as const;
+  }
+  const sb = supabase;
+  if (!sb) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from(SHARE_TABLE)
     .select(SHARE_COLUMNS_FULL)
     .eq("id", shareId)
@@ -221,10 +302,18 @@ export const fetchBoardShareById = async (shareId: string) => {
 };
 
 export const fetchBoardComments = async (shareId: string) => {
-  if (!supabase) {
+  const accessResult = await getCurrentShareAccess(shareId);
+  if (!accessResult.ok) {
+    return accessResult;
+  }
+  if (!accessResult.access.canView) {
+    return { ok: false, error: "You do not have access to this share." } as const;
+  }
+  const sb = supabase;
+  if (!sb) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from(COMMENT_TABLE)
     .select(COMMENT_COLUMNS)
     .eq("share_id", shareId)
@@ -266,23 +355,31 @@ export const addBoardComment = async (payload: {
   boardId: string;
   body: string;
 }) => {
-  if (!supabase) {
+  const body = payload.body.trim();
+  if (!body) {
+    return { ok: false, error: "Enter a comment." } as const;
+  }
+  const accessResult = await getCurrentShareAccess(payload.shareId);
+  if (!accessResult.ok) {
+    return accessResult;
+  }
+  if (!accessResult.access.canComment) {
+    return { ok: false, error: "Commenting is disabled for this share." } as const;
+  }
+  const sb = supabase;
+  if (!sb) {
     return { ok: false, error: "Supabase not configured." } as const;
   }
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    return { ok: false, error: "Please sign in to comment." } as const;
-  }
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from(COMMENT_TABLE)
     .insert({
       share_id: payload.shareId,
       board_id: payload.boardId,
       frame_id: null,
       object_id: null,
-      author_id: userData.user.id,
-      author_email: userData.user.email ?? "",
-      body: payload.body,
+      author_id: accessResult.user.id,
+      author_email: accessResult.user.email ?? "",
+      body,
     })
     .select(COMMENT_COLUMNS)
     .single();

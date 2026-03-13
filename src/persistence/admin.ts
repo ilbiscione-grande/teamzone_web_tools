@@ -1,5 +1,4 @@
 import { supabase } from "@/utils/supabaseClient";
-import type { BugReportRow } from "@/persistence/bugReports";
 
 export type AdminUserRow = {
   id: string;
@@ -10,6 +9,17 @@ export type AdminUserRow = {
   isAdmin: boolean;
   createdAt: string;
   updatedAt: string;
+};
+
+export type AdminReportRow = {
+  id: string;
+  created_at: string;
+  report_type: string;
+  user_email: string | null;
+  project_name: string | null;
+  board_name: string | null;
+  body: string;
+  source: "bug_report" | "public_board_report" | "public_project_report";
 };
 
 const getAccessToken = async () => {
@@ -36,7 +46,7 @@ const adminFetch = async (path: string, init?: RequestInit) => {
   const payload = (await response.json().catch(() => ({}))) as {
     error?: string;
     users?: AdminUserRow[];
-    reports?: BugReportRow[];
+    reports?: AdminReportRow[];
     networkCounters?: {
       key: string;
       calls: number;

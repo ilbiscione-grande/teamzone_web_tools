@@ -21,8 +21,10 @@ export default function CommentsModal({
   const shareMeta = project.sharedMeta;
   const [comments, setComments] = useState<BoardComment[]>([]);
   const [commentBody, setCommentBody] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [submitStatus, setSubmitStatus] = useState<string | null>(null);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [savingComment, setSavingComment] = useState(false);
 
   const canComment =
     can(plan, "board.comment") && shareMeta?.permission === "comment";
@@ -30,16 +32,36 @@ export default function CommentsModal({
   useEffect(() => {
     if (!open || !shareMeta) {
       setComments([]);
+      setCommentBody("");
+      setFetchError(null);
+      setSubmitStatus(null);
+      setLoadingComments(false);
       return;
     }
-    fetchBoardComments(shareMeta.shareId).then((result) => {
-      if (!result.ok) {
-        setStatus(result.error);
-        setComments([]);
-        return;
-      }
-      setComments(result.comments);
-    });
+    let cancelled = false;
+    setLoadingComments(true);
+    setFetchError(null);
+    setSubmitStatus(null);
+    fetchBoardComments(shareMeta.shareId)
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        if (!result.ok) {
+          setFetchError(result.error);
+          setComments([]);
+          return;
+        }
+        setComments(result.comments);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingComments(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [open, shareMeta]);
 
   const onAdd = async () => {
@@ -47,24 +69,25 @@ export default function CommentsModal({
       return;
     }
     if (!canComment) {
-      setStatus("Commenting is disabled for this share.");
+      setSubmitStatus("Commenting is disabled for this share.");
       return;
     }
-    setLoading(true);
-    setStatus(null);
+    setSavingComment(true);
+    setSubmitStatus(null);
     const result = await addBoardComment({
       shareId: shareMeta.shareId,
       boardId: shareMeta.boardId,
       body: commentBody.trim(),
     });
     if (!result.ok) {
-      setStatus(result.error);
-      setLoading(false);
+      setSubmitStatus(result.error);
+      setSavingComment(false);
       return;
     }
     setComments((prev) => [...prev, result.comment]);
     setCommentBody("");
-    setLoading(false);
+    setSubmitStatus("Comment added.");
+    setSavingComment(false);
   };
 
   if (!open || !shareMeta) {
@@ -92,7 +115,11 @@ export default function CommentsModal({
         </div>
 
         <div className="mt-4 max-h-64 space-y-3 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-4">
-          {comments.length === 0 ? (
+          {loadingComments ? (
+            <p className="text-xs text-[var(--ink-1)]">Loading comments...</p>
+          ) : fetchError ? (
+            <p className="text-xs text-[var(--accent-1)]">{fetchError}</p>
+          ) : comments.length === 0 ? (
             <p className="text-xs text-[var(--ink-1)]">
               No comments yet.
             </p>
@@ -125,17 +152,17 @@ export default function CommentsModal({
             disabled={!canComment}
           />
           <div className="flex items-center justify-between">
-            {status ? (
-              <p className="text-xs text-[var(--accent-1)]">{status}</p>
+            {submitStatus ? (
+              <p className="text-xs text-[var(--accent-1)]">{submitStatus}</p>
             ) : (
               <span />
             )}
             <button
               className="rounded-full bg-[var(--accent-0)] px-4 py-2 text-xs font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
               onClick={onAdd}
-              disabled={!canComment || loading}
+              disabled={!canComment || savingComment}
             >
-              {loading ? "Saving..." : "Add comment"}
+              {savingComment ? "Saving..." : "Add comment"}
             </button>
           </div>
         </div>
