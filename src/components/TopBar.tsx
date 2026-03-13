@@ -67,7 +67,10 @@ type ManageDirectoryTeamOption = {
   status: string;
   isCurrentUserTeamAdmin: boolean;
   squad: SquadPreset["squad"];
+  members: TeamDirectoryClub["teams"][number]["members"];
 };
+
+type ManageDirectoryMemberOption = TeamDirectoryClub["teams"][number]["members"][number];
 
 const flattenDirectoryTeamsToPresets = (clubs: TeamDirectoryClub[]): SquadPreset[] =>
   clubs.flatMap((club) =>
@@ -416,6 +419,7 @@ export default function TopBar() {
           status: team.status,
           isCurrentUserTeamAdmin: team.isCurrentUserTeamAdmin,
           squad: team.squad,
+          members: team.members,
         }))
       ),
     [squadPresetDirectory]
@@ -426,7 +430,7 @@ export default function TopBar() {
     manageDirectoryTeams.find((team) => team.teamId === manageSelectedDirectoryTeamId) ??
     null;
   const managedDirectoryMemberMap = useMemo(() => {
-    const entries = new Map<string, (typeof managedDirectoryTeam.members)[number]>();
+    const entries = new Map<string, ManageDirectoryMemberOption>();
     managedDirectoryTeam?.members.forEach((member) => {
       entries.set(member.id, member);
     });
