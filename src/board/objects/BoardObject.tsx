@@ -281,7 +281,7 @@ export default function BoardObject({
     if (jerseyType === "solid" || primary === secondary) {
       return null;
     }
-    const innerRadius = Math.max(0.2, radius - Math.max(0.45, radius * 0.08));
+    const innerRadius = Math.max(0.2, radius - Math.max(0.9, radius * 0.14));
     return (
       <Group
         clipFunc={(ctx) => {
@@ -317,7 +317,7 @@ export default function BoardObject({
               -innerRadius * 1.05,
             ]}
             stroke={secondary}
-            strokeWidth={Math.max(2.2, innerRadius * 0.42)}
+            strokeWidth={Math.max(1.2, innerRadius * 0.21)}
             lineCap="round"
             lineJoin="round"
           />
