@@ -311,14 +311,14 @@ export default function BoardObject({
         {jerseyType === "sash" ? (
           <Line
             points={[
-              -innerRadius * 1.15,
-              innerRadius * 1.05,
-              innerRadius * 1.15,
-              -innerRadius * 1.05,
+              -innerRadius * 1.45,
+              innerRadius * 1.28,
+              innerRadius * 1.45,
+              -innerRadius * 1.28,
             ]}
             stroke={secondary}
             strokeWidth={Math.max(1.2, innerRadius * 0.21)}
-            lineCap="round"
+            lineCap="butt"
             lineJoin="round"
           />
         ) : null}
