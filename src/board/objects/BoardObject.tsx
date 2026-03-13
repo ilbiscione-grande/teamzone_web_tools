@@ -281,31 +281,43 @@ export default function BoardObject({
     if (jerseyType === "solid" || primary === secondary) {
       return null;
     }
+    const innerRadius = Math.max(0.2, radius - Math.max(0.45, radius * 0.08));
     return (
       <Group
         clipFunc={(ctx) => {
           ctx.beginPath();
-          ctx.arc(0, 0, radius, 0, Math.PI * 2, false);
+          ctx.arc(0, 0, innerRadius, 0, Math.PI * 2, false);
           ctx.closePath();
         }}
       >
         {jerseyType === "split" ? (
-          <Rect x={0} y={-radius} width={radius} height={radius * 2} fill={secondary} />
+          <Rect
+            x={0}
+            y={-innerRadius}
+            width={innerRadius}
+            height={innerRadius * 2}
+            fill={secondary}
+          />
         ) : null}
         {jerseyType === "stripe" ? (
           <Rect
-            x={-radius * 0.22}
-            y={-radius}
-            width={radius * 0.44}
-            height={radius * 2}
+            x={-innerRadius * 0.22}
+            y={-innerRadius}
+            width={innerRadius * 0.44}
+            height={innerRadius * 2}
             fill={secondary}
           />
         ) : null}
         {jerseyType === "sash" ? (
           <Line
-            points={[-radius * 1.15, radius * 1.05, radius * 1.15, -radius * 1.05]}
+            points={[
+              -innerRadius * 1.15,
+              innerRadius * 1.05,
+              innerRadius * 1.15,
+              -innerRadius * 1.05,
+            ]}
             stroke={secondary}
-            strokeWidth={Math.max(2.2, radius * 0.42)}
+            strokeWidth={Math.max(2.2, innerRadius * 0.42)}
             lineCap="round"
             lineJoin="round"
           />
@@ -314,10 +326,10 @@ export default function BoardObject({
           ? [-0.62, -0.31, 0, 0.31, 0.62].map((offset) => (
               <Rect
                 key={offset}
-                x={radius * offset - radius * 0.035}
-                y={-radius}
-                width={radius * 0.07}
-                height={radius * 2}
+                x={innerRadius * offset - innerRadius * 0.035}
+                y={-innerRadius}
+                width={innerRadius * 0.07}
+                height={innerRadius * 2}
                 fill={secondary}
                 opacity={0.95}
               />
