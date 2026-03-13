@@ -633,6 +633,64 @@ create index if not exists club_members_user_idx on club_members(user_id);
 create index if not exists club_members_club_idx on club_members(club_id);
 create index if not exists club_members_admin_idx on club_members(club_id, is_club_admin);
 
+create or replace function public.is_club_member(target_club_id uuid, target_user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = target_club_id
+      and cm.user_id = target_user_id
+  );
+$$;
+
+create or replace function public.is_club_admin(target_club_id uuid, target_user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = target_club_id
+      and cm.user_id = target_user_id
+      and cm.is_club_admin = true
+  );
+$$;
+
+create or replace function public.is_team_member(target_team_id uuid, target_user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.team_members tm
+    where tm.team_id = target_team_id
+      and tm.user_id = target_user_id
+  );
+$$;
+
+create or replace function public.is_team_admin_member(target_team_id uuid, target_user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.team_members tm
+    where tm.team_id = target_team_id
+      and tm.user_id = target_user_id
+      and tm.is_team_admin = true
+  );
+$$;
+
 alter table clubs enable row level security;
 alter table club_members enable row level security;
 
@@ -645,12 +703,7 @@ create policy "Users can view their clubs"
 on clubs
 for select
 using (
-  exists (
-    select 1
-    from club_members cm
-    where cm.club_id = clubs.id
-      and cm.user_id = auth.uid()
-  )
+  public.is_club_member(clubs.id, auth.uid())
   or primary_admin_user_id = auth.uid()
   or created_by_user_id = auth.uid()
 );
@@ -668,13 +721,7 @@ on clubs
 for update
 using (
   primary_admin_user_id = auth.uid()
-  or exists (
-    select 1
-    from club_members cm
-    where cm.club_id = clubs.id
-      and cm.user_id = auth.uid()
-      and cm.is_club_admin = true
-  )
+  or public.is_club_admin(clubs.id, auth.uid())
 );
 
 create policy "Club admins can delete clubs"
@@ -682,13 +729,7 @@ on clubs
 for delete
 using (
   primary_admin_user_id = auth.uid()
-  or exists (
-    select 1
-    from club_members cm
-    where cm.club_id = clubs.id
-      and cm.user_id = auth.uid()
-      and cm.is_club_admin = true
-  )
+  or public.is_club_admin(clubs.id, auth.uid())
 );
 
 drop policy if exists "Users can view club memberships" on club_members;
@@ -701,13 +742,7 @@ on club_members
 for select
 using (
   user_id = auth.uid()
-  or exists (
-    select 1
-    from club_members cm
-    where cm.club_id = club_members.club_id
-      and cm.user_id = auth.uid()
-      and cm.is_club_admin = true
-  )
+  or public.is_club_admin(club_members.club_id, auth.uid())
   or exists (
     select 1
     from clubs c
@@ -720,13 +755,7 @@ create policy "Club admins can insert club memberships"
 on club_members
 for insert
 with check (
-  exists (
-    select 1
-    from club_members cm
-    where cm.club_id = club_members.club_id
-      and cm.user_id = auth.uid()
-      and cm.is_club_admin = true
-  )
+  public.is_club_admin(club_members.club_id, auth.uid())
   or exists (
     select 1
     from clubs c
@@ -739,13 +768,7 @@ create policy "Club admins can update club memberships"
 on club_members
 for update
 using (
-  exists (
-    select 1
-    from club_members cm
-    where cm.club_id = club_members.club_id
-      and cm.user_id = auth.uid()
-      and cm.is_club_admin = true
-  )
+  public.is_club_admin(club_members.club_id, auth.uid())
   or exists (
     select 1
     from clubs c
@@ -758,13 +781,7 @@ create policy "Club admins can delete club memberships"
 on club_members
 for delete
 using (
-  exists (
-    select 1
-    from club_members cm
-    where cm.club_id = club_members.club_id
-      and cm.user_id = auth.uid()
-      and cm.is_club_admin = true
-  )
+  public.is_club_admin(club_members.club_id, auth.uid())
   or exists (
     select 1
     from clubs c
@@ -893,18 +910,8 @@ on teams
 for select
 using (
   owner_id = auth.uid()
-  or exists (
-    select 1
-    from team_members tm
-    where tm.team_id = teams.id
-      and tm.user_id = auth.uid()
-  )
-  or exists (
-    select 1
-    from club_members cm
-    where cm.club_id = teams.club_id
-      and cm.user_id = auth.uid()
-  )
+  or public.is_team_member(teams.id, auth.uid())
+  or public.is_club_member(teams.club_id, auth.uid())
 );
 
 create policy "Users can insert their teams"
@@ -912,13 +919,7 @@ on teams
 for insert
 with check (
   owner_id = auth.uid()
-  or exists (
-    select 1
-    from club_members cm
-    where cm.club_id = teams.club_id
-      and cm.user_id = auth.uid()
-      and cm.is_club_admin = true
-  )
+  or public.is_club_admin(teams.club_id, auth.uid())
 );
 
 create policy "Users can update owned teams"
@@ -926,20 +927,8 @@ on teams
 for update
 using (
   owner_id = auth.uid()
-  or exists (
-    select 1
-    from team_members tm
-    where tm.team_id = teams.id
-      and tm.user_id = auth.uid()
-      and tm.is_team_admin = true
-  )
-  or exists (
-    select 1
-    from club_members cm
-    where cm.club_id = teams.club_id
-      and cm.user_id = auth.uid()
-      and cm.is_club_admin = true
-  )
+  or public.is_team_admin_member(teams.id, auth.uid())
+  or public.is_club_admin(teams.club_id, auth.uid())
 );
 
 create policy "Users can delete owned teams"
@@ -947,13 +936,7 @@ on teams
 for delete
 using (
   owner_id = auth.uid()
-  or exists (
-    select 1
-    from club_members cm
-    where cm.club_id = teams.club_id
-      and cm.user_id = auth.uid()
-      and cm.is_club_admin = true
-  )
+  or public.is_club_admin(teams.club_id, auth.uid())
 );
 
 drop policy if exists "Users can view team memberships" on team_members;
@@ -972,18 +955,12 @@ using (
     where t.id = team_members.team_id
       and t.owner_id = auth.uid()
   )
-  or exists (
-    select 1
-    from team_members tm
-    where tm.team_id = team_members.team_id
-      and tm.user_id = auth.uid()
-  )
+  or public.is_team_member(team_members.team_id, auth.uid())
   or exists (
     select 1
     from teams t
-    join club_members cm on cm.club_id = t.club_id
     where t.id = team_members.team_id
-      and cm.user_id = auth.uid()
+      and public.is_club_member(t.club_id, auth.uid())
   )
 );
 
@@ -997,20 +974,12 @@ with check (
     where t.id = team_members.team_id
       and t.owner_id = auth.uid()
   )
-  or exists (
-    select 1
-    from team_members tm
-    where tm.team_id = team_members.team_id
-      and tm.user_id = auth.uid()
-      and tm.is_team_admin = true
-  )
+  or public.is_team_admin_member(team_members.team_id, auth.uid())
   or exists (
     select 1
     from teams t
-    join club_members cm on cm.club_id = t.club_id
     where t.id = team_members.team_id
-      and cm.user_id = auth.uid()
-      and cm.is_club_admin = true
+      and public.is_club_admin(t.club_id, auth.uid())
   )
 );
 
@@ -1024,20 +993,12 @@ using (
     where t.id = team_members.team_id
       and t.owner_id = auth.uid()
   )
-  or exists (
-    select 1
-    from team_members tm
-    where tm.team_id = team_members.team_id
-      and tm.user_id = auth.uid()
-      and tm.is_team_admin = true
-  )
+  or public.is_team_admin_member(team_members.team_id, auth.uid())
   or exists (
     select 1
     from teams t
-    join club_members cm on cm.club_id = t.club_id
     where t.id = team_members.team_id
-      and cm.user_id = auth.uid()
-      and cm.is_club_admin = true
+      and public.is_club_admin(t.club_id, auth.uid())
   )
 );
 
@@ -1051,20 +1012,12 @@ using (
     where t.id = team_members.team_id
       and t.owner_id = auth.uid()
   )
-  or exists (
-    select 1
-    from team_members tm
-    where tm.team_id = team_members.team_id
-      and tm.user_id = auth.uid()
-      and tm.is_team_admin = true
-  )
+  or public.is_team_admin_member(team_members.team_id, auth.uid())
   or exists (
     select 1
     from teams t
-    join club_members cm on cm.club_id = t.club_id
     where t.id = team_members.team_id
-      and cm.user_id = auth.uid()
-      and cm.is_club_admin = true
+      and public.is_club_admin(t.club_id, auth.uid())
   )
 );
 

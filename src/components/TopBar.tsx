@@ -692,7 +692,9 @@ export default function TopBar() {
         prev.map((item) => (item.id === result.team.id ? result.team : item))
       );
       saveDefaultTeamSquad(manageSide, result.team.squad, authUser?.id ?? null);
-      setManagePresetStatus("Team saved to DB and set as default.");
+      setManagePresetStatus(
+        "Current squad snapshot saved to Team DB and set as default for new projects. This board keeps its local copy until you load the saved team."
+      );
       return;
     }
     const result = await createTeamWithSquad({
@@ -705,7 +707,9 @@ export default function TopBar() {
     }
     setSquadPresets((prev) => [result.team, ...prev]);
     saveDefaultTeamSquad(manageSide, result.team.squad, authUser?.id ?? null);
-    setManagePresetStatus("Team saved and set as default.");
+    setManagePresetStatus(
+      "Current squad snapshot saved to Team DB and set as default for new projects. This board keeps its local copy until you load the saved team."
+    );
   };
 
   const loadDirectoryTeamIntoSide = (teamId: string, side: "home" | "away") => {
@@ -2346,12 +2350,12 @@ export default function TopBar() {
                   </p>
                 ) : null}
                 <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/35 px-3 py-2 text-[11px] text-[var(--ink-1)]">
-                  Local changes affect only this project/board. Use <span className="text-[var(--accent-0)]">Save to DB</span> to update the team database.
+                  Changes here affect this project/board first. Use <span className="text-[var(--accent-0)]">Save to DB</span> to save the current squad as a reusable team snapshot in the database.
                 </p>
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                   <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-3">
                     <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                      Current source
+                      Current board squad
                     </p>
                     {managedDirectoryTeam ? (
                       <div className="mt-2 space-y-2">
@@ -2389,7 +2393,7 @@ export default function TopBar() {
                       </div>
                     ) : (
                       <p className="mt-2 text-xs text-[var(--ink-1)]">
-                        This squad is currently local to the project, or not yet linked to a club team.
+                        This board is currently using a local project squad. Saving to DB creates or updates a reusable team snapshot, but does not automatically relink this board to that saved team.
                       </p>
                     )}
                   </div>
