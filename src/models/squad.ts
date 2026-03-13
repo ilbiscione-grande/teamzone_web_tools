@@ -1,3 +1,5 @@
+export type JerseyType = "solid" | "split" | "stripe" | "sash" | "pinstripe";
+
 export type SquadPlayer = {
   id: string;
   name: string;
@@ -18,6 +20,7 @@ export type SquadKit = {
   shorts: string;
   socks: string;
   vest?: string;
+  jerseyType?: JerseyType;
 };
 
 export type Squad = {

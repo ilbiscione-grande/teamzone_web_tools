@@ -18,6 +18,7 @@ import type {
   BallToken,
   ConeToken,
   DrawableObject,
+  JerseyType,
   MannequinToken,
   MovementPath,
   MiniGoal,
@@ -175,6 +176,8 @@ type BoardObjectProps = {
   onLinkPlayer: (id: string) => void;
   squadPlayers: SquadPlayer[];
   kitByPlayerId: Record<string, string>;
+  secondaryKitByPlayerId: Record<string, string | undefined>;
+  jerseyTypeByPlayerId: Record<string, string | undefined>;
   vestByPlayerId: Record<string, string | undefined>;
   defaultPlayerFill: string;
   playerTokenSize: number;
@@ -205,6 +208,8 @@ export default function BoardObject({
   onLinkPlayer,
   squadPlayers,
   kitByPlayerId,
+  secondaryKitByPlayerId,
+  jerseyTypeByPlayerId,
   vestByPlayerId,
   defaultPlayerFill,
   playerTokenSize,
@@ -267,6 +272,60 @@ export default function BoardObject({
   const ambientShadowBlur = 0.14 + 1.05 * depthEase;
   const ambientShadowOpacity = 0.04 + 0.2 * depthEase;
   const ambientShadowOffsetY = 0.03 + 0.32 * depthEase;
+  const renderPlayerJerseyPattern = (
+    radius: number,
+    primary: string,
+    secondary: string,
+    jerseyType: JerseyType
+  ) => {
+    if (jerseyType === "solid" || primary === secondary) {
+      return null;
+    }
+    return (
+      <Group
+        clipFunc={(ctx) => {
+          ctx.beginPath();
+          ctx.arc(0, 0, radius, 0, Math.PI * 2, false);
+          ctx.closePath();
+        }}
+      >
+        {jerseyType === "split" ? (
+          <Rect x={0} y={-radius} width={radius} height={radius * 2} fill={secondary} />
+        ) : null}
+        {jerseyType === "stripe" ? (
+          <Rect
+            x={-radius * 0.22}
+            y={-radius}
+            width={radius * 0.44}
+            height={radius * 2}
+            fill={secondary}
+          />
+        ) : null}
+        {jerseyType === "sash" ? (
+          <Line
+            points={[-radius * 1.15, radius * 1.05, radius * 1.15, -radius * 1.05]}
+            stroke={secondary}
+            strokeWidth={Math.max(2.2, radius * 0.42)}
+            lineCap="round"
+            lineJoin="round"
+          />
+        ) : null}
+        {jerseyType === "pinstripe"
+          ? [-0.62, -0.31, 0, 0.31, 0.62].map((offset) => (
+              <Rect
+                key={offset}
+                x={radius * offset - radius * 0.035}
+                y={-radius}
+                width={radius * 0.07}
+                height={radius * 2}
+                fill={secondary}
+                opacity={0.95}
+              />
+            ))
+          : null}
+      </Group>
+    );
+  };
 
   const commonProps = {
     x: object.position.x,
@@ -441,6 +500,14 @@ export default function BoardObject({
       : player.style.fill === "#f9bf4a"
         ? defaultPlayerFill
         : player.style.fill;
+    const secondaryFillColor =
+      (player.squadPlayerId
+        ? secondaryKitByPlayerId[player.squadPlayerId]
+        : undefined) ??
+      fillColor;
+    const jerseyType = ((player.squadPlayerId
+      ? jerseyTypeByPlayerId[player.squadPlayerId]
+      : undefined) ?? "solid") as JerseyType;
     const vestColor =
       player.vestColor ??
       (player.squadPlayerId ? vestByPlayerId[player.squadPlayerId] : undefined);
@@ -506,6 +573,7 @@ export default function BoardObject({
       }
       return "#0f1b1a";
     })();
+    const textStrokeColor = textColor === "#0f1b1a" ? "rgba(255,255,255,0.9)" : "rgba(5,20,16,0.92)";
     const circleTextSize = playerTokenSize * 2;
     const belowTextWidth = compactPlayerLabels ? playerTokenSize * 5.8 : playerTokenSize * 6;
     const belowTextHeight = compactPlayerLabels ? 2.35 : 2.2;
@@ -637,6 +705,12 @@ export default function BoardObject({
           shadowBlur={isThreeDView ? 0.8 : 0}
           shadowOffsetY={isThreeDView ? 0.35 : 0}
         />
+        {renderPlayerJerseyPattern(
+          playerTokenSize,
+          fillColor,
+          secondaryFillColor,
+          jerseyType
+        )}
         {renderShimmerSweepInCircle(0, 0, playerTokenSize)}
         {isThreeDView && (
           <>
@@ -694,6 +768,9 @@ export default function BoardObject({
               fontSize={circleFontSize}
               fill={textColor}
               fontStyle="bold"
+              stroke={textStrokeColor}
+              strokeWidth={Math.max(0.35, playerTokenSize * 0.06)}
+              fillAfterStrokeEnabled
             />
           </Group>
         )}

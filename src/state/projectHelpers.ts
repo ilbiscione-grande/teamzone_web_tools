@@ -21,6 +21,7 @@ export const defaultHomeKit = () => ({
   shorts: "#0f1b1a",
   socks: "#f06d4f",
   vest: "",
+  jerseyType: "solid" as const,
 });
 
 export const defaultAwayKit = () => ({
@@ -28,6 +29,7 @@ export const defaultAwayKit = () => ({
   shorts: "#0f1b1a",
   socks: "#f2f1e9",
   vest: "",
+  jerseyType: "solid" as const,
 });
 
 const createTeamSquad = (name: string, overrides?: Partial<Squad>): Squad => ({

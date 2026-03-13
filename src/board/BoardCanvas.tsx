@@ -1011,6 +1011,24 @@ export default function BoardCanvas({
     });
     return map;
   }, [boardSquads]);
+  const secondaryKitByPlayerId = useMemo(() => {
+    const map: Record<string, string | undefined> = {};
+    boardSquads.all.forEach((squad) => {
+      squad.players.forEach((player) => {
+        map[player.id] = squad.kit.shirtSecondary ?? squad.kit.shirt;
+      });
+    });
+    return map;
+  }, [boardSquads]);
+  const jerseyTypeByPlayerId = useMemo(() => {
+    const map: Record<string, string | undefined> = {};
+    boardSquads.all.forEach((squad) => {
+      squad.players.forEach((player) => {
+        map[player.id] = squad.kit.jerseyType ?? "solid";
+      });
+    });
+    return map;
+  }, [boardSquads]);
   const defaultPlayerFill =
     (playerSide === "away" ? boardSquads.away : boardSquads.home)?.kit.shirt ??
     (playerSide === "away"
@@ -2280,6 +2298,8 @@ export default function BoardCanvas({
                 onLinkPlayer={(id) => addLinkingPlayer(id)}
                 squadPlayers={squadPlayers}
                 kitByPlayerId={kitByPlayerId}
+                secondaryKitByPlayerId={secondaryKitByPlayerId}
+                jerseyTypeByPlayerId={jerseyTypeByPlayerId}
                 vestByPlayerId={vestByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}
                 playerTokenSize={effectivePlayerTokenSize}
@@ -2395,6 +2415,8 @@ export default function BoardCanvas({
                 onLinkPlayer={(id) => addLinkingPlayer(id)}
                 squadPlayers={squadPlayers}
                 kitByPlayerId={kitByPlayerId}
+                secondaryKitByPlayerId={secondaryKitByPlayerId}
+                jerseyTypeByPlayerId={jerseyTypeByPlayerId}
                 vestByPlayerId={vestByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}
                 playerTokenSize={effectivePlayerTokenSize}

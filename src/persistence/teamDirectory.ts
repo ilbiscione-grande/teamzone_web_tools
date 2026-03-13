@@ -90,6 +90,7 @@ const buildSquadFromMembers = (
       shirtSecondary: "#f3f3f3",
       shorts: "#f3f3f3",
       socks: "#f3f3f3",
+      jerseyType: "solid",
     },
     players,
   };

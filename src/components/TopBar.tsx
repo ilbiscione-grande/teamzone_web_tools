@@ -8,6 +8,7 @@ import { useEditorStore } from "@/state/useEditorStore";
 import type {
   Board,
   BoardMode,
+  JerseyType,
   PitchOverlay,
   PitchView,
   ProjectMode,
@@ -91,6 +92,17 @@ type ManageDirectoryTeamOption = {
   squad: SquadPreset["squad"];
   members: TeamDirectoryClub["teams"][number]["members"];
 };
+
+const SHIRT_TYPES: Array<{
+  id: JerseyType;
+  label: string;
+}> = [
+  { id: "solid", label: "Solid" },
+  { id: "split", label: "Split" },
+  { id: "stripe", label: "Stripe" },
+  { id: "sash", label: "Sash" },
+  { id: "pinstripe", label: "Pinstripe" },
+];
 
 type ManageDirectoryMemberOption = TeamDirectoryClub["teams"][number]["members"][number];
 
@@ -176,9 +188,7 @@ export default function TopBar() {
   const [managePresetStatus, setManagePresetStatus] = useState<string | null>(
     null
   );
-  const [jerseyType, setJerseyType] = useState<
-    "solid" | "split" | "stripe" | "sash" | "pinstripe"
-  >("solid");
+  const [jerseyType, setJerseyType] = useState<JerseyType>("solid");
   const [shareLinkOpen, setShareLinkOpen] = useState(false);
   const [shareLinkStatus, setShareLinkStatus] = useState<string | null>(null);
   const [shareLinkUrl, setShareLinkUrl] = useState<string | null>(null);
@@ -906,18 +916,8 @@ export default function TopBar() {
     }
     manageRemoveBoardGuest(player.id);
   };
-  const shirtTypes: Array<{
-    id: "solid" | "split" | "stripe" | "sash" | "pinstripe";
-    label: string;
-  }> = [
-    { id: "solid", label: "Solid" },
-    { id: "split", label: "Split" },
-    { id: "stripe", label: "Stripe" },
-    { id: "sash", label: "Sash" },
-    { id: "pinstripe", label: "Pinstripe" },
-  ];
   const renderShirtIcon = (
-    type: "solid" | "split" | "stripe" | "sash" | "pinstripe",
+    type: JerseyType,
     primary: string,
     secondary: string,
     className: string
@@ -954,6 +954,10 @@ export default function TopBar() {
       <rect x="42" y="18" width="16" height="10" rx="4" fill="#0b1c1d" />
     </svg>
   );
+
+  useEffect(() => {
+    setJerseyType(editableSquad?.kit.jerseyType ?? "solid");
+  }, [editableSquad?.kit.jerseyType]);
 
   useEffect(() => {
     if (!project) {
@@ -2408,105 +2412,138 @@ export default function TopBar() {
                 <p className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 px-4 py-3 text-[11px] leading-relaxed text-[var(--ink-1)]">
                   Changes here affect this project/board first. Use <span className="text-[var(--accent-0)]">Save to DB</span> to save the current squad as a reusable team snapshot in the database.
                 </p>
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-                  <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-4">
-                    <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                      Current board squad
-                    </p>
-                    {managedDirectoryTeam ? (
-                      <div className="mt-2 space-y-2">
-                        <p className="text-sm text-[var(--ink-0)]">
-                          {managedDirectoryTeam.clubName} / {managedDirectoryTeam.teamName}
-                        </p>
-                        <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                <details className="group rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25">
+                  <summary className="flex cursor-pointer list-none flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-1">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Team source and loading
+                      </p>
+                      <p className="text-[11px] text-[var(--ink-1)]">
+                        {managedDirectoryTeam
+                          ? `${managedDirectoryTeam.clubName} / ${managedDirectoryTeam.teamName}`
+                          : "This board is currently using a local project squad."}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                      {managedDirectoryTeam ? (
+                        <>
                           <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                            Club role: {managedDirectoryTeam.clubMembershipRole}
+                            {managedDirectoryTeam.teamType}
                           </span>
-                          <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                            Team type: {managedDirectoryTeam.teamType}
-                          </span>
-                          {managedDirectoryTeam.ageGroup ? (
-                            <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                              {managedDirectoryTeam.ageGroup}
-                            </span>
-                          ) : null}
-                          {managedDirectoryTeam.seasonLabel ? (
-                            <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                              {managedDirectoryTeam.seasonLabel}
-                            </span>
-                          ) : null}
-                          {managedDirectoryTeam.isCurrentUserClubAdmin ? (
-                            <span className="rounded-full border border-[var(--accent-2)] px-2 py-1 text-[var(--accent-2)]">
-                              Club admin
-                            </span>
-                          ) : null}
                           {managedDirectoryTeam.isCurrentUserTeamAdmin ? (
                             <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[var(--accent-0)]">
                               Team admin
                             </span>
                           ) : null}
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="mt-2 text-xs text-[var(--ink-1)]">
-                        This board is currently using a local project squad. Saving to DB creates or updates a reusable team snapshot, but does not automatically relink this board to that saved team.
+                        </>
+                      ) : (
+                        <span className="rounded-full border border-[var(--accent-1)] px-2 py-1 text-[var(--accent-1)]">
+                          Local squad
+                        </span>
+                      )}
+                      <span className="transition-transform group-open:rotate-180">⌄</span>
+                    </div>
+                  </summary>
+                  <div className="grid gap-4 border-t border-[var(--line)] px-4 py-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+                    <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Current board squad
                       </p>
-                    )}
-                  </div>
-                  <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-4">
-                    <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                      Load club team
-                    </p>
-                    {manageDirectoryTeams.length > 0 ? (
-                      <>
-                        <select
-                          className="mt-2 h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                          value={manageSelectedDirectoryTeamId}
-                          onChange={(event) => setManageSelectedDirectoryTeamId(event.target.value)}
-                        >
-                          {manageDirectoryTeams.map((team) => (
-                            <option key={team.teamId} value={team.teamId} className="bg-slate-900">
-                              {team.clubName} / {team.teamName}
-                            </option>
-                          ))}
-                        </select>
-                        {selectedManageDirectoryTeam ? (
-                          <p className="mt-2 text-[11px] text-[var(--ink-1)]">
-                            {selectedManageDirectoryTeam.teamType}
-                            {selectedManageDirectoryTeam.ageGroup
-                              ? ` • ${selectedManageDirectoryTeam.ageGroup}`
-                              : ""}
-                            {selectedManageDirectoryTeam.seasonLabel
-                              ? ` • ${selectedManageDirectoryTeam.seasonLabel}`
-                              : ""}
+                      {managedDirectoryTeam ? (
+                        <div className="mt-2 space-y-2">
+                          <p className="text-sm text-[var(--ink-0)]">
+                            {managedDirectoryTeam.clubName} / {managedDirectoryTeam.teamName}
                           </p>
-                        ) : null}
-                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                          <button
-                            className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                            onClick={() =>
-                              loadDirectoryTeamIntoSide(manageSelectedDirectoryTeamId, "home")
-                            }
-                          >
-                            Load as Home
-                          </button>
-                          <button
-                            className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                            onClick={() =>
-                              loadDirectoryTeamIntoSide(manageSelectedDirectoryTeamId, "away")
-                            }
-                          >
-                            Load as Away
-                          </button>
+                          <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                            <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                              Club role: {managedDirectoryTeam.clubMembershipRole}
+                            </span>
+                            <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                              Team type: {managedDirectoryTeam.teamType}
+                            </span>
+                            {managedDirectoryTeam.ageGroup ? (
+                              <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                                {managedDirectoryTeam.ageGroup}
+                              </span>
+                            ) : null}
+                            {managedDirectoryTeam.seasonLabel ? (
+                              <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                                {managedDirectoryTeam.seasonLabel}
+                              </span>
+                            ) : null}
+                            {managedDirectoryTeam.isCurrentUserClubAdmin ? (
+                              <span className="rounded-full border border-[var(--accent-2)] px-2 py-1 text-[var(--accent-2)]">
+                                Club admin
+                              </span>
+                            ) : null}
+                            {managedDirectoryTeam.isCurrentUserTeamAdmin ? (
+                              <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[var(--accent-0)]">
+                                Team admin
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
-                      </>
-                    ) : (
-                      <p className="mt-2 text-xs text-[var(--ink-1)]">
-                        No club teams available yet for this account.
+                      ) : (
+                        <p className="mt-2 text-xs text-[var(--ink-1)]">
+                          This board is currently using a local project squad. Saving to DB creates or updates a reusable team snapshot, but does not automatically relink this board to that saved team.
+                        </p>
+                      )}
+                    </div>
+                    <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Load club team
                       </p>
-                    )}
+                      {manageDirectoryTeams.length > 0 ? (
+                        <>
+                          <select
+                            className="mt-2 h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                            value={manageSelectedDirectoryTeamId}
+                            onChange={(event) => setManageSelectedDirectoryTeamId(event.target.value)}
+                          >
+                            {manageDirectoryTeams.map((team) => (
+                              <option key={team.teamId} value={team.teamId} className="bg-slate-900">
+                                {team.clubName} / {team.teamName}
+                              </option>
+                            ))}
+                          </select>
+                          {selectedManageDirectoryTeam ? (
+                            <p className="mt-2 text-[11px] text-[var(--ink-1)]">
+                              {selectedManageDirectoryTeam.teamType}
+                              {selectedManageDirectoryTeam.ageGroup
+                                ? ` • ${selectedManageDirectoryTeam.ageGroup}`
+                                : ""}
+                              {selectedManageDirectoryTeam.seasonLabel
+                                ? ` • ${selectedManageDirectoryTeam.seasonLabel}`
+                                : ""}
+                            </p>
+                          ) : null}
+                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                            <button
+                              className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                              onClick={() =>
+                                loadDirectoryTeamIntoSide(manageSelectedDirectoryTeamId, "home")
+                              }
+                            >
+                              Load as Home
+                            </button>
+                            <button
+                              className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                              onClick={() =>
+                                loadDirectoryTeamIntoSide(manageSelectedDirectoryTeamId, "away")
+                              }
+                            >
+                              Load as Away
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="mt-2 text-xs text-[var(--ink-1)]">
+                          No club teams available yet for this account.
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </details>
                 <div className="space-y-3 rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
                   <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                     Team details
@@ -2597,15 +2634,20 @@ export default function TopBar() {
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-[10px] text-[var(--ink-1)]">Type of jersey</span>
-                            {shirtTypes.map((item) => (
+                            {SHIRT_TYPES.map((item) => (
                               <button
                                 key={item.id}
                                 className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border ${
-                                  jerseyType === item.id
+                                  (editableSquad.kit.jerseyType ?? jerseyType) === item.id
                                     ? "border-[var(--accent-0)]"
                                     : "border-[var(--line)]"
                                 }`}
-                                onClick={() => setJerseyType(item.id)}
+                                onClick={() => {
+                                  setJerseyType(item.id);
+                                  updateEditableSquad({
+                                    kit: { ...editableSquad.kit, jerseyType: item.id },
+                                  });
+                                }}
                                 title={item.label}
                                 aria-label={item.label}
                               >
@@ -2625,7 +2667,7 @@ export default function TopBar() {
                       {editableSquad ? (
                         <div className="flex flex-col items-center gap-1">
                           {renderShirtIcon(
-                            jerseyType,
+                            editableSquad.kit.jerseyType ?? jerseyType,
                             editableSquad.kit.shirt,
                             editableSquad.kit.shirtSecondary ?? editableSquad.kit.shirt,
                             "h-24 w-24"
