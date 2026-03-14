@@ -2328,18 +2328,20 @@ export default function TopBar() {
       {squadPresetsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
           <div className="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[28px] border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
-            <div className="sticky top-0 z-10 border-b border-[var(--line)] bg-[color:color-mix(in_srgb,var(--panel)_92%,transparent)] px-4 py-4 backdrop-blur sm:px-6">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-3">
-                  <div>
-                    <h2 className="display-font text-xl text-[var(--accent-0)]">
-                      Team manager
-                    </h2>
-                    <p className="text-xs text-[var(--ink-1)]">
-                      Edit the board-local squad here. Database updates only happen when you press Save to Team DB.
-                    </p>
-                  </div>
-                  <div className="inline-flex rounded-full border border-[var(--line)] bg-[var(--panel-2)]/40 p-1 text-[11px] uppercase tracking-wide">
+            <div className="sticky top-0 z-10 border-b border-[var(--line)] bg-[color:color-mix(in_srgb,var(--panel)_94%,transparent)] px-4 py-4 backdrop-blur sm:px-6">
+              <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/20 px-4 py-4">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="min-w-0 space-y-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+                    <div className="min-w-0">
+                      <h2 className="display-font text-xl text-[var(--accent-0)]">
+                        Team manager
+                      </h2>
+                      <p className="text-xs text-[var(--ink-1)]">
+                        Edit the board-local squad here. Database updates only happen when you press Save to Team DB.
+                      </p>
+                    </div>
+                    <div className="inline-flex w-fit rounded-full border border-[var(--line)] bg-[var(--panel)]/60 p-1 text-[11px] uppercase tracking-wide">
                     {[
                       { id: "home", label: "Home" },
                       { id: "away", label: "Away" },
@@ -2356,10 +2358,21 @@ export default function TopBar() {
                         Editing {side.label}
                       </button>
                     ))}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                    <span className="rounded-full border border-[var(--line)] px-2.5 py-1">
+                      Active side: {manageSide}
+                    </span>
+                    <span className="rounded-full border border-[var(--line)] px-2.5 py-1">
+                      Mode: Team manager
+                    </span>
+                    <span className="rounded-full border border-[var(--line)] px-2.5 py-1">
+                      Scope: Project / board
+                    </span>
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 self-start lg:items-end">
-                  <div className="flex flex-wrap items-stretch gap-2">
+                <div className="flex flex-wrap items-stretch gap-2 xl:justify-end">
                     <button
                       className="rounded-full border border-[var(--line)] px-4 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                       onClick={() => setManagedTeamToSide("home")}
@@ -2409,22 +2422,27 @@ export default function TopBar() {
                     Free/Auth plans can edit teams locally in this project. Team presets are available on paid plans.
                   </p>
                 ) : null}
-                <p className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 px-4 py-3 text-[11px] leading-relaxed text-[var(--ink-1)]">
-                  Changes here affect this project/board first. Use <span className="text-[var(--accent-0)]">Save to DB</span> to save the current squad as a reusable team snapshot in the database.
-                </p>
+                <div className="flex items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 px-4 py-2.5 text-[11px] text-[var(--ink-1)]">
+                  <span className="shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 text-[9px] uppercase tracking-widest">
+                    Info
+                  </span>
+                  <p className="min-w-0 truncate">
+                    Changes here affect this project/board first. Use <span className="text-[var(--accent-0)]">Save to DB</span> to save the current squad as a reusable team snapshot in the database.
+                  </p>
+                </div>
                 <details className="group rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25">
-                  <summary className="flex cursor-pointer list-none flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="space-y-1">
-                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <p className="shrink-0 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                         Team source and loading
                       </p>
-                      <p className="text-[11px] text-[var(--ink-1)]">
+                      <p className="truncate text-[11px] text-[var(--ink-1)]">
                         {managedDirectoryTeam
                           ? `${managedDirectoryTeam.clubName} / ${managedDirectoryTeam.teamName}`
                           : "This board is currently using a local project squad."}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                    <div className="flex shrink-0 items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                       {managedDirectoryTeam ? (
                         <>
                           <span className="rounded-full border border-[var(--line)] px-2 py-1">
@@ -3848,8 +3866,8 @@ export default function TopBar() {
 
       {settingsOpen && activeBoard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-          <div className="flex max-h-[84vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
-            <div className="flex items-center justify-between">
+          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--line)] bg-[color:color-mix(in_srgb,var(--panel)_94%,transparent)] px-5 py-4 backdrop-blur sm:px-6">
               <h2 className="display-font text-xl text-[var(--accent-0)]">
                 Board Settings
               </h2>
@@ -3860,8 +3878,11 @@ export default function TopBar() {
                 Close
               </button>
             </div>
-            <div className="mt-4 space-y-4 overflow-y-auto pr-1 text-xs text-[var(--ink-1)]" data-scrollable>
-              <div>
+            <div
+              className="grid gap-4 overflow-y-auto px-5 py-4 pr-3 text-xs text-[var(--ink-1)] sm:px-6 lg:grid-cols-2"
+              data-scrollable
+            >
+              <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
                 <p className="mb-2 text-[11px] uppercase">Project mode</p>
                 <div className="grid grid-cols-3 gap-2">
                   {[
@@ -3890,7 +3911,7 @@ export default function TopBar() {
                   ))}
                 </div>
               </div>
-              <div>
+              <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
                 <p className="mb-2 text-[11px] uppercase">Pitch view</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
@@ -3919,7 +3940,7 @@ export default function TopBar() {
                 </div>
               </div>
               {activeBoard.pitchView === "FULL" && (
-                <div>
+                <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
                   <p className="mb-2 text-[11px] uppercase">Pitch rotation</p>
                   <div className="grid grid-cols-2 gap-2">
                     {[0, 180].map((value) => (
@@ -3942,7 +3963,7 @@ export default function TopBar() {
                   </div>
                 </div>
               )}
-              <div>
+              <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
                 <p className="mb-2 text-[11px] uppercase">Pitch overlay</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
@@ -3981,7 +4002,7 @@ export default function TopBar() {
                   Show overlay text
                 </label>
               </div>
-              <div>
+              <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
                 <p className="mb-2 text-[11px] uppercase">Player labels</p>
                 <div className="grid grid-cols-3 gap-2">
                   <label className="flex items-center gap-2 rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px]">
@@ -4031,7 +4052,7 @@ export default function TopBar() {
                   </label>
                 </div>
               </div>
-              <div>
+              <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
                 <p className="mb-2 text-[11px] uppercase">Video watermark</p>
                 <div className="grid gap-2">
                   <label className="flex items-center gap-2 rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px]">
@@ -4077,24 +4098,26 @@ export default function TopBar() {
                   </label>
                 </div>
               </div>
-              <div className="flex items-center justify-between rounded-2xl border border-[var(--line)] px-3 py-2">
-                <span>Attach ball to player on drop</span>
-                <input
-                  type="checkbox"
-                  checked={attachBallToPlayer}
-                  onChange={(event) => {
-                    const checked = event.target.checked;
-                    setAttachBallToPlayer(checked);
-                    updateProjectMeta({
-                      settings: {
-                        ...project.settings,
-                        attachBallToPlayer: checked,
-                      },
-                    });
-                  }}
-                />
+              <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
+                <div className="flex items-center justify-between rounded-2xl border border-[var(--line)] px-3 py-2">
+                  <span>Attach ball to player on drop</span>
+                  <input
+                    type="checkbox"
+                    checked={attachBallToPlayer}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setAttachBallToPlayer(checked);
+                      updateProjectMeta({
+                        settings: {
+                          ...project.settings,
+                          attachBallToPlayer: checked,
+                        },
+                      });
+                    }}
+                  />
+                </div>
               </div>
-              <div>
+              <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
                 <p className="mb-2 text-[11px] uppercase">Player size</p>
                 <select
                   className="h-9 w-full rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
@@ -4114,30 +4137,32 @@ export default function TopBar() {
                   ))}
                 </select>
               </div>
-              <div className="flex items-center justify-between rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px]">
-                <span>Hide beta banner</span>
-                <input
-                  type="checkbox"
-                  checked={hideBetaBanner}
-                  onChange={(event) => {
-                    const next = event.target.checked;
-                    if (next) {
-                      const confirmed = window.confirm(
-                        "I understand and accept that this app is in beta and may contain bugs, even if the banner is hidden."
-                      );
-                      if (!confirmed) {
-                        return;
+              <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4 lg:col-span-2">
+                <div className="flex items-center justify-between rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px]">
+                  <span>Hide beta banner</span>
+                  <input
+                    type="checkbox"
+                    checked={hideBetaBanner}
+                    onChange={(event) => {
+                      const next = event.target.checked;
+                      if (next) {
+                        const confirmed = window.confirm(
+                          "I understand and accept that this app is in beta and may contain bugs, even if the banner is hidden."
+                        );
+                        if (!confirmed) {
+                          return;
+                        }
                       }
-                    }
-                    setHideBetaBanner(next);
-                    if (typeof window !== "undefined") {
-                      window.localStorage.setItem(
-                        "tacticsboard:hideBetaBanner",
-                        next ? "true" : "false"
-                      );
-                    }
-                  }}
-                />
+                      setHideBetaBanner(next);
+                      if (typeof window !== "undefined") {
+                        window.localStorage.setItem(
+                          "tacticsboard:hideBetaBanner",
+                          next ? "true" : "false"
+                        );
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
