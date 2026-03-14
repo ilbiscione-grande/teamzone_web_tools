@@ -851,7 +851,9 @@ export const useBoardInteractions = ({
 
   const handleDoubleClick = () => {
     if (draft?.type === "polygon") {
-      commitPolygonDraft(draft);
+      if ((draft.points?.length ?? 0) >= 6) {
+        commitPolygonDraft(draft);
+      }
       return;
     }
     if (readOnly) {
