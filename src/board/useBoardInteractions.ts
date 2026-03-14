@@ -974,48 +974,45 @@ export const useBoardInteractions = ({
     if (!stage) {
       return;
     }
-    const isStage = event.target === stage || event.target.getParent() === stage;
-    if (isStage) {
-      if (readOnly || activeTool !== "polygon") {
+    if (readOnly || activeTool !== "polygon") {
+      const isStage = event.target === stage || event.target.getParent() === stage;
+      if (isStage) {
         clearSelection();
       }
-      if (readOnly || activeTool !== "polygon") {
-        return;
-      }
-      const pointer = stage.getPointerPosition();
-      if (!pointer) {
-        return;
-      }
-      const world = stageToWorld(pointer);
-      if (!draft || draft.type !== "polygon") {
-        setDraft({
-          type: "polygon",
-          start: world,
-          current: world,
-          points: [0, 0],
-          constrain: false,
-        });
-        return;
-      }
-      const relativeX = world.x - draft.start.x;
-      const relativeY = world.y - draft.start.y;
-      if (canClosePolygonDraft(draft, world)) {
-        commitPolygonDraft(draft);
-        return;
-      }
-      const points = draft.points ?? [0, 0];
-      const lastX = points[points.length - 2] ?? 0;
-      const lastY = points[points.length - 1] ?? 0;
-      if (Math.hypot(relativeX - lastX, relativeY - lastY) < 0.35) {
-        return;
-      }
+      return;
+    }
+    const pointer = stage.getPointerPosition();
+    if (!pointer) {
+      return;
+    }
+    const world = stageToWorld(pointer);
+    if (!draft || draft.type !== "polygon") {
       setDraft({
-        ...draft,
+        type: "polygon",
+        start: world,
         current: world,
-        points: [...points, relativeX, relativeY],
+        points: [0, 0],
+        constrain: false,
       });
       return;
     }
+    const relativeX = world.x - draft.start.x;
+    const relativeY = world.y - draft.start.y;
+    if (canClosePolygonDraft(draft, world)) {
+      commitPolygonDraft(draft);
+      return;
+    }
+    const points = draft.points ?? [0, 0];
+    const lastX = points[points.length - 2] ?? 0;
+    const lastY = points[points.length - 1] ?? 0;
+    if (Math.hypot(relativeX - lastX, relativeY - lastY) < 0.35) {
+      return;
+    }
+    setDraft({
+      ...draft,
+      current: world,
+      points: [...points, relativeX, relativeY],
+    });
   };
 
   const handleClick = (event: Konva.KonvaEventObject<MouseEvent>) => {
@@ -1024,10 +1021,6 @@ export const useBoardInteractions = ({
     }
     const stage = stageRef.current;
     if (!stage) {
-      return;
-    }
-    const isStage = event.target === stage || event.target.getParent() === stage;
-    if (!isStage) {
       return;
     }
     const pointer = stage.getPointerPosition();
