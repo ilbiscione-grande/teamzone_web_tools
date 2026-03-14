@@ -281,7 +281,7 @@ export default function BoardObject({
     if (jerseyType === "solid" || primary === secondary) {
       return null;
     }
-    const innerRadius = Math.max(0.2, radius - Math.max(0.9, radius * 0.14));
+    const innerRadius = Math.max(0.2, radius - 0.02);
     return (
       <Group
         clipFunc={(ctx) => {
@@ -311,10 +311,10 @@ export default function BoardObject({
         {jerseyType === "sash" ? (
           <Line
             points={[
-              -innerRadius * 1.45,
-              innerRadius * 1.28,
-              innerRadius * 1.45,
-              -innerRadius * 1.28,
+              -innerRadius * 1.8,
+              innerRadius * 1.6,
+              innerRadius * 1.8,
+              -innerRadius * 1.6,
             ]}
             stroke={secondary}
             strokeWidth={Math.max(1.2, innerRadius * 0.21)}
@@ -766,6 +766,13 @@ export default function BoardObject({
             />
           </Group>
         )}
+        <Circle
+          radius={playerTokenSize}
+          fillEnabled={false}
+          stroke={player.style.stroke}
+          strokeWidth={depthStroke(player.style.strokeWidth)}
+          listening={false}
+        />
         {hasLabel && (
           <Group rotation={labelRotation} scaleY={textForeshorten}>
             <Text
