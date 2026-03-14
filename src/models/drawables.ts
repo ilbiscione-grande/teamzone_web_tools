@@ -41,6 +41,7 @@ export type BaseDrawable = {
     | "mannequin"
     | "goal"
     | "circle"
+    | "polygon"
     | "rect"
     | "triangle"
     | "arrow"
@@ -112,6 +113,11 @@ export type ShapeRect = BaseDrawable & {
   cornerRadius: number;
 };
 
+export type ShapePolygon = BaseDrawable & {
+  type: "polygon";
+  points: number[];
+};
+
 export type ShapeTriangle = BaseDrawable & {
   type: "triangle";
   width: number;
@@ -152,6 +158,7 @@ export type DrawableObject =
   | MannequinToken
   | MiniGoal
   | ShapeCircle
+  | ShapePolygon
   | ShapeRect
   | ShapeTriangle
   | ArrowLine

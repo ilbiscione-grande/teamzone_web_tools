@@ -25,6 +25,7 @@ import type {
   PoleToken,
   PlayerToken,
   ShapeCircle,
+  ShapePolygon,
   ShapeRect,
   ShapeTriangle,
   SquadPlayer,
@@ -919,6 +920,35 @@ export default function BoardObject({
           dash={circle.style.dash}
         />
         {renderShimmerSweepInCircle(0, 0, circle.radius)}
+      </Group>
+    );
+  }
+
+  if (object.type === "polygon") {
+    const polygon = object as ShapePolygon;
+    return (
+      <Group
+        {...commonProps}
+        shadowEnabled={ambientShadowEnabled}
+        shadowColor="#000000"
+        shadowBlur={ambientShadowBlur}
+        shadowOpacity={ambientShadowOpacity}
+        shadowOffsetY={ambientShadowOffsetY}
+        ref={(node) => {
+          if (node) {
+            registerNode(object.id, node);
+          }
+        }}
+      >
+        <Line
+          points={polygon.points}
+          closed
+          stroke={polygon.style.stroke}
+          strokeWidth={depthStroke(polygon.style.strokeWidth)}
+          fill={polygon.style.fill}
+          dash={polygon.style.dash}
+          lineJoin="round"
+        />
       </Group>
     );
   }

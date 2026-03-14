@@ -113,6 +113,7 @@ export default function PropertiesPanel({
       "pole",
       "mannequin",
       "circle",
+      "polygon",
       "rect",
       "triangle",
       "arrow",
@@ -876,6 +877,7 @@ export default function PropertiesPanel({
             target.type === "pole" ||
             target.type === "mannequin" ||
             target.type === "circle" ||
+            target.type === "polygon" ||
             target.type === "rect" ||
             target.type === "triangle") && (
             <div className="rounded-2xl border border-[var(--line)] p-3">

@@ -16,7 +16,7 @@ import {
 import { createId } from "@/utils/id";
 
 type DraftShape = {
-  type: "circle" | "rect" | "triangle" | "arrow" | "path";
+  type: "circle" | "polygon" | "rect" | "triangle" | "arrow" | "path";
   start: { x: number; y: number };
   current: { x: number; y: number };
   points?: number[];
@@ -80,6 +80,19 @@ export const useBoardInteractions = ({
   const [marqueeMode, setMarqueeMode] = useState<"select" | "zoom">("select");
   const [isPanning, setIsPanning] = useState(false);
   const circleSnapTolerance = 0.08;
+  const polygonCloseTolerance = 1.2;
+  const canClosePolygonDraft = (polygonDraft: DraftShape, point: { x: number; y: number }) => {
+    if (polygonDraft.type !== "polygon") {
+      return false;
+    }
+    if ((polygonDraft.points?.length ?? 0) < 6) {
+      return false;
+    }
+    return (
+      Math.hypot(point.x - polygonDraft.start.x, point.y - polygonDraft.start.y) <=
+      polygonCloseTolerance
+    );
+  };
   const smoothPathPoints = (points: number[]) => {
     if (points.length <= 6) {
       return points;
@@ -225,8 +238,10 @@ export const useBoardInteractions = ({
     activeTool === "arrow" ||
     activeTool === "arrow_dashed";
   const isFreehandTool = activeTool === "freehand";
+  const isPolygonTool = activeTool === "polygon";
   const isShapeTool =
     activeTool === "circle" ||
+    isPolygonTool ||
     activeTool === "rect" ||
     activeTool === "triangle" ||
     isLineTool ||
@@ -275,6 +290,9 @@ export const useBoardInteractions = ({
           return;
         }
         setIsPanning(true);
+        return;
+      }
+      if (isPolygonTool) {
         return;
       }
       if (activeTool === "circle") {
@@ -370,6 +388,14 @@ export const useBoardInteractions = ({
       });
       return;
     }
+    if (draft.type === "polygon") {
+      setDraft({
+        ...draft,
+        current: world,
+        constrain: false,
+      });
+      return;
+    }
     setDraft({
       ...draft,
       current: world,
@@ -377,8 +403,34 @@ export const useBoardInteractions = ({
     });
   };
 
+  const commitPolygonDraft = (polygonDraft: DraftShape) => {
+    const points = polygonDraft.points ?? [];
+    if (points.length < 6) {
+      setDraft(null);
+      return;
+    }
+    pushHistory(clone(objects));
+    addObject(boardId, frameIndex, {
+      id: createId(),
+      type: "polygon",
+      position: polygonDraft.start,
+      rotation: 0,
+      scale: { x: 1, y: 1 },
+      style: { ...defaultStyle },
+      zIndex: 1,
+      locked: false,
+      visible: true,
+      points,
+    });
+    setDraft(null);
+  };
+
   const commitDraft = () => {
     if (!draft) {
+      return;
+    }
+    if (draft.type === "polygon") {
+      commitPolygonDraft(draft);
       return;
     }
     const dragDistance = Math.hypot(
@@ -584,7 +636,7 @@ export const useBoardInteractions = ({
     if (completeMarquee()) {
       return;
     }
-    if (draft) {
+    if (draft && draft.type !== "polygon") {
       commitDraft();
     }
     if (isPanning) {
@@ -648,6 +700,9 @@ export const useBoardInteractions = ({
     if (activeTool === "triangle") {
       setDraft({ type: "triangle", start: world, current: world, constrain: false });
     }
+    if (isPolygonTool) {
+      return;
+    }
     if (isLineTool) {
       setDraft({ type: "arrow", start: world, current: world, constrain: false });
     }
@@ -700,6 +755,10 @@ export const useBoardInteractions = ({
           points: [...points, nextX, nextY],
           constrain: false,
         });
+        return;
+      }
+      if (draft.type === "polygon") {
+        setDraft({ ...draft, current: world, constrain: false });
         return;
       }
       setDraft({ ...draft, current: world, constrain: false });
@@ -775,7 +834,7 @@ export const useBoardInteractions = ({
       setMarqueeMode("select");
       return;
     }
-    if (draft) {
+    if (draft && draft.type !== "polygon") {
       commitDraft();
     }
     if (isPanning) {
@@ -791,6 +850,10 @@ export const useBoardInteractions = ({
   };
 
   const handleDoubleClick = () => {
+    if (draft?.type === "polygon") {
+      commitPolygonDraft(draft);
+      return;
+    }
     if (readOnly) {
       return;
     }
@@ -911,11 +974,93 @@ export const useBoardInteractions = ({
     }
     const isStage = event.target === stage || event.target.getParent() === stage;
     if (isStage) {
-      clearSelection();
+      if (readOnly || activeTool !== "polygon") {
+        clearSelection();
+      }
+      if (readOnly || activeTool !== "polygon") {
+        return;
+      }
+      const pointer = stage.getPointerPosition();
+      if (!pointer) {
+        return;
+      }
+      const world = stageToWorld(pointer);
+      if (!draft || draft.type !== "polygon") {
+        setDraft({
+          type: "polygon",
+          start: world,
+          current: world,
+          points: [0, 0],
+          constrain: false,
+        });
+        return;
+      }
+      const relativeX = world.x - draft.start.x;
+      const relativeY = world.y - draft.start.y;
+      if (canClosePolygonDraft(draft, world)) {
+        commitPolygonDraft(draft);
+        return;
+      }
+      const points = draft.points ?? [0, 0];
+      const lastX = points[points.length - 2] ?? 0;
+      const lastY = points[points.length - 1] ?? 0;
+      if (Math.hypot(relativeX - lastX, relativeY - lastY) < 0.35) {
+        return;
+      }
+      setDraft({
+        ...draft,
+        current: world,
+        points: [...points, relativeX, relativeY],
+      });
+      return;
     }
   };
 
-  const handleClick = () => {};
+  const handleClick = (event: Konva.KonvaEventObject<MouseEvent>) => {
+    if (readOnly || activeTool !== "polygon") {
+      return;
+    }
+    const stage = stageRef.current;
+    if (!stage) {
+      return;
+    }
+    const isStage = event.target === stage || event.target.getParent() === stage;
+    if (!isStage) {
+      return;
+    }
+    const pointer = stage.getPointerPosition();
+    if (!pointer) {
+      return;
+    }
+    const world = stageToWorld(pointer);
+    if (!draft || draft.type !== "polygon") {
+      setDraft({
+        type: "polygon",
+        start: world,
+        current: world,
+        points: [0, 0],
+        constrain: false,
+      });
+      return;
+    }
+    const relativeX = world.x - draft.start.x;
+    const relativeY = world.y - draft.start.y;
+    if (canClosePolygonDraft(draft, world)) {
+      commitPolygonDraft(draft);
+      return;
+    }
+    const points = draft.points ?? [0, 0];
+    const lastX = points[points.length - 2] ?? 0;
+    const lastY = points[points.length - 1] ?? 0;
+    if (Math.hypot(relativeX - lastX, relativeY - lastY) < 0.35) {
+      return;
+    }
+    setDraft({
+      ...draft,
+      current: world,
+      points: [...points, relativeX, relativeY],
+    });
+  };
 
   return {
     draft,

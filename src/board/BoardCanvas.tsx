@@ -15,6 +15,7 @@ import type {
   PoleToken,
   PlayerToken,
   ShapeCircle,
+  ShapePolygon,
   ShapeRect,
   ShapeTriangle,
   TextLabel,
@@ -63,6 +64,54 @@ const getProportionalDimensions = (
     width: safeBaseWidth * scale,
     height: safeBaseHeight * scale,
   };
+};
+const getPolygonBounds = (points: number[]) => {
+  if (points.length < 2) {
+    return {
+      minX: 0,
+      maxX: 0,
+      minY: 0,
+      maxY: 0,
+      width: 0,
+      height: 0,
+    };
+  }
+  let minX = points[0] ?? 0;
+  let maxX = minX;
+  let minY = points[1] ?? 0;
+  let maxY = minY;
+  for (let index = 2; index < points.length; index += 2) {
+    const x = points[index] ?? 0;
+    const y = points[index + 1] ?? 0;
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  }
+  return {
+    minX,
+    maxX,
+    minY,
+    maxY,
+    width: maxX - minX,
+    height: maxY - minY,
+  };
+};
+const scalePolygonPoints = (
+  points: number[],
+  nextWidth: number,
+  nextHeight: number
+) => {
+  const bounds = getPolygonBounds(points);
+  const baseWidth = Math.max(0.001, bounds.width);
+  const baseHeight = Math.max(0.001, bounds.height);
+  const scaleX = nextWidth / baseWidth;
+  const scaleY = nextHeight / baseHeight;
+  return points.map((value, index) =>
+    index % 2 === 0
+      ? bounds.minX + (value - bounds.minX) * scaleX
+      : bounds.minY + (value - bounds.minY) * scaleY
+  );
 };
 const rotateVector = (vector: { x: number; y: number }, angle: number) => {
   const radians = (angle * Math.PI) / 180;
@@ -463,6 +512,31 @@ export default function BoardCanvas({
           x: object.position.x + rect.width / 2,
           y: object.position.y + rect.height / 2,
           radius: Math.max(1.4, Math.hypot(rect.width, rect.height) * 0.56),
+          strength,
+        };
+      }
+      if (object.type === "polygon") {
+        const polygon = object as ShapePolygon;
+        if (polygon.points.length < 2) {
+          return null;
+        }
+        const xs: number[] = [];
+        const ys: number[] = [];
+        for (let i = 0; i < polygon.points.length; i += 2) {
+          xs.push(polygon.points[i] ?? 0);
+          ys.push(polygon.points[i + 1] ?? 0);
+        }
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        const width = Math.max(1, maxX - minX);
+        const height = Math.max(1, maxY - minY);
+        return {
+          id: object.id,
+          x: object.position.x + minX + width / 2,
+          y: object.position.y + minY + height / 2,
+          radius: Math.max(1.4, Math.hypot(width, height) * 0.56),
           strength,
         };
       }
@@ -1213,6 +1287,25 @@ export default function BoardCanvas({
         }
         return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
       }
+      if (item.type === "polygon") {
+        const points = item.points ?? [];
+        if (points.length < 2) {
+          return item.position;
+        }
+        let minX = item.position.x + points[0]!;
+        let maxX = minX;
+        let minY = item.position.y + points[1]!;
+        let maxY = minY;
+        for (let index = 2; index < points.length; index += 2) {
+          const x = item.position.x + (points[index] ?? 0);
+          const y = item.position.y + (points[index + 1] ?? 0);
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+        return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+      }
       if (item.type === "circle") {
         return item.position;
       }
@@ -1492,6 +1585,25 @@ export default function BoardCanvas({
       }
       return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
     }
+    if (item.type === "polygon") {
+      const points = item.points ?? [];
+      if (points.length < 2) {
+        return item.position;
+      }
+      let minX = item.position.x + points[0]!;
+      let maxX = minX;
+      let minY = item.position.y + points[1]!;
+      let maxY = minY;
+      for (let index = 2; index < points.length; index += 2) {
+        const x = item.position.x + (points[index] ?? 0);
+        const y = item.position.y + (points[index + 1] ?? 0);
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+      return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+    }
     if (item.type === "circle") {
       return item.position;
     }
@@ -1561,6 +1673,7 @@ export default function BoardCanvas({
       mannequin: "Mannequin",
       goal: "Mini goal",
       circle: "Circle",
+      polygon: "Polygon",
       rect: "Rectangle",
       triangle: "Triangle",
       arrow: "Line",
@@ -1716,6 +1829,22 @@ export default function BoardCanvas({
         </svg>
       );
     }
+    if (item.type === "polygon") {
+      return (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={commonSvgClass}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M5 9 11 4l8 4-2 10H8L4 12z" fill={fill} />
+        </svg>
+      );
+    }
     if (item.type === "rect") {
       return (
         <svg
@@ -1842,6 +1971,23 @@ export default function BoardCanvas({
         x: item.position.x + item.radius,
         y: item.position.y - item.radius,
       };
+    }
+    if (item.type === "polygon") {
+      const points = item.points ?? [];
+      if (points.length < 2) {
+        return item.position;
+      }
+      let minX = item.position.x + points[0]!;
+      let maxX = minX;
+      let minY = item.position.y + points[1]!;
+      for (let index = 2; index < points.length; index += 2) {
+        const x = item.position.x + (points[index] ?? 0);
+        const y = item.position.y + (points[index + 1] ?? 0);
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+      }
+      return { x: maxX, y: minY };
     }
     if (item.type === "player" || item.type === "ball") {
       return {
@@ -2093,6 +2239,7 @@ export default function BoardCanvas({
                 <option value="mannequin">Mannequin</option>
                 <option value="goal">Mini goal</option>
                 <option value="circle">Circle</option>
+                <option value="polygon">Polygon</option>
                 <option value="rect">Rectangle</option>
                 <option value="triangle">Triangle</option>
                 <option value="arrow">Line/Arrow</option>
@@ -2643,6 +2790,7 @@ export default function BoardCanvas({
                 (item) =>
                   selection.includes(item.id) &&
                   (item.type === "circle" ||
+                    item.type === "polygon" ||
                     item.type === "rect" ||
                     item.type === "triangle")
               )
@@ -2788,6 +2936,143 @@ export default function BoardCanvas({
                           event.target.position({
                             x: localX,
                             y: localY,
+                          });
+                        }}
+                      />
+                    </Group>
+                  );
+                }
+                if (item.type === "polygon") {
+                  const bounds = getPolygonBounds(item.points);
+                  const width = Math.max(minSize, bounds.width);
+                  const height = Math.max(minSize, bounds.height);
+                  const scaleX = item.scale.x || 1;
+                  const scaleY = item.scale.y || 1;
+                  const rotateHandle = {
+                    x: bounds.minX - transformHandleHalf,
+                    y: bounds.minY - transformHandleHalf,
+                  };
+                  const center = {
+                    x: bounds.minX + width / 2,
+                    y: bounds.minY + height / 2,
+                  };
+                  return (
+                    <Group
+                      key={`${item.id}-shape-handles`}
+                      x={item.position.x}
+                      y={item.position.y}
+                      rotation={item.rotation}
+                      scaleX={scaleX}
+                      scaleY={scaleY}
+                    >
+                      <Line
+                        points={[
+                          center.x,
+                          center.y,
+                          rotateHandle.x,
+                          rotateHandle.y,
+                        ]}
+                        stroke="rgba(255,255,255,0.5)"
+                        strokeWidth={0.2}
+                        dash={[0.6, 0.6]}
+                        listening={false}
+                      />
+                      <Circle
+                        x={rotateHandle.x}
+                        y={rotateHandle.y}
+                        radius={transformHandleRadius}
+                        fill="#ffffff"
+                        stroke="#0f1b1a"
+                        strokeWidth={0.15}
+                        hitStrokeWidth={transformHandleHitStrokeWidth}
+                        draggable={!item.locked}
+                        onMouseDown={(event) => {
+                          event.cancelBubble = true;
+                        }}
+                        onDragStart={() => pushHistory(clone(objects))}
+                        onDragMove={(event) => {
+                          const rawAngle =
+                            getRawRotationAngleFromPointer(event, center) ??
+                            item.rotation;
+                          const snapKey = `${item.id}:rotate`;
+                          const angle = event.evt?.altKey
+                            ? rawAngle
+                            : getStableSnappedRotation(rawAngle, snapKey);
+                          if (event.evt?.altKey) {
+                            clearRotationSnapState(snapKey);
+                          }
+                          const nextPosition = getCenterAnchoredPositionForRotation({
+                            position: item.position,
+                            center,
+                            scale: { x: scaleX, y: scaleY },
+                            fromAngle: item.rotation,
+                            toAngle: angle,
+                          });
+                          updateObject(board.id, frameIndex, item.id, {
+                            rotation: angle,
+                            position: nextPosition,
+                          });
+                        }}
+                        onDragEnd={() => {
+                          clearRotationSnapState(`${item.id}:rotate`);
+                        }}
+                      />
+                      <Rect
+                        x={bounds.maxX - transformHandleHalf}
+                        y={bounds.maxY - transformHandleHalf}
+                        width={transformHandleSize}
+                        height={transformHandleSize}
+                        fill="#ffffff"
+                        stroke="#0f1b1a"
+                        strokeWidth={0.15}
+                        cornerRadius={0.2 * mobileTransformScale}
+                        hitStrokeWidth={transformHandleHitStrokeWidth}
+                        draggable={!item.locked}
+                        onMouseDown={(event) => {
+                          event.cancelBubble = true;
+                        }}
+                        onDragStart={() => pushHistory(clone(objects))}
+                        onDragMove={(event) => {
+                          const allowFreeSize = !!event.evt?.altKey;
+                          const baseX = Math.max(
+                            minSize,
+                            (event.target.x() - bounds.minX) / scaleX
+                          );
+                          const baseY = Math.max(
+                            minSize,
+                            (event.target.y() - bounds.minY) / scaleY
+                          );
+                          const constrained = event.evt?.shiftKey;
+                          let nextWidth = allowFreeSize
+                            ? baseX
+                            : snapSizeValue(baseX, minSize);
+                          let nextHeight = allowFreeSize
+                            ? baseY
+                            : snapSizeValue(baseY, minSize);
+                          if (constrained) {
+                            const proportional = getProportionalDimensions(
+                              nextWidth,
+                              nextHeight,
+                              width,
+                              height
+                            );
+                            nextWidth = allowFreeSize
+                              ? proportional.width
+                              : snapSizeValue(proportional.width, minSize);
+                            nextHeight = allowFreeSize
+                              ? proportional.height
+                              : snapSizeValue(proportional.height, minSize);
+                          }
+                          updateObject(board.id, frameIndex, item.id, {
+                            points: scalePolygonPoints(
+                              item.points,
+                              nextWidth,
+                              nextHeight
+                            ),
+                          });
+                          event.target.position({
+                            x: bounds.minX + nextWidth,
+                            y: bounds.minY + nextHeight,
                           });
                         }}
                       />
@@ -3712,7 +3997,61 @@ export default function BoardCanvas({
                 lineJoin="round"
               />
             )}
-            {draft && draft.type !== "arrow" && draft.type !== "path" && (
+            {draft && draft.type === "polygon" && (
+              <>
+                {(() => {
+                  const draftPoints = draft.points ?? [];
+                  const canClose =
+                    draftPoints.length >= 6 &&
+                    Math.hypot(
+                      draft.current.x - draft.start.x,
+                      draft.current.y - draft.start.y
+                    ) <= 1.2;
+                  return (
+                    <>
+                      <Line
+                        points={[
+                          ...(draftPoints.flatMap((value, index) =>
+                            index % 2 === 0
+                              ? [value + draft.start.x]
+                              : [value + draft.start.y]
+                          )),
+                          draft.current.x,
+                          draft.current.y,
+                        ]}
+                        closed
+                        fill="rgba(255,255,255,0.12)"
+                        stroke="#ffffff"
+                        strokeWidth={0.42}
+                        lineJoin="round"
+                      />
+                      <Circle
+                        x={draft.start.x}
+                        y={draft.start.y}
+                        radius={canClose ? 0.62 : 0.45}
+                        fill={canClose ? "#f9bf4a" : "#ffffff"}
+                        stroke="#111111"
+                        strokeWidth={0.12}
+                      />
+                      {canClose ? (
+                        <Circle
+                          x={draft.start.x}
+                          y={draft.start.y}
+                          radius={0.95}
+                          stroke="#f9bf4a"
+                          strokeWidth={0.16}
+                          dash={[0.22, 0.18]}
+                        />
+                      ) : null}
+                    </>
+                  );
+                })()}
+              </>
+            )}
+            {draft &&
+              draft.type !== "arrow" &&
+              draft.type !== "path" &&
+              draft.type !== "polygon" && (
               <Rect
                 x={Math.min(draft.start.x, draft.current.x)}
                 y={Math.min(draft.start.y, draft.current.y)}

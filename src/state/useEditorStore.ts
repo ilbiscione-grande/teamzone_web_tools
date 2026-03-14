@@ -10,6 +10,7 @@ export type Tool =
   | "mannequin"
   | "goal"
   | "circle"
+  | "polygon"
   | "rect"
   | "triangle"
   | "line"

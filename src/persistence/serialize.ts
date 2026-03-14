@@ -67,6 +67,8 @@ const isDrawable = (value: unknown): boolean => {
       return isFiniteNumber(value.width) && isFiniteNumber(value.height);
     case "circle":
       return isFiniteNumber(value.radius);
+    case "polygon":
+      return Array.isArray(value.points) && value.points.every(isFiniteNumber);
     case "rect":
       return (
         isFiniteNumber(value.width) &&
