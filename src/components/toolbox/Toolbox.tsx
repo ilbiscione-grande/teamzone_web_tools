@@ -519,7 +519,34 @@ export default function Toolbox({
   };
   const toDateTimeLocalValue = (input?: string) => {
     if (input && input.trim()) {
-      const parsed = new Date(input);
+      const trimmed = input.trim();
+      const isoLocalMatch = trimmed.match(
+        /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?$/
+      );
+      const svMatch =
+        isoLocalMatch === null
+          ? trimmed.match(
+              /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})(?:,\s*|\s+)?(\d{1,2}):(\d{2})$/
+            )
+          : null;
+      const parsed =
+        isoLocalMatch !== null
+          ? new Date(
+              Number(isoLocalMatch[1]),
+              Number(isoLocalMatch[2]) - 1,
+              Number(isoLocalMatch[3]),
+              Number(isoLocalMatch[4] ?? "0"),
+              Number(isoLocalMatch[5] ?? "0")
+            )
+          : svMatch !== null
+            ? new Date(
+                Number(svMatch[3].length === 2 ? `20${svMatch[3]}` : svMatch[3]),
+                Number(svMatch[2]) - 1,
+                Number(svMatch[1]),
+                Number(svMatch[4]),
+                Number(svMatch[5])
+              )
+            : new Date(trimmed);
       if (!Number.isNaN(parsed.getTime())) {
         const y = parsed.getFullYear();
         const m = `${parsed.getMonth() + 1}`.padStart(2, "0");
@@ -1614,11 +1641,7 @@ export default function Toolbox({
                 className="rounded-full border border-[var(--accent-0)] bg-[var(--accent-0)] px-3 py-1 text-xs text-black"
                 onClick={() => {
                   const value = dateTimeDraft || toDateTimeLocalValue();
-                  const parsed = new Date(value);
-                  const label = Number.isNaN(parsed.getTime())
-                    ? value
-                    : parsed.toLocaleString();
-                  updateScopedTrainingField("dateTime", label);
+                  updateScopedTrainingField("dateTime", value);
                   setShowDateTimeDialog(false);
                 }}
               >

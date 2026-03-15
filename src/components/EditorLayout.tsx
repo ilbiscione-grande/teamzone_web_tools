@@ -391,38 +391,7 @@ export default function EditorLayout() {
       },
     });
   };
-  const formatDateTimeSv = (value?: string) => {
-    if (!value || !value.trim()) {
-      return "-";
-    }
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-      return value;
-    }
-    const months = [
-      "jan",
-      "feb",
-      "mar",
-      "apr",
-      "maj",
-      "jun",
-      "jul",
-      "aug",
-      "sep",
-      "okt",
-      "nov",
-      "dec",
-    ];
-    const day = parsed.getDate();
-    const month = months[parsed.getMonth()] ?? "";
-    const year = parsed.getFullYear();
-    const hh = `${parsed.getHours()}`.padStart(2, "0");
-    const mm = `${parsed.getMinutes()}`.padStart(2, "0");
-    return `${day} ${month} ${year} ${hh}:${mm}`;
-  };
-
   if (isMaximized && board) {
-    const sessionDateText = formatDateTimeSv(sessionTraining.dateTime);
     const sessionNotesText = (project.sessionNotes ?? "").trim();
     const boardNotesText = (board.notes ?? "").trim();
     const boardEquipmentText = (boardTraining.equipment ?? []).join(", ").trim();
@@ -576,19 +545,6 @@ export default function EditorLayout() {
                   ))}
                 </svg>
               </div>
-            </div>
-          )}
-          {showMaximizedNotes && (
-            <div
-              className="pointer-events-none absolute top-4 z-20 rounded-full border border-[var(--line)] bg-[var(--panel-2)]/80 px-3 py-1 text-[10px] text-[var(--ink-1)]"
-              style={{
-                right: useNotesSplitLayout
-                  ? `${notesWidth + (compactVertical ? 30 : 38)}px`
-                  : "16px",
-                top: compactVertical ? "10px" : "16px",
-              }}
-            >
-              {sessionDateText}
             </div>
           )}
           {useNotesSplitLayout && (
