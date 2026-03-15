@@ -1405,6 +1405,8 @@ export default function BoardCanvas({
     marquee,
     marqueeMode,
     isPanning,
+    cancelDraft,
+    undoDraftStep,
     handleWheel,
     handleMouseDown,
     handleMouseMove,
@@ -2191,6 +2193,26 @@ export default function BoardCanvas({
           )}
         </div>
       )}
+      {draft ? (
+        <div className="pointer-events-none absolute inset-x-3 top-3 z-20 flex justify-center">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--panel)]/95 px-2 py-2 shadow-lg shadow-black/25 backdrop-blur">
+            {draft.type === "polygon" ? (
+              <button
+                className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[11px] font-medium text-[var(--ink-0)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                onClick={undoDraftStep}
+              >
+                Undo point
+              </button>
+            ) : null}
+            <button
+              className="rounded-full border border-[var(--accent-1)] px-3 py-1.5 text-[11px] font-medium text-[var(--accent-1)] hover:bg-[var(--accent-1)] hover:text-black"
+              onClick={cancelDraft}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
       {objectListOpen ? (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 px-4 py-6">
           <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 shadow-xl shadow-black/40">

@@ -294,6 +294,60 @@ export const useBoardInteractions = ({
       });
       return;
     }
+    if (!readOnly && isShapeTool) {
+      const pointer = stage.getPointerPosition();
+      if (!pointer) {
+        return;
+      }
+      const world = stageToWorld(pointer);
+      clearSelection();
+      if (activeTool === "circle") {
+        setDraft({
+          type: "circle",
+          start: world,
+          current: world,
+          constrain: event.evt.shiftKey,
+        });
+        return;
+      }
+      if (activeTool === "rect") {
+        setDraft({
+          type: "rect",
+          start: world,
+          current: world,
+          constrain: event.evt.shiftKey,
+        });
+        return;
+      }
+      if (activeTool === "triangle") {
+        setDraft({
+          type: "triangle",
+          start: world,
+          current: world,
+          constrain: event.evt.shiftKey,
+        });
+        return;
+      }
+      if (isLineTool) {
+        setDraft({
+          type: "arrow",
+          start: world,
+          current: world,
+          constrain: event.evt.shiftKey,
+        });
+        return;
+      }
+      if (isFreehandTool) {
+        setDraft({
+          type: "path",
+          start: world,
+          current: world,
+          points: [0, 0],
+          constrain: false,
+        });
+        return;
+      }
+    }
     const isStage = event.target === stage || event.target.getParent() === stage;
     if (isStage) {
       clearSelection();
@@ -327,50 +381,6 @@ export const useBoardInteractions = ({
         }
         setIsPanning(true);
         return;
-      }
-      if (isPolygonTool) {
-        return;
-      }
-      if (activeTool === "circle") {
-        setDraft({
-          type: "circle",
-          start: world,
-          current: world,
-          constrain: event.evt.shiftKey,
-        });
-      }
-      if (activeTool === "rect") {
-        setDraft({
-          type: "rect",
-          start: world,
-          current: world,
-          constrain: event.evt.shiftKey,
-        });
-      }
-      if (activeTool === "triangle") {
-        setDraft({
-          type: "triangle",
-          start: world,
-          current: world,
-          constrain: event.evt.shiftKey,
-        });
-      }
-      if (isLineTool) {
-        setDraft({
-          type: "arrow",
-          start: world,
-          current: world,
-          constrain: event.evt.shiftKey,
-        });
-      }
-      if (isFreehandTool) {
-        setDraft({
-          type: "path",
-          start: world,
-          current: world,
-          points: [0, 0],
-          constrain: false,
-        });
       }
       return;
     }
@@ -461,6 +471,32 @@ export const useBoardInteractions = ({
     setDraft(null);
   };
 
+  const cancelDraft = () => {
+    setDraft(null);
+  };
+
+  const undoDraftStep = () => {
+    if (!draft || draft.type !== "polygon") {
+      return;
+    }
+    const points = draft.points ?? [];
+    if (points.length <= 2) {
+      setDraft(null);
+      return;
+    }
+    const nextPoints = points.slice(0, -2);
+    const lastX = nextPoints[nextPoints.length - 2] ?? 0;
+    const lastY = nextPoints[nextPoints.length - 1] ?? 0;
+    setDraft({
+      ...draft,
+      points: nextPoints,
+      current: {
+        x: draft.start.x + lastX,
+        y: draft.start.y + lastY,
+      },
+    });
+  };
+
   useEffect(() => {
     if (readOnly) {
       return;
@@ -490,22 +526,7 @@ export const useBoardInteractions = ({
         return;
       }
       event.preventDefault();
-      const points = draft.points ?? [];
-      if (points.length <= 2) {
-        setDraft(null);
-        return;
-      }
-      const nextPoints = points.slice(0, -2);
-      const lastX = nextPoints[nextPoints.length - 2] ?? 0;
-      const lastY = nextPoints[nextPoints.length - 1] ?? 0;
-      setDraft({
-        ...draft,
-        points: nextPoints,
-        current: {
-          x: draft.start.x + lastX,
-          y: draft.start.y + lastY,
-        },
-      });
+      undoDraftStep();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => {
@@ -744,6 +765,41 @@ export const useBoardInteractions = ({
     if (!stage) {
       return;
     }
+    if (!readOnly && isShapeTool && !isPolygonTool) {
+      const pointer = stage.getPointerPosition();
+      if (!pointer) {
+        return;
+      }
+      const world = stageToWorld(pointer);
+      clearSelection();
+      event.evt.preventDefault();
+      if (activeTool === "circle") {
+        setDraft({ type: "circle", start: world, current: world, constrain: false });
+        return;
+      }
+      if (activeTool === "rect") {
+        setDraft({ type: "rect", start: world, current: world, constrain: false });
+        return;
+      }
+      if (activeTool === "triangle") {
+        setDraft({ type: "triangle", start: world, current: world, constrain: false });
+        return;
+      }
+      if (isLineTool) {
+        setDraft({ type: "arrow", start: world, current: world, constrain: false });
+        return;
+      }
+      if (isFreehandTool) {
+        setDraft({
+          type: "path",
+          start: world,
+          current: world,
+          points: [0, 0],
+          constrain: false,
+        });
+        return;
+      }
+    }
     const isStage = event.target === stage || event.target.getParent() === stage;
     if (isStage) {
       clearSelection();
@@ -786,35 +842,8 @@ export const useBoardInteractions = ({
     } else {
       return;
     }
-    const pointer = stage.getPointerPosition();
-    if (!pointer) {
-      return;
-    }
-    const world = stageToWorld(pointer);
-    event.evt.preventDefault();
-    if (activeTool === "circle") {
-      setDraft({ type: "circle", start: world, current: world, constrain: false });
-    }
-    if (activeTool === "rect") {
-      setDraft({ type: "rect", start: world, current: world, constrain: false });
-    }
-    if (activeTool === "triangle") {
-      setDraft({ type: "triangle", start: world, current: world, constrain: false });
-    }
     if (isPolygonTool) {
       return;
-    }
-    if (isLineTool) {
-      setDraft({ type: "arrow", start: world, current: world, constrain: false });
-    }
-    if (isFreehandTool) {
-      setDraft({
-        type: "path",
-        start: world,
-        current: world,
-        points: [0, 0],
-        constrain: false,
-      });
     }
   };
 
@@ -1125,6 +1154,8 @@ export const useBoardInteractions = ({
     marquee,
     marqueeMode,
     isPanning,
+    cancelDraft,
+    undoDraftStep,
     handleWheel,
     handleMouseDown,
     handleMouseMove,
