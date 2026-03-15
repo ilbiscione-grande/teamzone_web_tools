@@ -3,6 +3,7 @@ import { immer } from "zustand/middleware/immer";
 import type { DrawableObject } from "@/models";
 
 export type Tool =
+  | "select"
   | "player"
   | "ball"
   | "cone"
@@ -81,7 +82,7 @@ const loadPlayerTokenSize = () => {
 
 export const useEditorStore = create<EditorState>()(
   immer((set, get) => ({
-    activeTool: "player",
+    activeTool: "select",
     selection: [],
     viewport: {
       zoom: 1,

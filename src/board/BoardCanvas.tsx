@@ -4001,6 +4001,20 @@ export default function BoardCanvas({
               <>
                 {(() => {
                   const draftPoints = draft.points ?? [];
+                  const vertexPoints = draftPoints.reduce<
+                    { x: number; y: number; key: string; isStart: boolean }[]
+                  >((result, value, index) => {
+                    if (index % 2 !== 0) {
+                      return result;
+                    }
+                    result.push({
+                      x: draft.start.x + value,
+                      y: draft.start.y + (draftPoints[index + 1] ?? 0),
+                      key: `${value}:${draftPoints[index + 1] ?? 0}:${index}`,
+                      isStart: index === 0,
+                    });
+                    return result;
+                  }, []);
                   const canClose =
                     draftPoints.length >= 6 &&
                     Math.hypot(
@@ -4043,6 +4057,17 @@ export default function BoardCanvas({
                           dash={[0.22, 0.18]}
                         />
                       ) : null}
+                      {vertexPoints.map((point) => (
+                        <Circle
+                          key={point.key}
+                          x={point.x}
+                          y={point.y}
+                          radius={point.isStart ? 0.38 : 0.28}
+                          fill={point.isStart ? "#f9bf4a" : "#ffffff"}
+                          stroke="#111111"
+                          strokeWidth={0.1}
+                        />
+                      ))}
                     </>
                   );
                 })()}

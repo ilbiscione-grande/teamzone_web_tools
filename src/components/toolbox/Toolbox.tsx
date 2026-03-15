@@ -113,6 +113,11 @@ const TriangleIcon = () => (
     <path d="M12 6l8 12H4l8-12z" />
   </svg>
 );
+const SelectIcon = () => (
+  <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
+    <path d="M6 4l10 8-5 1.2L13 20l-3 1-2.1-6.9L4 16 6 4z" />
+  </svg>
+);
 const PolygonIcon = () => (
   <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth={iconStroke}>
     <path d="M6 7l6-3 6 4-2 9H8L4 11z" />
@@ -133,6 +138,7 @@ const SquadIcon = () => (
 );
 
 const itemTools: { id: Tool; label: string; hint: string; icon: ReactNode }[] = [
+  { id: "select", label: "Select", hint: "Click or drag to select", icon: <SelectIcon /> },
   { id: "player", label: "Player", hint: "Double-click to add", icon: <PlayerIcon /> },
   { id: "ball", label: "Ball", hint: "Double-click to add", icon: <BallIcon /> },
   { id: "cone", label: "Cone", hint: "Double-click to add", icon: <ConeIcon /> },

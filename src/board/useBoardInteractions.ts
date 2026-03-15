@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { RefObject } from "react";
 import type Konva from "konva";
 import type { DrawableObject } from "@/models";
-import type { Tool } from "@/state/useEditorStore";
+import { useEditorStore, type Tool } from "@/state/useEditorStore";
 import { clamp } from "@/utils/math";
 import { clone } from "@/utils/clone";
 import {
@@ -72,6 +72,7 @@ export const useBoardInteractions = ({
   selectByMarquee,
   disablePanZoom = false,
 }: UseBoardInteractionsProps) => {
+  const setTool = useEditorStore((state) => state.setTool);
   const [draft, setDraft] = useState<DraftShape | null>(null);
   const [marquee, setMarquee] = useState<{
     start: { x: number; y: number };
@@ -305,7 +306,7 @@ export const useBoardInteractions = ({
       }
       const world = stageToWorld(pointer);
       if (!isShapeTool) {
-        if (activeTool === "player") {
+        if (activeTool === "select") {
           setMarqueeMode("select");
           setMarquee({
             start: world,
@@ -459,6 +460,58 @@ export const useBoardInteractions = ({
     });
     setDraft(null);
   };
+
+  useEffect(() => {
+    if (readOnly) {
+      return;
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (draft) {
+          setDraft(null);
+          return;
+        }
+        if (activeTool !== "select") {
+          setTool("select");
+        }
+        return;
+      }
+      if (event.key !== "Backspace" || draft?.type !== "polygon") {
+        return;
+      }
+      event.preventDefault();
+      const points = draft.points ?? [];
+      if (points.length <= 2) {
+        setDraft(null);
+        return;
+      }
+      const nextPoints = points.slice(0, -2);
+      const lastX = nextPoints[nextPoints.length - 2] ?? 0;
+      const lastY = nextPoints[nextPoints.length - 1] ?? 0;
+      setDraft({
+        ...draft,
+        points: nextPoints,
+        current: {
+          x: draft.start.x + lastX,
+          y: draft.start.y + lastY,
+        },
+      });
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeTool, draft, readOnly, setTool]);
 
   const commitDraft = () => {
     if (!draft) {
@@ -705,6 +758,19 @@ export const useBoardInteractions = ({
           }
           const world = stageToWorld(pointer);
           setMarqueeMode("zoom");
+          setMarquee({
+            start: world,
+            current: world,
+          });
+          return;
+        }
+        if (activeTool === "select") {
+          const pointer = stage.getPointerPosition();
+          if (!pointer) {
+            return;
+          }
+          const world = stageToWorld(pointer);
+          setMarqueeMode("select");
           setMarquee({
             start: world,
             current: world,
