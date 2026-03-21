@@ -45,6 +45,19 @@ type GraphicsTextConfig = {
   heroImageUrl?: string;
 };
 
+const TEXT_LIMITS = {
+  fixtureLine: 48,
+  competitionLine: 32,
+  opponent: 24,
+  matchTime: 20,
+  venue: 24,
+  matchSquadTitle: 18,
+  lineupTitle: 18,
+  footerLine: 32,
+} as const;
+
+const clampText = (value: string, max: number) => value.slice(0, max).trimStart();
+
 const loadImage = (src: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new window.Image();
@@ -376,67 +389,86 @@ const renderMatchSquadGraphic = async (params: {
   ctx.closePath();
   ctx.fill();
 
+  const leftPad = 72;
+  const topPad = 66;
+  const headerWidth = text.format === "square" ? 560 : 590;
+  const heroBlockWidth = text.format === "square" ? 300 : 340;
+  const heroX = width - heroBlockWidth - 62;
   ctx.fillStyle = palette.accent;
-  ctx.fillRect(72, 66, 260, 12);
+  ctx.fillRect(leftPad, topPad, 220, 10);
   ctx.fillStyle = palette.text;
-  ctx.font = "900 106px Arial";
-  fillWrappedText({
+  ctx.font = text.format === "square" ? "900 92px Arial" : "900 106px Arial";
+  const titleLineCount = fillWrappedText({
     ctx,
     text: text.matchSquadTitle.toUpperCase(),
-    x: 72,
-    y: 176,
-    maxWidth: 560,
-    lineHeight: 96,
+    x: leftPad,
+    y: topPad + 110,
+    maxWidth: headerWidth,
+    lineHeight: text.format === "square" ? 82 : 94,
     maxLines: 2,
   });
+  const competitionY = topPad + 110 + titleLineCount * (text.format === "square" ? 82 : 94) - 6;
 
   ctx.fillStyle = palette.muted;
-  ctx.font = "700 24px Arial";
-  ctx.fillText(text.competitionLine.toUpperCase(), 76, 286);
-  ctx.font = "500 26px Arial";
-  fillWrappedText({
+  ctx.font = "700 22px Arial";
+  ctx.fillText(text.competitionLine.toUpperCase(), leftPad + 4, competitionY);
+  ctx.font = "500 24px Arial";
+  const fixtureLineCount = fillWrappedText({
     ctx,
     text: text.fixtureLine || `${project.name} • ${board.name}`,
-    x: 76,
-    y: 326,
-    maxWidth: 560,
-    lineHeight: 32,
+    x: leftPad + 4,
+    y: competitionY + 38,
+    maxWidth: headerWidth,
+    lineHeight: 30,
     maxLines: 3,
   });
+  let metaTop = competitionY + 38 + fixtureLineCount * 30 + 16;
   const metaLine = formatMetaLine([text.opponent, text.matchTime, text.venue]);
   if (metaLine) {
     ctx.fillStyle = palette.text;
-    ctx.font = "600 22px Arial";
-    fillWrappedText({
+    ctx.font = "600 20px Arial";
+    const metaLineCount = fillWrappedText({
       ctx,
       text: metaLine,
-      x: 76,
-      y: 410,
-      maxWidth: 560,
-      lineHeight: 28,
+      x: leftPad + 4,
+      y: metaTop,
+      maxWidth: headerWidth,
+      lineHeight: 24,
       maxLines: 2,
     });
+    metaTop += metaLineCount * 24 + 10;
   }
 
-  await drawLogo(ctx, squad.clubLogo, 770, 96, 220);
+  ctx.fillStyle = text.theme === "clean" ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.08)";
+  ctx.beginPath();
+  ctx.roundRect(heroX, topPad, heroBlockWidth, text.format === "square" ? 310 : 360, 30);
+  ctx.fill();
+
+  await drawLogo(ctx, squad.clubLogo, heroX + 24, topPad + 24, text.format === "square" ? 140 : 160);
   const photoPlayers = [...starters, ...substitutes].filter(
     (entry, index, list) =>
       !!entry.player.photoUrl &&
       list.findIndex((candidate) => candidate.player.id === entry.player.id) === index
   );
   if (photoPlayers.length > 0) {
-    const photoCount = text.format === "square" ? Math.min(2, photoPlayers.length) : Math.min(3, photoPlayers.length);
+    const photoCount = text.format === "square" ? Math.min(2, photoPlayers.length) : Math.min(2, photoPlayers.length);
     for (let index = 0; index < photoCount; index += 1) {
       await drawPlayerPhotoBadge({
         ctx,
         imageUrl: photoPlayers[index]?.player.photoUrl,
-        x: width - 290 + index * 34,
-        y: text.format === "square" ? 250 + index * 88 : 344 + index * 92,
-        size: text.format === "square" ? 148 : 170,
+        x: heroX + heroBlockWidth - (text.format === "square" ? 122 : 142) - index * (text.format === "square" ? 118 : 126),
+        y: text.format === "square" ? topPad + 140 : topPad + 176,
+        size: text.format === "square" ? 110 : 128,
         accent: palette.accent,
       });
     }
   }
+  ctx.fillStyle = palette.text;
+  ctx.font = "700 18px Arial";
+  ctx.fillText((squad.name || board.name).toUpperCase(), heroX + 24, topPad + (text.format === "square" ? 196 : 218));
+  ctx.fillStyle = palette.muted;
+  ctx.font = "600 14px Arial";
+  ctx.fillText(`${starters.length + substitutes.length} players selected`, heroX + 24, topPad + (text.format === "square" ? 224 : 246));
 
   const startersBlock = starters.map((entry) => {
     const prefix = entry.player.number ? `${entry.player.number} ` : "";
@@ -448,48 +480,59 @@ const renderMatchSquadGraphic = async (params: {
   });
 
   ctx.fillStyle = text.theme === "clean" ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.1)";
-  const listTop = text.format === "square" ? 430 : 470;
-  const listHeight = text.format === "square" ? 500 : 724;
+  const listTop = Math.max(text.format === "square" ? 430 : 500, metaTop + 28);
+  const listHeight = Math.max(320, height - listTop - 170);
   ctx.beginPath();
-  ctx.roundRect(62, listTop, 604, listHeight, 34);
+  ctx.roundRect(62, listTop, width - 124, listHeight, 34);
   ctx.fill();
 
   ctx.fillStyle = palette.text;
   ctx.font = "700 18px Arial";
   ctx.fillText("SELECTED MATCHDAY SQUAD", 84, listTop + 48);
 
-  ctx.font = "700 36px Arial";
+  const numberX = 86;
+  const nameX = 152;
+  const listWidth = width - 124;
+  const startersColumnWidth = text.format === "square" ? listWidth - 84 : Math.min(580, listWidth - 84);
+  const subsX = text.format === "square" ? 82 : 82 + startersColumnWidth + 34;
+  const subsWidth = text.format === "square" ? listWidth - 64 : listWidth - startersColumnWidth - 68;
+  ctx.font = "700 34px Arial";
   let y = listTop + 104;
   startersBlock.forEach((line, index) => {
     ctx.fillStyle = palette.accent;
-    ctx.fillText(`${String(index + 1).padStart(2, "0")}`, 86, y);
+    ctx.fillText(`${String(index + 1).padStart(2, "0")}`, numberX, y);
     ctx.fillStyle = palette.text;
-    ctx.fillText(line, 152, y);
-    y += 50;
+    fillWrappedText({
+      ctx,
+      text: line,
+      x: nameX,
+      y,
+      maxWidth: startersColumnWidth - 70,
+      lineHeight: 28,
+      maxLines: 2,
+    });
+    y += 48;
   });
 
   if (subsBlock.length > 0) {
-    y += 30;
     ctx.fillStyle = palette.accent;
     ctx.font = "800 30px Arial";
-    ctx.fillText("SUBS", 82, y);
-    y += 44;
+    const subsTitleY = text.format === "square" ? y + 18 : listTop + 104;
+    ctx.fillText("SUBS", subsX, subsTitleY);
+    let subsY = subsTitleY + 42;
     ctx.fillStyle = palette.text;
     ctx.font = "600 24px Arial";
-    const maxWidth = 540;
-    let row = "";
-    subsBlock.forEach((line, index) => {
-      const next = row ? `${row}  ${line}` : line;
-      if (ctx.measureText(next).width > maxWidth) {
-        ctx.fillText(row, 82, y);
-        y += 34;
-        row = line;
-      } else {
-        row = next;
-      }
-      if (index === subsBlock.length - 1 && row) {
-        ctx.fillText(row, 82, y);
-      }
+    subsBlock.forEach((line) => {
+      const usedLines = fillWrappedText({
+        ctx,
+        text: line,
+        x: subsX,
+        y: subsY,
+        maxWidth: subsWidth,
+        lineHeight: 24,
+        maxLines: 2,
+      });
+      subsY += usedLines * 24 + 12;
     });
   }
 
@@ -522,6 +565,9 @@ const renderStartingXiGraphic = async (params: {
   }
 
   const palette = getThemePalette(squad, text.theme);
+  const cardInset = 56;
+  const titleX = 70;
+  const titleMaxWidth = text.format === "square" ? 540 : 600;
 
   const gradient = ctx.createLinearGradient(0, 0, width, height);
   gradient.addColorStop(0, palette.strong);
@@ -540,53 +586,64 @@ const renderStartingXiGraphic = async (params: {
   }
 
   ctx.fillStyle = palette.accent;
-  ctx.fillRect(70, 54, 280, 12);
+  ctx.fillRect(titleX, 54, 220, 10);
   ctx.fillStyle = palette.text;
-  ctx.font = "900 100px Arial";
-  fillWrappedText({
+  ctx.font = text.format === "square" ? "900 84px Arial" : "900 100px Arial";
+  const titleLineCount = fillWrappedText({
     ctx,
     text: text.lineupTitle.toUpperCase(),
-    x: 70,
+    x: titleX,
     y: 148,
-    maxWidth: 600,
-    lineHeight: 92,
+    maxWidth: titleMaxWidth,
+    lineHeight: text.format === "square" ? 76 : 92,
     maxLines: 2,
   });
+  const competitionY = 148 + titleLineCount * (text.format === "square" ? 76 : 92) - 6;
   ctx.fillStyle = palette.muted;
   ctx.font = "700 24px Arial";
-  ctx.fillText(text.competitionLine.toUpperCase(), 74, 210);
+  ctx.fillText(text.competitionLine.toUpperCase(), titleX + 4, competitionY);
   ctx.font = "500 24px Arial";
-  fillWrappedText({
+  const fixtureLineCount = fillWrappedText({
     ctx,
     text: text.fixtureLine || `${project.name} • ${board.name}`,
-    x: 74,
-    y: 246,
-    maxWidth: 620,
+    x: titleX + 4,
+    y: competitionY + 36,
+    maxWidth: titleMaxWidth + 20,
     lineHeight: 28,
     maxLines: 3,
   });
+  let metaTop = competitionY + 36 + fixtureLineCount * 28 + 18;
   const metaLine = formatMetaLine([text.opponent, text.matchTime, text.venue]);
   if (metaLine) {
     ctx.fillStyle = palette.text;
     ctx.font = "600 20px Arial";
-    fillWrappedText({
+    const metaLineCount = fillWrappedText({
       ctx,
       text: metaLine,
-      x: 74,
-      y: text.format === "square" ? 292 : 316,
-      maxWidth: 620,
+      x: titleX + 4,
+      y: metaTop,
+      maxWidth: titleMaxWidth + 20,
       lineHeight: 24,
       maxLines: 2,
     });
+    metaTop += metaLineCount * 24 + 18;
   }
 
-  await drawLogo(ctx, squad.clubLogo, 816, 56, 170);
+  await drawLogo(
+    ctx,
+    squad.clubLogo,
+    width - (text.format === "square" ? 184 : 240),
+    56,
+    text.format === "square" ? 128 : 170
+  );
 
+  const boardTop = Math.max(text.format === "square" ? 360 : 320, metaTop + 14);
+  const boardBottomInset = text.lineupLayout === "pitch" || substitutes.length === 0 ? 72 : 160;
   const boardFrame = {
-    x: 56,
-    y: text.format === "square" ? 334 : 258,
-    width: 968,
-    height: text.format === "square" ? 560 : 862,
+    x: cardInset,
+    y: boardTop,
+    width: width - cardInset * 2,
+    height: Math.max(420, height - boardTop - boardBottomInset),
   };
 
   ctx.save();
@@ -596,7 +653,7 @@ const renderStartingXiGraphic = async (params: {
   ctx.fill();
   ctx.restore();
 
-  if (boardImage) {
+  if (boardImage && text.lineupLayout === "pitch") {
     try {
       const image = await loadImage(boardImage);
       ctx.save();
@@ -625,19 +682,57 @@ const renderStartingXiGraphic = async (params: {
   }
 
   if (text.lineupLayout === "panel") {
+    const listPane = {
+      x: boardFrame.x + 16,
+      y: boardFrame.y + 16,
+      width: text.format === "square" ? 330 : 360,
+      height: boardFrame.height - 32,
+    };
+    const pitchPane = {
+      x: listPane.x + listPane.width + 16,
+      y: boardFrame.y + 16,
+      width: boardFrame.width - listPane.width - 48,
+      height: boardFrame.height - 32,
+    };
+
     ctx.fillStyle = text.theme === "clean" ? "rgba(27,26,23,0.18)" : "rgba(8,21,23,0.48)";
-    ctx.fillRect(boardFrame.x + 16, boardFrame.y + 16, 360, boardFrame.height - 32);
+    ctx.beginPath();
+    ctx.roundRect(listPane.x, listPane.y, listPane.width, listPane.height, 24);
+    ctx.fill();
+
+    if (boardImage) {
+      try {
+        const image = await loadImage(boardImage);
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(pitchPane.x, pitchPane.y, pitchPane.width, pitchPane.height, 24);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(image, pitchPane.x, pitchPane.y, pitchPane.width, pitchPane.height);
+        ctx.restore();
+      } catch {
+        // Ignore and keep panel background only.
+      }
+    }
 
     ctx.fillStyle = palette.text;
     ctx.font = "700 32px Arial";
-    let y = boardFrame.y + 80;
+    let y = listPane.y + 62;
     starters.forEach((entry, index) => {
       const number = entry.player.number ? `${entry.player.number}` : `${index + 1}`;
       ctx.fillStyle = palette.accent;
-      ctx.fillText(number.padStart(2, "0"), boardFrame.x + 42, y);
+      ctx.fillText(number.padStart(2, "0"), listPane.x + 26, y);
       ctx.fillStyle = palette.text;
-      ctx.fillText(entry.player.name.toUpperCase(), boardFrame.x + 100, y);
-      y += 58;
+      fillWrappedText({
+        ctx,
+        text: entry.player.name.toUpperCase(),
+        x: listPane.x + 84,
+        y,
+        maxWidth: listPane.width - 106,
+        lineHeight: 28,
+        maxLines: 2,
+      });
+      y += 54;
     });
   } else {
     const bounds = getBoardCaptureBounds(board);
@@ -708,7 +803,7 @@ const renderStartingXiGraphic = async (params: {
     }
   }
 
-  if (substitutes.length > 0) {
+  if (substitutes.length > 0 && (text.lineupLayout === "panel" || !text.showBenchOnPitch)) {
     let y = text.format === "square" ? height - 118 : 1138;
     ctx.fillStyle = palette.accent;
     ctx.font = "800 28px Arial";
@@ -769,6 +864,9 @@ export default function MatchGraphicsModal({
   const [lineupTitle, setLineupTitle] = useState("Starting XI");
   const [footerLine, setFooterLine] = useState("Generated in TacticsBoard");
   const [heroPlayerId, setHeroPlayerId] = useState("");
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [matchPreviewUrl, setMatchPreviewUrl] = useState<string | null>(null);
+  const [lineupPreviewUrl, setLineupPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -878,20 +976,103 @@ export default function MatchGraphicsModal({
     heroCandidates[0]?.player.photoUrl;
 
   const buildTextConfig = (exportFormat: GraphicFormat): GraphicsTextConfig => ({
+    fixtureLine: clampText(fixtureLine, TEXT_LIMITS.fixtureLine),
+    matchSquadTitle: clampText(matchSquadTitle, TEXT_LIMITS.matchSquadTitle),
+    lineupTitle: clampText(lineupTitle, TEXT_LIMITS.lineupTitle),
+    competitionLine: clampText(competitionLine, TEXT_LIMITS.competitionLine),
+    footerLine: clampText(footerLine, TEXT_LIMITS.footerLine),
+    theme,
+    format: exportFormat,
+    lineupLayout,
+    opponent: clampText(opponent, TEXT_LIMITS.opponent),
+    matchTime: clampText(matchTime, TEXT_LIMITS.matchTime),
+    venue: clampText(venue, TEXT_LIMITS.venue),
+    showBenchOnPitch,
+    heroImageUrl,
+  });
+
+  useEffect(() => {
+    if (!open || !selectedSquad || allPresentPlayers.length === 0) {
+      setMatchPreviewUrl(null);
+      setLineupPreviewUrl(null);
+      setPreviewBusy(false);
+      return;
+    }
+    let cancelled = false;
+    setPreviewBusy(true);
+    void (async () => {
+      try {
+        const textConfig = buildTextConfig(format);
+        const matchPreview = await renderMatchSquadGraphic({
+          project,
+          board,
+          squad: selectedSquad,
+          starters: present.starters,
+          substitutes: present.substitutes,
+          text: textConfig,
+        });
+        if (cancelled) {
+          return;
+        }
+        setMatchPreviewUrl(matchPreview);
+        if (includeLineup && present.starters.length > 0) {
+          const boardImage = await captureBoardImage(board, setActiveFrameIndex);
+          if (cancelled) {
+            return;
+          }
+          const lineupPreview = await renderStartingXiGraphic({
+            project,
+            board,
+            squad: selectedSquad,
+            starters: present.starters,
+            substitutes: present.substitutes,
+            boardImage,
+            text: textConfig,
+          });
+          if (!cancelled) {
+            setLineupPreviewUrl(lineupPreview);
+          }
+        } else if (!cancelled) {
+          setLineupPreviewUrl(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setMatchPreviewUrl(null);
+          setLineupPreviewUrl(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setPreviewBusy(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    selectedSquad,
+    allPresentPlayers.length,
+    includeLineup,
+    present.starters,
+    present.substitutes,
+    project,
+    board,
+    format,
     fixtureLine,
     matchSquadTitle,
     lineupTitle,
     competitionLine,
     footerLine,
     theme,
-    format: exportFormat,
     lineupLayout,
     opponent,
     matchTime,
     venue,
     showBenchOnPitch,
     heroImageUrl,
-  });
+    setActiveFrameIndex,
+  ]);
 
   const onDownload = async () => {
     if (!selectedSquad) {
@@ -1092,6 +1273,9 @@ export default function MatchGraphicsModal({
                     <option value="panel">Side panel list</option>
                     <option value="pitch">Names on pitch</option>
                   </select>
+                  <p className="px-1 text-[11px] text-[var(--ink-1)]">
+                    `Side panel list` keeps names in a separate column. `Names on pitch` removes the big list and labels the formation directly on the board.
+                  </p>
                 </label>
               </div>
               <label className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--ink-0)]">
@@ -1139,8 +1323,12 @@ export default function MatchGraphicsModal({
                 <input
                   className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
                   value={fixtureLine}
-                  onChange={(event) => setFixtureLine(event.target.value)}
+                  maxLength={TEXT_LIMITS.fixtureLine}
+                  onChange={(event) => setFixtureLine(clampText(event.target.value, TEXT_LIMITS.fixtureLine))}
                 />
+                <p className="px-1 text-[11px] text-[var(--ink-1)]">
+                  {fixtureLine.length}/{TEXT_LIMITS.fixtureLine}
+                </p>
               </label>
               <label className="space-y-1">
                 <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
@@ -1149,8 +1337,14 @@ export default function MatchGraphicsModal({
                 <input
                   className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
                   value={competitionLine}
-                  onChange={(event) => setCompetitionLine(event.target.value)}
+                  maxLength={TEXT_LIMITS.competitionLine}
+                  onChange={(event) =>
+                    setCompetitionLine(clampText(event.target.value, TEXT_LIMITS.competitionLine))
+                  }
                 />
+                <p className="px-1 text-[11px] text-[var(--ink-1)]">
+                  {competitionLine.length}/{TEXT_LIMITS.competitionLine}
+                </p>
               </label>
               <div className="grid gap-3 md:grid-cols-3">
                 <label className="space-y-1">
@@ -1160,8 +1354,12 @@ export default function MatchGraphicsModal({
                   <input
                     className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
                     value={opponent}
-                    onChange={(event) => setOpponent(event.target.value)}
+                    maxLength={TEXT_LIMITS.opponent}
+                    onChange={(event) => setOpponent(clampText(event.target.value, TEXT_LIMITS.opponent))}
                   />
+                  <p className="px-1 text-[11px] text-[var(--ink-1)]">
+                    {opponent.length}/{TEXT_LIMITS.opponent}
+                  </p>
                 </label>
                 <label className="space-y-1">
                   <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
@@ -1170,8 +1368,12 @@ export default function MatchGraphicsModal({
                   <input
                     className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
                     value={matchTime}
-                    onChange={(event) => setMatchTime(event.target.value)}
+                    maxLength={TEXT_LIMITS.matchTime}
+                    onChange={(event) => setMatchTime(clampText(event.target.value, TEXT_LIMITS.matchTime))}
                   />
+                  <p className="px-1 text-[11px] text-[var(--ink-1)]">
+                    {matchTime.length}/{TEXT_LIMITS.matchTime}
+                  </p>
                 </label>
                 <label className="space-y-1">
                   <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
@@ -1180,8 +1382,12 @@ export default function MatchGraphicsModal({
                   <input
                     className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
                     value={venue}
-                    onChange={(event) => setVenue(event.target.value)}
+                    maxLength={TEXT_LIMITS.venue}
+                    onChange={(event) => setVenue(clampText(event.target.value, TEXT_LIMITS.venue))}
                   />
+                  <p className="px-1 text-[11px] text-[var(--ink-1)]">
+                    {venue.length}/{TEXT_LIMITS.venue}
+                  </p>
                 </label>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
@@ -1192,8 +1398,14 @@ export default function MatchGraphicsModal({
                   <input
                     className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
                     value={matchSquadTitle}
-                    onChange={(event) => setMatchSquadTitle(event.target.value)}
+                    maxLength={TEXT_LIMITS.matchSquadTitle}
+                    onChange={(event) =>
+                      setMatchSquadTitle(clampText(event.target.value, TEXT_LIMITS.matchSquadTitle))
+                    }
                   />
+                  <p className="px-1 text-[11px] text-[var(--ink-1)]">
+                    {matchSquadTitle.length}/{TEXT_LIMITS.matchSquadTitle}
+                  </p>
                 </label>
                 <label className="space-y-1">
                   <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
@@ -1202,8 +1414,14 @@ export default function MatchGraphicsModal({
                   <input
                     className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
                     value={lineupTitle}
-                    onChange={(event) => setLineupTitle(event.target.value)}
+                    maxLength={TEXT_LIMITS.lineupTitle}
+                    onChange={(event) =>
+                      setLineupTitle(clampText(event.target.value, TEXT_LIMITS.lineupTitle))
+                    }
                   />
+                  <p className="px-1 text-[11px] text-[var(--ink-1)]">
+                    {lineupTitle.length}/{TEXT_LIMITS.lineupTitle}
+                  </p>
                 </label>
               </div>
               <label className="space-y-1">
@@ -1213,8 +1431,12 @@ export default function MatchGraphicsModal({
                 <input
                   className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
                   value={footerLine}
-                  onChange={(event) => setFooterLine(event.target.value)}
+                  maxLength={TEXT_LIMITS.footerLine}
+                  onChange={(event) => setFooterLine(clampText(event.target.value, TEXT_LIMITS.footerLine))}
                 />
+                <p className="px-1 text-[11px] text-[var(--ink-1)]">
+                  {footerLine.length}/{TEXT_LIMITS.footerLine}
+                </p>
               </label>
             </div>
           </section>
@@ -1272,6 +1494,51 @@ export default function MatchGraphicsModal({
                   Uses the current board capture as the visual base, with either a side list or names placed directly on the pitch.
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/30 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] uppercase tracking-widest text-[var(--accent-0)]">
+              Live Preview
+            </p>
+            <p className="text-[11px] text-[var(--ink-1)]">
+              {previewBusy ? "Rendering preview..." : "Preview uses the current export settings"}
+            </p>
+          </div>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
+              <p className="mb-3 text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
+                Match Squad
+              </p>
+              {matchPreviewUrl ? (
+                <img
+                  src={matchPreviewUrl}
+                  alt="Match squad preview"
+                  className="w-full rounded-2xl border border-[var(--line)]"
+                />
+              ) : (
+                <div className="flex min-h-56 items-center justify-center rounded-2xl border border-dashed border-[var(--line)] text-sm text-[var(--ink-1)]">
+                  No preview available yet
+                </div>
+              )}
+            </div>
+            <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
+              <p className="mb-3 text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
+                Starting XI
+              </p>
+              {lineupPreviewUrl ? (
+                <img
+                  src={lineupPreviewUrl}
+                  alt="Starting XI preview"
+                  className="w-full rounded-2xl border border-[var(--line)]"
+                />
+              ) : (
+                <div className="flex min-h-56 items-center justify-center rounded-2xl border border-dashed border-[var(--line)] text-sm text-[var(--ink-1)]">
+                  Enable Starting XI and place starters on the board to preview it
+                </div>
+              )}
             </div>
           </div>
         </div>
