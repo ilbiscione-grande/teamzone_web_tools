@@ -47,6 +47,15 @@ type PresentPlayer = {
   token: PlayerToken;
 };
 
+type ExportPlayerEdits = Record<
+  string,
+  {
+    name?: string;
+    number?: string;
+    positionLabel?: string;
+  }
+>;
+
 type GraphicsTextConfig = {
   title: string;
   theme: GraphicTheme;
@@ -85,6 +94,19 @@ const toShortPosition = (value?: string) => {
     return trimmed.toUpperCase();
   }
   return "";
+};
+
+const formatSquadLine = (player: SquadPlayer, fallbackIndex?: number) => {
+  const numericValue =
+    typeof player.number === "number"
+      ? player.number
+      : typeof fallbackIndex === "number"
+        ? fallbackIndex + 1
+        : null;
+  const prefix =
+    typeof numericValue === "number" ? `${String(numericValue).padStart(2, "0")} ` : "";
+  const shortPosition = toShortPosition(player.positionLabel);
+  return `${prefix}${player.name}${shortPosition ? ` (${shortPosition})` : ""}`;
 };
 
 const loadImage = (src: string) =>
@@ -492,18 +514,8 @@ const renderMatchSquadGraphic = async (params: {
       });
     }
   }
-  const startersBlock = starters.map((entry) => {
-    const prefix = typeof entry.number === "number" ? `${String(entry.number).padStart(2, "0")} ` : "";
-    const shortPosition = toShortPosition(entry.positionLabel);
-    const suffix = shortPosition ? ` (${shortPosition})` : "";
-    return `${prefix}${entry.name}${suffix}`;
-  });
-  const subsBlock = substitutes.map((entry) => {
-    const prefix = typeof entry.number === "number" ? `${String(entry.number).padStart(2, "0")} ` : "";
-    const shortPosition = toShortPosition(entry.positionLabel);
-    const suffix = shortPosition ? ` (${shortPosition})` : "";
-    return `${prefix}${entry.name}${suffix}`;
-  });
+  const startersBlock = starters.map((entry, index) => formatSquadLine(entry, index));
+  const subsBlock = substitutes.map((entry, index) => formatSquadLine(entry, starters.length + index));
 
   ctx.fillStyle = text.theme === "clean" ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.1)";
   const listTop = Math.max(text.format === "square" ? 430 : 500, metaTop + 28);
@@ -512,47 +524,63 @@ const renderMatchSquadGraphic = async (params: {
   ctx.roundRect(62, listTop, width - 124, listHeight, 34);
   ctx.fill();
 
-  const numberX = 86;
-  const nameX = 132;
   const listWidth = width - 124;
-  const startersColumnWidth = listWidth - 84;
-  const subsX = text.format === "square" ? 82 : 82 + startersColumnWidth + 34;
-  const subsWidth = text.format === "square" ? listWidth - 64 : listWidth - startersColumnWidth - 68;
-  ctx.font = "700 28px Arial";
-  let y = listTop + 72;
-  startersBlock.forEach((line, index) => {
-    ctx.fillStyle = palette.text;
-    fillWrappedText({
+  const hasSubs = subsBlock.length > 0;
+  const columnGap = hasSubs ? 28 : 0;
+  const startersColumnWidth = hasSubs
+    ? text.format === "square"
+      ? Math.round(listWidth * 0.64)
+      : Math.round(listWidth * 0.7)
+    : listWidth - 64;
+  const subsColumnWidth = hasSubs
+    ? listWidth - startersColumnWidth - columnGap - 48
+    : 0;
+  const startersX = 86;
+  const startersLabelY = listTop + 52;
+  ctx.fillStyle = palette.accent;
+  ctx.font = "800 18px Arial";
+  ctx.fillText("STARTERS", startersX, startersLabelY);
+  ctx.fillStyle = palette.text;
+  ctx.font = text.format === "square" ? "700 22px Arial" : "700 24px Arial";
+  let y = startersLabelY + 42;
+  startersBlock.forEach((line) => {
+    const usedLines = fillWrappedText({
       ctx,
       text: line,
-      x: numberX,
+      x: startersX,
       y,
-      maxWidth: startersColumnWidth - 32,
+      maxWidth: startersColumnWidth - 12,
       lineHeight: 24,
       maxLines: 1,
     });
-    y += 40;
+    y += usedLines * 24 + 16;
   });
 
-  if (subsBlock.length > 0) {
+  if (hasSubs) {
+    const subsCardX = startersX + startersColumnWidth + columnGap;
+    const subsCardY = listTop + 30;
+    const subsCardHeight = listHeight - 60;
+    ctx.fillStyle = text.theme === "clean" ? "rgba(27,26,23,0.08)" : "rgba(8,21,23,0.24)";
+    ctx.beginPath();
+    ctx.roundRect(subsCardX - 16, subsCardY, subsColumnWidth + 24, subsCardHeight, 24);
+    ctx.fill();
     ctx.fillStyle = palette.accent;
-    ctx.font = "800 26px Arial";
-    const subsTitleY = text.format === "square" ? y + 18 : listTop + 104;
-    ctx.fillText("SUBS", subsX, subsTitleY);
-    let subsY = subsTitleY + 42;
+    ctx.font = "800 18px Arial";
+    ctx.fillText("SUBS", subsCardX, startersLabelY);
     ctx.fillStyle = palette.text;
-    ctx.font = "600 22px Arial";
+    ctx.font = "600 18px Arial";
+    let subsY = startersLabelY + 34;
     subsBlock.forEach((line) => {
       const usedLines = fillWrappedText({
         ctx,
         text: line,
-        x: subsX,
+        x: subsCardX,
         y: subsY,
-        maxWidth: subsWidth,
-        lineHeight: 22,
-        maxLines: 1,
+        maxWidth: subsColumnWidth,
+        lineHeight: 20,
+        maxLines: 2,
       });
-      subsY += usedLines * 22 + 10;
+      subsY += usedLines * 20 + 14;
     });
   }
 
@@ -705,7 +733,7 @@ const renderStartingXiGraphic = async (params: {
     const listPane = {
       x: boardFrame.x + 16,
       y: boardFrame.y + 16,
-      width: text.format === "square" ? 330 : 360,
+      width: text.format === "square" ? 286 : 308,
       height: boardFrame.height - 32,
     };
     const pitchPane = {
@@ -736,23 +764,25 @@ const renderStartingXiGraphic = async (params: {
     }
 
     ctx.fillStyle = palette.text;
-    ctx.font = "700 32px Arial";
-    let y = listPane.y + 62;
+    ctx.font = text.format === "square" ? "700 22px Arial" : "700 24px Arial";
+    let y = listPane.y + 46;
     starters.forEach((entry, index) => {
       const number = entry.player.number ? `${entry.player.number}` : `${index + 1}`;
       ctx.fillStyle = palette.accent;
-      ctx.fillText(number.padStart(2, "0"), listPane.x + 26, y);
+      ctx.font = text.format === "square" ? "800 20px Arial" : "800 22px Arial";
+      ctx.fillText(number.padStart(2, "0"), listPane.x + 22, y);
       ctx.fillStyle = palette.text;
+      ctx.font = text.format === "square" ? "700 22px Arial" : "700 24px Arial";
       fillWrappedText({
         ctx,
         text: entry.player.name.toUpperCase(),
-        x: listPane.x + 84,
+        x: listPane.x + 72,
         y,
-        maxWidth: listPane.width - 106,
-        lineHeight: 28,
+        maxWidth: listPane.width - 92,
+        lineHeight: 22,
         maxLines: 2,
       });
-      y += 54;
+      y += text.format === "square" ? 44 : 46;
     });
   } else {
     const bounds = getBoardCaptureBounds(board);
@@ -826,32 +856,26 @@ const renderStartingXiGraphic = async (params: {
   if (substitutes.length > 0 && (text.lineupLayout === "panel" || !text.showBenchOnPitch)) {
     let y = text.format === "square" ? height - 118 : 1138;
     ctx.fillStyle = palette.accent;
-    ctx.font = "800 28px Arial";
+    ctx.font = "800 22px Arial";
     ctx.fillText("BENCH", 74, y);
     y += 36;
     ctx.fillStyle = palette.text;
-    ctx.font = "600 22px Arial";
-    const benchLine = substitutes
-      .map((entry) =>
-        `${entry.player.number ? `${entry.player.number} ` : ""}${entry.player.name}`
-      )
-      .join("   ")
-      .toUpperCase();
+    ctx.font = "600 18px Arial";
     const maxWidth = 930;
-    const words = benchLine.split(/\s+/);
-    let row = "";
-    words.forEach((word, index) => {
-      const next = row ? `${row} ${word}` : word;
-      if (ctx.measureText(next).width > maxWidth) {
-        ctx.fillText(row, 74, y);
-        y += 30;
-        row = word;
-      } else {
-        row = next;
-      }
-      if (index === words.length - 1 && row) {
-        ctx.fillText(row, 74, y);
-      }
+    const lines = substitutes.map((entry, index) =>
+      formatSquadLine(entry.player, starters.length + index)
+    );
+    lines.forEach((line) => {
+      const usedLines = fillWrappedText({
+        ctx,
+        text: line.toUpperCase(),
+        x: 74,
+        y,
+        maxWidth,
+        lineHeight: 20,
+        maxLines: 1,
+      });
+      y += usedLines * 20 + 10;
     });
   }
 
@@ -881,6 +905,7 @@ export default function MatchGraphicsModal({
   const [matchDate, setMatchDate] = useState("");
   const [matchTime, setMatchTime] = useState("");
   const [venue, setVenue] = useState("");
+  const [exportPlayerEdits, setExportPlayerEdits] = useState<ExportPlayerEdits>({});
   const [heroPlayerId, setHeroPlayerId] = useState("");
   const [previewBusy, setPreviewBusy] = useState(false);
   const [matchPreviewUrl, setMatchPreviewUrl] = useState<string | null>(null);
@@ -903,6 +928,10 @@ export default function MatchGraphicsModal({
       setSide(availableSides[0]);
     }
   }, [availableSides, side]);
+
+  useEffect(() => {
+    setExportPlayerEdits({});
+  }, [selectedSquad?.id]);
 
   useEffect(() => {
     if (template === "matchday") {
@@ -940,11 +969,39 @@ export default function MatchGraphicsModal({
     setTheme("clean");
   }, [preset]);
 
-  const present = useMemo(() => {
+  const exportSelectedSquad = useMemo(() => {
     if (!selectedSquad) {
+      return null;
+    }
+    return {
+      ...selectedSquad,
+      players: selectedSquad.players.map((player) => {
+        const edit = exportPlayerEdits[player.id];
+        const nextNumber =
+          typeof edit?.number === "string" && edit.number.trim().length > 0
+            ? Number(edit.number)
+            : player.number;
+        return {
+          ...player,
+          name:
+            typeof edit?.name === "string" && edit.name.trim().length > 0
+              ? edit.name.trim()
+              : player.name,
+          positionLabel:
+            typeof edit?.positionLabel === "string" && edit.positionLabel.trim().length > 0
+              ? edit.positionLabel.trim()
+              : player.positionLabel,
+          number: Number.isFinite(nextNumber) ? nextNumber : undefined,
+        };
+      }),
+    };
+  }, [exportPlayerEdits, selectedSquad]);
+
+  const present = useMemo(() => {
+    if (!exportSelectedSquad) {
       return { starters: [] as PresentPlayer[], substitutes: [] as PresentPlayer[] };
     }
-    const playerIds = new Set(selectedSquad.players.map((player) => player.id));
+    const playerIds = new Set(exportSelectedSquad.players.map((player) => player.id));
     const tokens = (board.frames[board.activeFrameIndex]?.objects ?? [])
       .filter((item): item is PlayerToken => item.type === "player")
       .filter((item) => item.squadPlayerId && playerIds.has(item.squadPlayerId));
@@ -954,26 +1011,26 @@ export default function MatchGraphicsModal({
         tokenByPlayerId.set(token.squadPlayerId, token);
       }
     });
-    const presentPlayers = selectedSquad.players
+    const presentPlayers = exportSelectedSquad.players
       .filter((player) => tokenByPlayerId.has(player.id))
       .map((player) => ({
         player,
         token: tokenByPlayerId.get(player.id)!,
       }));
-    const substituteIds = new Set(selectedSquad.substituteIds ?? []);
+    const substituteIds = new Set(exportSelectedSquad.substituteIds ?? []);
     const starters = presentPlayers
       .filter((entry) => !substituteIds.has(entry.player.id))
       .sort((a, b) => a.token.position.y - b.token.position.y || a.token.position.x - b.token.position.x);
     const substitutes = presentPlayers.filter((entry) => substituteIds.has(entry.player.id));
     return { starters, substitutes };
-  }, [board, selectedSquad]);
+  }, [board, exportSelectedSquad]);
 
   const matchSquadPlayers = useMemo(() => {
-    if (!selectedSquad) {
+    if (!exportSelectedSquad) {
       return [] as SquadPlayer[];
     }
-    const substituteIds = new Set(selectedSquad.substituteIds ?? []);
-    return selectedSquad.players
+    const substituteIds = new Set(exportSelectedSquad.substituteIds ?? []);
+    return exportSelectedSquad.players
       .filter((player) => player.active !== false)
       .sort((a, b) => {
         const aSub = substituteIds.has(a.id) ? 1 : 0;
@@ -988,18 +1045,18 @@ export default function MatchGraphicsModal({
         }
         return a.name.localeCompare(b.name, "sv");
       });
-  }, [selectedSquad]);
+  }, [exportSelectedSquad]);
 
   const matchSquadGroups = useMemo(() => {
-    if (!selectedSquad) {
+    if (!exportSelectedSquad) {
       return { starters: [] as SquadPlayer[], substitutes: [] as SquadPlayer[] };
     }
-    const substituteIds = new Set(selectedSquad.substituteIds ?? []);
+    const substituteIds = new Set(exportSelectedSquad.substituteIds ?? []);
     return {
       starters: matchSquadPlayers.filter((player) => !substituteIds.has(player.id)),
       substitutes: matchSquadPlayers.filter((player) => substituteIds.has(player.id)),
     };
-  }, [matchSquadPlayers, selectedSquad]);
+  }, [matchSquadPlayers, exportSelectedSquad]);
 
   const allPresentPlayers = useMemo(
     () => [...present.starters, ...present.substitutes],
@@ -1040,8 +1097,22 @@ export default function MatchGraphicsModal({
     heroImageUrl,
   });
 
+  const updateExportPlayer = (
+    playerId: string,
+    field: keyof ExportPlayerEdits[string],
+    value: string
+  ) => {
+    setExportPlayerEdits((current) => ({
+      ...current,
+      [playerId]: {
+        ...current[playerId],
+        [field]: value,
+      },
+    }));
+  };
+
   useEffect(() => {
-    if (!open || !selectedSquad || allPresentPlayers.length === 0) {
+    if (!open || !exportSelectedSquad || matchSquadPlayers.length === 0) {
       setMatchPreviewUrl(null);
       setLineupPreviewUrl(null);
       setPreviewBusy(false);
@@ -1055,7 +1126,7 @@ export default function MatchGraphicsModal({
         const matchPreview = await renderMatchSquadGraphic({
           project,
           board,
-          squad: selectedSquad,
+          squad: exportSelectedSquad,
           starters: matchSquadGroups.starters,
           substitutes: matchSquadGroups.substitutes,
           text: textConfig,
@@ -1072,7 +1143,7 @@ export default function MatchGraphicsModal({
           const lineupPreview = await renderStartingXiGraphic({
             project,
             board,
-            squad: selectedSquad,
+            squad: exportSelectedSquad,
             starters: present.starters,
             substitutes: present.substitutes,
             boardImage,
@@ -1100,8 +1171,8 @@ export default function MatchGraphicsModal({
     };
   }, [
     open,
-    selectedSquad,
-    allPresentPlayers.length,
+    exportSelectedSquad,
+    matchSquadPlayers.length,
     includeLineup,
     present.starters,
     present.substitutes,
@@ -1127,8 +1198,8 @@ export default function MatchGraphicsModal({
       setStatus("Choose a side with a linked squad first.");
       return;
     }
-    if (allPresentPlayers.length === 0) {
-      setStatus("No linked squad players from this side are currently placed on the board.");
+    if (!exportSelectedSquad || matchSquadPlayers.length === 0) {
+      setStatus("No visible squad players are available for export on this side.");
       return;
     }
     if (!can(plan, "squad.export")) {
@@ -1152,7 +1223,7 @@ export default function MatchGraphicsModal({
         const squadImage = await renderMatchSquadGraphic({
           project,
           board,
-          squad: selectedSquad,
+          squad: exportSelectedSquad,
           starters: matchSquadGroups.starters,
           substitutes: matchSquadGroups.substitutes,
           text: textConfig,
@@ -1163,7 +1234,7 @@ export default function MatchGraphicsModal({
           const lineupImage = await renderStartingXiGraphic({
             project,
             board,
-            squad: selectedSquad,
+            squad: exportSelectedSquad,
             starters: present.starters,
             substitutes: present.substitutes,
             boardImage,
@@ -1202,8 +1273,7 @@ export default function MatchGraphicsModal({
               Match Graphics Export
             </h2>
             <p className="mt-1 text-sm text-[var(--ink-1)]">
-              Create a match squad graphic from players currently placed on this board,
-              and optionally export a Starting XI poster using the current board layout.
+              Create a match squad graphic from players marked `Show in Squad`, and optionally export a Starting XI graphic from the current board layout.
             </p>
           </div>
           <button
@@ -1479,6 +1549,93 @@ export default function MatchGraphicsModal({
           </section>
         </div>
 
+        <section className="mt-5 rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-widest text-[var(--accent-0)]">
+                Export Squad
+              </p>
+              <p className="mt-1 text-[12px] text-[var(--ink-1)]">
+                Edit the exact player text used in the export without changing the board or team data.
+              </p>
+            </div>
+            <div className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
+              {matchSquadPlayers.length} players
+            </div>
+          </div>
+          <div className="mt-4 space-y-3">
+            {matchSquadPlayers.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-6 text-sm text-[var(--ink-1)]">
+                No players are currently included. `Match Squad` uses everyone with `Show in Squad` enabled.
+              </div>
+            ) : (
+              matchSquadPlayers.map((player) => {
+                const isSubstitute = (exportSelectedSquad?.substituteIds ?? []).includes(player.id);
+                const edit = exportPlayerEdits[player.id];
+                return (
+                  <div
+                    key={player.id}
+                    className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/80 p-3"
+                  >
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                        {isSubstitute ? "Sub" : "Starter"}
+                      </span>
+                      {typeof player.number === "number" ? (
+                        <span className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                          #{String(player.number).padStart(2, "0")}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-[110px_minmax(0,1fr)_160px]">
+                      <label className="space-y-1">
+                        <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
+                          Number
+                        </span>
+                        <input
+                          className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-4 text-sm text-[var(--ink-0)]"
+                          value={edit?.number ?? (typeof player.number === "number" ? String(player.number) : "")}
+                          onChange={(event) =>
+                            updateExportPlayer(
+                              player.id,
+                              "number",
+                              event.target.value.replace(/[^0-9]/g, "").slice(0, 2)
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="space-y-1">
+                        <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
+                          Name
+                        </span>
+                        <input
+                          className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-4 text-sm text-[var(--ink-0)]"
+                          value={edit?.name ?? player.name}
+                          onChange={(event) =>
+                            updateExportPlayer(player.id, "name", event.target.value.slice(0, 34))
+                          }
+                        />
+                      </label>
+                      <label className="space-y-1">
+                        <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
+                          Position
+                        </span>
+                        <input
+                          className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-4 text-sm text-[var(--ink-0)]"
+                          value={edit?.positionLabel ?? player.positionLabel ?? ""}
+                          onChange={(event) =>
+                            updateExportPlayer(player.id, "positionLabel", event.target.value.slice(0, 18))
+                          }
+                        />
+                      </label>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+
         <div className="mt-5 grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
           <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/30 p-4">
             <p className="text-[11px] uppercase tracking-widest text-[var(--accent-0)]">
@@ -1507,7 +1664,7 @@ export default function MatchGraphicsModal({
               </div>
             </div>
             <div className="mt-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-[12px] text-[var(--ink-1)]">
-              Only linked squad players that are actually placed on the active board are included.
+              `Match Squad` uses everyone marked `Show in Squad`. `Starting XI` still uses only players currently placed on the active board.
             </div>
           </div>
           <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/30 p-4">
