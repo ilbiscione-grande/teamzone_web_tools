@@ -578,7 +578,7 @@ const renderMatchSquadGraphic = async (params: {
         y: subsY,
         maxWidth: subsColumnWidth,
         lineHeight: 20,
-        maxLines: 2,
+        maxLines: 1,
       });
       subsY += usedLines * 20 + 14;
     });
@@ -588,7 +588,7 @@ const renderMatchSquadGraphic = async (params: {
   ctx.fillRect(72, height - 160, width - 144, 2);
   ctx.fillStyle = palette.muted;
   ctx.font = "600 24px Arial";
-  ctx.fillText("Generated in TacticsBoard", 72, height - 110);
+  ctx.fillText("Made with: Teamzone Webtools", 72, height - 110);
 
   return canvas.toDataURL("image/png");
 };
@@ -1554,55 +1554,38 @@ export default function MatchGraphicsModal({
                 </label>
               </div>
             </div>
-          </section>
-        </div>
-
-        <section className="mt-5 rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-widest text-[var(--accent-0)]">
-                Export Squad
-              </p>
-              <p className="mt-1 text-[12px] text-[var(--ink-1)]">
-                Edit the exact player text used in the export without changing the board or team data.
-              </p>
-            </div>
-            <div className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
-              {matchSquadPlayers.length} players
-            </div>
-          </div>
-          <div className="mt-4 space-y-3">
-            {matchSquadPlayers.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-6 text-sm text-[var(--ink-1)]">
-                No players are currently included. `Match Squad` uses everyone with `Show in Squad` enabled.
+            <section className="mt-4 rounded-3xl border border-[var(--line)] bg-[var(--panel)]/50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-widest text-[var(--accent-0)]">
+                    Export Squad
+                  </p>
+                  <p className="mt-1 text-[12px] text-[var(--ink-1)]">
+                    Adjust export text only.
+                  </p>
+                </div>
+                <div className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
+                  {matchSquadPlayers.length} players
+                </div>
               </div>
-            ) : (
-              matchSquadPlayers.map((player) => {
-                const isSubstitute = (exportSelectedSquad?.substituteIds ?? []).includes(player.id);
-                const edit = exportPlayerEdits[player.id];
-                return (
-                  <div
-                    key={player.id}
-                    className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/80 p-3"
-                  >
-                    <div className="mb-3 flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                        {isSubstitute ? "Sub" : "Starter"}
-                      </span>
-                      {typeof player.number === "number" ? (
-                        <span className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                          #{String(player.number).padStart(2, "0")}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="grid gap-3 md:grid-cols-[110px_minmax(0,1fr)_160px]">
-                      <label className="space-y-1">
-                        <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
-                          Number
-                        </span>
+              <div className="mt-3 space-y-2">
+                {matchSquadPlayers.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-5 text-sm text-[var(--ink-1)]">
+                    No players are currently included. `Match Squad` uses everyone with `Show in Squad` enabled.
+                  </div>
+                ) : (
+                  matchSquadPlayers.map((player) => {
+                    const isSubstitute = (exportSelectedSquad?.substituteIds ?? []).includes(player.id);
+                    const edit = exportPlayerEdits[player.id];
+                    return (
+                      <div
+                        key={player.id}
+                        className="grid gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-2 md:grid-cols-[82px_minmax(0,1fr)_120px_58px]"
+                      >
                         <input
-                          className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-4 text-sm text-[var(--ink-0)]"
+                          className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-sm text-[var(--ink-0)]"
                           value={edit?.number ?? (typeof player.number === "number" ? String(player.number) : "")}
+                          placeholder="No."
                           onChange={(event) =>
                             updateExportPlayer(
                               player.id,
@@ -1611,38 +1594,33 @@ export default function MatchGraphicsModal({
                             )
                           }
                         />
-                      </label>
-                      <label className="space-y-1">
-                        <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
-                          Name
-                        </span>
                         <input
-                          className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-4 text-sm text-[var(--ink-0)]"
+                          className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-sm text-[var(--ink-0)]"
                           value={edit?.name ?? player.name}
+                          placeholder="Name"
                           onChange={(event) =>
                             updateExportPlayer(player.id, "name", event.target.value.slice(0, 34))
                           }
                         />
-                      </label>
-                      <label className="space-y-1">
-                        <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
-                          Position
-                        </span>
                         <input
-                          className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-4 text-sm text-[var(--ink-0)]"
+                          className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-sm text-[var(--ink-0)]"
                           value={edit?.positionLabel ?? player.positionLabel ?? ""}
+                          placeholder="Pos"
                           onChange={(event) =>
                             updateExportPlayer(player.id, "positionLabel", event.target.value.slice(0, 18))
                           }
                         />
-                      </label>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </section>
+                        <div className="flex items-center justify-center rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                          {isSubstitute ? "Sub" : "XI"}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+          </section>
+        </div>
 
         <div className="mt-5 grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
           <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/30 p-4">
