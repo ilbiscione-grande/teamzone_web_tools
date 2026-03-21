@@ -24,6 +24,24 @@ type LineupLayout = "panel" | "pitch";
 type GraphicTemplate = "matchday" | "starting-xi" | "match-squad";
 type GraphicPreset = "club-default" | "royal-night" | "editorial-light";
 
+const TEMPLATE_COPY: Record<
+  GraphicTemplate,
+  { title: string; description: string }
+> = {
+  matchday: {
+    title: "Matchday Poster",
+    description: "Balanced poster with squad card and optional lineup export.",
+  },
+  "starting-xi": {
+    title: "Starting XI Pitch",
+    description: "Board-first lineup graphic where the formation is the hero.",
+  },
+  "match-squad": {
+    title: "Square Squad Card",
+    description: "Compact social-first match squad card for quick posting.",
+  },
+};
+
 type PresentPlayer = {
   player: SquadPlayer;
   token: PlayerToken;
@@ -888,6 +906,7 @@ export default function MatchGraphicsModal({
 
   useEffect(() => {
     if (template === "matchday") {
+      setPreset("club-default");
       setTheme("ember");
       setFormat("poster");
       setLineupLayout("panel");
@@ -896,6 +915,7 @@ export default function MatchGraphicsModal({
       return;
     }
     if (template === "starting-xi") {
+      setPreset("royal-night");
       setTheme("royal");
       setFormat("poster");
       setLineupLayout("pitch");
@@ -904,6 +924,7 @@ export default function MatchGraphicsModal({
       setLineupTitle("Starting XI");
       return;
     }
+    setPreset("editorial-light");
     setTheme("clean");
     setFormat("square");
     setLineupLayout("panel");
@@ -1169,26 +1190,47 @@ export default function MatchGraphicsModal({
         <div className="mt-5 grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
           <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-4">
             <p className="text-[11px] uppercase tracking-widest text-[var(--accent-0)]">
-              Export Setup
+              Curated Templates
             </p>
             <div className="mt-4 grid gap-3">
+              <div className="grid gap-3">
+                {(Object.keys(TEMPLATE_COPY) as GraphicTemplate[]).map((key) => {
+                  const item = TEMPLATE_COPY[key];
+                  const active = template === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`rounded-2xl border px-4 py-3 text-left transition ${
+                        active
+                          ? "border-[var(--accent-0)] bg-[var(--panel)] shadow-[0_0_0_1px_rgba(255,196,87,0.16)]"
+                          : "border-[var(--line)] bg-[var(--panel)]/70 hover:border-[var(--accent-2)]"
+                      }`}
+                      onClick={() => setTemplate(key)}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-semibold text-[var(--ink-0)]">
+                          {item.title}
+                        </span>
+                        {active ? (
+                          <span className="rounded-full bg-[var(--accent-0)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-black">
+                            Active
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-[12px] text-[var(--ink-1)]">
+                        {item.description}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="px-1 text-[11px] text-[var(--ink-1)]">
+                Template sets the recommended format and layout first. The controls below are only for fine-tuning.
+              </p>
               <label className="space-y-1">
                 <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
-                  Template
-                </span>
-                <select
-                  className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-sm text-[var(--ink-0)]"
-                  value={template}
-                  onChange={(event) => setTemplate(event.target.value as GraphicTemplate)}
-                >
-                  <option value="matchday">Matchday</option>
-                  <option value="starting-xi">Starting XI</option>
-                  <option value="match-squad">Match Squad</option>
-                </select>
-              </label>
-              <label className="space-y-1">
-                <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
-                  Style preset
+                  Look override
                 </span>
                 <select
                   className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-sm text-[var(--ink-0)]"
