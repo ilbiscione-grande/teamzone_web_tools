@@ -24,6 +24,7 @@ import PlanModal from "@/components/PlanModal";
 import BetaNoticeModal from "@/components/BetaNoticeModal";
 import ShareBoardModal from "@/components/ShareBoardModal";
 import CommentsModal from "@/components/CommentsModal";
+import MatchGraphicsModal from "@/components/MatchGraphicsModal";
 import { getActiveBoard, getBoardSquads } from "@/utils/board";
 import { createId } from "@/utils/id";
 import {
@@ -195,6 +196,7 @@ export default function TopBar() {
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [shareLinkQrError, setShareLinkQrError] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [matchGraphicsOpen, setMatchGraphicsOpen] = useState(false);
   const [pdfScope, setPdfScope] = useState<"board" | "project">("board");
   const [pdfSelectedBoardIds, setPdfSelectedBoardIds] = useState<string[]>([]);
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -2092,6 +2094,30 @@ export default function TopBar() {
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                     onClick={() => {
                       setActionsOpen(false);
+                      setMatchGraphicsOpen(true);
+                    }}
+                    disabled={!activeBoard || !can(plan, "squad.export")}
+                    data-locked={!activeBoard || !can(plan, "squad.export")}
+                  >
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 24 24"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="4" width="18" height="14" rx="2" />
+                      <path d="M7 8h7M7 12h5M16 15l2-2 2 2" />
+                    </svg>
+                    Match graphics
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
+                    onClick={() => {
+                      setActionsOpen(false);
                       setPdfOpen(true);
                       setPdfStatus(null);
                     }}
@@ -3842,6 +3868,14 @@ export default function TopBar() {
             </div>
           </div>
         </div>
+      )}
+      {matchGraphicsOpen && activeBoard && (
+        <MatchGraphicsModal
+          open={matchGraphicsOpen}
+          onClose={() => setMatchGraphicsOpen(false)}
+          project={project}
+          board={activeBoard}
+        />
       )}
       <BetaNoticeModal
         open={betaOpen}
