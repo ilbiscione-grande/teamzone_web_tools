@@ -756,7 +756,15 @@ const renderStartingXiGraphic = async (params: {
         ctx.roundRect(pitchPane.x, pitchPane.y, pitchPane.width, pitchPane.height, 24);
         ctx.closePath();
         ctx.clip();
-        ctx.drawImage(image, pitchPane.x, pitchPane.y, pitchPane.width, pitchPane.height);
+        const rotatedScale = Math.min(
+          pitchPane.width / Math.max(image.height, 1),
+          pitchPane.height / Math.max(image.width, 1)
+        );
+        const drawWidth = image.width * rotatedScale;
+        const drawHeight = image.height * rotatedScale;
+        ctx.translate(pitchPane.x + pitchPane.width / 2, pitchPane.y + pitchPane.height / 2);
+        ctx.rotate(Math.PI / 2);
+        ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
         ctx.restore();
       } catch {
         // Ignore and keep panel background only.
