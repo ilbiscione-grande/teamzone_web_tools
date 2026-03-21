@@ -48,30 +48,26 @@ type PresentPlayer = {
 };
 
 type GraphicsTextConfig = {
-  fixtureLine: string;
-  matchSquadTitle: string;
-  lineupTitle: string;
-  competitionLine: string;
-  footerLine: string;
+  title: string;
   theme: GraphicTheme;
   format: GraphicFormat;
   lineupLayout: LineupLayout;
   opponent: string;
+  matchDate: string;
   matchTime: string;
   venue: string;
+  competition: string;
   showBenchOnPitch: boolean;
   heroImageUrl?: string;
 };
 
 const TEXT_LIMITS = {
-  fixtureLine: 48,
-  competitionLine: 32,
+  title: 18,
   opponent: 24,
+  matchDate: 20,
   matchTime: 20,
   venue: 24,
-  matchSquadTitle: 18,
-  lineupTitle: 18,
-  footerLine: 32,
+  competition: 28,
 } as const;
 
 const clampText = (value: string, max: number) => value.slice(0, max).trimStart();
@@ -314,7 +310,7 @@ const getBoardCaptureBounds = (board: Board) => {
       };
 };
 
-const formatMetaLine = (parts: string[]) => parts.filter(Boolean).join("  •  ");
+const formatMetaLine = (parts: string[]) => parts.filter(Boolean).join(" • ");
 
 const captureBoardImage = async (board: Board, setActiveFrameIndex: (boardId: string, index: number) => void) => {
   const stage = getStageRef();
@@ -367,8 +363,8 @@ const renderMatchSquadGraphic = async (params: {
   project: Project;
   board: Board;
   squad: Squad;
-  starters: PresentPlayer[];
-  substitutes: PresentPlayer[];
+  starters: SquadPlayer[];
+  substitutes: SquadPlayer[];
   text: GraphicsTextConfig;
 }) => {
   const { project, board, squad, starters, substitutes, text } = params;
@@ -418,7 +414,7 @@ const renderMatchSquadGraphic = async (params: {
   ctx.font = text.format === "square" ? "900 92px Arial" : "900 106px Arial";
   const titleLineCount = fillWrappedText({
     ctx,
-    text: text.matchSquadTitle.toUpperCase(),
+    text: text.title.toUpperCase(),
     x: leftPad,
     y: topPad + 110,
     maxWidth: headerWidth,
@@ -429,11 +425,11 @@ const renderMatchSquadGraphic = async (params: {
 
   ctx.fillStyle = palette.muted;
   ctx.font = "700 22px Arial";
-  ctx.fillText(text.competitionLine.toUpperCase(), leftPad + 4, competitionY);
+  ctx.fillText(text.competition.toUpperCase(), leftPad + 4, competitionY);
   ctx.font = "500 24px Arial";
   const fixtureLineCount = fillWrappedText({
     ctx,
-    text: text.fixtureLine || `${project.name} • ${board.name}`,
+    text: text.opponent ? `vs ${text.opponent}` : board.name,
     x: leftPad + 4,
     y: competitionY + 38,
     maxWidth: headerWidth,
@@ -441,7 +437,7 @@ const renderMatchSquadGraphic = async (params: {
     maxLines: 3,
   });
   let metaTop = competitionY + 38 + fixtureLineCount * 30 + 16;
-  const metaLine = formatMetaLine([text.opponent, text.matchTime, text.venue]);
+  const metaLine = formatMetaLine([text.matchDate, text.matchTime, text.venue]);
   if (metaLine) {
     ctx.fillStyle = palette.text;
     ctx.font = "600 20px Arial";
@@ -465,15 +461,15 @@ const renderMatchSquadGraphic = async (params: {
   await drawLogo(ctx, squad.clubLogo, heroX + 24, topPad + 24, text.format === "square" ? 140 : 160);
   const photoPlayers = [...starters, ...substitutes].filter(
     (entry, index, list) =>
-      !!entry.player.photoUrl &&
-      list.findIndex((candidate) => candidate.player.id === entry.player.id) === index
+      !!entry.photoUrl &&
+      list.findIndex((candidate) => candidate.id === entry.id) === index
   );
   if (photoPlayers.length > 0) {
     const photoCount = text.format === "square" ? Math.min(2, photoPlayers.length) : Math.min(2, photoPlayers.length);
     for (let index = 0; index < photoCount; index += 1) {
       await drawPlayerPhotoBadge({
         ctx,
-        imageUrl: photoPlayers[index]?.player.photoUrl,
+        imageUrl: photoPlayers[index]?.photoUrl,
         x: heroX + heroBlockWidth - (text.format === "square" ? 122 : 142) - index * (text.format === "square" ? 118 : 126),
         y: text.format === "square" ? topPad + 140 : topPad + 176,
         size: text.format === "square" ? 110 : 128,
@@ -489,12 +485,14 @@ const renderMatchSquadGraphic = async (params: {
   ctx.fillText(`${starters.length + substitutes.length} players selected`, heroX + 24, topPad + (text.format === "square" ? 224 : 246));
 
   const startersBlock = starters.map((entry) => {
-    const prefix = entry.player.number ? `${entry.player.number} ` : "";
-    return `${prefix}${entry.player.name}`.toUpperCase();
+    const prefix = entry.number ? `${entry.number} ` : "";
+    const suffix = entry.positionLabel ? `  ${entry.positionLabel}` : "";
+    return `${prefix}${entry.name}${suffix}`.toUpperCase();
   });
   const subsBlock = substitutes.map((entry) => {
-    const prefix = entry.player.number ? `${entry.player.number} ` : "";
-    return `${prefix}${entry.player.name}`.toUpperCase();
+    const prefix = entry.number ? `${entry.number} ` : "";
+    const suffix = entry.positionLabel ? `  ${entry.positionLabel}` : "";
+    return `${prefix}${entry.name}${suffix}`.toUpperCase();
   });
 
   ctx.fillStyle = text.theme === "clean" ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.1)";
@@ -558,7 +556,7 @@ const renderMatchSquadGraphic = async (params: {
   ctx.fillRect(72, height - 160, width - 144, 2);
   ctx.fillStyle = palette.muted;
   ctx.font = "600 24px Arial";
-  ctx.fillText(text.footerLine || "Generated in TacticsBoard", 72, height - 110);
+  ctx.fillText("Generated in TacticsBoard", 72, height - 110);
 
   return canvas.toDataURL("image/png");
 };
@@ -609,7 +607,7 @@ const renderStartingXiGraphic = async (params: {
   ctx.font = text.format === "square" ? "900 84px Arial" : "900 100px Arial";
   const titleLineCount = fillWrappedText({
     ctx,
-    text: text.lineupTitle.toUpperCase(),
+    text: text.title.toUpperCase(),
     x: titleX,
     y: 148,
     maxWidth: titleMaxWidth,
@@ -619,11 +617,11 @@ const renderStartingXiGraphic = async (params: {
   const competitionY = 148 + titleLineCount * (text.format === "square" ? 76 : 92) - 6;
   ctx.fillStyle = palette.muted;
   ctx.font = "700 24px Arial";
-  ctx.fillText(text.competitionLine.toUpperCase(), titleX + 4, competitionY);
+  ctx.fillText(text.competition.toUpperCase(), titleX + 4, competitionY);
   ctx.font = "500 24px Arial";
   const fixtureLineCount = fillWrappedText({
     ctx,
-    text: text.fixtureLine || `${project.name} • ${board.name}`,
+    text: text.opponent ? `vs ${text.opponent}` : board.name,
     x: titleX + 4,
     y: competitionY + 36,
     maxWidth: titleMaxWidth + 20,
@@ -631,7 +629,7 @@ const renderStartingXiGraphic = async (params: {
     maxLines: 3,
   });
   let metaTop = competitionY + 36 + fixtureLineCount * 28 + 18;
-  const metaLine = formatMetaLine([text.opponent, text.matchTime, text.venue]);
+  const metaLine = formatMetaLine([text.matchDate, text.matchTime, text.venue]);
   if (metaLine) {
     ctx.fillStyle = palette.text;
     ctx.font = "600 20px Arial";
@@ -873,14 +871,11 @@ export default function MatchGraphicsModal({
   const [format, setFormat] = useState<GraphicFormat>("poster");
   const [lineupLayout, setLineupLayout] = useState<LineupLayout>("panel");
   const [showBenchOnPitch, setShowBenchOnPitch] = useState(false);
-  const [fixtureLine, setFixtureLine] = useState(`${project.name} • ${board.name}`);
-  const [competitionLine, setCompetitionLine] = useState(project.name);
+  const [title, setTitle] = useState("Match Squad");
   const [opponent, setOpponent] = useState("");
+  const [matchDate, setMatchDate] = useState("");
   const [matchTime, setMatchTime] = useState("");
   const [venue, setVenue] = useState("");
-  const [matchSquadTitle, setMatchSquadTitle] = useState("Match Squad");
-  const [lineupTitle, setLineupTitle] = useState("Starting XI");
-  const [footerLine, setFooterLine] = useState("Generated in TacticsBoard");
   const [heroPlayerId, setHeroPlayerId] = useState("");
   const [previewBusy, setPreviewBusy] = useState(false);
   const [matchPreviewUrl, setMatchPreviewUrl] = useState<string | null>(null);
@@ -910,8 +905,7 @@ export default function MatchGraphicsModal({
       setTheme("ember");
       setFormat("poster");
       setLineupLayout("panel");
-      setMatchSquadTitle("Match Squad");
-      setLineupTitle("Starting XI");
+      setTitle("Match Squad");
       return;
     }
     if (template === "starting-xi") {
@@ -920,16 +914,14 @@ export default function MatchGraphicsModal({
       setFormat("poster");
       setLineupLayout("pitch");
       setIncludeLineup(true);
-      setMatchSquadTitle("Match Squad");
-      setLineupTitle("Starting XI");
+      setTitle("Starting XI");
       return;
     }
     setPreset("editorial-light");
     setTheme("clean");
     setFormat("square");
     setLineupLayout("panel");
-    setMatchSquadTitle("Match Squad");
-    setLineupTitle("Line Up");
+    setTitle("Match Squad");
   }, [template]);
 
   useEffect(() => {
@@ -971,6 +963,39 @@ export default function MatchGraphicsModal({
     return { starters, substitutes };
   }, [board, selectedSquad]);
 
+  const matchSquadPlayers = useMemo(() => {
+    if (!selectedSquad) {
+      return [] as SquadPlayer[];
+    }
+    const substituteIds = new Set(selectedSquad.substituteIds ?? []);
+    return selectedSquad.players
+      .filter((player) => player.active !== false)
+      .sort((a, b) => {
+        const aSub = substituteIds.has(a.id) ? 1 : 0;
+        const bSub = substituteIds.has(b.id) ? 1 : 0;
+        if (aSub !== bSub) {
+          return aSub - bSub;
+        }
+        const aNumber = typeof a.number === "number" ? a.number : Number.MAX_SAFE_INTEGER;
+        const bNumber = typeof b.number === "number" ? b.number : Number.MAX_SAFE_INTEGER;
+        if (aNumber !== bNumber) {
+          return aNumber - bNumber;
+        }
+        return a.name.localeCompare(b.name, "sv");
+      });
+  }, [selectedSquad]);
+
+  const matchSquadGroups = useMemo(() => {
+    if (!selectedSquad) {
+      return { starters: [] as SquadPlayer[], substitutes: [] as SquadPlayer[] };
+    }
+    const substituteIds = new Set(selectedSquad.substituteIds ?? []);
+    return {
+      starters: matchSquadPlayers.filter((player) => !substituteIds.has(player.id)),
+      substitutes: matchSquadPlayers.filter((player) => substituteIds.has(player.id)),
+    };
+  }, [matchSquadPlayers, selectedSquad]);
+
   const allPresentPlayers = useMemo(
     () => [...present.starters, ...present.substitutes],
     [present.starters, present.substitutes]
@@ -997,17 +1022,15 @@ export default function MatchGraphicsModal({
     heroCandidates[0]?.player.photoUrl;
 
   const buildTextConfig = (exportFormat: GraphicFormat): GraphicsTextConfig => ({
-    fixtureLine: clampText(fixtureLine, TEXT_LIMITS.fixtureLine),
-    matchSquadTitle: clampText(matchSquadTitle, TEXT_LIMITS.matchSquadTitle),
-    lineupTitle: clampText(lineupTitle, TEXT_LIMITS.lineupTitle),
-    competitionLine: clampText(competitionLine, TEXT_LIMITS.competitionLine),
-    footerLine: clampText(footerLine, TEXT_LIMITS.footerLine),
+    title: clampText(title, TEXT_LIMITS.title),
     theme,
     format: exportFormat,
     lineupLayout,
     opponent: clampText(opponent, TEXT_LIMITS.opponent),
+    matchDate: clampText(matchDate, TEXT_LIMITS.matchDate),
     matchTime: clampText(matchTime, TEXT_LIMITS.matchTime),
     venue: clampText(venue, TEXT_LIMITS.venue),
+    competition: clampText(project.name, TEXT_LIMITS.competition),
     showBenchOnPitch,
     heroImageUrl,
   });
@@ -1028,8 +1051,8 @@ export default function MatchGraphicsModal({
           project,
           board,
           squad: selectedSquad,
-          starters: present.starters,
-          substitutes: present.substitutes,
+          starters: matchSquadGroups.starters,
+          substitutes: matchSquadGroups.substitutes,
           text: textConfig,
         });
         if (cancelled) {
@@ -1080,18 +1103,17 @@ export default function MatchGraphicsModal({
     project,
     board,
     format,
-    fixtureLine,
-    matchSquadTitle,
-    lineupTitle,
-    competitionLine,
-    footerLine,
+    title,
     theme,
     lineupLayout,
     opponent,
+    matchDate,
     matchTime,
     venue,
     showBenchOnPitch,
     heroImageUrl,
+    matchSquadGroups.starters,
+    matchSquadGroups.substitutes,
     setActiveFrameIndex,
   ]);
 
@@ -1126,8 +1148,8 @@ export default function MatchGraphicsModal({
           project,
           board,
           squad: selectedSquad,
-          starters: present.starters,
-          substitutes: present.substitutes,
+          starters: matchSquadGroups.starters,
+          substitutes: matchSquadGroups.substitutes,
           text: textConfig,
         });
         downloadDataUrl(squadImage, `${safeBase}-${exportFormat}-match-squad.png`);
@@ -1355,40 +1377,24 @@ export default function MatchGraphicsModal({
 
           <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-4">
             <p className="text-[11px] uppercase tracking-widest text-[var(--accent-0)]">
-              Poster Text
+              Match Meta
             </p>
             <div className="mt-4 grid gap-3">
               <label className="space-y-1">
                 <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
-                  Fixture line
+                  Title
                 </span>
                 <input
                   className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
-                  value={fixtureLine}
-                  maxLength={TEXT_LIMITS.fixtureLine}
-                  onChange={(event) => setFixtureLine(clampText(event.target.value, TEXT_LIMITS.fixtureLine))}
+                  value={title}
+                  maxLength={TEXT_LIMITS.title}
+                  onChange={(event) => setTitle(clampText(event.target.value, TEXT_LIMITS.title))}
                 />
                 <p className="px-1 text-[11px] text-[var(--ink-1)]">
-                  {fixtureLine.length}/{TEXT_LIMITS.fixtureLine}
+                  {title.length}/{TEXT_LIMITS.title}
                 </p>
               </label>
-              <label className="space-y-1">
-                <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
-                  Competition / top line
-                </span>
-                <input
-                  className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
-                  value={competitionLine}
-                  maxLength={TEXT_LIMITS.competitionLine}
-                  onChange={(event) =>
-                    setCompetitionLine(clampText(event.target.value, TEXT_LIMITS.competitionLine))
-                  }
-                />
-                <p className="px-1 text-[11px] text-[var(--ink-1)]">
-                  {competitionLine.length}/{TEXT_LIMITS.competitionLine}
-                </p>
-              </label>
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2">
                 <label className="space-y-1">
                   <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
                     Opponent
@@ -1403,6 +1409,22 @@ export default function MatchGraphicsModal({
                     {opponent.length}/{TEXT_LIMITS.opponent}
                   </p>
                 </label>
+                <label className="space-y-1">
+                  <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
+                    Match date
+                  </span>
+                  <input
+                    className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
+                    value={matchDate}
+                    maxLength={TEXT_LIMITS.matchDate}
+                    onChange={(event) => setMatchDate(clampText(event.target.value, TEXT_LIMITS.matchDate))}
+                  />
+                  <p className="px-1 text-[11px] text-[var(--ink-1)]">
+                    {matchDate.length}/{TEXT_LIMITS.matchDate}
+                  </p>
+                </label>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
                 <label className="space-y-1">
                   <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
                     Match time
@@ -1432,54 +1454,9 @@ export default function MatchGraphicsModal({
                   </p>
                 </label>
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="space-y-1">
-                  <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
-                    Match squad title
-                  </span>
-                  <input
-                    className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
-                    value={matchSquadTitle}
-                    maxLength={TEXT_LIMITS.matchSquadTitle}
-                    onChange={(event) =>
-                      setMatchSquadTitle(clampText(event.target.value, TEXT_LIMITS.matchSquadTitle))
-                    }
-                  />
-                  <p className="px-1 text-[11px] text-[var(--ink-1)]">
-                    {matchSquadTitle.length}/{TEXT_LIMITS.matchSquadTitle}
-                  </p>
-                </label>
-                <label className="space-y-1">
-                  <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
-                    Starting XI title
-                  </span>
-                  <input
-                    className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
-                    value={lineupTitle}
-                    maxLength={TEXT_LIMITS.lineupTitle}
-                    onChange={(event) =>
-                      setLineupTitle(clampText(event.target.value, TEXT_LIMITS.lineupTitle))
-                    }
-                  />
-                  <p className="px-1 text-[11px] text-[var(--ink-1)]">
-                    {lineupTitle.length}/{TEXT_LIMITS.lineupTitle}
-                  </p>
-                </label>
+              <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-[12px] text-[var(--ink-1)]">
+                Competition is taken from the project name. The poster combines opponent, date, kickoff and arena automatically.
               </div>
-              <label className="space-y-1">
-                <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
-                  Footer
-                </span>
-                <input
-                  className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
-                  value={footerLine}
-                  maxLength={TEXT_LIMITS.footerLine}
-                  onChange={(event) => setFooterLine(clampText(event.target.value, TEXT_LIMITS.footerLine))}
-                />
-                <p className="px-1 text-[11px] text-[var(--ink-1)]">
-                  {footerLine.length}/{TEXT_LIMITS.footerLine}
-                </p>
-              </label>
             </div>
           </section>
         </div>
