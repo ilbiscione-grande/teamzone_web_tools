@@ -72,6 +72,21 @@ const TEXT_LIMITS = {
 
 const clampText = (value: string, max: number) => value.slice(0, max).trimStart();
 
+const toShortPosition = (value?: string) => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return "";
+  }
+  const parenMatch = trimmed.match(/\(([^)]+)\)/);
+  if (parenMatch?.[1]) {
+    return parenMatch[1].trim().toUpperCase();
+  }
+  if (/^[A-Za-z]{1,5}$/.test(trimmed)) {
+    return trimmed.toUpperCase();
+  }
+  return "";
+};
+
 const loadImage = (src: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new window.Image();
@@ -477,22 +492,17 @@ const renderMatchSquadGraphic = async (params: {
       });
     }
   }
-  ctx.fillStyle = palette.text;
-  ctx.font = "700 18px Arial";
-  ctx.fillText((squad.name || board.name).toUpperCase(), heroX + 24, topPad + (text.format === "square" ? 196 : 218));
-  ctx.fillStyle = palette.muted;
-  ctx.font = "600 14px Arial";
-  ctx.fillText(`${starters.length + substitutes.length} players selected`, heroX + 24, topPad + (text.format === "square" ? 224 : 246));
-
   const startersBlock = starters.map((entry) => {
-    const prefix = entry.number ? `${entry.number} ` : "";
-    const suffix = entry.positionLabel ? `  ${entry.positionLabel}` : "";
-    return `${prefix}${entry.name}${suffix}`.toUpperCase();
+    const prefix = typeof entry.number === "number" ? `${String(entry.number).padStart(2, "0")} ` : "";
+    const shortPosition = toShortPosition(entry.positionLabel);
+    const suffix = shortPosition ? ` (${shortPosition})` : "";
+    return `${prefix}${entry.name}${suffix}`;
   });
   const subsBlock = substitutes.map((entry) => {
-    const prefix = entry.number ? `${entry.number} ` : "";
-    const suffix = entry.positionLabel ? `  ${entry.positionLabel}` : "";
-    return `${prefix}${entry.name}${suffix}`.toUpperCase();
+    const prefix = typeof entry.number === "number" ? `${String(entry.number).padStart(2, "0")} ` : "";
+    const shortPosition = toShortPosition(entry.positionLabel);
+    const suffix = shortPosition ? ` (${shortPosition})` : "";
+    return `${prefix}${entry.name}${suffix}`;
   });
 
   ctx.fillStyle = text.theme === "clean" ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.1)";
@@ -502,42 +512,36 @@ const renderMatchSquadGraphic = async (params: {
   ctx.roundRect(62, listTop, width - 124, listHeight, 34);
   ctx.fill();
 
-  ctx.fillStyle = palette.text;
-  ctx.font = "700 18px Arial";
-  ctx.fillText("SELECTED MATCHDAY SQUAD", 84, listTop + 48);
-
   const numberX = 86;
-  const nameX = 152;
+  const nameX = 132;
   const listWidth = width - 124;
-  const startersColumnWidth = text.format === "square" ? listWidth - 84 : Math.min(580, listWidth - 84);
+  const startersColumnWidth = listWidth - 84;
   const subsX = text.format === "square" ? 82 : 82 + startersColumnWidth + 34;
   const subsWidth = text.format === "square" ? listWidth - 64 : listWidth - startersColumnWidth - 68;
-  ctx.font = "700 34px Arial";
-  let y = listTop + 104;
+  ctx.font = "700 28px Arial";
+  let y = listTop + 72;
   startersBlock.forEach((line, index) => {
-    ctx.fillStyle = palette.accent;
-    ctx.fillText(`${String(index + 1).padStart(2, "0")}`, numberX, y);
     ctx.fillStyle = palette.text;
     fillWrappedText({
       ctx,
       text: line,
-      x: nameX,
+      x: numberX,
       y,
-      maxWidth: startersColumnWidth - 70,
-      lineHeight: 28,
-      maxLines: 2,
+      maxWidth: startersColumnWidth - 32,
+      lineHeight: 24,
+      maxLines: 1,
     });
-    y += 48;
+    y += 40;
   });
 
   if (subsBlock.length > 0) {
     ctx.fillStyle = palette.accent;
-    ctx.font = "800 30px Arial";
+    ctx.font = "800 26px Arial";
     const subsTitleY = text.format === "square" ? y + 18 : listTop + 104;
     ctx.fillText("SUBS", subsX, subsTitleY);
     let subsY = subsTitleY + 42;
     ctx.fillStyle = palette.text;
-    ctx.font = "600 24px Arial";
+    ctx.font = "600 22px Arial";
     subsBlock.forEach((line) => {
       const usedLines = fillWrappedText({
         ctx,
@@ -545,10 +549,10 @@ const renderMatchSquadGraphic = async (params: {
         x: subsX,
         y: subsY,
         maxWidth: subsWidth,
-        lineHeight: 24,
-        maxLines: 2,
+        lineHeight: 22,
+        maxLines: 1,
       });
-      subsY += usedLines * 24 + 12;
+      subsY += usedLines * 22 + 10;
     });
   }
 
@@ -873,6 +877,7 @@ export default function MatchGraphicsModal({
   const [showBenchOnPitch, setShowBenchOnPitch] = useState(false);
   const [title, setTitle] = useState("Match Squad");
   const [opponent, setOpponent] = useState("");
+  const [competition, setCompetition] = useState("");
   const [matchDate, setMatchDate] = useState("");
   const [matchTime, setMatchTime] = useState("");
   const [venue, setVenue] = useState("");
@@ -1030,7 +1035,7 @@ export default function MatchGraphicsModal({
     matchDate: clampText(matchDate, TEXT_LIMITS.matchDate),
     matchTime: clampText(matchTime, TEXT_LIMITS.matchTime),
     venue: clampText(venue, TEXT_LIMITS.venue),
-    competition: clampText(project.name, TEXT_LIMITS.competition),
+    competition: clampText(competition, TEXT_LIMITS.competition),
     showBenchOnPitch,
     heroImageUrl,
   });
@@ -1411,6 +1416,24 @@ export default function MatchGraphicsModal({
                 </label>
                 <label className="space-y-1">
                   <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
+                    Competition
+                  </span>
+                  <input
+                    className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 text-sm text-[var(--ink-0)]"
+                    value={competition}
+                    maxLength={TEXT_LIMITS.competition}
+                    onChange={(event) =>
+                      setCompetition(clampText(event.target.value, TEXT_LIMITS.competition))
+                    }
+                  />
+                  <p className="px-1 text-[11px] text-[var(--ink-1)]">
+                    {competition.length}/{TEXT_LIMITS.competition}
+                  </p>
+                </label>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <label className="space-y-1">
+                  <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
                     Match date
                   </span>
                   <input
@@ -1423,8 +1446,6 @@ export default function MatchGraphicsModal({
                     {matchDate.length}/{TEXT_LIMITS.matchDate}
                   </p>
                 </label>
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
                 <label className="space-y-1">
                   <span className="text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
                     Match time
@@ -1453,9 +1474,6 @@ export default function MatchGraphicsModal({
                     {venue.length}/{TEXT_LIMITS.venue}
                   </p>
                 </label>
-              </div>
-              <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-[12px] text-[var(--ink-1)]">
-                Competition is taken from the project name. The poster combines opponent, date, kickoff and arena automatically.
               </div>
             </div>
           </section>
