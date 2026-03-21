@@ -96,6 +96,9 @@ const toShortPosition = (value?: string) => {
   return "";
 };
 
+const normalizePositionInput = (value: string) =>
+  toShortPosition(value)?.slice(0, 3) ?? value.replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 3);
+
 const formatSquadLine = (player: SquadPlayer, fallbackIndex?: number) => {
   const numericValue =
     typeof player.number === "number"
@@ -460,34 +463,35 @@ const renderMatchSquadGraphic = async (params: {
   });
   const competitionY = topPad + 110 + titleLineCount * (text.format === "square" ? 82 : 94) - 6;
 
-  ctx.fillStyle = palette.muted;
-  ctx.font = "700 22px Arial";
-  ctx.fillText(text.competition.toUpperCase(), leftPad + 4, competitionY);
-  ctx.font = "500 24px Arial";
+  const metaX = leftPad + 46;
+  ctx.fillStyle = palette.text;
+  ctx.font = "800 28px Arial";
+  ctx.fillText(text.competition.toUpperCase(), metaX, competitionY + 4);
+  ctx.font = "800 52px Arial";
   const fixtureLineCount = fillWrappedText({
     ctx,
     text: text.opponent ? `vs ${text.opponent}` : board.name,
-    x: leftPad + 4,
-    y: competitionY + 38,
+    x: metaX,
+    y: competitionY + 60,
     maxWidth: headerWidth,
-    lineHeight: 30,
-    maxLines: 3,
+    lineHeight: 50,
+    maxLines: 2,
   });
-  let metaTop = competitionY + 38 + fixtureLineCount * 30 + 16;
+  let metaTop = competitionY + 60 + fixtureLineCount * 50 + 16;
   const metaLine = formatMetaLine([text.matchDate, text.matchTime, text.venue]);
   if (metaLine) {
     ctx.fillStyle = palette.text;
-    ctx.font = "600 20px Arial";
+    ctx.font = "700 32px Arial";
     const metaLineCount = fillWrappedText({
       ctx,
       text: metaLine,
-      x: leftPad + 4,
+      x: metaX,
       y: metaTop,
       maxWidth: headerWidth,
-      lineHeight: 24,
+      lineHeight: 32,
       maxLines: 2,
     });
-    metaTop += metaLineCount * 24 + 10;
+    metaTop += metaLineCount * 32 + 12;
   }
 
   ctx.fillStyle = text.theme === "clean" ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.08)";
@@ -647,34 +651,35 @@ const renderStartingXiGraphic = async (params: {
     maxLines: 2,
   });
   const competitionY = 148 + titleLineCount * (text.format === "square" ? 76 : 92) - 6;
-  ctx.fillStyle = palette.muted;
-  ctx.font = "700 24px Arial";
-  ctx.fillText(text.competition.toUpperCase(), titleX + 4, competitionY);
-  ctx.font = "500 24px Arial";
+  const metaX = titleX + 56;
+  ctx.fillStyle = palette.text;
+  ctx.font = "800 30px Arial";
+  ctx.fillText(text.competition.toUpperCase(), metaX, competitionY + 4);
+  ctx.font = "800 56px Arial";
   const fixtureLineCount = fillWrappedText({
     ctx,
     text: text.opponent ? `vs ${text.opponent}` : board.name,
-    x: titleX + 4,
-    y: competitionY + 36,
-    maxWidth: titleMaxWidth + 20,
-    lineHeight: 28,
-    maxLines: 3,
+    x: metaX,
+    y: competitionY + 62,
+    maxWidth: titleMaxWidth + 60,
+    lineHeight: 54,
+    maxLines: 2,
   });
-  let metaTop = competitionY + 36 + fixtureLineCount * 28 + 18;
+  let metaTop = competitionY + 62 + fixtureLineCount * 54 + 22;
   const metaLine = formatMetaLine([text.matchDate, text.matchTime, text.venue]);
   if (metaLine) {
     ctx.fillStyle = palette.text;
-    ctx.font = "600 20px Arial";
+    ctx.font = "700 34px Arial";
     const metaLineCount = fillWrappedText({
       ctx,
       text: metaLine,
-      x: titleX + 4,
+      x: metaX,
       y: metaTop,
       maxWidth: titleMaxWidth + 20,
-      lineHeight: 24,
+      lineHeight: 34,
       maxLines: 2,
     });
-    metaTop += metaLineCount * 24 + 18;
+    metaTop += metaLineCount * 34 + 18;
   }
 
   await drawLogo(
@@ -751,21 +756,48 @@ const renderStartingXiGraphic = async (params: {
     if (boardImage) {
       try {
         const image = await loadImage(boardImage);
-        ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(pitchPane.x, pitchPane.y, pitchPane.width, pitchPane.height, 24);
-        ctx.closePath();
-        ctx.clip();
+        const bounds = getBoardCaptureBounds(board);
         const rotatedScale = Math.min(
           pitchPane.width / Math.max(image.height, 1),
           pitchPane.height / Math.max(image.width, 1)
         );
         const drawWidth = image.width * rotatedScale;
         const drawHeight = image.height * rotatedScale;
-        ctx.translate(pitchPane.x + pitchPane.width / 2, pitchPane.y + pitchPane.height / 2);
+        const centerX = pitchPane.x + pitchPane.width / 2;
+        const centerY = pitchPane.y + pitchPane.height / 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(pitchPane.x, pitchPane.y, pitchPane.width, pitchPane.height, 24);
+        ctx.closePath();
+        ctx.clip();
+        ctx.translate(centerX, centerY);
         ctx.rotate(Math.PI / 2);
         ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
         ctx.restore();
+
+        const placedEntries = [...starters, ...substitutes];
+        placedEntries.forEach((entry) => {
+          const relativeX = (entry.token.position.x - bounds.x) / Math.max(bounds.width, 1);
+          const relativeY = (entry.token.position.y - bounds.y) / Math.max(bounds.height, 1);
+          const clampedX = Math.min(Math.max(relativeX, 0), 1);
+          const clampedY = Math.min(Math.max(relativeY, 0), 1);
+          const x = centerX + drawHeight / 2 - clampedY * drawHeight;
+          const y = centerY - drawWidth / 2 + clampedX * drawWidth;
+          const label = entry.player.name.toUpperCase();
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(Math.PI / 2);
+          ctx.fillStyle = "rgba(8,21,23,0.74)";
+          ctx.beginPath();
+          ctx.roundRect(-46, -9, 92, 18, 9);
+          ctx.fill();
+          ctx.fillStyle = "#f6f1e8";
+          ctx.font = "700 10px Arial";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(label, 0, 0, 84);
+          ctx.restore();
+        });
       } catch {
         // Ignore and keep panel background only.
       }
@@ -1292,7 +1324,7 @@ export default function MatchGraphicsModal({
           </button>
         </div>
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="mt-5 grid gap-4 xl:grid-cols-[0.92fr_1.08fr]">
           <section className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-4">
             <p className="text-[11px] uppercase tracking-widest text-[var(--accent-0)]">
               Curated Templates
@@ -1314,7 +1346,7 @@ export default function MatchGraphicsModal({
                       onClick={() => setTemplate(key)}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm font-semibold text-[var(--ink-0)]">
+                        <span className="text-[13px] font-semibold text-[var(--ink-0)]">
                           {item.title}
                         </span>
                         {active ? (
@@ -1323,7 +1355,7 @@ export default function MatchGraphicsModal({
                           </span>
                         ) : null}
                       </div>
-                      <p className="mt-1 text-[12px] text-[var(--ink-1)]">
+                      <p className="mt-1 text-[11px] text-[var(--ink-1)]">
                         {item.description}
                       </p>
                     </button>
@@ -1580,10 +1612,10 @@ export default function MatchGraphicsModal({
                     return (
                       <div
                         key={player.id}
-                        className="grid gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-2 md:grid-cols-[82px_minmax(0,1fr)_120px_58px]"
+                        className="grid gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/70 p-2 md:grid-cols-[68px_minmax(0,1fr)_74px_50px]"
                       >
                         <input
-                          className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-sm text-[var(--ink-0)]"
+                          className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] text-[var(--ink-0)]"
                           value={edit?.number ?? (typeof player.number === "number" ? String(player.number) : "")}
                           placeholder="No."
                           onChange={(event) =>
@@ -1595,7 +1627,7 @@ export default function MatchGraphicsModal({
                           }
                         />
                         <input
-                          className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-sm text-[var(--ink-0)]"
+                          className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] text-[var(--ink-0)]"
                           value={edit?.name ?? player.name}
                           placeholder="Name"
                           onChange={(event) =>
@@ -1603,14 +1635,18 @@ export default function MatchGraphicsModal({
                           }
                         />
                         <input
-                          className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-sm text-[var(--ink-0)]"
-                          value={edit?.positionLabel ?? player.positionLabel ?? ""}
+                          className="h-8 w-full rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-[13px] uppercase text-[var(--ink-0)]"
+                          value={normalizePositionInput(edit?.positionLabel ?? player.positionLabel ?? "")}
                           placeholder="Pos"
                           onChange={(event) =>
-                            updateExportPlayer(player.id, "positionLabel", event.target.value.slice(0, 18))
+                            updateExportPlayer(
+                              player.id,
+                              "positionLabel",
+                              normalizePositionInput(event.target.value)
+                            )
                           }
                         />
-                        <div className="flex items-center justify-center rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                        <div className="flex h-8 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--panel)] px-2 text-[9px] uppercase tracking-wide text-[var(--ink-1)]">
                           {isSubstitute ? "Sub" : "XI"}
                         </div>
                       </div>
