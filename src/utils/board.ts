@@ -5,7 +5,7 @@ export const getBoardOverridePlayerKey = (player: Pick<SquadPlayer, "id" | "team
 
 export const getPlayerTokenLinkKey = (
   player: Pick<PlayerToken, "squadPlayerId" | "teamMemberId">
-) => player.teamMemberId ?? player.squadPlayerId;
+) => player.squadPlayerId ?? player.teamMemberId;
 
 const applyBoardOverride = (board: Board, squad: Squad): Squad => {
   const override = board.squadOverrides?.[squad.id];
