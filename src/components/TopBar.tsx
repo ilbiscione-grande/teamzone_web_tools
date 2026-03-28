@@ -38,7 +38,6 @@ import {
 import { getActiveBoard, getBoardOverridePlayerKey, getBoardSquads } from "@/utils/board";
 import { createId } from "@/utils/id";
 import {
-  createTeamWithSquad,
   updateTeamWithSquad,
 } from "@/persistence/teamSquads";
 import { fetchClubTeamDirectory } from "@/persistence/teamDirectory";
@@ -187,6 +186,7 @@ export default function TopBar() {
   const [squadPresetsLoading, setSquadPresetsLoading] = useState(false);
   const [squadPresetsError, setSquadPresetsError] = useState<string | null>(null);
   const [manageSide, setManageSide] = useState<"home" | "away">("home");
+  const [manageSelectedDirectoryClubId, setManageSelectedDirectoryClubId] = useState("");
   const [manageSelectedDirectoryTeamId, setManageSelectedDirectoryTeamId] = useState("");
   const [managePlayersSortKey, setManagePlayersSortKey] =
     useState<ManagePlayersSortKey>("default");
@@ -450,6 +450,10 @@ export default function TopBar() {
       ),
     [squadPresetDirectory]
   );
+  const manageDirectoryClubs = useMemo(
+    () => squadPresetDirectory.filter((club) => club.teams.length > 0),
+    [squadPresetDirectory]
+  );
   const currentHomeLinkedTeam =
     manageDirectoryTeams.find((team) => team.teamId === currentHomeLinkedTeamId) ?? null;
   const currentAwayLinkedTeam =
@@ -461,8 +465,25 @@ export default function TopBar() {
   const selectedManageDirectoryTeam =
     manageDirectoryTeams.find((team) => team.teamId === manageSelectedDirectoryTeamId) ??
     null;
+  const selectedManageDirectoryClub =
+    manageDirectoryClubs.find((club) => club.id === manageSelectedDirectoryClubId) ?? null;
+  const selectedManageDirectoryClubTeams = selectedManageDirectoryClub?.teams ?? [];
+  const currentActiveDirectoryTeam =
+    activeTeamSelection?.teamId
+      ? manageDirectoryTeams.find((team) => team.teamId === activeTeamSelection.teamId) ?? null
+      : null;
+  const currentActiveClubId =
+    currentActiveDirectoryTeam?.clubId ??
+    activeTeamSelection?.clubId ??
+    manageDirectoryClubs[0]?.id ??
+    "";
+  const currentActiveClubTeams =
+    manageDirectoryClubs.find((club) => club.id === currentActiveClubId)?.teams ?? [];
   const setCurrentActiveTeam = (teamId: string, clubName: string, teamName: string) => {
+    const nextTeam =
+      manageDirectoryTeams.find((team) => team.teamId === teamId) ?? null;
     const nextSelection: ActiveTeamSelection = {
+      clubId: nextTeam?.clubId ?? null,
       teamId,
       clubName,
       teamName,
@@ -471,6 +492,7 @@ export default function TopBar() {
     setActiveTeamSelection(nextSelection);
     saveActiveTeamSelection(
       {
+        clubId: nextSelection.clubId,
         teamId,
         clubName,
         teamName,
@@ -478,6 +500,21 @@ export default function TopBar() {
       authUser?.id ?? null
     );
     setManagePresetStatus(`Current team set to ${clubName} / ${teamName}.`);
+  };
+  const setCurrentActiveTeamById = (teamId: string) => {
+    const nextTeam = manageDirectoryTeams.find((team) => team.teamId === teamId) ?? null;
+    if (!nextTeam) {
+      return;
+    }
+    setCurrentActiveTeam(nextTeam.teamId, nextTeam.clubName, nextTeam.teamName);
+  };
+  const setCurrentActiveClub = (clubId: string) => {
+    const nextClub = manageDirectoryClubs.find((club) => club.id === clubId) ?? null;
+    const nextTeam = nextClub?.teams[0] ?? null;
+    if (!nextClub || !nextTeam) {
+      return;
+    }
+    setCurrentActiveTeam(nextTeam.id, nextClub.name, nextTeam.name);
   };
   const managedDirectoryMemberMap = useMemo(() => {
     const entries = new Map<string, ManageDirectoryMemberOption>();
@@ -524,6 +561,12 @@ export default function TopBar() {
     if (!squadPresetsOpen) {
       return;
     }
+    const nextClubId =
+      managedDirectoryTeam?.clubId ||
+      selectedManageDirectoryTeam?.clubId ||
+      manageDirectoryClubs[0]?.id ||
+      "";
+    setManageSelectedDirectoryClubId((current) => current || nextClubId);
     if (managedDirectoryTeam) {
       setManageSelectedDirectoryTeamId(managedDirectoryTeam.teamId);
       return;
@@ -531,7 +574,26 @@ export default function TopBar() {
     setManageSelectedDirectoryTeamId(
       (current) => current || manageDirectoryTeams[0]?.teamId || ""
     );
-  }, [manageDirectoryTeams, managedDirectoryTeam, squadPresetsOpen]);
+  }, [
+    manageDirectoryClubs,
+    manageDirectoryTeams,
+    managedDirectoryTeam,
+    selectedManageDirectoryTeam?.clubId,
+    squadPresetsOpen,
+  ]);
+  useEffect(() => {
+    if (!squadPresetsOpen || !manageSelectedDirectoryClubId) {
+      return;
+    }
+    const nextClub = manageDirectoryClubs.find((club) => club.id === manageSelectedDirectoryClubId);
+    const nextTeams = nextClub?.teams ?? [];
+    if (nextTeams.length === 0) {
+      return;
+    }
+    setManageSelectedDirectoryTeamId((current) =>
+      nextTeams.some((team) => team.id === current) ? current : nextTeams[0]!.id
+    );
+  }, [manageDirectoryClubs, manageSelectedDirectoryClubId, squadPresetsOpen]);
   const sortedManagePlayers = useMemo(() => {
     if (!manageSquad) {
       return [];
@@ -921,17 +983,26 @@ export default function TopBar() {
       ...editableSquad,
       players: manageBaseRosterRows.map((row) => row.player),
     };
-    const existingTeamId =
-      manageLinkedTeamId ??
-      manageDirectoryTeams.find(
-        (item) => item.teamName.trim().toLowerCase() === nextName.toLowerCase()
-      )?.teamId ??
-      squadPresets.find(
-        (item) => item.name.trim().toLowerCase() === nextName.toLowerCase()
-      )?.id;
-    const existingTeam = existingTeamId
-      ? squadPresets.find((item) => item.id === existingTeamId) ?? null
-      : null;
+    if (!manageLinkedTeamId) {
+      setManagePresetStatus(
+        "This side is not linked to a team yet. Use Switch team first."
+      );
+      return;
+    }
+    const existingTeam =
+      squadPresets.find((item) => item.id === manageLinkedTeamId) ??
+      (managedDirectoryTeam
+        ? {
+            id: managedDirectoryTeam.teamId,
+            userId: "",
+            teamId: managedDirectoryTeam.teamId,
+            teamName: managedDirectoryTeam.teamName,
+            name: managedDirectoryTeam.teamName,
+            squad: squadForSave,
+            createdAt: new Date(0).toISOString(),
+            updatedAt: new Date(0).toISOString(),
+          }
+        : null);
     if (existingTeam) {
       const result = await updateTeamWithSquad({
         id: existingTeam.id,
@@ -954,22 +1025,7 @@ export default function TopBar() {
       );
       return;
     }
-    const result = await createTeamWithSquad({
-      name: nextName,
-      squad: squadForSave,
-    });
-    if (!result.ok) {
-      setManagePresetStatus(result.error);
-      return;
-    }
-    setSquadPresets((prev) => [result.team, ...prev]);
-    setProjectTeamContextForSide(manageSide, result.team.id);
-    setManageSelectedDirectoryTeamId(result.team.id);
-    saveDefaultLinkedTeam(manageSide, result.team.id, authUser?.id ?? null);
-    saveDefaultTeamSquad(manageSide, result.team.squad, authUser?.id ?? null);
-    setManagePresetStatus(
-      "New linked team created for this side."
-    );
+    setManagePresetStatus("Linked team could not be found in your team directory.");
   };
 
   const cloneSquadIntoTargetSide = (
@@ -2861,6 +2917,12 @@ export default function TopBar() {
                                   ? `${activeTeamSelection.clubName ?? "Team"} / ${activeTeamSelection.teamName}`
                                   : null
                               }
+                              currentActiveClubId={currentActiveClubId}
+                              currentActiveTeamId={activeTeamSelection?.teamId ?? ""}
+                              currentActiveClubTeams={currentActiveClubTeams.map((team) => ({
+                                id: team.id,
+                                name: team.name,
+                              }))}
                               currentSourceName={
                                 managedDirectoryTeam
                                   ? `${managedDirectoryTeam.clubName} / ${managedDirectoryTeam.teamName}`
@@ -2871,14 +2933,28 @@ export default function TopBar() {
                                   ? null
                                   : manageLinkedTeamId
                                     ? "This side is linked to a saved team outside the loaded club directory view."
-                                    : null
+                                  : null
                               }
+                              manageDirectoryClubs={manageDirectoryClubs.map((club) => ({
+                                id: club.id,
+                                name: club.name,
+                              }))}
                               manageDirectoryTeams={manageDirectoryTeams}
+                              manageSelectedDirectoryClubId={manageSelectedDirectoryClubId}
                               manageSelectedDirectoryTeamId={manageSelectedDirectoryTeamId}
                               selectedManageDirectoryTeam={selectedManageDirectoryTeam}
+                              selectedManageDirectoryClubTeams={selectedManageDirectoryClubTeams.map(
+                                (team) => ({
+                                  id: team.id,
+                                  name: team.name,
+                                })
+                              )}
                               squadPresetsLoading={squadPresetsLoading}
                               squadPresetsError={squadPresetsError}
                               managePresetStatus={managePresetStatus}
+                              onCurrentActiveClubIdChange={setCurrentActiveClub}
+                              onCurrentActiveTeamIdChange={setCurrentActiveTeamById}
+                              onManageSelectedDirectoryClubIdChange={setManageSelectedDirectoryClubId}
                               onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
                               onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
                               onSaveReusableTeam={saveManagePreset}

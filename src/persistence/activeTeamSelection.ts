@@ -1,6 +1,7 @@
 "use client";
 
 export type ActiveTeamSelection = {
+  clubId?: string | null;
   teamId: string;
   clubName?: string | null;
   teamName: string;
@@ -23,6 +24,9 @@ export const loadActiveTeamSelection = (
   try {
     const parsed = JSON.parse(raw) as ActiveTeamSelection;
     if (!parsed || typeof parsed.teamId !== "string" || typeof parsed.teamName !== "string") {
+      return null;
+    }
+    if ("clubId" in parsed && parsed.clubId != null && typeof parsed.clubId !== "string") {
       return null;
     }
     return parsed;

@@ -12,6 +12,7 @@ type ManageTeamsSourceTeam = {
 };
 
 type ManageTeamsDirectoryOption = {
+  clubId: string;
   teamId: string;
   clubName: string;
   teamName: string;
@@ -20,18 +21,38 @@ type ManageTeamsDirectoryOption = {
   seasonLabel?: string | null;
 };
 
+type ManageTeamsDirectoryClubOption = {
+  id: string;
+  name: string;
+};
+
 type ManageTeamsSourcePanelProps = {
   canUsePresetStorage: boolean;
   managedDirectoryTeam: ManageTeamsSourceTeam | null;
   currentActiveTeamName?: string | null;
+  currentActiveClubId: string;
+  currentActiveTeamId: string;
+  currentActiveClubTeams: Array<{
+    id: string;
+    name: string;
+  }>;
   currentSourceName?: string | null;
   currentSourceDescription?: string | null;
+  manageDirectoryClubs: ManageTeamsDirectoryClubOption[];
   manageDirectoryTeams: ManageTeamsDirectoryOption[];
+  manageSelectedDirectoryClubId: string;
   manageSelectedDirectoryTeamId: string;
   selectedManageDirectoryTeam: ManageTeamsDirectoryOption | null;
+  selectedManageDirectoryClubTeams: Array<{
+    id: string;
+    name: string;
+  }>;
   squadPresetsLoading: boolean;
   squadPresetsError: string | null;
   managePresetStatus: string | null;
+  onCurrentActiveClubIdChange: (clubId: string) => void;
+  onCurrentActiveTeamIdChange: (teamId: string) => void;
+  onManageSelectedDirectoryClubIdChange: (clubId: string) => void;
   onManageSelectedDirectoryTeamIdChange: (teamId: string) => void;
   onLoadDirectoryTeamIntoSide: (teamId: string, side: "home" | "away") => void;
   onSaveReusableTeam: () => void;
@@ -42,14 +63,23 @@ export default function ManageTeamsSourcePanel({
   canUsePresetStorage,
   managedDirectoryTeam,
   currentActiveTeamName,
+  currentActiveClubId,
+  currentActiveTeamId,
+  currentActiveClubTeams,
   currentSourceName,
   currentSourceDescription,
+  manageDirectoryClubs,
   manageDirectoryTeams,
+  manageSelectedDirectoryClubId,
   manageSelectedDirectoryTeamId,
   selectedManageDirectoryTeam,
+  selectedManageDirectoryClubTeams,
   squadPresetsLoading,
   squadPresetsError,
   managePresetStatus,
+  onCurrentActiveClubIdChange,
+  onCurrentActiveTeamIdChange,
+  onManageSelectedDirectoryClubIdChange,
   onManageSelectedDirectoryTeamIdChange,
   onLoadDirectoryTeamIntoSide,
   onSaveReusableTeam,
@@ -68,6 +98,46 @@ export default function ManageTeamsSourcePanel({
           <p className="mt-1 text-[11px] text-[var(--ink-1)]">
             Used as the default Home team when creating new projects.
           </p>
+          {manageDirectoryClubs.length > 0 ? (
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                  Current club
+                </span>
+                <select
+                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                  value={currentActiveClubId}
+                  onChange={(event) => onCurrentActiveClubIdChange(event.target.value)}
+                >
+                  {manageDirectoryClubs.map((club) => (
+                    <option key={`manage-club-${club.id}`} value={club.id} className="bg-slate-900">
+                      {club.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                  Current team
+                </span>
+                <select
+                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                  value={currentActiveTeamId}
+                  onChange={(event) => onCurrentActiveTeamIdChange(event.target.value)}
+                >
+                  {currentActiveClubTeams.map((team) => (
+                    <option
+                      key={`manage-current-team-${team.id}`}
+                      value={team.id}
+                      className="bg-slate-900"
+                    >
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ) : null}
           {managedDirectoryTeam && onSetManagedTeamAsCurrent ? (
             <button
               className="mt-3 rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
@@ -136,12 +206,12 @@ export default function ManageTeamsSourcePanel({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                Save team
+                Linked team
               </p>
               <p className="text-[11px] text-[var(--ink-1)]">
                 {currentSourceName
-                  ? "Pushes the current team roster back to the linked team."
-                  : "Creates a reusable linked team from the current team roster."}
+                  ? "Updates the linked team's only roster."
+                  : "This side is not linked yet. Switch to one of your teams first."}
               </p>
             </div>
             {canUsePresetStorage ? (
@@ -149,7 +219,7 @@ export default function ManageTeamsSourcePanel({
                 className="rounded-full border border-[var(--accent-0)] px-4 py-2 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
                 onClick={onSaveReusableTeam}
               >
-                {currentSourceName ? "Update linked team" : "Create linked team"}
+                Update linked team
               </button>
             ) : (
               <p className="text-[11px] text-[var(--ink-1)]">Paid plan required.</p>
@@ -158,24 +228,51 @@ export default function ManageTeamsSourcePanel({
         </div>
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
           <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-            Load team
+            Switch team
           </p>
           <p className="mt-2 text-[11px] text-[var(--ink-1)]">
-            Loading a team replaces this side&apos;s roster with that team&apos;s base squad and links the side to it.
+            Each team has exactly one roster. Switching team replaces this side with that team&apos;s roster and links the side to it.
           </p>
           {manageDirectoryTeams.length > 0 ? (
             <>
-              <select
-                className="mt-3 h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                value={manageSelectedDirectoryTeamId}
-                onChange={(event) => onManageSelectedDirectoryTeamIdChange(event.target.value)}
-              >
-                {manageDirectoryTeams.map((team) => (
-                  <option key={team.teamId} value={team.teamId} className="bg-slate-900">
-                    {team.clubName} / {team.teamName}
-                  </option>
-                ))}
-              </select>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <label className="space-y-1">
+                  <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                    Club
+                  </span>
+                  <select
+                    className="h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                    value={manageSelectedDirectoryClubId}
+                    onChange={(event) => onManageSelectedDirectoryClubIdChange(event.target.value)}
+                  >
+                    {manageDirectoryClubs.map((club) => (
+                      <option key={`switch-club-${club.id}`} value={club.id} className="bg-slate-900">
+                        {club.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                    Team
+                  </span>
+                  <select
+                    className="h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                    value={manageSelectedDirectoryTeamId}
+                    onChange={(event) => onManageSelectedDirectoryTeamIdChange(event.target.value)}
+                  >
+                    {selectedManageDirectoryClubTeams.map((team) => (
+                      <option
+                        key={team.id}
+                        value={team.id}
+                        className="bg-slate-900"
+                      >
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               {selectedManageDirectoryTeam ? (
                 <p className="mt-2 text-[11px] text-[var(--ink-1)]">
                   {selectedManageDirectoryTeam.teamType}

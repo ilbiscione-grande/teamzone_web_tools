@@ -161,7 +161,7 @@ export default function ManageTeamsRoster({
                   {baseRosterToolbar}
                 </div>
                 <p className="text-[11px] text-[var(--ink-1)]">
-                  Team roster starts from the linked team. Project-only rows are local additions on top of that roster.
+                  Team roster is the linked team&apos;s only roster. Any project-only rows here are temporary local additions.
                 </p>
               </>
             ) : (

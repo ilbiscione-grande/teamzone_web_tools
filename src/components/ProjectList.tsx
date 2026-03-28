@@ -674,7 +674,7 @@ export default function ProjectList() {
   }, [authUser?.id]);
 
   useEffect(() => {
-    if (!createOpen || !authUser) {
+    if (!authUser) {
       setCreateTeamDirectory([]);
       setCreateTeamDirectoryError(null);
       setSelectedHomeTeamId("");
@@ -704,7 +704,7 @@ export default function ProjectList() {
     return () => {
       cancelled = true;
     };
-  }, [authUser, createOpen]);
+  }, [authUser]);
 
   const availableCreateTeams = createTeamDirectory.flatMap((club) =>
     club.teams.map((team) => ({
@@ -712,6 +712,19 @@ export default function ProjectList() {
       team,
     }))
   );
+  const availableCreateClubs = createTeamDirectory.filter((club) => club.teams.length > 0);
+  const activeCreateClubId =
+    activeTeamSelection?.clubId &&
+    availableCreateClubs.some((club) => club.id === activeTeamSelection.clubId)
+      ? activeTeamSelection.clubId
+      : activeTeamSelection?.teamId
+        ? availableCreateTeams.find(({ team }) => team.id === activeTeamSelection.teamId)?.club.id ??
+          availableCreateClubs[0]?.id ??
+          ""
+        : availableCreateClubs[0]?.id ?? "";
+  const activeCreateClub =
+    availableCreateClubs.find((club) => club.id === activeCreateClubId) ?? null;
+  const activeCreateClubTeams = activeCreateClub?.teams ?? [];
 
   const setCurrentActiveTeam = (teamId: string) => {
     const nextEntry =
@@ -720,6 +733,7 @@ export default function ProjectList() {
       return;
     }
     const nextSelection: ActiveTeamSelection = {
+      clubId: nextEntry.club.id,
       teamId: nextEntry.team.id,
       clubName: nextEntry.club.name,
       teamName: nextEntry.team.name,
@@ -728,12 +742,22 @@ export default function ProjectList() {
     setActiveTeamSelection(nextSelection);
     saveActiveTeamSelection(
       {
+        clubId: nextSelection.clubId,
         teamId: nextSelection.teamId,
         clubName: nextSelection.clubName,
         teamName: nextSelection.teamName,
       },
       authUser?.id ?? null
     );
+  };
+
+  const setCurrentActiveClub = (clubId: string) => {
+    const nextClub = availableCreateClubs.find((club) => club.id === clubId) ?? null;
+    const nextTeam = nextClub?.teams[0] ?? null;
+    if (!nextTeam) {
+      return;
+    }
+    setCurrentActiveTeam(nextTeam.id);
   };
 
   useEffect(() => {
@@ -779,12 +803,6 @@ export default function ProjectList() {
 
   const selectedHomeTeam = getCreateTeamById(selectedHomeTeamId);
   const selectedAwayTeam = getCreateTeamById(selectedAwayTeamId);
-  const activeCreateTeam =
-    activeTeamSelection?.teamId
-      ? availableCreateTeams.find(({ team }) => team.id === activeTeamSelection.teamId) ??
-        null
-      : null;
-
   useEffect(() => {
     if (selectedHomeTeam) {
       setHomeKit({
@@ -1334,14 +1352,58 @@ export default function ProjectList() {
               <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
                 Current team
               </p>
-              <p className="mt-1 text-sm text-[var(--ink-0)]">
-                {activeTeamSelection
-                  ? `${activeTeamSelection.clubName ?? "Team"} / ${activeTeamSelection.teamName}`
-                  : "No team selected yet"}
-              </p>
-              <p className="mt-1 text-[11px] text-[var(--ink-1)]">
-                Used as the default Home team when you create a new project.
-              </p>
+              {availableCreateTeams.length > 0 ? (
+                <>
+                  <div className="mt-2 grid gap-2 md:grid-cols-2">
+                    <label className="space-y-1">
+                      <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Current club
+                      </span>
+                      <select
+                        className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-sm text-[var(--ink-0)]"
+                        value={activeCreateClubId}
+                        onChange={(event) => setCurrentActiveClub(event.target.value)}
+                      >
+                        {availableCreateClubs.map((club) => (
+                          <option key={`console-club-${club.id}`} value={club.id}>
+                            {club.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                        Current team
+                      </span>
+                      <select
+                        className="h-10 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-sm text-[var(--ink-0)]"
+                        value={activeTeamSelection?.teamId ?? ""}
+                        onChange={(event) => setCurrentActiveTeam(event.target.value)}
+                      >
+                        {activeCreateClubTeams.map((team) => (
+                          <option key={`console-active-${team.id}`} value={team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <p className="mt-2 text-[11px] text-[var(--ink-1)]">
+                    Used as the default Home team when you create a new project.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-1 text-sm text-[var(--ink-0)]">
+                    {activeTeamSelection
+                      ? `${activeTeamSelection.clubName ?? "Team"} / ${activeTeamSelection.teamName}`
+                      : "No team selected yet"}
+                  </p>
+                  <p className="mt-1 text-[11px] text-[var(--ink-1)]">
+                    No available teams found for this user yet.
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
@@ -2464,23 +2526,39 @@ export default function ProjectList() {
                 ) : null}
                 {availableCreateTeams.length > 0 ? (
                   <div className="space-y-3">
-                    <label className="space-y-1">
-                      <span className="text-[11px] uppercase text-[var(--ink-1)]">Current team</span>
-                      <select
-                        className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
-                        value={activeTeamSelection?.teamId ?? ""}
-                        onChange={(event) => setCurrentActiveTeam(event.target.value)}
-                      >
-                        {availableCreateTeams.map(({ club, team }) => (
-                          <option key={`active-${team.id}`} value={team.id}>
-                            {club.name}: {team.name}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-[10px] text-[var(--ink-1)]">
-                        New projects will use this as the default Home team.
-                      </p>
-                    </label>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="space-y-1">
+                        <span className="text-[11px] uppercase text-[var(--ink-1)]">Current club</span>
+                        <select
+                          className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                          value={activeCreateClubId}
+                          onChange={(event) => setCurrentActiveClub(event.target.value)}
+                        >
+                          {availableCreateClubs.map((club) => (
+                            <option key={`active-club-${club.id}`} value={club.id}>
+                              {club.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="space-y-1">
+                        <span className="text-[11px] uppercase text-[var(--ink-1)]">Current team</span>
+                        <select
+                          className="h-9 w-full rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-xs text-[var(--ink-0)]"
+                          value={activeTeamSelection?.teamId ?? ""}
+                          onChange={(event) => setCurrentActiveTeam(event.target.value)}
+                        >
+                          {activeCreateClubTeams.map((team) => (
+                            <option key={`active-${team.id}`} value={team.id}>
+                              {team.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-[var(--ink-1)]">
+                          New projects will use this as the default Home team.
+                        </p>
+                      </label>
+                    </div>
                     <div className="grid gap-3 md:grid-cols-2">
                     <label className="space-y-1">
                       <span className="text-[11px] uppercase text-[var(--ink-1)]">Home team</span>
