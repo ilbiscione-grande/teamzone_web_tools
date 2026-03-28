@@ -49,44 +49,11 @@ export default function ManageTeamsSourcePanel({
 }: ManageTeamsSourcePanelProps) {
   return (
     <>
-      {!canUsePresetStorage ? (
-        <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/50 px-3 py-2 text-xs text-[var(--ink-1)]">
-          Free/Auth plans can edit rosters locally in this project. Reusable team storage is available on paid plans.
-        </p>
-      ) : null}
-      <div className="flex items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 px-4 py-2.5 text-[11px] text-[var(--ink-1)]">
-        <span className="shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 text-[9px] uppercase tracking-widest">
-          Info
-        </span>
-        <p className="min-w-0 truncate">
-          Changes here affect the current project first. Use <span className="text-[var(--accent-0)]">Save as reusable team</span> when you want this squad available in future projects.
-        </p>
-      </div>
-      {canUsePresetStorage ? (
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                Save reusable team
-              </p>
-              <p className="text-[11px] text-[var(--ink-1)]">
-                Saves this side as a reusable team for future projects.
-              </p>
-            </div>
-            <button
-              className="rounded-full border border-[var(--accent-0)] px-4 py-2 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
-              onClick={onSaveReusableTeam}
-            >
-              Save reusable team
-            </button>
-          </div>
-        </div>
-      ) : null}
-      <details className="group rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25">
+      <details className="group rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25" open>
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <p className="shrink-0 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-              Team source
+              Source & reuse
             </p>
             <p className="truncate text-[11px] text-[var(--ink-1)]">
               {managedDirectoryTeam
@@ -114,7 +81,7 @@ export default function ManageTeamsSourcePanel({
             <span className="transition-transform group-open:rotate-180">⌄</span>
           </div>
         </summary>
-        <div className="grid gap-4 border-t border-[var(--line)] px-4 py-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="space-y-4 border-t border-[var(--line)] px-4 py-4">
           <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
             <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
               Current source
@@ -158,6 +125,30 @@ export default function ManageTeamsSourcePanel({
                 This side is currently using a local project squad. Saving a reusable team does not automatically relink the current board to that saved team.
               </p>
             )}
+          </div>
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                  Save reusable team
+                </p>
+                <p className="text-[11px] text-[var(--ink-1)]">
+                  Makes this side available in future projects.
+                </p>
+              </div>
+              {canUsePresetStorage ? (
+                <button
+                  className="rounded-full border border-[var(--accent-0)] px-4 py-2 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
+                  onClick={onSaveReusableTeam}
+                >
+                  Save reusable team
+                </button>
+              ) : (
+                <p className="text-[11px] text-[var(--ink-1)]">
+                  Paid plan required.
+                </p>
+              )}
+            </div>
           </div>
           <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
             <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">

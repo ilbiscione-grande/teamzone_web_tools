@@ -2403,48 +2403,104 @@ export default function TopBar() {
           onApplyToAway={() => setManagedTeamToSide("away")}
           onClose={closeSquadPresetsModal}
         >
-              <div className="max-h-[calc(92vh-128px)] overflow-y-auto px-4 py-4 text-xs text-[var(--ink-1)] sm:px-6" data-scrollable>
-                <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.92fr)_minmax(0,1.08fr)]">
-                  <div className="order-2 space-y-4 xl:order-1">
-                    <div className="xl:hidden">
-                      <details className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25">
-                        <summary className="cursor-pointer list-none px-4 py-3 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                          Team source
-                        </summary>
-                        <div className="border-t border-[var(--line)] p-3">
-                          <ManageTeamsSourcePanel
-                            canUsePresetStorage={canUsePresetStorage}
-                            managedDirectoryTeam={managedDirectoryTeam}
-                            manageDirectoryTeams={manageDirectoryTeams}
-                            manageSelectedDirectoryTeamId={manageSelectedDirectoryTeamId}
-                            selectedManageDirectoryTeam={selectedManageDirectoryTeam}
-                            squadPresetsLoading={squadPresetsLoading}
-                      squadPresetsError={squadPresetsError}
-                      managePresetStatus={managePresetStatus}
-                      onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
-                      onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
-                      onSaveReusableTeam={saveManagePreset}
-                    />
-                        </div>
-                      </details>
-                      <details className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25">
-                        <summary className="cursor-pointer list-none px-4 py-3 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                          Team setup
-                        </summary>
-                        <div className="border-t border-[var(--line)] p-3">
-                          <ManageTeamsTeamSetup
-                            editableSquad={editableSquad}
-                            jerseyType={jerseyType}
-                            shirtTypes={SHIRT_TYPES}
-                            manageLogoRef={manageLogoRef}
-                            updateEditableSquad={updateEditableSquad}
-                            onJerseyTypeChange={setJerseyType}
-                            renderShirtIcon={renderShirtIcon}
+              <div className="px-4 py-4 text-xs text-[var(--ink-1)] sm:px-6" data-scrollable>
+                <div className="mx-auto max-w-5xl space-y-4">
+                  <div className="space-y-4">
+                    <ManageTeamsRoster
+                      manageSquad={manageSquad}
+                      manageSide={manageSide}
+                      manageRosterView={manageRosterView}
+                      manageMembershipSummary={manageMembershipSummary}
+                      manageBaseSearch={manageBaseSearch}
+                      manageBoardSearch={manageBoardSearch}
+                      manageBoardFilter={manageBoardFilter}
+                      manageGuestName={manageGuestName}
+                      manageGuestPosition={manageGuestPosition}
+                      manageGuestNumber={manageGuestNumber}
+                      onManageRosterViewChange={setManageRosterView}
+                      onManageBaseSearchChange={setManageBaseSearch}
+                      onManageBoardSearchChange={setManageBoardSearch}
+                      onManageBoardFilterChange={setManageBoardFilter}
+                      onManageGuestNameChange={setManageGuestName}
+                      onManageGuestPositionChange={setManageGuestPosition}
+                      onManageGuestNumberChange={setManageGuestNumber}
+                      onAddMember={() =>
+                        manageSquad &&
+                        addSquadPlayer(manageSquad.id, {
+                          id: createId(),
+                          name: "New Member",
+                          positionLabel: "",
+                          guest: false,
+                          active: true,
+                          number: undefined,
+                          vestColor: undefined,
+                        })
+                      }
+                      onAddGuestMember={() =>
+                        manageSquad &&
+                        addSquadPlayer(manageSquad.id, {
+                          id: createId(),
+                          name: "Guest Member",
+                          positionLabel: "",
+                          guest: true,
+                          active: true,
+                          number: undefined,
+                          vestColor: undefined,
+                        })
+                      }
+                      onAddBoardGuest={manageAddBoardGuest}
+                      onShowAllBoardPlayers={() =>
+                        updateManageBoardOverride((current) => ({
+                          ...current,
+                          hiddenPlayerIds: [],
+                        }))
+                      }
+                      onResetBoardPositions={() =>
+                        updateManageBoardOverride((current) => ({
+                          ...current,
+                          positionOverrides: {},
+                        }))
+                      }
+                      onResetBoardRoster={() =>
+                        updateManageBoardOverride(() => ({
+                          hiddenPlayerIds: [],
+                          guestPlayers: [],
+                          positionOverrides: {},
+                        }))
+                      }
+                    >
+                        {manageSquad ? (
+                          manageRosterView === "base" ? (
+                            <ManageTeamsBaseRoster
+                              manageSquadId={manageSquad.id}
+                              filteredManageBasePlayers={filteredManageBasePlayers}
+                              editableSquadSubstituteIds={editableSquad?.substituteIds ?? []}
+                              editableSquadCaptainId={editableSquad?.captainId}
+                              manageSortIndicator={manageSortIndicator}
+                              managedDirectoryMemberMap={managedDirectoryMemberMap}
+                              onToggleManagePlayersSort={toggleManagePlayersSort}
+                              onUpdateSquadPlayer={updateSquadPlayer}
+                              onUpdateEditableSquad={updateEditableSquad}
+                              onRemoveSquadPlayer={removeSquadPlayer}
+                              positionOptions={MANAGE_POSITION_OPTIONS}
+                            />
+                        ) : (
+                          <ManageTeamsBoardRoster
+                            sortedManageBoardPlayers={sortedManageBoardPlayers}
+                          onSetBoardPlayerPosition={manageSetBoardPlayerPosition}
+                          onToggleBoardPlayerVisible={manageToggleBoardPlayerVisible}
+                          onPromoteBoardGuest={managePromoteBoardGuest}
+                          onRemoveBoardGuest={manageRemoveBoardGuest}
                           />
-                        </div>
-                      </details>
-                    </div>
-                    <div className="hidden space-y-4 xl:block">
+                        )
+                        ) : null}
+                    </ManageTeamsRoster>
+                  </div>
+                  <details className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25">
+                    <summary className="cursor-pointer list-none px-4 py-3 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                      Source & reuse
+                    </summary>
+                    <div className="border-t border-[var(--line)] p-4">
                       <ManageTeamsSourcePanel
                         canUsePresetStorage={canUsePresetStorage}
                         managedDirectoryTeam={managedDirectoryTeam}
@@ -2452,12 +2508,19 @@ export default function TopBar() {
                         manageSelectedDirectoryTeamId={manageSelectedDirectoryTeamId}
                         selectedManageDirectoryTeam={selectedManageDirectoryTeam}
                         squadPresetsLoading={squadPresetsLoading}
-                            squadPresetsError={squadPresetsError}
-                            managePresetStatus={managePresetStatus}
-                            onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
-                            onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
-                            onSaveReusableTeam={saveManagePreset}
-                          />
+                        squadPresetsError={squadPresetsError}
+                        managePresetStatus={managePresetStatus}
+                        onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
+                        onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
+                        onSaveReusableTeam={saveManagePreset}
+                      />
+                    </div>
+                  </details>
+                  <details className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25">
+                    <summary className="cursor-pointer list-none px-4 py-3 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                      Appearance
+                    </summary>
+                    <div className="border-t border-[var(--line)] p-4">
                       <ManageTeamsTeamSetup
                         editableSquad={editableSquad}
                         jerseyType={jerseyType}
@@ -2468,98 +2531,7 @@ export default function TopBar() {
                         renderShirtIcon={renderShirtIcon}
                       />
                     </div>
-                  </div>
-                  <div className="order-1 space-y-4 xl:order-2">
-                    <ManageTeamsRoster
-                    manageSquad={manageSquad}
-                    manageSide={manageSide}
-                    manageRosterView={manageRosterView}
-                  manageMembershipSummary={manageMembershipSummary}
-                  manageBaseSearch={manageBaseSearch}
-                  manageBoardSearch={manageBoardSearch}
-                  manageBoardFilter={manageBoardFilter}
-                  manageGuestName={manageGuestName}
-                  manageGuestPosition={manageGuestPosition}
-                  manageGuestNumber={manageGuestNumber}
-                  onManageRosterViewChange={setManageRosterView}
-                  onManageBaseSearchChange={setManageBaseSearch}
-                  onManageBoardSearchChange={setManageBoardSearch}
-                  onManageBoardFilterChange={setManageBoardFilter}
-                  onManageGuestNameChange={setManageGuestName}
-                  onManageGuestPositionChange={setManageGuestPosition}
-                  onManageGuestNumberChange={setManageGuestNumber}
-                  onAddMember={() =>
-                    manageSquad &&
-                    addSquadPlayer(manageSquad.id, {
-                      id: createId(),
-                      name: "New Member",
-                      positionLabel: "",
-                      guest: false,
-                      active: true,
-                      number: undefined,
-                      vestColor: undefined,
-                    })
-                  }
-                  onAddGuestMember={() =>
-                    manageSquad &&
-                    addSquadPlayer(manageSquad.id, {
-                      id: createId(),
-                      name: "Guest Member",
-                      positionLabel: "",
-                      guest: true,
-                      active: true,
-                      number: undefined,
-                      vestColor: undefined,
-                    })
-                  }
-                  onAddBoardGuest={manageAddBoardGuest}
-                  onShowAllBoardPlayers={() =>
-                    updateManageBoardOverride((current) => ({
-                      ...current,
-                      hiddenPlayerIds: [],
-                    }))
-                  }
-                  onResetBoardPositions={() =>
-                    updateManageBoardOverride((current) => ({
-                      ...current,
-                      positionOverrides: {},
-                    }))
-                  }
-                  onResetBoardRoster={() =>
-                    updateManageBoardOverride(() => ({
-                      hiddenPlayerIds: [],
-                      guestPlayers: [],
-                      positionOverrides: {},
-                    }))
-                  }
-                    >
-                      {manageSquad ? (
-                        manageRosterView === "base" ? (
-                          <ManageTeamsBaseRoster
-                        manageSquadId={manageSquad.id}
-                        filteredManageBasePlayers={filteredManageBasePlayers}
-                        editableSquadSubstituteIds={editableSquad?.substituteIds ?? []}
-                        editableSquadCaptainId={editableSquad?.captainId}
-                        manageSortIndicator={manageSortIndicator}
-                        managedDirectoryMemberMap={managedDirectoryMemberMap}
-                        onToggleManagePlayersSort={toggleManagePlayersSort}
-                        onUpdateSquadPlayer={updateSquadPlayer}
-                        onUpdateEditableSquad={updateEditableSquad}
-                          onRemoveSquadPlayer={removeSquadPlayer}
-                          positionOptions={MANAGE_POSITION_OPTIONS}
-                        />
-                      ) : (
-                        <ManageTeamsBoardRoster
-                          sortedManageBoardPlayers={sortedManageBoardPlayers}
-                          onSetBoardPlayerPosition={manageSetBoardPlayerPosition}
-                          onToggleBoardPlayerVisible={manageToggleBoardPlayerVisible}
-                          onPromoteBoardGuest={managePromoteBoardGuest}
-                          onRemoveBoardGuest={manageRemoveBoardGuest}
-                        />
-                        )
-                      ) : null}
-                    </ManageTeamsRoster>
-                  </div>
+                  </details>
                 </div>
               </div>
             </ManageTeamsModal>

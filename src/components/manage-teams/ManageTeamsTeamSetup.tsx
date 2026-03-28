@@ -36,11 +36,11 @@ export default function ManageTeamsTeamSetup({
   return (
     <div className="space-y-3 rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
       <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-        Team setup
+        Appearance
       </p>
-      <div className="grid gap-4 lg:grid-cols-[160px_minmax(0,1fr)] xl:grid-cols-[180px_minmax(0,1fr)_180px]">
+      <div className="grid gap-4 lg:grid-cols-[140px_minmax(0,1fr)] xl:grid-cols-[140px_minmax(0,1fr)_160px]">
         <button
-          className="flex h-40 w-full items-center justify-center overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/55 text-[11px] text-[var(--ink-1)] lg:h-full"
+          className="flex h-32 w-full items-center justify-center overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/55 text-[11px] text-[var(--ink-1)] lg:h-full"
           onClick={() => manageLogoRef.current?.click()}
           title="Change club logo"
         >
@@ -54,7 +54,7 @@ export default function ManageTeamsTeamSetup({
             <span>Club Logo</span>
           )}
         </button>
-        <div className="flex min-h-[220px] flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-4">
+        <div className="flex min-h-[180px] flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-4">
           <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
             Squad name
           </span>
@@ -153,14 +153,14 @@ export default function ManageTeamsTeamSetup({
             </>
           ) : null}
         </div>
-        <div className="hidden min-h-[220px] flex-col items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-4 xl:flex">
+        <div className="hidden min-h-[180px] flex-col items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-4 xl:flex">
           {editableSquad ? (
             <div className="flex flex-col items-center gap-1">
               {renderShirtIcon(
                 editableSquad.kit.jerseyType ?? jerseyType,
                 editableSquad.kit.shirt,
                 editableSquad.kit.shirtSecondary ?? editableSquad.kit.shirt,
-                "h-24 w-24"
+                "h-20 w-20"
               )}
               <svg viewBox="0 0 64 40" className="h-7 w-11" aria-hidden>
                 <path
