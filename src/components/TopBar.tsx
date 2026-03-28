@@ -59,6 +59,7 @@ import { duplicateProjectWithFreshIds } from "@/state/projectHelpers";
 type ManagePlayersSortKey = "default" | "name" | "position" | "number";
 type ManageRosterFilter = "all" | "visible" | "hidden" | "guests" | "regular";
 type ManageRosterView = "base" | "board";
+type ManageTeamsTopPanel = "none" | "source" | "appearance";
 const SHARE_LINK_BASE_URL = "https://webtools.teamzoneapp.se";
 const MANAGE_POSITION_OPTIONS = [
   "Goalkeeper (GK)",
@@ -195,6 +196,8 @@ export default function TopBar() {
   const [managePresetStatus, setManagePresetStatus] = useState<string | null>(
     null
   );
+  const [manageTopPanel, setManageTopPanel] =
+    useState<ManageTeamsTopPanel>("none");
   const [jerseyType, setJerseyType] = useState<JerseyType>("solid");
   const [shareLinkOpen, setShareLinkOpen] = useState(false);
   const [shareLinkStatus, setShareLinkStatus] = useState<string | null>(null);
@@ -705,6 +708,7 @@ export default function TopBar() {
   }, [authUser, plan, project, shareLinkOpen]);
   const closeSquadPresetsModal = () => {
     setSquadPresetsOpen(false);
+    setManageTopPanel("none");
   };
   const saveManagePreset = async () => {
     if (!editableSquad) {
@@ -2398,14 +2402,72 @@ export default function TopBar() {
           manageSide={manageSide}
           currentHomeTeamName={currentHomeManagedSquad?.name}
           currentAwayTeamName={currentAwayManagedSquad?.name}
+          topControls={
+            <>
+              <button
+                className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-[10px] uppercase tracking-wide ${
+                  manageTopPanel === "source"
+                    ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                    : "border-[var(--line)] text-[var(--ink-1)]"
+                }`}
+                onClick={() =>
+                  setManageTopPanel((current) =>
+                    current === "source" ? "none" : "source"
+                  )
+                }
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 3v18" />
+                  <path d="M3 12h18" />
+                </svg>
+                Source
+              </button>
+              <button
+                className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-[10px] uppercase tracking-wide ${
+                  manageTopPanel === "appearance"
+                    ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                    : "border-[var(--line)] text-[var(--ink-1)]"
+                }`}
+                onClick={() =>
+                  setManageTopPanel((current) =>
+                    current === "appearance" ? "none" : "appearance"
+                  )
+                }
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 1-3 0 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 1 0-3 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 1 3 0 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c0 .38.22.74.6 1a1.7 1.7 0 0 1 0 3c-.38.26-.6.62-.6 1Z" />
+                </svg>
+                Appearance
+              </button>
+            </>
+          }
           onManageSideChange={setManageSide}
           onApplyToHome={() => setManagedTeamToSide("home")}
           onApplyToAway={() => setManagedTeamToSide("away")}
           onClose={closeSquadPresetsModal}
         >
-              <div className="px-4 py-4 text-xs text-[var(--ink-1)] sm:px-6" data-scrollable>
-                <div className="mx-auto max-w-5xl space-y-4">
-                  <div className="space-y-4">
+                <div className="px-4 py-4 text-xs text-[var(--ink-1)] sm:px-6" data-scrollable>
+                  <div className="mx-auto max-w-5xl space-y-4">
+                    <div className="space-y-4">
                     <ManageTeamsRoster
                       manageSquad={manageSquad}
                       manageSide={manageSide}
@@ -2503,46 +2565,40 @@ export default function TopBar() {
                           />
                         )
                         ) : null}
-                    </ManageTeamsRoster>
-                  </div>
-                  <details className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25">
-                    <summary className="cursor-pointer list-none px-4 py-3 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                      Source & reuse
-                    </summary>
-                    <div className="border-t border-[var(--line)] p-4">
-                      <ManageTeamsSourcePanel
-                        canUsePresetStorage={canUsePresetStorage}
-                        managedDirectoryTeam={managedDirectoryTeam}
+                      </ManageTeamsRoster>
+                    </div>
+                    {manageTopPanel === "source" ? (
+                      <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
+                        <ManageTeamsSourcePanel
+                          canUsePresetStorage={canUsePresetStorage}
+                          managedDirectoryTeam={managedDirectoryTeam}
                         manageDirectoryTeams={manageDirectoryTeams}
                         manageSelectedDirectoryTeamId={manageSelectedDirectoryTeamId}
                         selectedManageDirectoryTeam={selectedManageDirectoryTeam}
                         squadPresetsLoading={squadPresetsLoading}
                         squadPresetsError={squadPresetsError}
                         managePresetStatus={managePresetStatus}
-                        onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
-                        onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
-                        onSaveReusableTeam={saveManagePreset}
-                      />
-                    </div>
-                  </details>
-                  <details className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25">
-                    <summary className="cursor-pointer list-none px-4 py-3 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                      Appearance
-                    </summary>
-                    <div className="border-t border-[var(--line)] p-4">
-                      <ManageTeamsTeamSetup
-                        editableSquad={editableSquad}
-                        jerseyType={jerseyType}
+                          onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
+                          onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
+                          onSaveReusableTeam={saveManagePreset}
+                        />
+                      </div>
+                    ) : null}
+                    {manageTopPanel === "appearance" ? (
+                      <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
+                        <ManageTeamsTeamSetup
+                          editableSquad={editableSquad}
+                          jerseyType={jerseyType}
                         shirtTypes={SHIRT_TYPES}
                         manageLogoRef={manageLogoRef}
-                        updateEditableSquad={updateEditableSquad}
-                        onJerseyTypeChange={setJerseyType}
-                        renderShirtIcon={renderShirtIcon}
-                      />
-                    </div>
-                  </details>
+                          updateEditableSquad={updateEditableSquad}
+                          onJerseyTypeChange={setJerseyType}
+                          renderShirtIcon={renderShirtIcon}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
             </ManageTeamsModal>
       {manageTemplatesOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">

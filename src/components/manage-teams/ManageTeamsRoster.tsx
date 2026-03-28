@@ -109,9 +109,9 @@ export default function ManageTeamsRoster({
                   Guests: {manageMembershipSummary.guests}
                 </span>
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center xl:min-w-[380px] xl:max-w-[520px] xl:flex-1 xl:justify-end">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center xl:min-w-[380px] xl:flex-1 xl:justify-end">
                 <input
-                  className="h-8 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-[11px] text-[var(--ink-0)] sm:flex-1 xl:max-w-[340px]"
+                  className="h-8 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-[11px] text-[var(--ink-0)] sm:flex-1"
                   placeholder={
                     manageRosterView === "base"
                       ? "Search team roster..."

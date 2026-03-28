@@ -7,6 +7,7 @@ type ManageTeamsModalProps = {
   manageSide: "home" | "away";
   currentHomeTeamName?: string | null;
   currentAwayTeamName?: string | null;
+  topControls?: ReactNode;
   onManageSideChange: (side: "home" | "away") => void;
   onApplyToHome: () => void;
   onApplyToAway: () => void;
@@ -19,6 +20,7 @@ export default function ManageTeamsModal({
   manageSide,
   currentHomeTeamName,
   currentAwayTeamName,
+  topControls,
   onManageSideChange,
   onApplyToHome,
   onApplyToAway,
@@ -54,7 +56,7 @@ export default function ManageTeamsModal({
                 </span>
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-end gap-3">
               <div className="inline-flex w-fit rounded-full border border-[var(--line)] bg-[var(--panel)]/60 p-1 text-[11px] uppercase tracking-wide">
                 {[
                   { id: "home", label: "Home" },
@@ -73,6 +75,7 @@ export default function ManageTeamsModal({
                   </button>
                 ))}
               </div>
+              {topControls}
               <button
                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--line)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
                 onClick={onClose}
