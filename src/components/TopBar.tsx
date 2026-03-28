@@ -45,6 +45,11 @@ import { fetchClubTeamDirectory } from "@/persistence/teamDirectory";
 import { saveDefaultTeamSquad } from "@/persistence/defaultTeamSquads";
 import { saveDefaultLinkedTeam } from "@/persistence/defaultLinkedTeams";
 import {
+  loadActiveTeamSelection,
+  saveActiveTeamSelection,
+  type ActiveTeamSelection,
+} from "@/persistence/activeTeamSelection";
+import {
   createProjectShareLink,
   fetchProjectShareLinkForOwner,
 } from "@/persistence/projectShareLinks";
@@ -210,6 +215,8 @@ export default function TopBar() {
   const [shareLinkQrError, setShareLinkQrError] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [matchGraphicsOpen, setMatchGraphicsOpen] = useState(false);
+  const [activeTeamSelection, setActiveTeamSelection] =
+    useState<ActiveTeamSelection | null>(null);
   const [pdfScope, setPdfScope] = useState<"board" | "project">("board");
   const [pdfSelectedBoardIds, setPdfSelectedBoardIds] = useState<string[]>([]);
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -300,6 +307,9 @@ export default function TopBar() {
       window.removeEventListener("offline", update);
     };
   }, []);
+  useEffect(() => {
+    setActiveTeamSelection(loadActiveTeamSelection(authUser?.id ?? null));
+  }, [authUser?.id, squadPresetsOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -451,6 +461,24 @@ export default function TopBar() {
   const selectedManageDirectoryTeam =
     manageDirectoryTeams.find((team) => team.teamId === manageSelectedDirectoryTeamId) ??
     null;
+  const setCurrentActiveTeam = (teamId: string, clubName: string, teamName: string) => {
+    const nextSelection: ActiveTeamSelection = {
+      teamId,
+      clubName,
+      teamName,
+      updatedAt: new Date().toISOString(),
+    };
+    setActiveTeamSelection(nextSelection);
+    saveActiveTeamSelection(
+      {
+        teamId,
+        clubName,
+        teamName,
+      },
+      authUser?.id ?? null
+    );
+    setManagePresetStatus(`Current team set to ${clubName} / ${teamName}.`);
+  };
   const managedDirectoryMemberMap = useMemo(() => {
     const entries = new Map<string, ManageDirectoryMemberOption>();
     managedDirectoryTeam?.members.forEach((member) => {
@@ -2828,6 +2856,11 @@ export default function TopBar() {
                             <ManageTeamsSourcePanel
                               canUsePresetStorage={canUsePresetStorage}
                               managedDirectoryTeam={managedDirectoryTeam}
+                              currentActiveTeamName={
+                                activeTeamSelection
+                                  ? `${activeTeamSelection.clubName ?? "Team"} / ${activeTeamSelection.teamName}`
+                                  : null
+                              }
                               currentSourceName={
                                 managedDirectoryTeam
                                   ? `${managedDirectoryTeam.clubName} / ${managedDirectoryTeam.teamName}`
@@ -2849,6 +2882,16 @@ export default function TopBar() {
                               onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
                               onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
                               onSaveReusableTeam={saveManagePreset}
+                              onSetManagedTeamAsCurrent={
+                                managedDirectoryTeam
+                                  ? () =>
+                                      setCurrentActiveTeam(
+                                        managedDirectoryTeam.teamId,
+                                        managedDirectoryTeam.clubName,
+                                        managedDirectoryTeam.teamName
+                                      )
+                                  : null
+                              }
                             />
                           ) : (
                             <ManageTeamsTeamSetup

@@ -23,6 +23,7 @@ type ManageTeamsDirectoryOption = {
 type ManageTeamsSourcePanelProps = {
   canUsePresetStorage: boolean;
   managedDirectoryTeam: ManageTeamsSourceTeam | null;
+  currentActiveTeamName?: string | null;
   currentSourceName?: string | null;
   currentSourceDescription?: string | null;
   manageDirectoryTeams: ManageTeamsDirectoryOption[];
@@ -34,11 +35,13 @@ type ManageTeamsSourcePanelProps = {
   onManageSelectedDirectoryTeamIdChange: (teamId: string) => void;
   onLoadDirectoryTeamIntoSide: (teamId: string, side: "home" | "away") => void;
   onSaveReusableTeam: () => void;
+  onSetManagedTeamAsCurrent?: (() => void) | null;
 };
 
 export default function ManageTeamsSourcePanel({
   canUsePresetStorage,
   managedDirectoryTeam,
+  currentActiveTeamName,
   currentSourceName,
   currentSourceDescription,
   manageDirectoryTeams,
@@ -50,10 +53,30 @@ export default function ManageTeamsSourcePanel({
   onManageSelectedDirectoryTeamIdChange,
   onLoadDirectoryTeamIntoSide,
   onSaveReusableTeam,
+  onSetManagedTeamAsCurrent,
 }: ManageTeamsSourcePanelProps) {
   return (
     <>
       <div className="space-y-4">
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
+          <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+            Current team
+          </p>
+          <p className="mt-2 text-sm text-[var(--ink-0)]">
+            {currentActiveTeamName ?? "No active team selected"}
+          </p>
+          <p className="mt-1 text-[11px] text-[var(--ink-1)]">
+            Used as the default Home team when creating new projects.
+          </p>
+          {managedDirectoryTeam && onSetManagedTeamAsCurrent ? (
+            <button
+              className="mt-3 rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              onClick={onSetManagedTeamAsCurrent}
+            >
+              Set linked team as current
+            </button>
+          ) : null}
+        </div>
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
           <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
             Current source
