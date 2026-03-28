@@ -28,7 +28,6 @@ import { createId } from "@/utils/id";
 import BoardObject from "@/board/objects/BoardObject";
 import { useBoardInteractions } from "@/board/useBoardInteractions";
 import {
-  getBoardOverridePlayerKey,
   getBoardSquads,
   getPlayerTokenLinkKey,
 } from "@/utils/board";
@@ -1080,9 +1079,7 @@ export default function BoardCanvas({
     const map: Record<string, string> = {};
     boardSquads.all.forEach((squad) => {
       squad.players.forEach((player) => {
-        const key = getBoardOverridePlayerKey(player);
         map[player.id] = squad.kit.shirt;
-        map[key] = squad.kit.shirt;
       });
     });
     return map;
@@ -1091,9 +1088,7 @@ export default function BoardCanvas({
     const map: Record<string, string | undefined> = {};
     boardSquads.all.forEach((squad) => {
       squad.players.forEach((player) => {
-        const key = getBoardOverridePlayerKey(player);
         map[player.id] = player.vestColor || undefined;
-        map[key] = player.vestColor || undefined;
       });
     });
     return map;
@@ -1102,9 +1097,7 @@ export default function BoardCanvas({
     const map: Record<string, string | undefined> = {};
     boardSquads.all.forEach((squad) => {
       squad.players.forEach((player) => {
-        const key = getBoardOverridePlayerKey(player);
         map[player.id] = squad.kit.shirtSecondary ?? squad.kit.shirt;
-        map[key] = squad.kit.shirtSecondary ?? squad.kit.shirt;
       });
     });
     return map;
@@ -1113,9 +1106,7 @@ export default function BoardCanvas({
     const map: Record<string, string | undefined> = {};
     boardSquads.all.forEach((squad) => {
       squad.players.forEach((player) => {
-        const key = getBoardOverridePlayerKey(player);
         map[player.id] = squad.kit.jerseyType ?? "solid";
-        map[key] = squad.kit.jerseyType ?? "solid";
       });
     });
     return map;
