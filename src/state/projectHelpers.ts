@@ -551,10 +551,56 @@ export const ensureBoardSquads = (project: Project): Project => {
       object.style.stroke = "#111111";
     };
 
+    const homePlayers =
+      squads.find((squad) => squad.id === primaryHome.id)?.players ?? primaryHome.players;
+    const awayPlayers =
+      squads.find((squad) => squad.id === primaryAway.id)?.players ?? primaryAway.players;
+    const resolveLegacyTokenSquadPlayerId = (object: DrawableObject) => {
+      if (object.type !== "player" || object.squadPlayerId || !object.teamMemberId) {
+        return;
+      }
+      const homeCandidate = homePlayers.find(
+        (player) => player.teamMemberId === object.teamMemberId
+      );
+      const awayCandidate = awayPlayers.find(
+        (player) => player.teamMemberId === object.teamMemberId
+      );
+      if (homeCandidate && !awayCandidate) {
+        object.squadPlayerId = homeCandidate.id;
+        return;
+      }
+      if (awayCandidate && !homeCandidate) {
+        object.squadPlayerId = awayCandidate.id;
+        return;
+      }
+      if (!homeCandidate || !awayCandidate) {
+        return;
+      }
+      const tokenFill = object.style.fill?.trim().toLowerCase();
+      const homeFill = primaryHome.kit.shirt.trim().toLowerCase();
+      const awayFill = primaryAway.kit.shirt.trim().toLowerCase();
+      if (tokenFill && tokenFill === homeFill && tokenFill !== awayFill) {
+        object.squadPlayerId = homeCandidate.id;
+        return;
+      }
+      if (tokenFill && tokenFill === awayFill && tokenFill !== homeFill) {
+        object.squadPlayerId = awayCandidate.id;
+        return;
+      }
+      object.squadPlayerId =
+        object.position.x <= PITCH_LENGTH / 2 ? homeCandidate.id : awayCandidate.id;
+    };
+
     board.frames.forEach((frame) => {
-      frame.objects.forEach(normalizeConeObject);
+      frame.objects.forEach((object) => {
+        normalizeConeObject(object);
+        resolveLegacyTokenSquadPlayerId(object);
+      });
     });
-    board.layers.forEach(normalizeConeObject);
+    board.layers.forEach((object) => {
+      normalizeConeObject(object);
+      resolveLegacyTokenSquadPlayerId(object);
+    });
   });
 
   project.squads = squads;
