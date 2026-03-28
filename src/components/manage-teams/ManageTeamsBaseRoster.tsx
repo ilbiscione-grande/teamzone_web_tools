@@ -62,7 +62,7 @@ export default function ManageTeamsBaseRoster({
     <>
       <div className="space-y-3 lg:hidden">
         <p className="text-[10px] leading-relaxed text-[var(--ink-1)]">
-          Edit players as compact cards on mobile.
+          Edit the reusable team roster here. Linked rows come from the team, while project-only rows exist only in this project.
         </p>
         <div className="max-h-[52vh] space-y-3 overflow-auto pr-1" data-scrollable>
           {filteredManageBasePlayers.map((row) => {
@@ -197,7 +197,7 @@ export default function ManageTeamsBaseRoster({
                     className="rounded-xl border border-[var(--line)] py-2 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
                     onClick={() => onRemoveSquadPlayer(manageSquadId, row.identity)}
                   >
-                    {row.source === "linked" ? "Reset" : "Delete"}
+                    {row.source === "linked" ? "Revert" : "Delete"}
                   </button>
                 </div>
               </div>
@@ -233,7 +233,7 @@ export default function ManageTeamsBaseRoster({
         <span />
       </div>
       <p className="text-[10px] text-[var(--ink-1)]">
-        All players are listed here. Use &quot;Shown&quot; to control who appears in the squad list.
+        This view edits the reusable team roster. Use &quot;Shown&quot; to decide who is included in the match squad list.
       </p>
       <div className="hidden max-h-56 space-y-2 overflow-auto pr-1 lg:block" data-scrollable>
         {filteredManageBasePlayers.map((row) => {
@@ -375,8 +375,8 @@ export default function ManageTeamsBaseRoster({
               <button
                 className="rounded-full border border-[var(--line)] p-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
                 onClick={() => onRemoveSquadPlayer(manageSquadId, row.identity)}
-                title={row.source === "linked" ? "Reset to linked team" : "Delete"}
-                aria-label={row.source === "linked" ? "Reset to linked team" : "Delete"}
+                title={row.source === "linked" ? "Revert to linked team" : "Delete"}
+                aria-label={row.source === "linked" ? "Revert to linked team" : "Delete"}
               >
                 <svg
                   aria-hidden

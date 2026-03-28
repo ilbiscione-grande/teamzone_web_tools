@@ -42,7 +42,7 @@ export default function ManageTeamsModal({
                   Team manager
                 </h2>
                 <p className="text-xs text-[var(--ink-1)]">
-                  Edit one side at a time. Roster first, source and appearance below.
+                  Edit one side at a time. Team roster changes follow the linked team, while match board changes stay on this board only.
                 </p>
               </div>
               <p className="text-xs text-[var(--ink-1)]">

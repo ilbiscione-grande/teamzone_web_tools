@@ -158,18 +158,11 @@ const buildTeamsFromRows = async (
 
   const teamIds = teams.map((team) => team.id);
 
-  const [{ data: squadsData }, { data: playersData }, { data: teamMembersData }] =
-    await Promise.all([
+  const [{ data: squadsData }, { data: teamMembersData }] = await Promise.all([
     supabase
       .from(TEAM_SQUADS_TABLE)
       .select(
         "id, team_id, name, kit_data, captain_player_id, substitute_player_ids, created_at, updated_at"
-      )
-      .in("team_id", teamIds),
-    supabase
-      .from(TEAM_PLAYERS_TABLE)
-      .select(
-        "id, team_id, name, position_label, is_active, number, vest_color, photo_url"
       )
       .in("team_id", teamIds),
     supabase
@@ -181,7 +174,6 @@ const buildTeamsFromRows = async (
   ]);
 
   const squads = (squadsData ?? []) as TeamSquadRow[];
-  const players = (playersData ?? []) as TeamPlayerRow[];
   const teamMembers = (teamMembersData ?? []) as TeamMemberRow[];
 
   const squadIds = squads.map((squad) => squad.id);
@@ -209,14 +201,32 @@ const buildTeamsFromRows = async (
   const squadByTeamId = new Map<string, TeamSquadRow>();
   squads.forEach((squad) => squadByTeamId.set(squad.team_id, squad));
 
-  const playersById = new Map<string, TeamPlayerRow>();
-  players.forEach((player) => playersById.set(player.id, player));
   const membersByTeamId = new Map<string, TeamMemberRow[]>();
   teamMembers.forEach((member) => {
     const list = membersByTeamId.get(member.team_id) ?? [];
     list.push(member);
     membersByTeamId.set(member.team_id, list);
   });
+
+  const legacyTeamIds = teamIds.filter((teamId) => {
+    const members = membersByTeamId.get(teamId) ?? [];
+    return !members.some(
+      (member) => member.team_role === "player" || member.is_guest === true
+    );
+  });
+
+  const { data: playersData } =
+    legacyTeamIds.length > 0
+      ? await supabase
+          .from(TEAM_PLAYERS_TABLE)
+          .select(
+            "id, team_id, name, position_label, is_active, number, vest_color, photo_url"
+          )
+          .in("team_id", legacyTeamIds)
+      : ({ data: [] as TeamPlayerRow[] } as const);
+  const players = (playersData ?? []) as TeamPlayerRow[];
+  const playersById = new Map<string, TeamPlayerRow>();
+  players.forEach((player) => playersById.set(player.id, player));
 
   const squadPlayersBySquadId = new Map<string, TeamSquadPlayerRow[]>();
   squadPlayers.forEach((entry) => {
@@ -769,33 +779,42 @@ export const listTeamPlayerCandidates = async (targetTeamId: string) => {
     return { ok: true as const, players: [] as Array<SquadPlayer & { teamId: string; teamName: string }> };
   }
 
-  const { data: playersData, error: playersError } = await supabase
-    .from(TEAM_PLAYERS_TABLE)
-    .select("id, team_id, name, position_label, is_active, number, vest_color, photo_url")
+  const { data: membersData, error: membersError } = await supabase
+    .from(TEAM_MEMBERS_TABLE)
+    .select(
+      "id, team_id, user_id, display_name, team_role, team_position, is_team_admin, is_guest, is_active, shirt_number, photo_url, sort_order"
+    )
     .in(
       "team_id",
       sourceTeams.map((team) => team.id)
     );
 
-  if (playersError) {
-    return { ok: false as const, error: playersError.message };
+  if (membersError) {
+    return { ok: false as const, error: membersError.message };
   }
 
   const teamNameById = new Map(sourceTeams.map((team) => [team.id, team.name]));
-  const players = ((playersData ?? []) as TeamPlayerRow[]).map((player) => ({
-    id: player.id,
-    teamId: player.team_id,
-    teamName: teamNameById.get(player.team_id) ?? "Other team",
-    name: player.name,
-    positionLabel: player.position_label,
-    active: player.is_active ?? true,
-    number: player.number ?? undefined,
-    vestColor: player.vest_color ?? undefined,
-    photoUrl: player.photo_url ?? undefined,
-    sourceTeamId: player.team_id,
-    teamMemberId: player.id,
-    sourcePlayerId: player.id,
-  }));
+  const players = ((membersData ?? []) as TeamMemberRow[])
+    .filter((member) => member.team_role === "player" || member.is_guest === true)
+    .sort(
+      (a, b) =>
+        (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
+        (a.display_name ?? "").localeCompare(b.display_name ?? "", "sv")
+    )
+    .map((member) => ({
+      id: member.id,
+      teamId: member.team_id,
+      teamName: teamNameById.get(member.team_id) ?? "Other team",
+      name: member.display_name?.trim() || "Unnamed member",
+      positionLabel: member.team_position?.trim() || "POS",
+      active: member.is_active ?? true,
+      number: member.shirt_number ?? undefined,
+      photoUrl: member.photo_url ?? undefined,
+      guest: member.is_guest ?? false,
+      sourceTeamId: member.team_id,
+      teamMemberId: member.id,
+      sourcePlayerId: member.id,
+    }));
 
   return { ok: true as const, players };
 };

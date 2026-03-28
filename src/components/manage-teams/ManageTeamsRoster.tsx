@@ -103,7 +103,7 @@ export default function ManageTeamsRoster({
                   Linked members: {manageMembershipSummary.linkedMembers}
                 </span>
                 <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                  Local only: {manageMembershipSummary.localOnly}
+                  Project-only: {manageMembershipSummary.localOnly}
                 </span>
                 <span className="rounded-full border border-[var(--line)] px-2 py-1">
                   Guests: {manageMembershipSummary.guests}
@@ -142,23 +142,28 @@ export default function ManageTeamsRoster({
               </div>
             </div>
             {manageRosterView === "base" ? (
-              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                  <button
-                    className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                    onClick={onAddMember}
-                  >
-                    Add player
-                  </button>
-                  <button
-                    className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
-                    onClick={onAddGuestMember}
-                  >
-                    Add guest
-                  </button>
+              <>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                    <button
+                      className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                      onClick={onAddMember}
+                    >
+                      Add player
+                    </button>
+                    <button
+                      className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
+                      onClick={onAddGuestMember}
+                    >
+                      Add guest
+                    </button>
+                  </div>
+                  {baseRosterToolbar}
                 </div>
-                {baseRosterToolbar}
-              </div>
+                <p className="text-[11px] text-[var(--ink-1)]">
+                  Team roster starts from the linked team. Project-only rows are local additions on top of that roster.
+                </p>
+              </>
             ) : (
               <details className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/35">
                 <summary className="cursor-pointer list-none px-3 py-2 text-[11px] uppercase tracking-wide text-[var(--ink-1)]">
@@ -166,7 +171,7 @@ export default function ManageTeamsRoster({
                 </summary>
                 <div className="space-y-3 border-t border-[var(--line)] px-3 py-3">
                   <p className="text-[10px] text-[var(--ink-1)]">
-                    Add temporary guests and adjust board-only visibility or positions here.
+                    Use match board tools for board-only changes like visibility, guest players, numbers and positions. The linked team stays unchanged.
                   </p>
                   <div className="grid gap-2 sm:grid-cols-3">
                     <input

@@ -1,3 +1,8 @@
+// Deprecated legacy persistence path.
+// The app now reads team data through `teamDirectory` and `teamSquads`.
+// Keep this file only as a temporary compatibility artifact until it can be
+// removed cleanly from the repository/worktree.
+
 import { supabase } from "@/utils/supabaseClient";
 import type { Squad, SquadPlayer, SquadPreset } from "@/models";
 

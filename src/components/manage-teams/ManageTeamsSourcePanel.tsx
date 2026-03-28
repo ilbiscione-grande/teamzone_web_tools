@@ -63,6 +63,9 @@ export default function ManageTeamsSourcePanel({
               <p className="text-sm text-[var(--ink-0)]">
                 {managedDirectoryTeam.clubName} / {managedDirectoryTeam.teamName}
               </p>
+              <p className="text-xs text-[var(--ink-1)]">
+                Team roster starts from this linked team. Match board changes still stay local to the active board.
+              </p>
               <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                 <span className="rounded-full border border-[var(--line)] px-2 py-1">
                   Club role: {managedDirectoryTeam.clubMembershipRole}
@@ -102,7 +105,7 @@ export default function ManageTeamsSourcePanel({
             </div>
           ) : (
             <p className="mt-2 text-xs text-[var(--ink-1)]">
-              This side is currently using a local project squad. Saving creates and links a reusable team for this side.
+              This side is currently project-only. Create or link a team here if you want this roster to be reusable across projects.
             </p>
           )}
         </div>
@@ -114,8 +117,8 @@ export default function ManageTeamsSourcePanel({
               </p>
               <p className="text-[11px] text-[var(--ink-1)]">
                 {currentSourceName
-                  ? "Updates the linked team roster for this side."
-                  : "Creates a reusable team and links this side to it."}
+                  ? "Pushes the current team roster back to the linked team."
+                  : "Creates a reusable linked team from the current team roster."}
               </p>
             </div>
             {canUsePresetStorage ? (
@@ -134,10 +137,13 @@ export default function ManageTeamsSourcePanel({
           <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
             Load team
           </p>
+          <p className="mt-2 text-[11px] text-[var(--ink-1)]">
+            Loading a team replaces this side&apos;s roster with that team&apos;s base squad and links the side to it.
+          </p>
           {manageDirectoryTeams.length > 0 ? (
             <>
               <select
-                className="mt-2 h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                className="mt-3 h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
                 value={manageSelectedDirectoryTeamId}
                 onChange={(event) => onManageSelectedDirectoryTeamIdChange(event.target.value)}
               >

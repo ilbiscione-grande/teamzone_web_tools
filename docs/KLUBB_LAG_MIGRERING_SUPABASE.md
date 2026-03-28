@@ -512,7 +512,6 @@ using (
 Filer som sannolikt behover ny struktur:
 
 - `src/persistence/teamSquads.ts`
-- `src/persistence/squadPresets.ts`
 - `src/persistence/defaultTeamSquads.ts`
 
 Ny riktning:

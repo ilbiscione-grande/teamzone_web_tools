@@ -46,6 +46,7 @@ import {
   type ProjectTemplate,
 } from "@/persistence/projectTemplates";
 import { loadDefaultTeamSquads } from "@/persistence/defaultTeamSquads";
+import { loadDefaultLinkedTeams } from "@/persistence/defaultLinkedTeams";
 import { fetchClubTeamDirectory } from "@/persistence/teamDirectory";
 import {
   fetchAdminAnalytics,
@@ -705,17 +706,28 @@ export default function ProjectList() {
     if (availableCreateTeams.length === 0) {
       return;
     }
+    const defaultLinkedTeams = loadDefaultLinkedTeams(authUser?.id ?? null);
     setSelectedHomeTeamId((current) =>
       current && availableCreateTeams.some(({ team }) => team.id === current)
         ? current
-        : availableCreateTeams[0]!.team.id
+        : defaultLinkedTeams.homeTeamId &&
+            availableCreateTeams.some(
+              ({ team }) => team.id === defaultLinkedTeams.homeTeamId
+            )
+          ? defaultLinkedTeams.homeTeamId
+          : availableCreateTeams[0]!.team.id
     );
     setSelectedAwayTeamId((current) =>
       current && availableCreateTeams.some(({ team }) => team.id === current)
         ? current
-        : availableCreateTeams[1]?.team.id ?? ""
+        : defaultLinkedTeams.awayTeamId &&
+            availableCreateTeams.some(
+              ({ team }) => team.id === defaultLinkedTeams.awayTeamId
+            )
+          ? defaultLinkedTeams.awayTeamId
+          : availableCreateTeams[1]?.team.id ?? ""
     );
-  }, [createOpen, availableCreateTeams]);
+  }, [createOpen, availableCreateTeams, authUser?.id]);
 
   const getCreateTeamById = (teamId: string): TeamDirectoryTeam | null =>
     availableCreateTeams.find(({ team }) => team.id === teamId)?.team ?? null;
