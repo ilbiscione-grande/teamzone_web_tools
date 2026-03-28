@@ -1,6 +1,7 @@
 "use client";
 
 import type { SquadPlayer } from "@/models";
+import type { ManageTeamRosterRow } from "./manageTeamRosterModel";
 
 type LinkedMember = {
   memberRole: string;
@@ -10,7 +11,7 @@ type LinkedMember = {
 
 type ManageTeamsBaseRosterProps = {
   manageSquadId: string;
-  filteredManageBasePlayers: SquadPlayer[];
+  filteredManageBasePlayers: ManageTeamRosterRow[];
   manageSortIndicator: (key: "default" | "name" | "position" | "number") => string;
   managedDirectoryMemberMap: Map<string, LinkedMember>;
   onToggleManagePlayersSort: (key: "default" | "name" | "position" | "number") => void;
@@ -64,19 +65,21 @@ export default function ManageTeamsBaseRoster({
           Edit players as compact cards on mobile.
         </p>
         <div className="max-h-[52vh] space-y-3 overflow-auto pr-1" data-scrollable>
-          {filteredManageBasePlayers.map((player) => {
+          {filteredManageBasePlayers.map((row) => {
+            const player = row.player;
             const linkedMember =
+              row.linkedMember ??
               managedDirectoryMemberMap.get(player.id) ??
               (player.teamMemberId
                 ? managedDirectoryMemberMap.get(player.teamMemberId)
                 : player.sourcePlayerId
                   ? managedDirectoryMemberMap.get(player.sourcePlayerId)
-                : undefined);
-            const playerIsCaptain = isCaptain(player.id);
-            const playerIsSub = isSubstitute(player.id);
+                  : undefined);
+            const playerIsCaptain = isCaptain(row.identity);
+            const playerIsSub = isSubstitute(row.identity);
             return (
               <div
-                key={player.id}
+                key={row.identity}
                 className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/60 p-3"
               >
                 <div className="grid grid-cols-[56px_minmax(0,1fr)_34px] gap-2">
@@ -192,9 +195,9 @@ export default function ManageTeamsBaseRoster({
                   </button>
                   <button
                     className="rounded-xl border border-[var(--line)] py-2 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                    onClick={() => onRemoveSquadPlayer(manageSquadId, player.id)}
+                    onClick={() => onRemoveSquadPlayer(manageSquadId, row.identity)}
                   >
-                    Delete
+                    {row.source === "linked" ? "Reset" : "Delete"}
                   </button>
                 </div>
               </div>
@@ -233,19 +236,21 @@ export default function ManageTeamsBaseRoster({
         All players are listed here. Use &quot;Shown&quot; to control who appears in the squad list.
       </p>
       <div className="hidden max-h-56 space-y-2 overflow-auto pr-1 lg:block" data-scrollable>
-        {filteredManageBasePlayers.map((player) => {
+        {filteredManageBasePlayers.map((row) => {
+          const player = row.player;
           const linkedMember =
+            row.linkedMember ??
             managedDirectoryMemberMap.get(player.id) ??
             (player.teamMemberId
               ? managedDirectoryMemberMap.get(player.teamMemberId)
               : player.sourcePlayerId
                 ? managedDirectoryMemberMap.get(player.sourcePlayerId)
-              : undefined);
-          const playerIsCaptain = isCaptain(player.id);
-          const playerIsSub = isSubstitute(player.id);
+                  : undefined);
+          const playerIsCaptain = isCaptain(row.identity);
+          const playerIsSub = isSubstitute(row.identity);
           return (
             <div
-              key={player.id}
+              key={row.identity}
               className="grid grid-cols-[40px_minmax(0,1fr)_170px_72px_60px_60px_24px] items-center gap-2"
             >
               <input
@@ -369,9 +374,9 @@ export default function ManageTeamsBaseRoster({
               </div>
               <button
                 className="rounded-full border border-[var(--line)] p-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                onClick={() => onRemoveSquadPlayer(manageSquadId, player.id)}
-                title="Delete"
-                aria-label="Delete"
+                onClick={() => onRemoveSquadPlayer(manageSquadId, row.identity)}
+                title={row.source === "linked" ? "Reset to linked team" : "Delete"}
+                aria-label={row.source === "linked" ? "Reset to linked team" : "Delete"}
               >
                 <svg
                   aria-hidden

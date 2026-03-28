@@ -6,8 +6,17 @@ Detta dokument oversatter den nya datamodellen i:
 
 - [KLUBB_LAG_ANVANDARE_MODELL.md](/c:/Dev/projects/tacticsboard/docs/KLUBB_LAG_ANVANDARE_MODELL.md)
 - [KLUBB_LAG_MIGRERING_SUPABASE.md](/c:/Dev/projects/tacticsboard/docs/KLUBB_LAG_MIGRERING_SUPABASE.md)
+- [STATUS_TACTICSBOARD_KLUBB_LAG_2026-03-28.md](/c:/Dev/projects/tacticsboard/docs/STATUS_TACTICSBOARD_KLUBB_LAG_2026-03-28.md)
 
 till en konkret kodmigrationsplan for appen.
+
+## Status kontra plan
+
+Detta dokument beskriver malriktning och rekommenderad migrationsordning.
+
+Den faktiska nulagesbilden for vad som redan ar genomfort i schema och kod, vad som fortfarande ar overgangslage, och vad som senare behovs for Teamzone-narmande finns i:
+
+- [STATUS_TACTICSBOARD_KLUBB_LAG_2026-03-28.md](/c:/Dev/projects/tacticsboard/docs/STATUS_TACTICSBOARD_KLUBB_LAG_2026-03-28.md)
 
 Målet ar att stegvis flytta Tacticsboard fran dagens blandade squad/source-upplagg till en modell dar:
 

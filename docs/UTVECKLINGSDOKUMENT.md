@@ -681,6 +681,88 @@ Denna etapp ar framtung och bor paborjas forst nar tidigare etapper ar tillrackl
   Vad det innebar for koden: Nytt schemaunderlag, adapterlager for `clubs -> teams -> team_members`, fallback mot legacyflodet och projektstart som kan valja `Home team`/`Away team`.
   Varfor det behovs: Det skapar en migrationsbar vag mot riktiga klubbkonton, rollstyrning och flera lag per anvandare utan att bryta dagens produktflode.
 
+### Prioriterad arbetslista: Klubb-, lag- och boardmodell
+
+Denna del bygger vidare pa:
+
+- [KLUBB_LAG_ANVANDARE_MODELL.md](/c:/Dev/projects/tacticsboard/docs/KLUBB_LAG_ANVANDARE_MODELL.md)
+- [KLUBB_LAG_MIGRERING_SUPABASE.md](/c:/Dev/projects/tacticsboard/docs/KLUBB_LAG_MIGRERING_SUPABASE.md)
+- [KODMIGRERING_KLUBB_LAG_BOARD.md](/c:/Dev/projects/tacticsboard/docs/KODMIGRERING_KLUBB_LAG_BOARD.md)
+- [STATUS_TACTICSBOARD_KLUBB_LAG_2026-03-28.md](/c:/Dev/projects/tacticsboard/docs/STATUS_TACTICSBOARD_KLUBB_LAG_2026-03-28.md)
+
+Detta ar den operativa arbetslistan for att fullfolja omlaggningen i Tactics Board innan djupare Teamzone-narmande paborjas.
+
+#### A. Fullfolja ny sanningskalla i Tactics Board
+
+- [x] Införa `teamMemberId` som stabil identitet i squad-, token- och boardfloden.
+  Vad det ar: Den tekniska bryggan mellan lagets `team_members` och projektets snapshots.
+  Vad det innebar for koden: Squadspelare, boardtokens, linking och rendering kan nu hitta samma person via stabil identitet.
+  Varfor det behovs: Utan stabil identitet blir boardoverrides och framtida appdelning mot Teamzone skora.
+
+- [x] Införa `teamContext` i projektet for `home` och `away`.
+  Vad det ar: Ett tydligt projektlager som vet vilka verkliga lag som ar valda for respektive sida.
+  Vad det innebar for koden: `Create project`, Team Manager och serialisering kan prata om faktiska lag i stallet for bara snapshot-squads.
+  Varfor det behovs: `Home` och `Away` maste vara riktiga lagkopplingar, inte bara lokala listor.
+
+- [x] Lata Team Manager orientera sig mot verkliga lag via `teamContext`.
+  Vad det ar: Ett forsta logiskt steg dar source, `Home/Away` och lagkoppling borjar prata om samma sak.
+  Vad det innebar for koden: `Current source`, load/save-floden och linked team-status blir mer sanningsenliga.
+  Varfor det behovs: UI:t far annars fortsatt motsagelsefulla signaler om vilket lag som faktiskt redigeras.
+
+- [x] Lata persistence-lagret lasa och skriva `team_members` som primar rosterkalla.
+  Vad det ar: Ett skifte dar den nya modellen ar huvudvag och legacy ar fallback.
+  Vad det innebar for koden: `teamSquads.ts` och relaterade adapters arbetar nu i forsta hand mot `team_members`.
+  Varfor det behovs: Lagets grundtrupp maste vara sanningskallan i praktiken, inte bara i dokumentation.
+
+#### B. Kvar att gora i Tactics Board
+
+- [ ] Gora `Team roster` till en helt konsekvent vy ovanpa länkade `team_members`.
+  Vad det ar: Slutsteget dar lagets grundtrupp upplevs och beter sig som huvudkallan i Team Manager.
+  Vad det innebar for koden: Snapshot-lagret ska vara lokalt diff-/override-lager ovanpa lagets medlemmar, inte en konkurrerande roster.
+  Varfor det behovs: Detta ar den sista stora logiska forflyttningen i Team Manager.
+
+- [ ] Gora boardoverrides tydliga och explicita for nummer, position, dolda spelare och boardgaster.
+  Vad det ar: En renare modell dar boarden bara lagrar matchspecifika skillnader.
+  Vad det innebar for koden: Override-flodet ska uttrycka `overrideNumber`, `overridePosition`, `hidden` och boardgaster tydligare.
+  Varfor det behovs: Det ar sa appen skiljer lagets grunddata fran matchens taktiska avvikelser.
+
+- [ ] Borja anvanda `board_team_selections` och `board_player_overrides` som verkligt taktiskt lagringslager.
+  Vad det ar: En overflyttning fran implicit override-logik i projekt-/boardstate till uttryckliga taveltabeller.
+  Vad det innebar for koden: Persistence, boardstore och eventuella syncfloden behover anpassas stegvis.
+  Varfor det behovs: Det gor datamodellen renare och enklare att dela med andra klienter i framtiden.
+
+- [ ] Minska beroendet av `team_players`, `team_squads` och `team_squad_players` i lasfloden.
+  Vad det ar: En kontrollerad fortsatt avveckling av den gamla lagersmodellen.
+  Vad det innebar for koden: Fallback ska bara finnas kvar dar den faktiskt fortfarande behovs och dokumenteras som legacy.
+  Varfor det behovs: Sa lange legacy ar for central blir appens modell svårare att forsta och forvalta.
+
+- [ ] Bygga fler tester kring den nya huvudvagen.
+  Vad det ar: Testskydd for `team_members` som sanningskalla, `teamContext`, linked-team-update och override via `teamMemberId`.
+  Vad det innebar for koden: Nya tester i persistence-, board- och Team Manager-floden.
+  Varfor det behovs: Nu nar modellen byts ut maste den nya vagens kontrakt hardtestas.
+
+- [ ] Fortsatt forenkla Team Manager sa att begreppen blir begripliga utan teknisk forklaring.
+  Vad det ar: Ett produktsteg dar UI-spraket och handlingsflodena rensas ytterligare.
+  Vad det innebar for koden: Fler mindre UI-forenklingar i source/load/save/override-floden, inte fler nya funktioner.
+  Varfor det behovs: En korrekt modell hjalper inte fullt ut om vyn fortfarande upplevs som teknisk och tung.
+
+#### C. Ska uttryckligen vanta tills senare
+
+- [ ] Pausa djupare Teamzone-koppling tills Tactics Board har fullfoljt sin egen modell.
+  Vad det ar: Ett aktivt prioriteringsbeslut, inte passiv uppskjutning.
+  Vad det innebar for koden: Ingen ny integrationslogik eller specialmappning mot Teamzone byggs just nu.
+  Varfor det behovs: Annars finns stor risk att overgångslogik cementeras i stallet for att modellen forenklas.
+
+- [ ] Lasa gemensam organisationsdomän med Teamzone nar Tactics Board ar renare internt.
+  Vad det ar: Ett senare arbete for att dela `users`, `clubs`, `club_members`, `teams` och `team_members` pa ett rent satt.
+  Vad det innebar for koden: Framtida beslut om ansvar, skrivrattigheter, API/synk och gemensam datakalla.
+  Varfor det behovs: Detta ar ratt strategiskt nasta steg, men det ska byggas ovanpa en fardigare intern modell.
+
+- [ ] Besluta senare vilken app som ar huvudagare for lagets grundtrupp.
+  Vad det ar: Ett verksamhets- och arkitekturbeslut mellan Tactics Board och Teamzone.
+  Vad det innebar for koden: Framtida styrning av vilka andringar som goras var och hur de synkas.
+  Varfor det behovs: Detta bor inte avgoras medan Tactics Board fortfarande har tydlig overgangslogik kvar.
+
 - [ ] Utred mer avancerad moderation och kvalitetssakring for publikt bibliotek.
   Vad det ar: Ett mer moget flode for granskning, flaggning och curatorarbete.
   Vad det innebar for koden: Adminverktyg, statusfloden och regler for synlighet.

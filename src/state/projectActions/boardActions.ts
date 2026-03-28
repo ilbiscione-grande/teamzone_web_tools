@@ -161,6 +161,13 @@ export const createBoardActions: StateCreator<
               ...guest,
               id: playerIdMap.get(guest.id) ?? createId(),
             }));
+            const mappedNumbers: Record<string, number | undefined> = {};
+            Object.entries(override.numberOverrides ?? {}).forEach(
+              ([playerId, playerNumber]) => {
+                const mappedPlayerId = playerIdMap.get(playerId) ?? playerId;
+                mappedNumbers[mappedPlayerId] = playerNumber;
+              }
+            );
             const mappedPositions: Record<string, string> = {};
             Object.entries(override.positionOverrides ?? {}).forEach(
               ([playerId, positionLabel]) => {
@@ -171,6 +178,7 @@ export const createBoardActions: StateCreator<
             nextOverrides[mappedSquadId] = {
               hiddenPlayerIds: mappedHidden,
               guestPlayers: mappedGuests,
+              numberOverrides: mappedNumbers,
               positionOverrides: mappedPositions,
             };
           }

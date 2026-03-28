@@ -151,6 +151,9 @@ describe("serialize/deserialize", () => {
                 number: 18,
               },
             ],
+            numberOverrides: {
+              "player-home-1": 99,
+            },
             positionOverrides: {
               "player-home-1": "SW",
             },
@@ -553,6 +556,9 @@ describe("serialize/deserialize", () => {
     expect(parsed.project.boards[0]?.squadOverrides?.["squad-home"]?.hiddenPlayerIds).toEqual([
       "player-home-2",
     ]);
+    expect(parsed.project.boards[0]?.squadOverrides?.["squad-home"]?.numberOverrides).toEqual({
+      "player-home-1": 99,
+    });
     expect(parsed.project.boards[0]?.frames[0]?.playerLinks?.[0]?.playerIds).toEqual([
       "player-token-1",
       "player-token-2",

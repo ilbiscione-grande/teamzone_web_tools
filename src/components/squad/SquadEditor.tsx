@@ -150,10 +150,12 @@ export default function SquadEditor() {
     updater: (current: {
       hiddenPlayerIds?: string[];
       guestPlayers?: SquadPlayer[];
+      numberOverrides?: Record<string, number | undefined>;
       positionOverrides?: Record<string, string>;
     }) => {
       hiddenPlayerIds?: string[];
       guestPlayers?: SquadPlayer[];
+      numberOverrides?: Record<string, number | undefined>;
       positionOverrides?: Record<string, string>;
     }
   ) => {
@@ -164,6 +166,7 @@ export default function SquadEditor() {
       currentOverride ?? {
         hiddenPlayerIds: [],
         guestPlayers: [],
+        numberOverrides: {},
         positionOverrides: {},
       }
     );
@@ -222,6 +225,32 @@ export default function SquadEditor() {
     });
   };
 
+  const setPlayerBoardNumber = (playerId: string, value: string) => {
+    const parsed = Number(value);
+    updateActiveOverride((current) => {
+      const guests = [...(current.guestPlayers ?? [])];
+      const guestIndex = guests.findIndex((item) => item.id === playerId);
+      if (guestIndex >= 0) {
+        guests[guestIndex] = {
+          ...guests[guestIndex],
+          number: Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
+        };
+        return { ...current, guestPlayers: guests };
+      }
+      const nextOverrides = { ...(current.numberOverrides ?? {}) };
+      const basePlayer = baseSquad?.players.find((item) => item.id === playerId);
+      const overrideKey = basePlayer ? getBoardOverridePlayerKey(basePlayer) : playerId;
+      const baseNumber = basePlayer?.number;
+      if (!Number.isFinite(parsed) || parsed <= 0 || parsed === baseNumber) {
+        delete nextOverrides[playerId];
+        delete nextOverrides[overrideKey];
+      } else {
+        nextOverrides[overrideKey] = parsed;
+      }
+      return { ...current, numberOverrides: nextOverrides };
+    });
+  };
+
   const addGuestPlayer = () => {
     if (!guestName.trim()) {
       return;
@@ -250,12 +279,15 @@ export default function SquadEditor() {
     updateActiveOverride((current) => {
       const nextGuests = (current.guestPlayers ?? []).filter((item) => item.id !== playerId);
       const nextHidden = (current.hiddenPlayerIds ?? []).filter((id) => id !== playerId);
+      const nextNumberOverrides = { ...(current.numberOverrides ?? {}) };
       const nextPositionOverrides = { ...(current.positionOverrides ?? {}) };
+      delete nextNumberOverrides[playerId];
       delete nextPositionOverrides[playerId];
       return {
         ...current,
         guestPlayers: nextGuests,
         hiddenPlayerIds: nextHidden,
+        numberOverrides: nextNumberOverrides,
         positionOverrides: nextPositionOverrides,
       };
     });
@@ -484,6 +516,7 @@ export default function SquadEditor() {
                 updateActiveOverride(() => ({
                   hiddenPlayerIds: [],
                   guestPlayers: [],
+                  numberOverrides: {},
                   positionOverrides: {},
                 }))
               }
@@ -536,7 +569,7 @@ export default function SquadEditor() {
         className="mt-3 min-h-0 flex-1 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/30 p-2"
         data-scrollable
       >
-        <div className="grid grid-cols-[28px_minmax(0,_1fr)_64px_64px_32px_40px] items-center gap-1 px-2 pb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+        <div className="grid grid-cols-[28px_minmax(0,_1fr)_48px_64px_64px_32px_40px] items-center gap-1 px-2 pb-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
           <button
             className="text-left hover:text-[var(--accent-2)]"
             onClick={() => toggleSort("number")}
@@ -551,6 +584,7 @@ export default function SquadEditor() {
           >
             Name{sortIndicator("name")}
           </button>
+          <span className="text-center">No.</span>
           <button
             className="min-w-0 truncate text-left hover:text-[var(--accent-2)]"
             onClick={() => toggleSort("position")}
@@ -580,7 +614,7 @@ export default function SquadEditor() {
             {(viewMode === "board" ? filteredBoardPlayers : filteredBasePlayers).map((player) => (
               <div
                 key={player.id}
-                className={`grid grid-cols-[28px_minmax(0,_1fr)_64px_64px_32px_40px] items-center gap-1 rounded-lg border px-2 py-1.5 ${
+                className={`grid grid-cols-[28px_minmax(0,_1fr)_48px_64px_64px_32px_40px] items-center gap-1 rounded-lg border px-2 py-1.5 ${
                   player.active === false
                     ? "border-[var(--line)] bg-[var(--panel)]/50"
                     : "border-[var(--line)] bg-[var(--panel)]"
@@ -595,6 +629,16 @@ export default function SquadEditor() {
                     </span>
                   ) : null}
                 </span>
+
+                {viewMode === "board" ? (
+                  <input
+                    className="h-7 rounded-lg border border-[var(--line)] bg-transparent px-1 text-center text-[10px] text-[var(--ink-1)]"
+                    value={player.number ?? ""}
+                    onChange={(event) => setPlayerBoardNumber(player.id, event.target.value)}
+                  />
+                ) : (
+                  <span className="text-center text-[11px] text-[var(--ink-1)]">{player.number ?? ""}</span>
+                )}
 
                 {viewMode === "board" ? (
                   <input

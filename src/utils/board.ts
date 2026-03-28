@@ -13,12 +13,18 @@ const applyBoardOverride = (board: Board, squad: Squad): Squad => {
     return squad;
   }
   const hiddenIds = new Set(override.hiddenPlayerIds ?? []);
+  const numberOverrides = override.numberOverrides ?? {};
   const positionOverrides = override.positionOverrides ?? {};
   const basePlayers = squad.players.map((player) => {
     const overrideKey = getBoardOverridePlayerKey(player);
+    const nextNumber = numberOverrides[overrideKey] ?? numberOverrides[player.id];
     const nextPosition = positionOverrides[overrideKey] ?? positionOverrides[player.id];
     return {
       ...player,
+      number:
+        typeof nextNumber === "number" && Number.isFinite(nextNumber)
+          ? nextNumber
+          : player.number,
       positionLabel:
         typeof nextPosition === "string" && nextPosition.trim().length > 0
           ? nextPosition
@@ -30,10 +36,15 @@ const applyBoardOverride = (board: Board, squad: Squad): Squad => {
     };
   });
   const guestPlayers = (override.guestPlayers ?? []).map((guest) => {
+    const nextNumber = numberOverrides[guest.id];
     const nextPosition = positionOverrides[guest.id];
     return {
       ...guest,
       guest: true,
+      number:
+        typeof nextNumber === "number" && Number.isFinite(nextNumber)
+          ? nextNumber
+          : guest.number,
       positionLabel:
         typeof nextPosition === "string" && nextPosition.trim().length > 0
           ? nextPosition

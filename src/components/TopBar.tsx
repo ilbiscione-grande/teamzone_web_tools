@@ -31,6 +31,10 @@ import ManageTeamsBoardRoster from "@/components/manage-teams/ManageTeamsBoardRo
 import ManageTeamsRoster from "@/components/manage-teams/ManageTeamsRoster";
 import ManageTeamsSourcePanel from "@/components/manage-teams/ManageTeamsSourcePanel";
 import ManageTeamsTeamSetup from "@/components/manage-teams/ManageTeamsTeamSetup";
+import {
+  buildManageTeamRosterRows,
+  findManageTeamRosterRow,
+} from "@/components/manage-teams/manageTeamRosterModel";
 import { getActiveBoard, getBoardOverridePlayerKey, getBoardSquads } from "@/utils/board";
 import { createId } from "@/utils/id";
 import {
@@ -514,78 +518,33 @@ export default function TopBar() {
     });
     return entries;
   }, [managedDirectoryTeam]);
-  const manageBasePlayers = useMemo(() => {
-    if (!manageSquad) {
-      return [] as SquadPlayer[];
-    }
-    if (!managedDirectoryTeam) {
-      return manageSquad.players;
-    }
-    const snapshotByMemberId = new Map<string, SquadPlayer>();
-    const unmatchedSnapshotPlayers: SquadPlayer[] = [];
-    manageSquad.players.forEach((player) => {
-      if (player.teamMemberId) {
-        snapshotByMemberId.set(player.teamMemberId, player);
-      } else if (player.sourcePlayerId) {
-        snapshotByMemberId.set(player.sourcePlayerId, player);
-      } else {
-        unmatchedSnapshotPlayers.push(player);
-      }
-    });
-    const mergedPlayers = managedDirectoryTeam.members
-      .filter((member) => member.memberRole === "player" || member.isGuest)
-      .map((member) => {
-        const snapshot = snapshotByMemberId.get(member.id);
-        if (snapshot) {
-          return {
-            ...snapshot,
-            teamMemberId: snapshot.teamMemberId ?? member.id,
-            sourcePlayerId: snapshot.sourcePlayerId ?? member.id,
-            sourceTeamId: snapshot.sourceTeamId ?? managedDirectoryTeam.teamId,
-            sourceTeamName:
-              snapshot.sourceTeamName ?? managedDirectoryTeam.teamName,
-          };
-        }
-        return {
-          id: member.id,
-          teamMemberId: member.id,
-          sourcePlayerId: member.id,
-          sourceTeamId: managedDirectoryTeam.teamId,
-          sourceTeamName: managedDirectoryTeam.teamName,
-          name: member.displayName,
-          positionLabel: member.teamPosition?.trim() || "POS",
-          guest: member.isGuest,
-          active: member.isActive,
-          number: member.shirtNumber ?? undefined,
-          photoUrl: member.photoUrl ?? undefined,
-        } satisfies SquadPlayer;
-      });
-    return [...mergedPlayers, ...unmatchedSnapshotPlayers];
-  }, [manageSquad, managedDirectoryTeam]);
+  const manageBaseRosterRows = useMemo(
+    () =>
+      buildManageTeamRosterRows({
+        snapshotSquad: manageSquad,
+        linkedMembers: managedDirectoryTeam?.members ?? [],
+        linkedTeamId: managedDirectoryTeam?.teamId,
+        linkedTeamName: managedDirectoryTeam?.teamName,
+      }),
+    [manageSquad, managedDirectoryTeam]
+  );
   const manageMembershipSummary = useMemo(() => {
-    const players = manageBasePlayers;
     let linkedMembers = 0;
     let localOnly = 0;
     let guests = 0;
-    players.forEach((player) => {
+    manageBaseRosterRows.forEach((row) => {
+      const player = row.player;
       if (player.guest) {
         guests += 1;
       }
-      const member =
-        managedDirectoryMemberMap.get(player.id) ??
-        (player.teamMemberId
-          ? managedDirectoryMemberMap.get(player.teamMemberId)
-          : player.sourcePlayerId
-            ? managedDirectoryMemberMap.get(player.sourcePlayerId)
-          : undefined);
-      if (member) {
+      if (row.source === "linked") {
         linkedMembers += 1;
       } else {
         localOnly += 1;
       }
     });
     return { linkedMembers, localOnly, guests };
-  }, [manageBasePlayers, managedDirectoryMemberMap]);
+  }, [manageBaseRosterRows]);
   useEffect(() => {
     if (!squadPresetsOpen) {
       return;
@@ -603,8 +562,9 @@ export default function TopBar() {
       return [];
     }
     const substitutes = new Set(editableSquad?.substituteIds ?? []);
-    const withIndex = manageBasePlayers.map((player, index) => ({
-      player,
+    const withIndex = manageBaseRosterRows.map((row, index) => ({
+      row,
+      player: row.player,
       index,
     }));
     const numberValue = (value: number | undefined): number =>
@@ -679,7 +639,7 @@ export default function TopBar() {
     editableSquad?.substituteIds,
     managePlayersSortDir,
     managePlayersSortKey,
-    manageBasePlayers,
+    manageBaseRosterRows,
     manageSquad,
     managedDirectoryMemberOrderMap,
   ]);
@@ -694,14 +654,17 @@ export default function TopBar() {
     if (!manageSquad) {
       return null;
     }
+    const row = findManageTeamRosterRow(manageBaseRosterRows, playerId);
     const existing =
-      manageSquad.players.find((player) => player.id === playerId) ??
-      manageSquad.players.find((player) => player.teamMemberId === playerId) ??
-      manageSquad.players.find((player) => player.sourcePlayerId === playerId);
-    if (existing) {
+      row?.localSnapshotId
+        ? manageSquad.players.find((player) => player.id === row.localSnapshotId)
+        : manageSquad.players.find((player) => player.id === playerId) ??
+          manageSquad.players.find((player) => player.teamMemberId === playerId) ??
+          manageSquad.players.find((player) => player.sourcePlayerId === playerId);
+    if (existing && row?.hasLocalSnapshot !== false) {
       return existing;
     }
-    const member = managedDirectoryMemberMap.get(playerId);
+    const member = row?.linkedMember ?? managedDirectoryMemberMap.get(playerId);
     if (!member || !managedDirectoryTeam) {
       return null;
     }
@@ -739,36 +702,47 @@ export default function TopBar() {
     if (!manageSquad || squadId !== manageSquad.id) {
       return;
     }
-    const existing =
-      manageSquad.players.find((player) => player.id === playerId) ??
-      manageSquad.players.find((player) => player.teamMemberId === playerId) ??
-      manageSquad.players.find((player) => player.sourcePlayerId === playerId);
-    if (!existing) {
+    const row = findManageTeamRosterRow(manageBaseRosterRows, playerId);
+    if (!row?.localSnapshotId) {
       return;
     }
-    removeSquadPlayer(squadId, existing.id);
+    removeSquadPlayer(squadId, row.localSnapshotId);
   };
   const isManageBaseCaptain = (playerId: string) => {
     if (!editableSquad?.captainId) {
       return false;
     }
-    return manageSquad?.players.some(
-      (player) =>
-        player.id === editableSquad.captainId &&
-        (player.id === playerId ||
-          player.teamMemberId === playerId ||
-          player.sourcePlayerId === playerId)
-    ) ?? false;
+    const row = findManageTeamRosterRow(manageBaseRosterRows, playerId);
+    if (!row) {
+      return false;
+    }
+    return (
+      manageSquad?.players.some(
+        (player) =>
+          player.id === editableSquad.captainId &&
+          (player.id === row.localSnapshotId ||
+            player.id === row.identity ||
+            player.teamMemberId === row.identity ||
+            player.sourcePlayerId === row.identity)
+      ) ?? false
+    );
   };
   const isManageBaseSubstitute = (playerId: string) => {
     const substituteIds = editableSquad?.substituteIds ?? [];
-    return manageSquad?.players.some(
-      (player) =>
-        substituteIds.includes(player.id) &&
-        (player.id === playerId ||
-          player.teamMemberId === playerId ||
-          player.sourcePlayerId === playerId)
-    ) ?? false;
+    const row = findManageTeamRosterRow(manageBaseRosterRows, playerId);
+    if (!row) {
+      return false;
+    }
+    return (
+      manageSquad?.players.some(
+        (player) =>
+          substituteIds.includes(player.id) &&
+          (player.id === row.localSnapshotId ||
+            player.id === row.identity ||
+            player.teamMemberId === row.identity ||
+            player.sourcePlayerId === row.identity)
+      ) ?? false
+    );
   };
   const toggleManageBaseCaptain = (playerId: string) => {
     if (!manageSquad) {
@@ -822,10 +796,12 @@ export default function TopBar() {
     updater: (current: {
       hiddenPlayerIds?: string[];
       guestPlayers?: SquadPlayer[];
+      numberOverrides?: Record<string, number | undefined>;
       positionOverrides?: Record<string, string>;
     }) => {
       hiddenPlayerIds?: string[];
       guestPlayers?: SquadPlayer[];
+      numberOverrides?: Record<string, number | undefined>;
       positionOverrides?: Record<string, string>;
     }
   ) => {
@@ -835,6 +811,7 @@ export default function TopBar() {
     const current = activeBoard.squadOverrides?.[manageBaseSquad.id] ?? {
       hiddenPlayerIds: [],
       guestPlayers: [],
+      numberOverrides: {},
       positionOverrides: {},
     };
     const next = updater(current);
@@ -870,16 +847,25 @@ export default function TopBar() {
     });
   }, [manageBoardFilter, manageBoardSearch, manageBoardSquad?.players]);
   const filteredManageBasePlayers = useMemo(() => {
+    const sortedRows = sortedManagePlayers
+      .map((player) =>
+        findManageTeamRosterRow(
+          manageBaseRosterRows,
+          player.teamMemberId ?? player.sourcePlayerId ?? player.id
+        )
+      )
+      .filter((row): row is NonNullable<typeof row> => Boolean(row));
     const needle = manageBaseSearch.trim().toLowerCase();
     if (!needle) {
-      return sortedManagePlayers;
+      return sortedRows;
     }
-    return sortedManagePlayers.filter((player) => {
+    return sortedRows.filter((row) => {
+      const player = row.player;
       const haystack =
         `${player.name} ${player.positionLabel} ${player.number ?? ""}`.toLowerCase();
       return haystack.includes(needle);
     });
-  }, [manageBaseSearch, sortedManagePlayers]);
+  }, [manageBaseRosterRows, manageBaseSearch, sortedManagePlayers]);
   const isSharedView = project?.isShared ?? false;
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
@@ -956,6 +942,10 @@ export default function TopBar() {
       return;
     }
     setManagePresetStatus(null);
+    const squadForSave = {
+      ...editableSquad,
+      players: manageBaseRosterRows.map((row) => row.player),
+    };
     const existingTeam =
       (manageLinkedTeamId
         ? squadPresets.find((item) => item.id === manageLinkedTeamId)
@@ -968,7 +958,7 @@ export default function TopBar() {
       const result = await updateTeamWithSquad({
         id: existingTeam.id,
         name: nextName,
-        squad: editableSquad,
+        squad: squadForSave,
       });
       if (!result.ok) {
         setManagePresetStatus(result.error);
@@ -987,7 +977,7 @@ export default function TopBar() {
     }
     const result = await createTeamWithSquad({
       name: nextName,
-      squad: editableSquad,
+      squad: squadForSave,
     });
     if (!result.ok) {
       setManagePresetStatus(result.error);
@@ -1162,6 +1152,31 @@ export default function TopBar() {
       return { ...current, positionOverrides: nextOverrides };
     });
   };
+  const manageSetBoardPlayerNumber = (playerId: string, value: string) => {
+    const parsed = Number(value);
+    updateManageBoardOverride((current) => {
+      const guests = [...(current.guestPlayers ?? [])];
+      const guestIndex = guests.findIndex((item) => item.id === playerId);
+      if (guestIndex >= 0) {
+        guests[guestIndex] = {
+          ...guests[guestIndex],
+          number: Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
+        };
+        return { ...current, guestPlayers: guests };
+      }
+      const nextOverrides = { ...(current.numberOverrides ?? {}) };
+      const basePlayer = manageBaseSquad?.players.find((item) => item.id === playerId);
+      const overrideKey = basePlayer ? getBoardOverridePlayerKey(basePlayer) : playerId;
+      const baseNumber = basePlayer?.number;
+      if (!Number.isFinite(parsed) || parsed <= 0 || parsed === baseNumber) {
+        delete nextOverrides[playerId];
+        delete nextOverrides[overrideKey];
+      } else {
+        nextOverrides[overrideKey] = parsed;
+      }
+      return { ...current, numberOverrides: nextOverrides };
+    });
+  };
   const manageAddBoardGuest = () => {
     if (!manageGuestName.trim()) {
       return;
@@ -1194,12 +1209,15 @@ export default function TopBar() {
         (item) => item.id !== playerId
       );
       const nextHidden = (current.hiddenPlayerIds ?? []).filter((id) => id !== playerId);
+      const nextNumberOverrides = { ...(current.numberOverrides ?? {}) };
       const nextPositionOverrides = { ...(current.positionOverrides ?? {}) };
+      delete nextNumberOverrides[playerId];
       delete nextPositionOverrides[playerId];
       return {
         ...current,
         guestPlayers: nextGuests,
         hiddenPlayerIds: nextHidden,
+        numberOverrides: nextNumberOverrides,
         positionOverrides: nextPositionOverrides,
       };
     });
@@ -2780,6 +2798,7 @@ export default function TopBar() {
                       updateManageBoardOverride(() => ({
                         hiddenPlayerIds: [],
                         guestPlayers: [],
+                        numberOverrides: {},
                         positionOverrides: {},
                       }))
                     }
@@ -2812,6 +2831,7 @@ export default function TopBar() {
                         ) : (
                           <ManageTeamsBoardRoster
                             sortedManageBoardPlayers={sortedManageBoardPlayers}
+                          onSetBoardPlayerNumber={manageSetBoardPlayerNumber}
                           onSetBoardPlayerPosition={manageSetBoardPlayerPosition}
                           onToggleBoardPlayerVisible={manageToggleBoardPlayerVisible}
                           onPromoteBoardGuest={managePromoteBoardGuest}

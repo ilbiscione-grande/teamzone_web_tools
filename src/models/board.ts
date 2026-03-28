@@ -25,6 +25,7 @@ export type PlayerLink = {
 export type BoardSquadOverride = {
   hiddenPlayerIds?: string[];
   guestPlayers?: SquadPlayer[];
+  numberOverrides?: Record<string, number | undefined>;
   positionOverrides?: Record<string, string>;
 };
 

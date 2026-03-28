@@ -51,6 +51,9 @@ describe("board utils", () => {
       squadOverrides: {
         "squad-home": {
           hiddenPlayerIds: ["team-member-1"],
+          numberOverrides: {
+            "team-member-1": 9,
+          },
           positionOverrides: {
             "team-member-1": "CF",
           },
@@ -114,6 +117,7 @@ describe("board utils", () => {
     const result = getBoardSquads(project, board);
     expect(result.home?.players[0]).toMatchObject({
       teamMemberId: "team-member-1",
+      number: 9,
       positionLabel: "CF",
       active: false,
     });

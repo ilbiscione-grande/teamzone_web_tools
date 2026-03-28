@@ -4,6 +4,7 @@ import type { SquadPlayer } from "@/models";
 
 type ManageTeamsBoardRosterProps = {
   sortedManageBoardPlayers: SquadPlayer[];
+  onSetBoardPlayerNumber: (playerId: string, value: string) => void;
   onSetBoardPlayerPosition: (playerId: string, value: string) => void;
   onToggleBoardPlayerVisible: (playerId: string, nextVisible: boolean) => void;
   onPromoteBoardGuest: (player: SquadPlayer) => void;
@@ -12,6 +13,7 @@ type ManageTeamsBoardRosterProps = {
 
 export default function ManageTeamsBoardRoster({
   sortedManageBoardPlayers,
+  onSetBoardPlayerNumber,
   onSetBoardPlayerPosition,
   onToggleBoardPlayerVisible,
   onPromoteBoardGuest,
@@ -59,6 +61,14 @@ export default function ManageTeamsBoardRoster({
               </div>
               <input
                 className="h-9 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                value={player.number ?? ""}
+                onChange={(event) =>
+                  onSetBoardPlayerNumber(player.id, event.target.value)
+                }
+                placeholder="No."
+              />
+              <input
+                className="h-9 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
                 value={player.positionLabel}
                 onChange={(event) =>
                   onSetBoardPlayerPosition(player.id, event.target.value)
@@ -84,8 +94,9 @@ export default function ManageTeamsBoardRoster({
           ))}
         </div>
       </div>
-      <div className="hidden grid-cols-[minmax(0,1fr)_120px_160px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)] lg:grid">
+      <div className="hidden grid-cols-[minmax(0,1fr)_72px_120px_160px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)] lg:grid">
         <span>Name</span>
+        <span>No.</span>
         <span>Board pos</span>
         <span>Actions</span>
       </div>
@@ -93,7 +104,7 @@ export default function ManageTeamsBoardRoster({
         {sortedManageBoardPlayers.map((player) => (
           <div
             key={player.id}
-            className="grid grid-cols-[minmax(0,1fr)_120px_160px] items-center gap-2"
+            className="grid grid-cols-[minmax(0,1fr)_72px_120px_160px] items-center gap-2"
           >
             <div className="truncate text-[11px] text-[var(--ink-0)]">
               {player.name}
@@ -103,6 +114,13 @@ export default function ManageTeamsBoardRoster({
                 </span>
               ) : null}
             </div>
+            <input
+              className="h-7 rounded-md border border-[var(--line)] bg-transparent px-2 text-[11px] text-[var(--ink-0)]"
+              value={player.number ?? ""}
+              onChange={(event) =>
+                onSetBoardPlayerNumber(player.id, event.target.value)
+              }
+            />
             <input
               className="h-7 rounded-md border border-[var(--line)] bg-transparent px-2 text-[11px] text-[var(--ink-0)]"
               value={player.positionLabel}

@@ -148,6 +148,20 @@ const isBoardFrame = (value: unknown) =>
   (value.playerLinks === undefined ||
     (Array.isArray(value.playerLinks) && value.playerLinks.every(isPlayerLink)));
 
+const isBoardSquadOverride = (value: unknown) =>
+  isObject(value) &&
+  (value.hiddenPlayerIds === undefined || isStringArray(value.hiddenPlayerIds)) &&
+  (value.guestPlayers === undefined ||
+    (Array.isArray(value.guestPlayers) && value.guestPlayers.every(isSquadPlayer))) &&
+  (value.numberOverrides === undefined ||
+    (isObject(value.numberOverrides) &&
+      Object.values(value.numberOverrides).every(
+        (entry) => entry === undefined || isFiniteNumber(entry)
+      ))) &&
+  (value.positionOverrides === undefined ||
+    (isObject(value.positionOverrides) &&
+      Object.values(value.positionOverrides).every(isString)));
+
 const isBoard = (value: unknown) =>
   isObject(value) &&
   isString(value.id) &&
@@ -167,6 +181,9 @@ const isBoard = (value: unknown) =>
   isBoolean(value.playerLabel.showName) &&
   isBoolean(value.playerLabel.showPosition) &&
   isBoolean(value.playerLabel.showNumber) &&
+  (value.squadOverrides === undefined ||
+    (isObject(value.squadOverrides) &&
+      Object.values(value.squadOverrides).every(isBoardSquadOverride))) &&
   Array.isArray(value.playerHighlights) &&
   value.playerHighlights.every(isString) &&
   Array.isArray(value.playerLinks) &&
