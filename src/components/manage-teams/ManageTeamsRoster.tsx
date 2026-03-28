@@ -34,6 +34,7 @@ type ManageTeamsRosterProps = {
   onShowAllBoardPlayers: () => void;
   onResetBoardPositions: () => void;
   onResetBoardRoster: () => void;
+  baseRosterToolbar?: ReactNode;
   children: ReactNode;
 };
 
@@ -61,6 +62,7 @@ export default function ManageTeamsRoster({
   onShowAllBoardPlayers,
   onResetBoardPositions,
   onResetBoardRoster,
+  baseRosterToolbar,
   children,
 }: ManageTeamsRosterProps) {
   return (
@@ -95,62 +97,67 @@ export default function ManageTeamsRoster({
                 </button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-              <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                Linked members: {manageMembershipSummary.linkedMembers}
-              </span>
-              <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                Local only: {manageMembershipSummary.localOnly}
-              </span>
-              <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                Guests: {manageMembershipSummary.guests}
-              </span>
-            </div>
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-              <input
-                className="h-8 flex-1 rounded-full border border-[var(--line)] bg-transparent px-3 text-[11px] text-[var(--ink-0)]"
-                placeholder={
-                  manageRosterView === "base"
-                    ? "Search team roster..."
-                    : "Search match board..."
-                }
-                value={manageRosterView === "base" ? manageBaseSearch : manageBoardSearch}
-                onChange={(event) =>
-                  manageRosterView === "base"
-                    ? onManageBaseSearchChange(event.target.value)
-                    : onManageBoardSearchChange(event.target.value)
-                }
-              />
-              {manageRosterView === "board" ? (
-                <select
-                  className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-[11px]"
-                  value={manageBoardFilter}
-                  onChange={(event) =>
-                    onManageBoardFilterChange(event.target.value as ManageRosterFilter)
+            <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                  Linked members: {manageMembershipSummary.linkedMembers}
+                </span>
+                <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                  Local only: {manageMembershipSummary.localOnly}
+                </span>
+                <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                  Guests: {manageMembershipSummary.guests}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center xl:min-w-[380px] xl:max-w-[520px] xl:flex-1 xl:justify-end">
+                <input
+                  className="h-8 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-[11px] text-[var(--ink-0)] sm:flex-1 xl:max-w-[340px]"
+                  placeholder={
+                    manageRosterView === "base"
+                      ? "Search team roster..."
+                      : "Search match board..."
                   }
-                >
-                  <option value="all">All</option>
-                  <option value="visible">Visible</option>
-                  <option value="hidden">Hidden</option>
-                  <option value="guests">Guests</option>
-                  <option value="regular">Regular</option>
-                </select>
-              ) : null}
+                  value={manageRosterView === "base" ? manageBaseSearch : manageBoardSearch}
+                  onChange={(event) =>
+                    manageRosterView === "base"
+                      ? onManageBaseSearchChange(event.target.value)
+                      : onManageBoardSearchChange(event.target.value)
+                  }
+                />
+                {manageRosterView === "board" ? (
+                  <select
+                    className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-[11px]"
+                    value={manageBoardFilter}
+                    onChange={(event) =>
+                      onManageBoardFilterChange(event.target.value as ManageRosterFilter)
+                    }
+                  >
+                    <option value="all">All</option>
+                    <option value="visible">Visible</option>
+                    <option value="hidden">Hidden</option>
+                    <option value="guests">Guests</option>
+                    <option value="regular">Regular</option>
+                  </select>
+                ) : null}
+              </div>
             </div>
             {manageRosterView === "base" ? (
-              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                <button
-                  className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                  onClick={onAddMember}
-                >
-                  Add player
-                </button>
-                <button
-                  className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
-                  onClick={onAddGuestMember}
-                >
-                  Add guest
-                </button>
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                  <button
+                    className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                    onClick={onAddMember}
+                  >
+                    Add player
+                  </button>
+                  <button
+                    className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
+                    onClick={onAddGuestMember}
+                  >
+                    Add guest
+                  </button>
+                </div>
+                {baseRosterToolbar}
               </div>
             ) : (
               <details className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/35">

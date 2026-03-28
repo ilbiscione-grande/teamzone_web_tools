@@ -240,15 +240,6 @@ export default function ManageTeamsBaseRoster({
       <p className="text-[10px] text-[var(--ink-1)]">
         All players are listed here. Use &quot;Shown&quot; to control who appears in the squad list.
       </p>
-      <div className="flex justify-end">
-        <button
-          className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-          onClick={() => onToggleManagePlayersSort("default")}
-          title="Reset to default sort"
-        >
-          Default sort{manageSortIndicator("default")}
-        </button>
-      </div>
       <div className="hidden max-h-56 space-y-2 overflow-auto pr-1 lg:block" data-scrollable>
         {filteredManageBasePlayers.map((player) => {
           const linkedMember =

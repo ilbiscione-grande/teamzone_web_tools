@@ -2461,13 +2461,22 @@ export default function TopBar() {
                           positionOverrides: {},
                         }))
                       }
-                      onResetBoardRoster={() =>
-                        updateManageBoardOverride(() => ({
-                          hiddenPlayerIds: [],
-                          guestPlayers: [],
-                          positionOverrides: {},
-                        }))
-                      }
+                    onResetBoardRoster={() =>
+                      updateManageBoardOverride(() => ({
+                        hiddenPlayerIds: [],
+                        guestPlayers: [],
+                        positionOverrides: {},
+                      }))
+                    }
+                    baseRosterToolbar={
+                      <button
+                        className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        onClick={() => toggleManagePlayersSort("default")}
+                        title="Reset to default sort"
+                      >
+                        Default sort{manageSortIndicator("default")}
+                      </button>
+                    }
                     >
                         {manageSquad ? (
                           manageRosterView === "base" ? (
