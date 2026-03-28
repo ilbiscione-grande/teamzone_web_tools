@@ -25,6 +25,12 @@ import BetaNoticeModal from "@/components/BetaNoticeModal";
 import ShareBoardModal from "@/components/ShareBoardModal";
 import CommentsModal from "@/components/CommentsModal";
 import MatchGraphicsModal from "@/components/MatchGraphicsModal";
+import ManageTeamsModal from "@/components/ManageTeamsModal";
+import ManageTeamsBaseRoster from "@/components/manage-teams/ManageTeamsBaseRoster";
+import ManageTeamsBoardRoster from "@/components/manage-teams/ManageTeamsBoardRoster";
+import ManageTeamsRoster from "@/components/manage-teams/ManageTeamsRoster";
+import ManageTeamsSourcePanel from "@/components/manage-teams/ManageTeamsSourcePanel";
+import ManageTeamsTeamSetup from "@/components/manage-teams/ManageTeamsTeamSetup";
 import { getActiveBoard, getBoardSquads } from "@/utils/board";
 import { createId } from "@/utils/id";
 import {
@@ -49,7 +55,6 @@ import { getPitchViewBounds } from "@/board/pitch/Pitch";
 import { getStageRef } from "@/utils/stageRef";
 import { clone } from "@/utils/clone";
 import { duplicateProjectWithFreshIds } from "@/state/projectHelpers";
-import ColorPalettePicker from "@/components/ColorPalettePicker";
 
 type ManagePlayersSortKey = "default" | "name" | "position" | "number";
 type ManageRosterFilter = "all" | "visible" | "hidden" | "guests" | "regular";
@@ -2388,1147 +2393,176 @@ export default function TopBar() {
           </div>
         </div>
       )}
-      {squadPresetsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-          <div className="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[28px] border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-0)] shadow-2xl shadow-black/40">
-            <div className="sticky top-0 z-10 border-b border-[var(--line)] bg-[color:color-mix(in_srgb,var(--panel)_94%,transparent)] px-4 py-4 backdrop-blur sm:px-6">
-              <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/20 px-4 py-4">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div className="min-w-0 space-y-3">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
-                    <div className="min-w-0">
-                      <h2 className="display-font text-xl text-[var(--accent-0)]">
-                        Team manager
-                      </h2>
-                      <p className="text-xs text-[var(--ink-1)]">
-                        Edit the board-local squad here. Database updates only happen when you press Save to Team DB.
-                      </p>
-                    </div>
-                    <div className="inline-flex w-fit rounded-full border border-[var(--line)] bg-[var(--panel)]/60 p-1 text-[11px] uppercase tracking-wide">
-                    {[
-                      { id: "home", label: "Home" },
-                      { id: "away", label: "Away" },
-                    ].map((side) => (
-                      <button
-                        key={side.id}
-                        className={`rounded-full px-4 py-2 ${
-                          manageSide === side.id
-                            ? "bg-[var(--accent-0)] text-black"
-                            : "text-[var(--ink-1)]"
-                        }`}
-                        onClick={() => setManageSide(side.id as "home" | "away")}
-                      >
-                        Editing {side.label}
-                      </button>
-                    ))}
-                    </div>
-                  </div>
-                <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                    <span className="rounded-full border border-[var(--line)] px-2.5 py-1">
-                      Active side: {manageSide}
-                    </span>
-                    <span className="rounded-full border border-[var(--line)] px-2.5 py-1">
-                      Mode: Team manager
-                    </span>
-                    <span className="rounded-full border border-[var(--line)] px-2.5 py-1">
-                      Scope: Project / board
-                    </span>
-                    <span className="rounded-full border border-[var(--line)] px-2.5 py-1 normal-case tracking-normal">
-                      Home linked: {currentHomeManagedSquad?.name ?? "None"}
-                    </span>
-                    <span className="rounded-full border border-[var(--line)] px-2.5 py-1 normal-case tracking-normal">
-                      Away linked: {currentAwayManagedSquad?.name ?? "None"}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-stretch gap-2 xl:justify-end">
-                    <button
-                      className="rounded-full border border-[var(--line)] px-4 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      onClick={() => setManagedTeamToSide("home")}
-                    >
-                      Apply to Home
-                    </button>
-                    <button
-                      className="rounded-full border border-[var(--line)] px-4 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                      onClick={() => setManagedTeamToSide("away")}
-                    >
-                      Apply to Away
-                    </button>
-                    {canUsePresetStorage ? (
-                      <button
-                        className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                        title="Save to Team DB"
-                        aria-label="Save to Team DB"
-                        onClick={saveManagePreset}
-                      >
-                        <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4 4h13l3 3v13H4z" />
-                          <path d="M8 4v6h8V4" />
-                          <path d="M8 20v-6h8v6" />
-                        </svg>
-                        <span className="text-[9px] uppercase tracking-wide">Save to DB</span>
-                      </button>
-                    ) : null}
-                    <button
-                      className="flex flex-col items-center gap-1 rounded-xl border border-[var(--line)] p-2 hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                      onClick={closeSquadPresetsModal}
-                      aria-label="Close"
-                      title="Close"
-                    >
-                      <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M6 6l12 12" />
-                        <path d="M18 6l-12 12" />
-                      </svg>
-                      <span className="text-[9px] uppercase tracking-wide">Close</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="max-h-[calc(92vh-128px)] space-y-4 overflow-y-auto px-4 py-4 text-xs text-[var(--ink-1)] sm:px-6" data-scrollable>
-                {!canUsePresetStorage ? (
-                  <p className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/50 px-3 py-2 text-xs text-[var(--ink-1)]">
-                    Free/Auth plans can edit teams locally in this project. Team presets are available on paid plans.
-                  </p>
-                ) : null}
-                <div className="flex items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 px-4 py-2.5 text-[11px] text-[var(--ink-1)]">
-                  <span className="shrink-0 rounded-full border border-[var(--line)] px-2 py-0.5 text-[9px] uppercase tracking-widest">
-                    Info
-                  </span>
-                  <p className="min-w-0 truncate">
-                    Changes here affect this project/board first. Use <span className="text-[var(--accent-0)]">Save to DB</span> to save the current squad as a reusable team snapshot in the database.
-                  </p>
-                </div>
-                <details className="group rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <p className="shrink-0 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                        Team source and loading
-                      </p>
-                      <p className="truncate text-[11px] text-[var(--ink-1)]">
-                        {managedDirectoryTeam
-                          ? `${managedDirectoryTeam.clubName} / ${managedDirectoryTeam.teamName}`
-                          : "This board is currently using a local project squad."}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                      {managedDirectoryTeam ? (
-                        <>
-                          <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                            {managedDirectoryTeam.teamType}
-                          </span>
-                          {managedDirectoryTeam.isCurrentUserTeamAdmin ? (
-                            <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[var(--accent-0)]">
-                              Team admin
-                            </span>
-                          ) : null}
-                        </>
-                      ) : (
-                        <span className="rounded-full border border-[var(--accent-1)] px-2 py-1 text-[var(--accent-1)]">
-                          Local squad
-                        </span>
-                      )}
-                      <span className="transition-transform group-open:rotate-180">⌄</span>
-                    </div>
-                  </summary>
-                  <div className="grid gap-4 border-t border-[var(--line)] px-4 py-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-                    <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
-                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                        Current board squad
-                      </p>
-                      {managedDirectoryTeam ? (
-                        <div className="mt-2 space-y-2">
-                          <p className="text-sm text-[var(--ink-0)]">
-                            {managedDirectoryTeam.clubName} / {managedDirectoryTeam.teamName}
-                          </p>
-                          <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                            <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                              Club role: {managedDirectoryTeam.clubMembershipRole}
-                            </span>
-                            <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                              Team type: {managedDirectoryTeam.teamType}
-                            </span>
-                            {managedDirectoryTeam.ageGroup ? (
-                              <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                                {managedDirectoryTeam.ageGroup}
-                              </span>
-                            ) : null}
-                            {managedDirectoryTeam.seasonLabel ? (
-                              <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                                {managedDirectoryTeam.seasonLabel}
-                              </span>
-                            ) : null}
-                            {managedDirectoryTeam.isCurrentUserClubAdmin ? (
-                              <span className="rounded-full border border-[var(--accent-2)] px-2 py-1 text-[var(--accent-2)]">
-                                Club admin
-                              </span>
-                            ) : null}
-                            {managedDirectoryTeam.isCurrentUserTeamAdmin ? (
-                              <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[var(--accent-0)]">
-                                Team admin
-                              </span>
-                            ) : null}
-                          </div>
+        <ManageTeamsModal
+          open={squadPresetsOpen}
+          manageSide={manageSide}
+          currentHomeTeamName={currentHomeManagedSquad?.name}
+          currentAwayTeamName={currentAwayManagedSquad?.name}
+          onManageSideChange={setManageSide}
+          onApplyToHome={() => setManagedTeamToSide("home")}
+          onApplyToAway={() => setManagedTeamToSide("away")}
+          onClose={closeSquadPresetsModal}
+        >
+              <div className="max-h-[calc(92vh-128px)] overflow-y-auto px-4 py-4 text-xs text-[var(--ink-1)] sm:px-6" data-scrollable>
+                <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.92fr)_minmax(0,1.08fr)]">
+                  <div className="order-2 space-y-4 xl:order-1">
+                    <div className="xl:hidden">
+                      <details className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25">
+                        <summary className="cursor-pointer list-none px-4 py-3 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                          Team source
+                        </summary>
+                        <div className="border-t border-[var(--line)] p-3">
+                          <ManageTeamsSourcePanel
+                            canUsePresetStorage={canUsePresetStorage}
+                            managedDirectoryTeam={managedDirectoryTeam}
+                            manageDirectoryTeams={manageDirectoryTeams}
+                            manageSelectedDirectoryTeamId={manageSelectedDirectoryTeamId}
+                            selectedManageDirectoryTeam={selectedManageDirectoryTeam}
+                            squadPresetsLoading={squadPresetsLoading}
+                      squadPresetsError={squadPresetsError}
+                      managePresetStatus={managePresetStatus}
+                      onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
+                      onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
+                      onSaveReusableTeam={saveManagePreset}
+                    />
                         </div>
-                      ) : (
-                        <p className="mt-2 text-xs text-[var(--ink-1)]">
-                          This board is currently using a local project squad. Saving to DB creates or updates a reusable team snapshot, but does not automatically relink this board to that saved team.
-                        </p>
-                      )}
+                      </details>
+                      <details className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25">
+                        <summary className="cursor-pointer list-none px-4 py-3 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                          Team setup
+                        </summary>
+                        <div className="border-t border-[var(--line)] p-3">
+                          <ManageTeamsTeamSetup
+                            editableSquad={editableSquad}
+                            jerseyType={jerseyType}
+                            shirtTypes={SHIRT_TYPES}
+                            manageLogoRef={manageLogoRef}
+                            updateEditableSquad={updateEditableSquad}
+                            onJerseyTypeChange={setJerseyType}
+                            renderShirtIcon={renderShirtIcon}
+                          />
+                        </div>
+                      </details>
                     </div>
-                    <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
-                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                        Load club team
-                      </p>
-                      {manageDirectoryTeams.length > 0 ? (
-                        <>
-                          <select
-                            className="mt-2 h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                            value={manageSelectedDirectoryTeamId}
-                            onChange={(event) => setManageSelectedDirectoryTeamId(event.target.value)}
-                          >
-                            {manageDirectoryTeams.map((team) => (
-                              <option key={team.teamId} value={team.teamId} className="bg-slate-900">
-                                {team.clubName} / {team.teamName}
-                              </option>
-                            ))}
-                          </select>
-                          {selectedManageDirectoryTeam ? (
-                            <p className="mt-2 text-[11px] text-[var(--ink-1)]">
-                              {selectedManageDirectoryTeam.teamType}
-                              {selectedManageDirectoryTeam.ageGroup
-                                ? ` • ${selectedManageDirectoryTeam.ageGroup}`
-                                : ""}
-                              {selectedManageDirectoryTeam.seasonLabel
-                                ? ` • ${selectedManageDirectoryTeam.seasonLabel}`
-                                : ""}
-                            </p>
-                          ) : null}
-                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                            <button
-                              className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                              onClick={() =>
-                                loadDirectoryTeamIntoSide(manageSelectedDirectoryTeamId, "home")
-                              }
-                            >
-                              Load as Home
-                            </button>
-                            <button
-                              className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                              onClick={() =>
-                                loadDirectoryTeamIntoSide(manageSelectedDirectoryTeamId, "away")
-                              }
-                            >
-                              Load as Away
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <p className="mt-2 text-xs text-[var(--ink-1)]">
-                          No club teams available yet for this account.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </details>
-                <div className="space-y-3 rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
-                  <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                    Team details
-                  </p>
-                  <div className="grid gap-4 lg:grid-cols-[160px_minmax(0,1fr)] xl:grid-cols-[180px_minmax(0,1fr)_180px]">
-                    <button
-                      className="flex h-40 w-full items-center justify-center overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/55 text-[11px] text-[var(--ink-1)] lg:h-full"
-                      onClick={() => manageLogoRef.current?.click()}
-                      title="Change club logo"
-                    >
-                      {editableSquad?.clubLogo ? (
-                        <img
-                          src={editableSquad.clubLogo}
-                          alt="Club logo"
-                          className="h-full w-full object-contain p-2"
-                        />
-                      ) : (
-                        <span>Club Logo</span>
-                      )}
-                    </button>
-                    <div className="flex min-h-[220px] flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-4">
-                      <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                        Squad name
-                      </span>
-                      <input
-                        className="h-9 w-full rounded-full border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                        value={editableSquad?.name ?? ""}
-                        onChange={(event) => {
-                          updateEditableSquad({ name: event.target.value });
-                        }}
-                        placeholder="Team name"
+                    <div className="hidden space-y-4 xl:block">
+                      <ManageTeamsSourcePanel
+                        canUsePresetStorage={canUsePresetStorage}
+                        managedDirectoryTeam={managedDirectoryTeam}
+                        manageDirectoryTeams={manageDirectoryTeams}
+                        manageSelectedDirectoryTeamId={manageSelectedDirectoryTeamId}
+                        selectedManageDirectoryTeam={selectedManageDirectoryTeam}
+                        squadPresetsLoading={squadPresetsLoading}
+                            squadPresetsError={squadPresetsError}
+                            managePresetStatus={managePresetStatus}
+                            onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
+                            onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
+                            onSaveReusableTeam={saveManagePreset}
+                          />
+                      <ManageTeamsTeamSetup
+                        editableSquad={editableSquad}
+                        jerseyType={jerseyType}
+                        shirtTypes={SHIRT_TYPES}
+                        manageLogoRef={manageLogoRef}
+                        updateEditableSquad={updateEditableSquad}
+                        onJerseyTypeChange={setJerseyType}
+                        renderShirtIcon={renderShirtIcon}
                       />
-                      {editableSquad ? (
-                        <>
-                          <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                            Team colors
-                          </span>
-                          <div className="grid gap-2 md:grid-cols-2">
-                            <label className="space-y-1">
-                              <span className="text-[10px] text-[var(--ink-1)]">Shirt Base</span>
-                              <ColorPalettePicker
-                                value={editableSquad.kit.shirt}
-                                onChange={(value) =>
-                                  updateEditableSquad({
-                                    kit: { ...editableSquad.kit, shirt: value },
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="space-y-1">
-                              <span className="text-[10px] text-[var(--ink-1)]">Shirt Secondary</span>
-                              <ColorPalettePicker
-                                value={editableSquad.kit.shirtSecondary ?? editableSquad.kit.shirt}
-                                onChange={(value) =>
-                                  updateEditableSquad({
-                                    kit: {
-                                      ...editableSquad.kit,
-                                      shirtSecondary: value,
-                                    },
-                                  })
-                                }
-                              />
-                            </label>
-                          </div>
-                          <div className="grid gap-2 md:grid-cols-2">
-                            <label className="space-y-1">
-                              <span className="text-[10px] text-[var(--ink-1)]">Shorts</span>
-                              <ColorPalettePicker
-                                value={editableSquad.kit.shorts}
-                                onChange={(value) =>
-                                  updateEditableSquad({
-                                    kit: { ...editableSquad.kit, shorts: value },
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="space-y-1">
-                              <span className="text-[10px] text-[var(--ink-1)]">Socks</span>
-                              <ColorPalettePicker
-                                value={editableSquad.kit.socks}
-                                onChange={(value) =>
-                                  updateEditableSquad({
-                                    kit: { ...editableSquad.kit, socks: value },
-                                  })
-                                }
-                              />
-                            </label>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[10px] text-[var(--ink-1)]">Type of jersey</span>
-                            {SHIRT_TYPES.map((item) => (
-                              <button
-                                key={item.id}
-                                className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border ${
-                                  (editableSquad.kit.jerseyType ?? jerseyType) === item.id
-                                    ? "border-[var(--accent-0)]"
-                                    : "border-[var(--line)]"
-                                }`}
-                                onClick={() => {
-                                  setJerseyType(item.id);
-                                  updateEditableSquad({
-                                    kit: { ...editableSquad.kit, jerseyType: item.id },
-                                  });
-                                }}
-                                title={item.label}
-                                aria-label={item.label}
-                              >
-                                {renderShirtIcon(
-                                  item.id,
-                                  editableSquad.kit.shirt,
-                                  editableSquad.kit.shirtSecondary ?? editableSquad.kit.shirt,
-                                  "h-5 w-5"
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      ) : null}
-                    </div>
-                    <div className="hidden min-h-[220px] flex-col items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/35 p-4 xl:flex">
-                      {editableSquad ? (
-                        <div className="flex flex-col items-center gap-1">
-                          {renderShirtIcon(
-                            editableSquad.kit.jerseyType ?? jerseyType,
-                            editableSquad.kit.shirt,
-                            editableSquad.kit.shirtSecondary ?? editableSquad.kit.shirt,
-                            "h-24 w-24"
-                          )}
-                          <svg viewBox="0 0 64 40" className="h-7 w-11" aria-hidden>
-                            <path
-                              d="M6 6h52l-4 28H36V22H28v12H10z"
-                              fill={editableSquad.kit.shorts}
-                              stroke="rgba(255,255,255,0.25)"
-                              strokeWidth="2"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 64 40" className="h-7 w-11" aria-hidden>
-                            <path
-                              d="M16 5h12v14l8 6v8H16z"
-                              fill={editableSquad.kit.socks}
-                              stroke="rgba(255,255,255,0.25)"
-                              strokeWidth="2"
-                              strokeLinejoin="round"
-                            />
-                            <path
-                              d="M36 5h12v14l8 6v8H36z"
-                              fill={editableSquad.kit.socks}
-                              stroke="rgba(255,255,255,0.25)"
-                              strokeWidth="2"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </div>
-                      ) : null}
                     </div>
                   </div>
-                  <input
-                    ref={manageLogoRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (!file) {
-                        return;
-                      }
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                        if (typeof reader.result === "string") {
-                          updateEditableSquad({ clubLogo: reader.result });
-                        }
-                      };
-                      reader.readAsDataURL(file);
-                    }}
-                  />
-                </div>
-                <div className="space-y-4 rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-4">
-                  {manageSquad ? (
-                    <>
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <span className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                          Players
-                        </span>
-                        <div className="flex items-center gap-2 self-start lg:self-auto">
-                          <button
-                            className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-wide ${
-                              manageRosterView === "base"
-                                ? "border-[var(--accent-0)] text-[var(--ink-0)]"
-                                : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-                            }`}
-                            onClick={() => setManageRosterView("base")}
-                          >
-                            Base
-                          </button>
-                          <button
-                            className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-wide ${
-                              manageRosterView === "board"
-                                ? "border-[var(--accent-0)] text-[var(--ink-0)]"
-                                : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
-                            }`}
-                            onClick={() => setManageRosterView("board")}
-                          >
-                            Board
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                        <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                          Linked members: {manageMembershipSummary.linkedMembers}
-                        </span>
-                        <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                          Local only: {manageMembershipSummary.localOnly}
-                        </span>
-                        <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                          Guests: {manageMembershipSummary.guests}
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-                        <input
-                          className="h-8 flex-1 rounded-full border border-[var(--line)] bg-transparent px-3 text-[11px] text-[var(--ink-0)]"
-                          placeholder={
-                            manageRosterView === "base"
-                              ? "Search base squad..."
-                              : "Search board roster..."
-                          }
-                          value={
-                            manageRosterView === "base"
-                              ? manageBaseSearch
-                              : manageBoardSearch
-                          }
-                          onChange={(event) =>
-                            manageRosterView === "base"
-                              ? setManageBaseSearch(event.target.value)
-                              : setManageBoardSearch(event.target.value)
-                          }
+                  <div className="order-1 space-y-4 xl:order-2">
+                    <ManageTeamsRoster
+                    manageSquad={manageSquad}
+                    manageSide={manageSide}
+                    manageRosterView={manageRosterView}
+                  manageMembershipSummary={manageMembershipSummary}
+                  manageBaseSearch={manageBaseSearch}
+                  manageBoardSearch={manageBoardSearch}
+                  manageBoardFilter={manageBoardFilter}
+                  manageGuestName={manageGuestName}
+                  manageGuestPosition={manageGuestPosition}
+                  manageGuestNumber={manageGuestNumber}
+                  onManageRosterViewChange={setManageRosterView}
+                  onManageBaseSearchChange={setManageBaseSearch}
+                  onManageBoardSearchChange={setManageBoardSearch}
+                  onManageBoardFilterChange={setManageBoardFilter}
+                  onManageGuestNameChange={setManageGuestName}
+                  onManageGuestPositionChange={setManageGuestPosition}
+                  onManageGuestNumberChange={setManageGuestNumber}
+                  onAddMember={() =>
+                    manageSquad &&
+                    addSquadPlayer(manageSquad.id, {
+                      id: createId(),
+                      name: "New Member",
+                      positionLabel: "",
+                      guest: false,
+                      active: true,
+                      number: undefined,
+                      vestColor: undefined,
+                    })
+                  }
+                  onAddGuestMember={() =>
+                    manageSquad &&
+                    addSquadPlayer(manageSquad.id, {
+                      id: createId(),
+                      name: "Guest Member",
+                      positionLabel: "",
+                      guest: true,
+                      active: true,
+                      number: undefined,
+                      vestColor: undefined,
+                    })
+                  }
+                  onAddBoardGuest={manageAddBoardGuest}
+                  onShowAllBoardPlayers={() =>
+                    updateManageBoardOverride((current) => ({
+                      ...current,
+                      hiddenPlayerIds: [],
+                    }))
+                  }
+                  onResetBoardPositions={() =>
+                    updateManageBoardOverride((current) => ({
+                      ...current,
+                      positionOverrides: {},
+                    }))
+                  }
+                  onResetBoardRoster={() =>
+                    updateManageBoardOverride(() => ({
+                      hiddenPlayerIds: [],
+                      guestPlayers: [],
+                      positionOverrides: {},
+                    }))
+                  }
+                    >
+                      {manageSquad ? (
+                        manageRosterView === "base" ? (
+                          <ManageTeamsBaseRoster
+                        manageSquadId={manageSquad.id}
+                        filteredManageBasePlayers={filteredManageBasePlayers}
+                        editableSquadSubstituteIds={editableSquad?.substituteIds ?? []}
+                        editableSquadCaptainId={editableSquad?.captainId}
+                        manageSortIndicator={manageSortIndicator}
+                        managedDirectoryMemberMap={managedDirectoryMemberMap}
+                        onToggleManagePlayersSort={toggleManagePlayersSort}
+                        onUpdateSquadPlayer={updateSquadPlayer}
+                        onUpdateEditableSquad={updateEditableSquad}
+                          onRemoveSquadPlayer={removeSquadPlayer}
+                          positionOptions={MANAGE_POSITION_OPTIONS}
                         />
-                        {manageRosterView === "board" ? (
-                          <select
-                            className="h-8 rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-3 text-[11px]"
-                            value={manageBoardFilter}
-                            onChange={(event) =>
-                              setManageBoardFilter(
-                                event.target.value as ManageRosterFilter
-                              )
-                            }
-                          >
-                            <option value="all">All</option>
-                            <option value="visible">Visible</option>
-                            <option value="hidden">Hidden</option>
-                            <option value="guests">Guests</option>
-                            <option value="regular">Regular</option>
-                          </select>
-                        ) : null}
-                      </div>
-                      {manageRosterView === "base" ? (
-                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                          <button
-                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                            onClick={() =>
-                              addSquadPlayer(manageSquad.id, {
-                                id: createId(),
-                                name: "New Member",
-                                positionLabel: "",
-                                guest: false,
-                                active: true,
-                                number: undefined,
-                                vestColor: undefined,
-                              })
-                            }
-                          >
-                            Add member
-                          </button>
-                          <button
-                            className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
-                            onClick={() =>
-                              addSquadPlayer(manageSquad.id, {
-                                id: createId(),
-                                name: "Guest Member",
-                                positionLabel: "",
-                                guest: true,
-                                active: true,
-                                number: undefined,
-                                vestColor: undefined,
-                              })
-                            }
-                          >
-                            Add guest member
-                          </button>
-                        </div>
                       ) : (
-                        <div className="grid gap-2 sm:grid-cols-3">
-                          <input
-                            className="h-8 rounded-md border border-[var(--line)] bg-transparent px-2 text-[11px] text-[var(--ink-0)]"
-                            placeholder="Guest name"
-                            value={manageGuestName}
-                            onChange={(event) => setManageGuestName(event.target.value)}
-                          />
-                          <input
-                            className="h-8 rounded-md border border-[var(--line)] bg-transparent px-2 text-[11px] text-[var(--ink-0)]"
-                            placeholder="Position"
-                            value={manageGuestPosition}
-                            onChange={(event) => setManageGuestPosition(event.target.value)}
-                          />
-                          <input
-                            className="h-8 rounded-md border border-[var(--line)] bg-transparent px-2 text-[11px] text-[var(--ink-0)]"
-                            placeholder="#"
-                            value={manageGuestNumber}
-                            onChange={(event) => setManageGuestNumber(event.target.value)}
-                          />
-                        </div>
-                      )}
-                      {manageRosterView === "board" ? (
-                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                          <button
-                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                            onClick={manageAddBoardGuest}
-                          >
-                            Add board guest
-                          </button>
-                          <button
-                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                            onClick={() =>
-                              updateManageBoardOverride((current) => ({
-                                ...current,
-                                hiddenPlayerIds: [],
-                              }))
-                            }
-                          >
-                            Show all
-                          </button>
-                          <button
-                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                            onClick={() =>
-                              updateManageBoardOverride((current) => ({
-                                ...current,
-                                positionOverrides: {},
-                              }))
-                            }
-                          >
-                            Reset positions
-                          </button>
-                          <button
-                            className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                            onClick={() =>
-                              updateManageBoardOverride(() => ({
-                                hiddenPlayerIds: [],
-                                guestPlayers: [],
-                                positionOverrides: {},
-                              }))
-                            }
-                          >
-                            Reset board roster
-                          </button>
-                        </div>
+                        <ManageTeamsBoardRoster
+                          sortedManageBoardPlayers={sortedManageBoardPlayers}
+                          onSetBoardPlayerPosition={manageSetBoardPlayerPosition}
+                          onToggleBoardPlayerVisible={manageToggleBoardPlayerVisible}
+                          onPromoteBoardGuest={managePromoteBoardGuest}
+                          onRemoveBoardGuest={manageRemoveBoardGuest}
+                        />
+                        )
                       ) : null}
-                      {manageRosterView === "base" ? (
-                        <>
-                          <div className="space-y-3 lg:hidden">
-                            <p className="text-[10px] leading-relaxed text-[var(--ink-1)]">
-                              Edit members as cards on mobile. Visibility, captain and substitute remain available in each card.
-                            </p>
-                            <div className="max-h-[52vh] space-y-3 overflow-auto pr-1" data-scrollable>
-                              {filteredManageBasePlayers.map((player) => {
-                                const linkedMember =
-                                  managedDirectoryMemberMap.get(player.id) ??
-                                  (player.sourcePlayerId
-                                    ? managedDirectoryMemberMap.get(player.sourcePlayerId)
-                                    : undefined);
-                                const substitutes = editableSquad?.substituteIds ?? [];
-                                const isCaptain = editableSquad?.captainId === player.id;
-                                const isSub = substitutes.includes(player.id);
-                                return (
-                                  <div
-                                    key={player.id}
-                                    className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/60 p-3"
-                                  >
-                                    <div className="grid grid-cols-[64px_minmax(0,1fr)_36px] gap-2">
-                                      <input
-                                        className="h-10 rounded-xl border border-[var(--line)] bg-transparent px-2 text-center text-sm text-[var(--ink-0)]"
-                                        value={player.number ?? ""}
-                                        onChange={(event) =>
-                                          updateSquadPlayer(manageSquad.id, player.id, {
-                                            number: event.target.value
-                                              ? Number(event.target.value)
-                                              : undefined,
-                                          })
-                                        }
-                                      />
-                                      <input
-                                        className="h-10 rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                                        value={player.name}
-                                        onChange={(event) =>
-                                          updateSquadPlayer(manageSquad.id, player.id, {
-                                            name: event.target.value,
-                                          })
-                                        }
-                                      />
-                                      <button
-                                        className={`h-10 rounded-xl border text-[11px] font-semibold ${
-                                          player.guest
-                                            ? "border-[var(--accent-0)] bg-[var(--accent-0)] text-black"
-                                            : "border-[var(--line)] text-[var(--ink-1)]"
-                                        }`}
-                                        onClick={() =>
-                                          updateSquadPlayer(manageSquad.id, player.id, {
-                                            guest: !player.guest,
-                                          })
-                                        }
-                                      >
-                                        G
-                                      </button>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1 text-[9px] uppercase tracking-wide">
-                                      {linkedMember ? (
-                                        <>
-                                          <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[var(--ink-1)]">
-                                            {linkedMember.memberRole}
-                                          </span>
-                                          {linkedMember.teamPosition ? (
-                                            <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[var(--ink-1)]">
-                                              {linkedMember.teamPosition}
-                                            </span>
-                                          ) : null}
-                                          {linkedMember.isTeamAdmin ? (
-                                            <span className="rounded-full border border-[var(--accent-2)] px-1.5 py-0.5 text-[var(--accent-2)]">
-                                              Team admin
-                                            </span>
-                                          ) : null}
-                                        </>
-                                      ) : (
-                                        <span className="rounded-full border border-[var(--accent-1)] px-1.5 py-0.5 text-[var(--accent-1)]">
-                                          Local only
-                                        </span>
-                                      )}
-                                      {player.guest ? (
-                                        <span className="rounded-full border border-[var(--accent-0)] px-1.5 py-0.5 text-[var(--accent-0)]">
-                                          Guest
-                                        </span>
-                                      ) : null}
-                                    </div>
-                                    <select
-                                      className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-3 text-sm text-[var(--ink-0)]"
-                                      value={player.positionLabel}
-                                      onChange={(event) =>
-                                        updateSquadPlayer(manageSquad.id, player.id, {
-                                          positionLabel: event.target.value,
-                                        })
-                                      }
-                                    >
-                                      <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]" />
-                                      {MANAGE_POSITION_OPTIONS.map((pos) => (
-                                        <option
-                                          key={pos}
-                                          value={pos}
-                                          className="bg-[var(--panel-2)] text-[var(--ink-0)]"
-                                        >
-                                          {pos}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    <div className="grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                                      <label className="flex flex-col items-center gap-2 rounded-xl border border-[var(--line)] py-2">
-                                        <span>Visible</span>
-                                        <input
-                                          type="checkbox"
-                                          checked={player.active !== false}
-                                          onChange={(event) =>
-                                            updateSquadPlayer(manageSquad.id, player.id, {
-                                              active: event.target.checked,
-                                            })
-                                          }
-                                        />
-                                      </label>
-                                      <button
-                                        className={`rounded-xl border py-2 ${
-                                          isCaptain
-                                            ? "border-[var(--accent-0)] text-[var(--accent-0)]"
-                                            : "border-[var(--line)] text-[var(--ink-1)]"
-                                        }`}
-                                        onClick={() =>
-                                          updateEditableSquad({
-                                            captainId: isCaptain ? undefined : player.id,
-                                          })
-                                        }
-                                      >
-                                        Captain
-                                      </button>
-                                      <button
-                                        className={`rounded-xl border py-2 ${
-                                          isSub
-                                            ? "border-[var(--accent-0)] text-[var(--accent-0)]"
-                                            : "border-[var(--line)] text-[var(--ink-1)]"
-                                        }`}
-                                        onClick={() => {
-                                          const next = isSub
-                                            ? substitutes.filter((id) => id !== player.id)
-                                            : [...substitutes, player.id];
-                                          updateEditableSquad({ substituteIds: next });
-                                        }}
-                                      >
-                                        Sub
-                                      </button>
-                                      <button
-                                        className="rounded-xl border border-[var(--line)] py-2 text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                                        onClick={() => removeSquadPlayer(manageSquad.id, player.id)}
-                                      >
-                                        Delete
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                          <div className="hidden grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)] lg:grid">
-                            <button
-                              className="text-left hover:text-[var(--accent-2)]"
-                              onClick={() => toggleManagePlayersSort("number")}
-                              title="Sort by number"
-                            >
-                              #{manageSortIndicator("number")}
-                            </button>
-                            <button
-                              className="text-left hover:text-[var(--accent-2)]"
-                              onClick={() => toggleManagePlayersSort("name")}
-                              title="Sort by name"
-                            >
-                              Name{manageSortIndicator("name")}
-                            </button>
-                            <button
-                              className="text-left hover:text-[var(--accent-2)]"
-                              onClick={() => toggleManagePlayersSort("position")}
-                              title="Sort by position"
-                            >
-                              Position{manageSortIndicator("position")}
-                            </button>
-                            <span className="text-center">Show in Squad</span>
-                            <span className="text-center">Captain</span>
-                            <span className="text-center">Substitute</span>
-                            <span />
-                          </div>
-                          <p className="text-[10px] text-[var(--ink-1)]">
-                            All players are listed here. Use &quot;Show in Squad&quot; to control who appears in the Squad tab.
-                          </p>
-                          <div className="flex justify-end">
-                            <button
-                              className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                              onClick={() => toggleManagePlayersSort("default")}
-                              title="Reset to default sort"
-                            >
-                              Default sort{manageSortIndicator("default")}
-                            </button>
-                          </div>
-                          <div className="hidden max-h-56 space-y-2 overflow-auto pr-1 lg:block" data-scrollable>
-                            {filteredManageBasePlayers.map((player) => {
-                              const linkedMember =
-                                managedDirectoryMemberMap.get(player.id) ??
-                                (player.sourcePlayerId
-                                  ? managedDirectoryMemberMap.get(player.sourcePlayerId)
-                                  : undefined);
-                              return (
-                              <div
-                                key={player.id}
-                                className="grid grid-cols-[28px_minmax(0,1fr)_190px_88px_72px_72px_20px] items-center gap-2"
-                              >
-                                <input
-                                  className="h-7 rounded-md border border-[var(--line)] bg-transparent px-1 text-center text-[11px] text-[var(--ink-0)]"
-                                  value={player.number ?? ""}
-                                  onChange={(event) =>
-                                    updateSquadPlayer(manageSquad.id, player.id, {
-                                      number: event.target.value
-                                        ? Number(event.target.value)
-                                        : undefined,
-                                    })
-                                  }
-                                />
-                                <div className="min-w-0 space-y-1">
-                                  <div className="flex items-center gap-1">
-                                    <input
-                                      className="h-7 w-full rounded-md border border-[var(--line)] bg-transparent px-1 text-[11px] text-[var(--ink-0)]"
-                                      value={player.name}
-                                      onChange={(event) =>
-                                        updateSquadPlayer(manageSquad.id, player.id, {
-                                          name: event.target.value,
-                                        })
-                                      }
-                                    />
-                                    <button
-                                      className={`h-7 min-w-[30px] rounded-md border px-1 text-[10px] font-semibold ${
-                                        player.guest
-                                          ? "border-[var(--accent-0)] bg-[var(--accent-0)] text-black"
-                                          : "border-[var(--line)] text-[var(--ink-1)]"
-                                      }`}
-                                      onClick={() =>
-                                        updateSquadPlayer(manageSquad.id, player.id, {
-                                          guest: !player.guest,
-                                        })
-                                      }
-                                      title="Guest player"
-                                      aria-label="Guest player"
-                                    >
-                                      G
-                                    </button>
-                                  </div>
-                                  <div className="flex flex-wrap gap-1 text-[9px] uppercase tracking-wide">
-                                    {linkedMember ? (
-                                      <>
-                                        <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[var(--ink-1)]">
-                                          {linkedMember.memberRole}
-                                        </span>
-                                        {linkedMember.teamPosition ? (
-                                          <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[var(--ink-1)]">
-                                            {linkedMember.teamPosition}
-                                          </span>
-                                        ) : null}
-                                        {linkedMember.isTeamAdmin ? (
-                                          <span className="rounded-full border border-[var(--accent-2)] px-1.5 py-0.5 text-[var(--accent-2)]">
-                                            Team admin
-                                          </span>
-                                        ) : null}
-                                      </>
-                                    ) : (
-                                      <span className="rounded-full border border-[var(--accent-1)] px-1.5 py-0.5 text-[var(--accent-1)]">
-                                        Local only
-                                      </span>
-                                    )}
-                                    {player.guest ? (
-                                      <span className="rounded-full border border-[var(--accent-0)] px-1.5 py-0.5 text-[var(--accent-0)]">
-                                        Guest
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                </div>
-                                <select
-                                  className="h-7 w-full rounded-md border border-[var(--line)] bg-[var(--panel-2)] px-2 text-[10px] text-[var(--ink-0)]"
-                                  value={player.positionLabel}
-                                  onChange={(event) =>
-                                    updateSquadPlayer(manageSquad.id, player.id, {
-                                      positionLabel: event.target.value,
-                                    })
-                                  }
-                                >
-                                  <option value="" className="bg-[var(--panel-2)] text-[var(--ink-0)]">
-                                    
-                                  </option>
-                                  {MANAGE_POSITION_OPTIONS.map((pos) => (
-                                    <option
-                                      key={pos}
-                                      value={pos}
-                                      className="bg-[var(--panel-2)] text-[var(--ink-0)]"
-                                    >
-                                      {pos}
-                                    </option>
-                                  ))}
-                                </select>
-                                <div className="flex h-full w-full items-center justify-center">
-                                  <input
-                                    type="checkbox"
-                                    checked={player.active !== false}
-                                    onChange={(event) =>
-                                      updateSquadPlayer(manageSquad.id, player.id, {
-                                        active: event.target.checked,
-                                      })
-                                    }
-                                    title="Show in Squad"
-                                    aria-label="Show in Squad"
-                                  />
-                                </div>
-                                {(() => {
-                                  const substitutes = editableSquad?.substituteIds ?? [];
-                                  const isCaptain = editableSquad?.captainId === player.id;
-                                  const isSub = substitutes.includes(player.id);
-                                  return (
-                                    <>
-                                    <div className="flex h-full w-full items-center justify-center">
-                                      <button
-                                        className={`h-4 w-4 rounded-full border ${
-                                          isCaptain
-                                            ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
-                                            : "border-[var(--line)]"
-                                        }`}
-                                        onClick={() =>
-                                          updateEditableSquad({
-                                            captainId: isCaptain ? undefined : player.id,
-                                          })
-                                        }
-                                        title="Captain"
-                                        aria-label="Captain"
-                                      />
-                                    </div>
-                                    <div className="flex h-full w-full items-center justify-center">
-                                      <button
-                                        className={`h-4 w-4 rounded-full border ${
-                                          isSub
-                                            ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
-                                            : "border-[var(--line)]"
-                                        }`}
-                                        onClick={() => {
-                                          const next = isSub
-                                            ? substitutes.filter((id) => id !== player.id)
-                                            : [...substitutes, player.id];
-                                          updateEditableSquad({ substituteIds: next });
-                                        }}
-                                        title="Substitute"
-                                        aria-label="Substitute"
-                                      />
-                                    </div>
-                                    </>
-                                  );
-                                })()}
-                                <button
-                                  className="rounded-full border border-[var(--line)] p-1 text-[10px] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                                  onClick={() => removeSquadPlayer(manageSquad.id, player.id)}
-                                  title="Delete"
-                                  aria-label="Delete"
-                                >
-                                  <svg
-                                    aria-hidden
-                                    viewBox="0 0 24 24"
-                                    className="h-3 w-3"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <path d="M4 7h16" />
-                                    <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                                    <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
-                                  </svg>
-                                </button>
-                              </div>
-                            );
-                            })}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="space-y-3 lg:hidden">
-                            <div className="max-h-[52vh] space-y-3 overflow-auto pr-1" data-scrollable>
-                              {sortedManageBoardPlayers.map((player) => (
-                                <div
-                                  key={player.id}
-                                  className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/60 p-3"
-                                >
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                      <p className="truncate text-sm text-[var(--ink-0)]">
-                                        {player.name}
-                                      </p>
-                                      <div className="mt-1 flex flex-wrap gap-1 text-[9px] uppercase tracking-wide">
-                                        {player.guest ? (
-                                          <span className="rounded-full border border-[var(--accent-0)] px-1.5 py-0.5 text-[var(--accent-0)]">
-                                            Guest
-                                          </span>
-                                        ) : (
-                                          <span className="rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[var(--ink-1)]">
-                                            Team member
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <button
-                                      className={`rounded-full border px-2 py-1 text-[10px] ${
-                                        player.active === false
-                                          ? "border-[var(--line)] text-[var(--ink-1)]"
-                                          : "border-[var(--accent-0)] text-[var(--accent-0)]"
-                                      }`}
-                                      onClick={() =>
-                                        manageToggleBoardPlayerVisible(
-                                          player.id,
-                                          player.active === false
-                                        )
-                                      }
-                                    >
-                                      {player.active === false ? "Show" : "Hide"}
-                                    </button>
-                                  </div>
-                                  <input
-                                    className="h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                                    value={player.positionLabel}
-                                    onChange={(event) =>
-                                      manageSetBoardPlayerPosition(player.id, event.target.value)
-                                    }
-                                  />
-                                  {player.guest ? (
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <button
-                                        className="rounded-xl border border-[var(--accent-2)] px-3 py-2 text-[11px] text-[var(--accent-2)]"
-                                        onClick={() => managePromoteBoardGuest(player)}
-                                      >
-                                        Promote
-                                      </button>
-                                      <button
-                                        className="rounded-xl border border-[var(--accent-1)] px-3 py-2 text-[11px] text-[var(--accent-1)]"
-                                        onClick={() => manageRemoveBoardGuest(player.id)}
-                                      >
-                                        Remove
-                                      </button>
-                                    </div>
-                                  ) : null}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="hidden grid-cols-[minmax(0,1fr)_130px_170px] items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)] lg:grid">
-                            <span>Name</span>
-                            <span>Position on board</span>
-                            <span>Actions</span>
-                          </div>
-                          <div className="hidden max-h-56 space-y-2 overflow-auto pr-1 lg:block" data-scrollable>
-                            {sortedManageBoardPlayers.map((player) => (
-                              <div
-                                key={player.id}
-                                className="grid grid-cols-[minmax(0,1fr)_130px_170px] items-center gap-2"
-                              >
-                                <div className="truncate text-[11px] text-[var(--ink-0)]">
-                                  {player.name}
-                                  {player.guest ? (
-                                    <span className="ml-1 rounded-full border border-[var(--accent-0)] px-1 text-[9px] uppercase text-[var(--accent-0)]">
-                                      Guest
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <input
-                                  className="h-7 rounded-md border border-[var(--line)] bg-transparent px-2 text-[11px] text-[var(--ink-0)]"
-                                  value={player.positionLabel}
-                                  onChange={(event) =>
-                                    manageSetBoardPlayerPosition(
-                                      player.id,
-                                      event.target.value
-                                    )
-                                  }
-                                />
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    className={`rounded-full border px-2 py-1 text-[10px] ${
-                                      player.active === false
-                                        ? "border-[var(--line)] text-[var(--ink-1)]"
-                                        : "border-[var(--accent-0)] text-[var(--accent-0)]"
-                                    }`}
-                                    onClick={() =>
-                                      manageToggleBoardPlayerVisible(
-                                        player.id,
-                                        player.active === false
-                                      )
-                                    }
-                                  >
-                                    {player.active === false ? "Show" : "Hide"}
-                                  </button>
-                                  {player.guest ? (
-                                    <>
-                                      <button
-                                        className="rounded-full border border-[var(--accent-2)] px-2 py-1 text-[10px] text-[var(--accent-2)]"
-                                        onClick={() => managePromoteBoardGuest(player)}
-                                      >
-                                        Promote
-                                      </button>
-                                      <button
-                                        className="rounded-full border border-[var(--accent-1)] px-2 py-1 text-[10px] text-[var(--accent-1)]"
-                                        onClick={() => manageRemoveBoardGuest(player.id)}
-                                      >
-                                        Remove
-                                      </button>
-                                    </>
-                                  ) : null}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-xs text-[var(--ink-1)]">
-                      No team data available.
-                    </p>
-                  )}
+                    </ManageTeamsRoster>
+                  </div>
                 </div>
-                <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25 px-4 py-3 text-[11px] text-[var(--ink-1)]">
-                  You are editing the <span className="text-[var(--accent-0)]">{manageSide === "home" ? "Home" : "Away"}</span> squad. Use the header actions to apply this edited squad to Home or Away.
-                </div>
-                {squadPresetsLoading ? (
-                  <p className="text-xs text-[var(--ink-1)]">Loading teams...</p>
-                ) : null}
-                {squadPresetsError ? (
-                  <p className="text-xs text-[var(--accent-1)]">
-                    {squadPresetsError}
-                  </p>
-                ) : null}
-                {managePresetStatus ? (
-                  <p className="text-xs text-[var(--accent-1)]">{managePresetStatus}</p>
-                ) : null}
               </div>
-          </div>
-        </div>
-      )}
+            </ManageTeamsModal>
       {manageTemplatesOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
           <div className="w-full max-w-2xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
