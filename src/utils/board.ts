@@ -7,6 +7,59 @@ export const getPlayerTokenLinkKey = (
   player: Pick<PlayerToken, "squadPlayerId" | "teamMemberId">
 ) => player.squadPlayerId ?? player.teamMemberId;
 
+const PITCH_MID_X = 105 / 2;
+
+export const resolvePlayerTokenSquadPlayer = (
+  token: Pick<PlayerToken, "position" | "squadPlayerId" | "teamMemberId">,
+  squads: { home?: Squad; away?: Squad }
+): SquadPlayer | undefined => {
+  const homePlayers = squads.home?.players ?? [];
+  const awayPlayers = squads.away?.players ?? [];
+  const allPlayers = [...homePlayers, ...awayPlayers];
+  const exactMatch = token.squadPlayerId
+    ? allPlayers.find((player) => player.id === token.squadPlayerId)
+    : undefined;
+  if (!token.teamMemberId) {
+    return exactMatch;
+  }
+  const homeByMember = homePlayers.find(
+    (player) => player.teamMemberId === token.teamMemberId
+  );
+  const awayByMember = awayPlayers.find(
+    (player) => player.teamMemberId === token.teamMemberId
+  );
+  if (!homeByMember && !awayByMember) {
+    return exactMatch;
+  }
+  if (homeByMember && !awayByMember) {
+    return homeByMember;
+  }
+  if (awayByMember && !homeByMember) {
+    return awayByMember;
+  }
+  const inferredSide = token.position.x <= PITCH_MID_X ? "home" : "away";
+  const inferredMatch = inferredSide === "home" ? homeByMember : awayByMember;
+  const oppositeMatch = inferredSide === "home" ? awayByMember : homeByMember;
+  if (
+    exactMatch &&
+    exactMatch.teamMemberId === token.teamMemberId &&
+    inferredMatch &&
+    exactMatch.id === inferredMatch.id
+  ) {
+    return exactMatch;
+  }
+  if (inferredMatch) {
+    return inferredMatch;
+  }
+  if (
+    exactMatch &&
+    (exactMatch.teamMemberId === token.teamMemberId || !exactMatch.teamMemberId)
+  ) {
+    return exactMatch;
+  }
+  return oppositeMatch;
+};
+
 const applyBoardOverride = (board: Board, squad: Squad): Squad => {
   const override = board.squadOverrides?.[squad.id];
   if (!override) {

@@ -30,6 +30,7 @@ import { useBoardInteractions } from "@/board/useBoardInteractions";
 import {
   getBoardSquads,
   getPlayerTokenLinkKey,
+  resolvePlayerTokenSquadPlayer,
 } from "@/utils/board";
 
 const getLineOutlineWidth = (strokeWidth: number) =>
@@ -1075,6 +1076,19 @@ export default function BoardCanvas({
     });
     return map;
   }, [squadPlayers]);
+  const resolvedSquadPlayerByTokenId = useMemo(() => {
+    const map = new Map<string, (typeof squadPlayers)[number]>();
+    objects.forEach((item) => {
+      if (item.type !== "player") {
+        return;
+      }
+      const resolved = resolvePlayerTokenSquadPlayer(item, boardSquads);
+      if (resolved) {
+        map.set(item.id, resolved);
+      }
+    });
+    return map;
+  }, [boardSquads, objects, squadPlayers]);
   const kitByPlayerId = useMemo(() => {
     const map: Record<string, string> = {};
     boardSquads.all.forEach((squad) => {
@@ -1694,10 +1708,7 @@ export default function BoardCanvas({
       .map((item, index) => {
         let fallbackName = "";
         if (item.type === "player") {
-          const playerKey = getPlayerTokenLinkKey(item);
-          const squadPlayer = playerKey
-            ? squadPlayerById.get(playerKey)
-            : null;
+          const squadPlayer = resolvedSquadPlayerByTokenId.get(item.id) ?? null;
           fallbackName = squadPlayer?.name?.trim() || `#${index + 1}`;
         } else if (item.type === "text") {
           fallbackName = item.text.trim().slice(0, 36) || `#${index + 1}`;
@@ -1725,7 +1736,7 @@ export default function BoardCanvas({
         }
         return a.label.localeCompare(b.label);
       });
-  }, [objects, squadPlayerById]);
+  }, [objects, resolvedSquadPlayerByTokenId]);
 
   const renderObjectTypeIcon = (item: DrawableObject) => {
     const stroke = item.style.stroke || "#111111";
@@ -1754,7 +1765,8 @@ export default function BoardCanvas({
       );
     }
     if (item.type === "player") {
-      const playerKey = getPlayerTokenLinkKey(item);
+      const playerKey =
+        resolvedSquadPlayerByTokenId.get(item.id)?.id ?? getPlayerTokenLinkKey(item);
       const playerFill = playerKey
         ? kitByPlayerId[playerKey] ?? item.style.fill
         : item.style.fill === "#f9bf4a"
@@ -2476,6 +2488,7 @@ export default function BoardCanvas({
                 isLinkCandidate={linkingPlayerIds.includes(object.id)}
                 onLinkPlayer={(id) => addLinkingPlayer(id)}
                 squadPlayers={squadPlayers}
+                resolvedSquadPlayerByTokenId={resolvedSquadPlayerByTokenId}
                 kitByPlayerId={kitByPlayerId}
                 secondaryKitByPlayerId={secondaryKitByPlayerId}
                 jerseyTypeByPlayerId={jerseyTypeByPlayerId}
@@ -2593,6 +2606,7 @@ export default function BoardCanvas({
                 isLinkCandidate={linkingPlayerIds.includes(object.id)}
                 onLinkPlayer={(id) => addLinkingPlayer(id)}
                 squadPlayers={squadPlayers}
+                resolvedSquadPlayerByTokenId={resolvedSquadPlayerByTokenId}
                 kitByPlayerId={kitByPlayerId}
                 secondaryKitByPlayerId={secondaryKitByPlayerId}
                 jerseyTypeByPlayerId={jerseyTypeByPlayerId}

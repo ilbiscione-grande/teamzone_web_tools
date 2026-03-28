@@ -556,7 +556,7 @@ export const ensureBoardSquads = (project: Project): Project => {
     const awayPlayers =
       squads.find((squad) => squad.id === primaryAway.id)?.players ?? primaryAway.players;
     const resolveLegacyTokenSquadPlayerId = (object: DrawableObject) => {
-      if (object.type !== "player" || object.squadPlayerId || !object.teamMemberId) {
+      if (object.type !== "player" || !object.teamMemberId) {
         return;
       }
       const homeCandidate = homePlayers.find(

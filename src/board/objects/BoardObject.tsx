@@ -177,6 +177,7 @@ type BoardObjectProps = {
   isLinkCandidate: boolean;
   onLinkPlayer: (id: string) => void;
   squadPlayers: SquadPlayer[];
+  resolvedSquadPlayerByTokenId: Map<string, SquadPlayer>;
   kitByPlayerId: Record<string, string>;
   secondaryKitByPlayerId: Record<string, string | undefined>;
   jerseyTypeByPlayerId: Record<string, string | undefined>;
@@ -209,6 +210,7 @@ export default function BoardObject({
   isLinkCandidate,
   onLinkPlayer,
   squadPlayers,
+  resolvedSquadPlayerByTokenId,
   kitByPlayerId,
   secondaryKitByPlayerId,
   jerseyTypeByPlayerId,
@@ -509,7 +511,8 @@ export default function BoardObject({
 
   if (object.type === "player") {
     const player = object as PlayerToken;
-    const playerKey = getPlayerTokenLinkKey(player);
+    const resolvedSquadPlayer = resolvedSquadPlayerByTokenId.get(player.id);
+    const playerKey = resolvedSquadPlayer?.id ?? getPlayerTokenLinkKey(player);
     const fillColor = playerKey
       ? kitByPlayerId[playerKey] ?? player.style.fill
       : player.style.fill === "#f9bf4a"
@@ -526,11 +529,13 @@ export default function BoardObject({
     const vestColor =
       player.vestColor ??
       (playerKey ? vestByPlayerId[playerKey] : undefined);
-    const squadPlayer = playerKey
-      ? squadPlayers.find(
-          (item) => item.id === playerKey || item.teamMemberId === playerKey
-        )
-      : undefined;
+    const squadPlayer =
+      resolvedSquadPlayer ??
+      (playerKey
+        ? squadPlayers.find(
+            (item) => item.id === playerKey || item.teamMemberId === playerKey
+          )
+        : undefined);
     const compactName = (() => {
       const value = squadPlayer?.name?.trim();
       if (!value) {
