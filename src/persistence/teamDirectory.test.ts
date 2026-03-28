@@ -44,7 +44,7 @@ describe("teamDirectory", () => {
       clubMemberships: [
         {
           club_id: "club-1",
-          membership_role: "staff",
+          club_role: "staff",
           is_club_admin: true,
           clubs: {
             id: "club-1",
@@ -74,7 +74,7 @@ describe("teamDirectory", () => {
           team_id: "team-1",
           user_id: "user-1",
           display_name: "Head Coach",
-          member_role: "leader",
+          team_role: "leader",
           team_position: "head_coach",
           is_team_admin: true,
           is_guest: false,
@@ -88,7 +88,7 @@ describe("teamDirectory", () => {
           team_id: "team-1",
           user_id: null,
           display_name: "Goalkeeper",
-          member_role: "player",
+          team_role: "player",
           team_position: "goalkeeper",
           is_team_admin: false,
           is_guest: false,
@@ -103,6 +103,7 @@ describe("teamDirectory", () => {
     expect(clubs[0]?.isCurrentUserClubAdmin).toBe(true);
     expect(clubs[0]?.teams[0]?.isCurrentUserTeamAdmin).toBe(true);
     expect(clubs[0]?.teams[0]?.squad.players[0]).toMatchObject({
+      teamMemberId: "member-2",
       name: "Goalkeeper",
       positionLabel: "goalkeeper",
       number: 1,

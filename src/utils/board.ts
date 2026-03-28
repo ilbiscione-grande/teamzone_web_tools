@@ -1,4 +1,11 @@
-import type { Board, Project, Squad } from "@/models";
+import type { Board, PlayerToken, Project, Squad, SquadPlayer } from "@/models";
+
+export const getBoardOverridePlayerKey = (player: Pick<SquadPlayer, "id" | "teamMemberId">) =>
+  player.teamMemberId ?? player.id;
+
+export const getPlayerTokenLinkKey = (
+  player: Pick<PlayerToken, "squadPlayerId" | "teamMemberId">
+) => player.teamMemberId ?? player.squadPlayerId;
 
 const applyBoardOverride = (board: Board, squad: Squad): Squad => {
   const override = board.squadOverrides?.[squad.id];
@@ -8,14 +15,18 @@ const applyBoardOverride = (board: Board, squad: Squad): Squad => {
   const hiddenIds = new Set(override.hiddenPlayerIds ?? []);
   const positionOverrides = override.positionOverrides ?? {};
   const basePlayers = squad.players.map((player) => {
-    const nextPosition = positionOverrides[player.id];
+    const overrideKey = getBoardOverridePlayerKey(player);
+    const nextPosition = positionOverrides[overrideKey] ?? positionOverrides[player.id];
     return {
       ...player,
       positionLabel:
         typeof nextPosition === "string" && nextPosition.trim().length > 0
           ? nextPosition
           : player.positionLabel,
-      active: hiddenIds.has(player.id) ? false : player.active ?? true,
+      active:
+        hiddenIds.has(overrideKey) || hiddenIds.has(player.id)
+          ? false
+          : player.active ?? true,
     };
   });
   const guestPlayers = (override.guestPlayers ?? []).map((guest) => {

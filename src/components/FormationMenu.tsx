@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
-import { getActiveBoard, getBoardSquads } from "@/utils/board";
+import {
+  getActiveBoard,
+  getBoardOverridePlayerKey,
+  getBoardSquads,
+  getPlayerTokenLinkKey,
+} from "@/utils/board";
 import { clone } from "@/utils/clone";
 import { createPlayer } from "@/board/objects/objectFactory";
 import { createId } from "@/utils/id";
@@ -181,17 +186,20 @@ export default function FormationMenu() {
   };
 
   const getSlotsFromLayout = (squad: Squad) => {
-    const squadPlayerIds = new Set(squad.players.map((player) => player.id));
+    const squadPlayerIds = new Set(
+      squad.players.map((player) => getBoardOverridePlayerKey(player))
+    );
     return objects
       .filter((item) => item.type === "player")
       .map((item) => item as PlayerToken)
       .filter(
         (token) =>
-          !token.squadPlayerId || squadPlayerIds.has(token.squadPlayerId)
+          !getPlayerTokenLinkKey(token) ||
+          squadPlayerIds.has(getPlayerTokenLinkKey(token)!)
       )
       .map((token) => ({
         position: { x: token.position.x, y: token.position.y },
-        playerId: token.squadPlayerId,
+        playerId: getPlayerTokenLinkKey(token),
       }))
       .sort((a, b) =>
         a.position.x === b.position.x
@@ -246,12 +254,14 @@ export default function FormationMenu() {
     if (!squad) {
       return;
     }
-    const squadPlayerIds = new Set(squad.players.map((player) => player.id));
+    const squadPlayerIds = new Set(
+      squad.players.map((player) => getBoardOverridePlayerKey(player))
+    );
     const existingSquadTokens = objects.filter(
       (item) =>
         item.type === "player" &&
-        (item as PlayerToken).squadPlayerId &&
-        squadPlayerIds.has((item as PlayerToken).squadPlayerId!)
+        getPlayerTokenLinkKey(item as PlayerToken) &&
+        squadPlayerIds.has(getPlayerTokenLinkKey(item as PlayerToken)!)
     );
     if (existingSquadTokens.length > 0) {
       const confirmed = window.confirm(
@@ -268,8 +278,8 @@ export default function FormationMenu() {
       (item) =>
         item.type !== "player" ||
         !(
-          (item as PlayerToken).squadPlayerId &&
-          squadPlayerIds.has((item as PlayerToken).squadPlayerId!)
+          getPlayerTokenLinkKey(item as PlayerToken) &&
+          squadPlayerIds.has(getPlayerTokenLinkKey(item as PlayerToken)!)
         )
     ) as PlayerToken[];
 
@@ -300,6 +310,7 @@ export default function FormationMenu() {
         );
         if (player) {
           token.squadPlayerId = player.id;
+          token.teamMemberId = player.teamMemberId;
         }
         next.push(token);
       });
@@ -319,7 +330,9 @@ export default function FormationMenu() {
       slots.forEach((slot) => {
         let player =
           custom.side === formationSide && slot.playerId
-            ? squadPlayers.find((item) => item.id === slot.playerId)
+            ? squadPlayers.find(
+                (item) => getBoardOverridePlayerKey(item) === slot.playerId
+              )
             : undefined;
         if (!player) {
           player = squadPlayers.find((item) => !usedPlayers.has(item.id));
@@ -334,6 +347,7 @@ export default function FormationMenu() {
         );
         if (player) {
           token.squadPlayerId = player.id;
+          token.teamMemberId = player.teamMemberId;
         }
         next.push(token);
       });

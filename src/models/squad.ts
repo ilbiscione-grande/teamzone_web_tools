@@ -2,6 +2,7 @@ export type JerseyType = "solid" | "split" | "stripe" | "sash" | "pinstripe";
 
 export type SquadPlayer = {
   id: string;
+  teamMemberId?: string;
   name: string;
   positionLabel: string;
   guest?: boolean;

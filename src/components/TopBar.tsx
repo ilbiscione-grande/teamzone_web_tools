@@ -31,7 +31,7 @@ import ManageTeamsBoardRoster from "@/components/manage-teams/ManageTeamsBoardRo
 import ManageTeamsRoster from "@/components/manage-teams/ManageTeamsRoster";
 import ManageTeamsSourcePanel from "@/components/manage-teams/ManageTeamsSourcePanel";
 import ManageTeamsTeamSetup from "@/components/manage-teams/ManageTeamsTeamSetup";
-import { getActiveBoard, getBoardSquads } from "@/utils/board";
+import { getActiveBoard, getBoardOverridePlayerKey, getBoardSquads } from "@/utils/board";
 import { createId } from "@/utils/id";
 import {
   createTeamWithSquad,
@@ -257,6 +257,8 @@ export default function TopBar() {
       homeKit: project.settings?.homeKit,
       awayKit: project.settings?.awayKit,
       attachBallToPlayer: project.settings?.attachBallToPlayer ?? false,
+      homeTeamId: project.teamContext?.homeTeamId,
+      awayTeamId: project.teamContext?.awayTeamId,
     });
   };
 
@@ -440,6 +442,10 @@ export default function TopBar() {
   const boardSquads = getBoardSquads(project ?? null, activeBoard ?? null);
   const manageSquadId =
     manageSide === "home" ? activeBoard?.homeSquadId : activeBoard?.awaySquadId;
+  const currentHomeLinkedTeamId = project?.teamContext?.homeTeamId;
+  const currentAwayLinkedTeamId = project?.teamContext?.awayTeamId;
+  const manageLinkedTeamId =
+    manageSide === "home" ? currentHomeLinkedTeamId : currentAwayLinkedTeamId;
   const manageBaseSquad =
     project?.squads.find((item) => item.id === manageSquadId) ?? null;
   const currentHomeManagedSquad =
@@ -471,8 +477,26 @@ export default function TopBar() {
       ),
     [squadPresetDirectory]
   );
+  const currentHomeLinkedTeam =
+    manageDirectoryTeams.find((team) => team.teamId === currentHomeLinkedTeamId) ?? null;
+  const currentAwayLinkedTeam =
+    manageDirectoryTeams.find((team) => team.teamId === currentAwayLinkedTeamId) ?? null;
+  const currentHomePresetTeam =
+    currentHomeLinkedTeamId
+      ? squadPresets.find((team) => team.id === currentHomeLinkedTeamId) ?? null
+      : null;
+  const currentAwayPresetTeam =
+    currentAwayLinkedTeamId
+      ? squadPresets.find((team) => team.id === currentAwayLinkedTeamId) ?? null
+      : null;
   const managedDirectoryTeam =
-    manageDirectoryTeams.find((team) => team.teamId === manageSquad?.id) ?? null;
+    manageDirectoryTeams.find((team) => team.teamId === manageLinkedTeamId) ??
+    manageDirectoryTeams.find((team) => team.teamId === manageSquad?.id) ??
+    null;
+  const managedPresetTeam =
+    manageLinkedTeamId
+      ? squadPresets.find((team) => team.id === manageLinkedTeamId) ?? null
+      : null;
   const selectedManageDirectoryTeam =
     manageDirectoryTeams.find((team) => team.teamId === manageSelectedDirectoryTeamId) ??
     null;
@@ -483,8 +507,63 @@ export default function TopBar() {
     });
     return entries;
   }, [managedDirectoryTeam]);
+  const managedDirectoryMemberOrderMap = useMemo(() => {
+    const entries = new Map<string, number>();
+    managedDirectoryTeam?.members.forEach((member, index) => {
+      entries.set(member.id, member.sortOrder ?? index);
+    });
+    return entries;
+  }, [managedDirectoryTeam]);
+  const manageBasePlayers = useMemo(() => {
+    if (!manageSquad) {
+      return [] as SquadPlayer[];
+    }
+    if (!managedDirectoryTeam) {
+      return manageSquad.players;
+    }
+    const snapshotByMemberId = new Map<string, SquadPlayer>();
+    const unmatchedSnapshotPlayers: SquadPlayer[] = [];
+    manageSquad.players.forEach((player) => {
+      if (player.teamMemberId) {
+        snapshotByMemberId.set(player.teamMemberId, player);
+      } else if (player.sourcePlayerId) {
+        snapshotByMemberId.set(player.sourcePlayerId, player);
+      } else {
+        unmatchedSnapshotPlayers.push(player);
+      }
+    });
+    const mergedPlayers = managedDirectoryTeam.members
+      .filter((member) => member.memberRole === "player" || member.isGuest)
+      .map((member) => {
+        const snapshot = snapshotByMemberId.get(member.id);
+        if (snapshot) {
+          return {
+            ...snapshot,
+            teamMemberId: snapshot.teamMemberId ?? member.id,
+            sourcePlayerId: snapshot.sourcePlayerId ?? member.id,
+            sourceTeamId: snapshot.sourceTeamId ?? managedDirectoryTeam.teamId,
+            sourceTeamName:
+              snapshot.sourceTeamName ?? managedDirectoryTeam.teamName,
+          };
+        }
+        return {
+          id: member.id,
+          teamMemberId: member.id,
+          sourcePlayerId: member.id,
+          sourceTeamId: managedDirectoryTeam.teamId,
+          sourceTeamName: managedDirectoryTeam.teamName,
+          name: member.displayName,
+          positionLabel: member.teamPosition?.trim() || "POS",
+          guest: member.isGuest,
+          active: member.isActive,
+          number: member.shirtNumber ?? undefined,
+          photoUrl: member.photoUrl ?? undefined,
+        } satisfies SquadPlayer;
+      });
+    return [...mergedPlayers, ...unmatchedSnapshotPlayers];
+  }, [manageSquad, managedDirectoryTeam]);
   const manageMembershipSummary = useMemo(() => {
-    const players = manageSquad?.players ?? [];
+    const players = manageBasePlayers;
     let linkedMembers = 0;
     let localOnly = 0;
     let guests = 0;
@@ -494,8 +573,10 @@ export default function TopBar() {
       }
       const member =
         managedDirectoryMemberMap.get(player.id) ??
-        (player.sourcePlayerId
-          ? managedDirectoryMemberMap.get(player.sourcePlayerId)
+        (player.teamMemberId
+          ? managedDirectoryMemberMap.get(player.teamMemberId)
+          : player.sourcePlayerId
+            ? managedDirectoryMemberMap.get(player.sourcePlayerId)
           : undefined);
       if (member) {
         linkedMembers += 1;
@@ -504,7 +585,7 @@ export default function TopBar() {
       }
     });
     return { linkedMembers, localOnly, guests };
-  }, [manageSquad?.players, managedDirectoryMemberMap]);
+  }, [manageBasePlayers, managedDirectoryMemberMap]);
   useEffect(() => {
     if (!squadPresetsOpen) {
       return;
@@ -522,7 +603,7 @@ export default function TopBar() {
       return [];
     }
     const substitutes = new Set(editableSquad?.substituteIds ?? []);
-    const withIndex = manageSquad.players.map((player, index) => ({
+    const withIndex = manageBasePlayers.map((player, index) => ({
       player,
       index,
     }));
@@ -535,6 +616,25 @@ export default function TopBar() {
       a: (typeof withIndex)[number],
       b: (typeof withIndex)[number]
     ) => {
+      const aMemberOrder =
+        (a.player.teamMemberId
+          ? managedDirectoryMemberOrderMap.get(a.player.teamMemberId)
+          : undefined) ?? managedDirectoryMemberOrderMap.get(a.player.id);
+      const bMemberOrder =
+        (b.player.teamMemberId
+          ? managedDirectoryMemberOrderMap.get(b.player.teamMemberId)
+          : undefined) ?? managedDirectoryMemberOrderMap.get(b.player.id);
+      if (aMemberOrder != null || bMemberOrder != null) {
+        if (aMemberOrder == null) {
+          return 1;
+        }
+        if (bMemberOrder == null) {
+          return -1;
+        }
+        if (aMemberOrder !== bMemberOrder) {
+          return aMemberOrder - bMemberOrder;
+        }
+      }
       const aShown = a.player.active !== false ? 0 : 1;
       const bShown = b.player.active !== false ? 0 : 1;
       if (aShown !== bShown) {
@@ -575,13 +675,148 @@ export default function TopBar() {
       return value * direction || a.index - b.index;
     };
     return [...withIndex].sort(compare).map((entry) => entry.player);
-  }, [editableSquad?.substituteIds, managePlayersSortDir, managePlayersSortKey, manageSquad]);
+  }, [
+    editableSquad?.substituteIds,
+    managePlayersSortDir,
+    managePlayersSortKey,
+    manageBasePlayers,
+    manageSquad,
+    managedDirectoryMemberOrderMap,
+  ]);
   const updateEditableSquad = (
     payload: Partial<SquadPreset["squad"]>
   ) => {
     if (manageSquad) {
       updateSquad(manageSquad.id, payload);
     }
+  };
+  const ensureManageBasePlayer = (playerId: string) => {
+    if (!manageSquad) {
+      return null;
+    }
+    const existing =
+      manageSquad.players.find((player) => player.id === playerId) ??
+      manageSquad.players.find((player) => player.teamMemberId === playerId) ??
+      manageSquad.players.find((player) => player.sourcePlayerId === playerId);
+    if (existing) {
+      return existing;
+    }
+    const member = managedDirectoryMemberMap.get(playerId);
+    if (!member || !managedDirectoryTeam) {
+      return null;
+    }
+    const nextPlayer: SquadPlayer = {
+      id: createId(),
+      teamMemberId: playerId,
+      sourcePlayerId: playerId,
+      sourceTeamId: managedDirectoryTeam.teamId,
+      sourceTeamName: managedDirectoryTeam.teamName,
+      name: member.displayName,
+      positionLabel: member.teamPosition?.trim() || "POS",
+      guest: member.isGuest,
+      active: member.isActive,
+      number: member.shirtNumber ?? undefined,
+      photoUrl: member.photoUrl ?? undefined,
+    };
+    addSquadPlayer(manageSquad.id, nextPlayer);
+    return nextPlayer;
+  };
+  const updateManageBasePlayer = (
+    squadId: string,
+    playerId: string,
+    payload: Partial<SquadPlayer>
+  ) => {
+    if (!manageSquad || squadId !== manageSquad.id) {
+      return;
+    }
+    const player = ensureManageBasePlayer(playerId);
+    if (!player) {
+      return;
+    }
+    updateSquadPlayer(squadId, player.id, payload);
+  };
+  const removeManageBasePlayer = (squadId: string, playerId: string) => {
+    if (!manageSquad || squadId !== manageSquad.id) {
+      return;
+    }
+    const existing =
+      manageSquad.players.find((player) => player.id === playerId) ??
+      manageSquad.players.find((player) => player.teamMemberId === playerId) ??
+      manageSquad.players.find((player) => player.sourcePlayerId === playerId);
+    if (!existing) {
+      return;
+    }
+    removeSquadPlayer(squadId, existing.id);
+  };
+  const isManageBaseCaptain = (playerId: string) => {
+    if (!editableSquad?.captainId) {
+      return false;
+    }
+    return manageSquad?.players.some(
+      (player) =>
+        player.id === editableSquad.captainId &&
+        (player.id === playerId ||
+          player.teamMemberId === playerId ||
+          player.sourcePlayerId === playerId)
+    ) ?? false;
+  };
+  const isManageBaseSubstitute = (playerId: string) => {
+    const substituteIds = editableSquad?.substituteIds ?? [];
+    return manageSquad?.players.some(
+      (player) =>
+        substituteIds.includes(player.id) &&
+        (player.id === playerId ||
+          player.teamMemberId === playerId ||
+          player.sourcePlayerId === playerId)
+    ) ?? false;
+  };
+  const toggleManageBaseCaptain = (playerId: string) => {
+    if (!manageSquad) {
+      return;
+    }
+    if (isManageBaseCaptain(playerId)) {
+      updateEditableSquad({ captainId: undefined });
+      return;
+    }
+    const player = ensureManageBasePlayer(playerId);
+    if (!player) {
+      return;
+    }
+    updateEditableSquad({ captainId: player.id });
+  };
+  const toggleManageBaseSubstitute = (playerId: string) => {
+    if (!manageSquad) {
+      return;
+    }
+    const player = ensureManageBasePlayer(playerId);
+    if (!player) {
+      return;
+    }
+    const current = editableSquad?.substituteIds ?? [];
+    const next = current.includes(player.id)
+      ? current.filter((id) => id !== player.id)
+      : [...current, player.id];
+    updateEditableSquad({ substituteIds: next });
+  };
+  const setProjectTeamContextForSide = (
+    side: "home" | "away",
+    teamId?: string
+  ) => {
+    if (!project) {
+      return;
+    }
+    const nextTeamContext = {
+      homeTeamId:
+        side === "home" ? teamId : project.teamContext?.homeTeamId,
+      awayTeamId:
+        side === "away" ? teamId : project.teamContext?.awayTeamId,
+    };
+    updateProjectMeta({
+      teamContext:
+        nextTeamContext.homeTeamId || nextTeamContext.awayTeamId
+          ? nextTeamContext
+          : undefined,
+    });
   };
   const updateManageBoardOverride = (
     updater: (current: {
@@ -722,10 +957,13 @@ export default function TopBar() {
     }
     setManagePresetStatus(null);
     const existingTeam =
+      (manageLinkedTeamId
+        ? squadPresets.find((item) => item.id === manageLinkedTeamId)
+        : null) ??
       (manageSquad ? squadPresets.find((item) => item.id === manageSquad.id) : null) ??
       squadPresets.find(
         (item) => item.name.trim().toLowerCase() === nextName.toLowerCase()
-      ) ?? squadPresets[0];
+      ) ?? null;
     if (existingTeam) {
       const result = await updateTeamWithSquad({
         id: existingTeam.id,
@@ -739,9 +977,11 @@ export default function TopBar() {
       setSquadPresets((prev) =>
         prev.map((item) => (item.id === result.team.id ? result.team : item))
       );
+      setProjectTeamContextForSide(manageSide, result.team.id);
+      setManageSelectedDirectoryTeamId(result.team.id);
       saveDefaultTeamSquad(manageSide, result.team.squad, authUser?.id ?? null);
       setManagePresetStatus(
-        "Current squad snapshot saved to Team DB and set as default for new projects. This board keeps its local copy until you load the saved team."
+        "Linked team updated for this side."
       );
       return;
     }
@@ -754,9 +994,11 @@ export default function TopBar() {
       return;
     }
     setSquadPresets((prev) => [result.team, ...prev]);
+    setProjectTeamContextForSide(manageSide, result.team.id);
+    setManageSelectedDirectoryTeamId(result.team.id);
     saveDefaultTeamSquad(manageSide, result.team.squad, authUser?.id ?? null);
     setManagePresetStatus(
-      "Current squad snapshot saved to Team DB and set as default for new projects. This board keeps its local copy until you load the saved team."
+      "New linked team created for this side."
     );
   };
 
@@ -827,6 +1069,7 @@ export default function TopBar() {
     if (!nextSquadId) {
       return;
     }
+    setProjectTeamContextForSide(side, teamId);
     setManageSide(side);
     setManageSelectedDirectoryTeamId(teamId);
     setManagePresetStatus(
@@ -845,6 +1088,7 @@ export default function TopBar() {
     if (!nextSquadId) {
       return;
     }
+    setProjectTeamContextForSide(side, manageLinkedTeamId);
     setManageSide(side);
     setManagePresetStatus(
       side === "home" ? "Set as Home team." : "Set as Away team."
@@ -873,12 +1117,19 @@ export default function TopBar() {
     return managePlayersSortDir === "asc" ? " ↑" : " ↓";
   };
   const manageToggleBoardPlayerVisible = (playerId: string, nextVisible: boolean) => {
+    const overridePlayer =
+      manageBaseSquad?.players.find((item) => item.id === playerId) ??
+      manageBoardSquad?.players.find((item) => item.id === playerId);
+    const overrideKey = overridePlayer
+      ? getBoardOverridePlayerKey(overridePlayer)
+      : playerId;
     updateManageBoardOverride((current) => {
       const hidden = new Set(current.hiddenPlayerIds ?? []);
       if (nextVisible) {
         hidden.delete(playerId);
+        hidden.delete(overrideKey);
       } else {
-        hidden.add(playerId);
+        hidden.add(overrideKey);
       }
       return {
         ...current,
@@ -899,12 +1150,14 @@ export default function TopBar() {
         return { ...current, guestPlayers: guests };
       }
       const nextOverrides = { ...(current.positionOverrides ?? {}) };
-      const basePosition =
-        manageBaseSquad?.players.find((item) => item.id === playerId)?.positionLabel ?? "";
+      const basePlayer = manageBaseSquad?.players.find((item) => item.id === playerId);
+      const overrideKey = basePlayer ? getBoardOverridePlayerKey(basePlayer) : playerId;
+      const basePosition = basePlayer?.positionLabel ?? "";
       if (!trimmed || trimmed === basePosition) {
         delete nextOverrides[playerId];
+        delete nextOverrides[overrideKey];
       } else {
-        nextOverrides[playerId] = trimmed;
+        nextOverrides[overrideKey] = trimmed;
       }
       return { ...current, positionOverrides: nextOverrides };
     });
@@ -2400,8 +2653,8 @@ export default function TopBar() {
         <ManageTeamsModal
           open={squadPresetsOpen}
           manageSide={manageSide}
-          currentHomeTeamName={currentHomeManagedSquad?.name}
-          currentAwayTeamName={currentAwayManagedSquad?.name}
+          currentHomeTeamName={currentHomeLinkedTeam?.teamName ?? currentHomeManagedSquad?.name}
+          currentAwayTeamName={currentAwayLinkedTeam?.teamName ?? currentAwayManagedSquad?.name}
           topControls={
             <>
               <button
@@ -2545,14 +2798,15 @@ export default function TopBar() {
                             <ManageTeamsBaseRoster
                               manageSquadId={manageSquad.id}
                               filteredManageBasePlayers={filteredManageBasePlayers}
-                              editableSquadSubstituteIds={editableSquad?.substituteIds ?? []}
-                              editableSquadCaptainId={editableSquad?.captainId}
                               manageSortIndicator={manageSortIndicator}
                               managedDirectoryMemberMap={managedDirectoryMemberMap}
                               onToggleManagePlayersSort={toggleManagePlayersSort}
-                              onUpdateSquadPlayer={updateSquadPlayer}
-                              onUpdateEditableSquad={updateEditableSquad}
-                              onRemoveSquadPlayer={removeSquadPlayer}
+                              onUpdateSquadPlayer={updateManageBasePlayer}
+                              onToggleCaptain={toggleManageBaseCaptain}
+                              onToggleSubstitute={toggleManageBaseSubstitute}
+                              isCaptain={isManageBaseCaptain}
+                              isSubstitute={isManageBaseSubstitute}
+                              onRemoveSquadPlayer={removeManageBasePlayer}
                               positionOptions={MANAGE_POSITION_OPTIONS}
                             />
                         ) : (
@@ -2592,6 +2846,18 @@ export default function TopBar() {
                             <ManageTeamsSourcePanel
                               canUsePresetStorage={canUsePresetStorage}
                               managedDirectoryTeam={managedDirectoryTeam}
+                              currentSourceName={
+                                managedDirectoryTeam
+                                  ? `${managedDirectoryTeam.clubName} / ${managedDirectoryTeam.teamName}`
+                                  : managedPresetTeam?.teamName ?? managedPresetTeam?.name ?? null
+                              }
+                              currentSourceDescription={
+                                managedDirectoryTeam
+                                  ? null
+                                  : managedPresetTeam
+                                    ? "This side is linked to a saved team roster."
+                                    : null
+                              }
                               manageDirectoryTeams={manageDirectoryTeams}
                               manageSelectedDirectoryTeamId={manageSelectedDirectoryTeamId}
                               selectedManageDirectoryTeam={selectedManageDirectoryTeam}

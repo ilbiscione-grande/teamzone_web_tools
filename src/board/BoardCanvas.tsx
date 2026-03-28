@@ -27,7 +27,11 @@ import { clone } from "@/utils/clone";
 import { createId } from "@/utils/id";
 import BoardObject from "@/board/objects/BoardObject";
 import { useBoardInteractions } from "@/board/useBoardInteractions";
-import { getBoardSquads } from "@/utils/board";
+import {
+  getBoardOverridePlayerKey,
+  getBoardSquads,
+  getPlayerTokenLinkKey,
+} from "@/utils/board";
 
 const getLineOutlineWidth = (strokeWidth: number) =>
   Math.max(0.15, strokeWidth * 0.6);
@@ -1064,14 +1068,21 @@ export default function BoardCanvas({
   );
   const squadPlayerById = useMemo(() => {
     const map = new Map<string, (typeof squadPlayers)[number]>();
-    squadPlayers.forEach((player) => map.set(player.id, player));
+    squadPlayers.forEach((player) => {
+      map.set(player.id, player);
+      if (player.teamMemberId) {
+        map.set(player.teamMemberId, player);
+      }
+    });
     return map;
   }, [squadPlayers]);
   const kitByPlayerId = useMemo(() => {
     const map: Record<string, string> = {};
     boardSquads.all.forEach((squad) => {
       squad.players.forEach((player) => {
+        const key = getBoardOverridePlayerKey(player);
         map[player.id] = squad.kit.shirt;
+        map[key] = squad.kit.shirt;
       });
     });
     return map;
@@ -1080,7 +1091,9 @@ export default function BoardCanvas({
     const map: Record<string, string | undefined> = {};
     boardSquads.all.forEach((squad) => {
       squad.players.forEach((player) => {
+        const key = getBoardOverridePlayerKey(player);
         map[player.id] = player.vestColor || undefined;
+        map[key] = player.vestColor || undefined;
       });
     });
     return map;
@@ -1089,7 +1102,9 @@ export default function BoardCanvas({
     const map: Record<string, string | undefined> = {};
     boardSquads.all.forEach((squad) => {
       squad.players.forEach((player) => {
+        const key = getBoardOverridePlayerKey(player);
         map[player.id] = squad.kit.shirtSecondary ?? squad.kit.shirt;
+        map[key] = squad.kit.shirtSecondary ?? squad.kit.shirt;
       });
     });
     return map;
@@ -1098,7 +1113,9 @@ export default function BoardCanvas({
     const map: Record<string, string | undefined> = {};
     boardSquads.all.forEach((squad) => {
       squad.players.forEach((player) => {
+        const key = getBoardOverridePlayerKey(player);
         map[player.id] = squad.kit.jerseyType ?? "solid";
+        map[key] = squad.kit.jerseyType ?? "solid";
       });
     });
     return map;
@@ -1686,8 +1703,9 @@ export default function BoardCanvas({
       .map((item, index) => {
         let fallbackName = "";
         if (item.type === "player") {
-          const squadPlayer = item.squadPlayerId
-            ? squadPlayerById.get(item.squadPlayerId)
+          const playerKey = getPlayerTokenLinkKey(item);
+          const squadPlayer = playerKey
+            ? squadPlayerById.get(playerKey)
             : null;
           fallbackName = squadPlayer?.name?.trim() || `#${index + 1}`;
         } else if (item.type === "text") {
@@ -1745,8 +1763,9 @@ export default function BoardCanvas({
       );
     }
     if (item.type === "player") {
-      const playerFill = item.squadPlayerId
-        ? kitByPlayerId[item.squadPlayerId] ?? item.style.fill
+      const playerKey = getPlayerTokenLinkKey(item);
+      const playerFill = playerKey
+        ? kitByPlayerId[playerKey] ?? item.style.fill
         : item.style.fill === "#f9bf4a"
           ? defaultPlayerFill
           : item.style.fill;

@@ -32,6 +32,21 @@ type TeamPlayerRow = {
   photo_url: string | null;
 };
 
+type TeamMemberRow = {
+  id: string;
+  team_id: string;
+  user_id: string | null;
+  display_name: string | null;
+  team_role: string | null;
+  team_position: string | null;
+  is_team_admin: boolean | null;
+  is_guest: boolean | null;
+  is_active: boolean | null;
+  shirt_number: number | null;
+  photo_url: string | null;
+  sort_order: number | null;
+};
+
 type TeamSquadPlayerRow = {
   id: string;
   squad_id: string;
@@ -91,6 +106,7 @@ const toSquadPlayer = (
   sourceTeamNameById: Map<string, string>
 ): SquadPlayer => ({
   id: player.id,
+  teamMemberId: relation.source_player_id ?? undefined,
   name: player.name,
   positionLabel: player.position_label,
   active: player.is_active ?? true,
@@ -102,6 +118,24 @@ const toSquadPlayer = (
     ? sourceTeamNameById.get(relation.source_team_id)
     : undefined,
   sourcePlayerId: relation.source_player_id ?? undefined,
+});
+
+const toSquadPlayerFromMember = (
+  member: TeamMemberRow,
+  team: TeamRow,
+  relation?: TeamSquadPlayerRow
+): SquadPlayer => ({
+  id: member.id,
+  teamMemberId: member.id,
+  name: member.display_name?.trim() || "Unnamed member",
+  positionLabel: member.team_position?.trim() || "POS",
+  active: member.is_active ?? true,
+  number: member.shirt_number ?? undefined,
+  photoUrl: member.photo_url ?? undefined,
+  guest: member.is_guest ?? false,
+  sourceTeamId: relation?.source_team_id ?? team.id,
+  sourceTeamName: team.name,
+  sourcePlayerId: member.id,
 });
 
 const fetchTeamsByIds = async (teamIds: string[]) => {
@@ -124,7 +158,8 @@ const buildTeamsFromRows = async (
 
   const teamIds = teams.map((team) => team.id);
 
-  const [{ data: squadsData }, { data: playersData }] = await Promise.all([
+  const [{ data: squadsData }, { data: playersData }, { data: teamMembersData }] =
+    await Promise.all([
     supabase
       .from(TEAM_SQUADS_TABLE)
       .select(
@@ -137,10 +172,17 @@ const buildTeamsFromRows = async (
         "id, team_id, name, position_label, is_active, number, vest_color, photo_url"
       )
       .in("team_id", teamIds),
+    supabase
+      .from(TEAM_MEMBERS_TABLE)
+      .select(
+        "id, team_id, user_id, display_name, team_role, team_position, is_team_admin, is_guest, is_active, shirt_number, photo_url, sort_order"
+      )
+      .in("team_id", teamIds),
   ]);
 
   const squads = (squadsData ?? []) as TeamSquadRow[];
   const players = (playersData ?? []) as TeamPlayerRow[];
+  const teamMembers = (teamMembersData ?? []) as TeamMemberRow[];
 
   const squadIds = squads.map((squad) => squad.id);
   const { data: squadPlayersData } = await supabase
@@ -169,6 +211,12 @@ const buildTeamsFromRows = async (
 
   const playersById = new Map<string, TeamPlayerRow>();
   players.forEach((player) => playersById.set(player.id, player));
+  const membersByTeamId = new Map<string, TeamMemberRow[]>();
+  teamMembers.forEach((member) => {
+    const list = membersByTeamId.get(member.team_id) ?? [];
+    list.push(member);
+    membersByTeamId.set(member.team_id, list);
+  });
 
   const squadPlayersBySquadId = new Map<string, TeamSquadPlayerRow[]>();
   squadPlayers.forEach((entry) => {
@@ -187,23 +235,55 @@ const buildTeamsFromRows = async (
             .slice()
             .sort((a, b) => a.order_index - b.order_index)
         : [];
+      const orderedMembers = (membersByTeamId.get(team.id) ?? [])
+        .filter((member) => member.team_role === "player" || member.is_guest === true)
+        .slice()
+        .sort(
+          (a, b) =>
+            (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
+            (a.display_name ?? "").localeCompare(b.display_name ?? "", "sv")
+        );
+      const relationsByMemberId = new Map<string, TeamSquadPlayerRow>();
+      orderedRelations.forEach((relation) => {
+        if (relation.source_player_id) {
+          relationsByMemberId.set(relation.source_player_id, relation);
+        }
+      });
 
-      const mappedPlayers = orderedRelations
-        .map((relation) => {
-          const player = playersById.get(relation.player_id);
-          if (!player) {
-            return null;
-          }
-          return toSquadPlayer(player, relation, sourceTeamNameById);
-        })
-        .filter((player): player is SquadPlayer => Boolean(player));
+      const mappedPlayers =
+        orderedMembers.length > 0
+          ? orderedMembers.map((member) =>
+              toSquadPlayerFromMember(
+                member,
+                team,
+                relationsByMemberId.get(member.id)
+              )
+            )
+          : orderedRelations
+              .map((relation) => {
+                const player = playersById.get(relation.player_id);
+                if (!player) {
+                  return null;
+                }
+                return toSquadPlayer(player, relation, sourceTeamNameById);
+              })
+              .filter((player): player is SquadPlayer => Boolean(player));
 
-      const captainId = squad?.captain_player_id ?? undefined;
+      const captainId =
+        orderedMembers.length > 0
+          ? orderedRelations.find((relation) => relation.is_captain)?.source_player_id ??
+            undefined
+          : squad?.captain_player_id ?? undefined;
       const substituteIds =
-        squad?.substitute_player_ids?.filter((id): id is string => Boolean(id)) ??
-        orderedRelations
-          .filter((relation) => relation.is_substitute)
-          .map((relation) => relation.player_id);
+        orderedMembers.length > 0
+          ? orderedRelations
+              .filter((relation) => relation.is_substitute)
+              .map((relation) => relation.source_player_id)
+              .filter((id): id is string => Boolean(id))
+          : squad?.substitute_player_ids?.filter((id): id is string => Boolean(id)) ??
+            orderedRelations
+              .filter((relation) => relation.is_substitute)
+              .map((relation) => relation.player_id);
 
       const squadData: Squad = {
         id: squad?.id ?? team.id,
@@ -235,6 +315,73 @@ const buildTeamsFromRows = async (
     });
 };
 
+const createOrReplaceTeamMembers = async (params: {
+  teamId: string;
+  players: SquadPlayer[];
+}) => {
+  if (!supabase) {
+    return { ok: false as const, error: "Supabase not configured." };
+  }
+
+  const memberPayload = params.players.map((player, index) => {
+    const memberId = isUuid(player.teamMemberId)
+      ? player.teamMemberId
+      : isUuid(player.sourcePlayerId)
+        ? player.sourcePlayerId
+        : isUuid(player.id)
+          ? player.id
+          : toPersistedTeamPlayerId(player.id);
+    return {
+      id: memberId,
+      team_id: params.teamId,
+      user_id: null,
+      display_name: player.name,
+      team_role: "player",
+      team_position: player.positionLabel,
+      is_team_admin: false,
+      is_guest: player.guest ?? false,
+      is_active: player.active ?? true,
+      shirt_number: player.number ?? null,
+      photo_url: player.photoUrl ?? null,
+      sort_order: index,
+      updated_at: new Date().toISOString(),
+    };
+  });
+
+  if (memberPayload.length === 0) {
+    return { ok: true as const, membersBySnapshotId: new Map<string, string>() };
+  }
+
+  const { data, error } = await supabase
+    .from(TEAM_MEMBERS_TABLE)
+    .upsert(memberPayload, { onConflict: "id" })
+    .select(
+      "id, team_id, user_id, display_name, team_role, team_position, is_team_admin, is_guest, is_active, shirt_number, photo_url, sort_order"
+    );
+
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+
+  const members = (data ?? []) as TeamMemberRow[];
+  const memberIdsByRowId = new Map<string, string>();
+  members.forEach((member) => memberIdsByRowId.set(member.id, member.id));
+  const membersBySnapshotId = new Map<string, string>();
+  params.players.forEach((player, index) => {
+    const payload = memberPayload[index];
+    membersBySnapshotId.set(
+      player.id,
+      memberIdsByRowId.get(payload?.id) ??
+        payload?.id ??
+        player.teamMemberId ??
+        player.sourcePlayerId ??
+        player.id
+    );
+  });
+
+  return { ok: true as const, membersBySnapshotId };
+};
+
 const createOrReplaceTeamSquad = async (params: {
   teamId: string;
   squadName: string;
@@ -246,6 +393,15 @@ const createOrReplaceTeamSquad = async (params: {
   if (!supabase) {
     return { ok: false as const, error: "Supabase not configured." };
   }
+
+  const teamMembersResult = await createOrReplaceTeamMembers({
+    teamId: params.teamId,
+    players: params.players,
+  });
+  if (!teamMembersResult.ok) {
+    return teamMembersResult;
+  }
+  const membersBySnapshotId = teamMembersResult.membersBySnapshotId;
 
   const upsertSquad = await supabase
     .from(TEAM_SQUADS_TABLE)
@@ -367,8 +523,14 @@ const createOrReplaceTeamSquad = async (params: {
         is_captain: captainTarget ? captainTarget === inserted.id : false,
         is_substitute: substituteTargets.includes(inserted.id),
         source_team_id: isUuid(player.sourceTeamId) ? player.sourceTeamId : null,
-        source_player_id: isUuid(player.sourcePlayerId)
-          ? player.sourcePlayerId
+        source_player_id: isUuid(
+          membersBySnapshotId.get(player.id) ??
+            player.teamMemberId ??
+            player.sourcePlayerId
+        )
+          ? (membersBySnapshotId.get(player.id) ??
+            player.teamMemberId ??
+            player.sourcePlayerId)
           : null,
         updated_at: new Date().toISOString(),
       };
@@ -462,6 +624,9 @@ export const createTeamWithSquad = async (payload: {
         team_id: team.id,
         user_id: user.id,
         role: "owner",
+        team_role: "leader",
+        team_position: "head_coach",
+        is_team_admin: true,
       },
       { onConflict: "team_id,user_id" }
     );
@@ -628,6 +793,7 @@ export const listTeamPlayerCandidates = async (targetTeamId: string) => {
     vestColor: player.vest_color ?? undefined,
     photoUrl: player.photo_url ?? undefined,
     sourceTeamId: player.team_id,
+    teamMemberId: player.id,
     sourcePlayerId: player.id,
   }));
 

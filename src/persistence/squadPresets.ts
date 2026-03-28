@@ -65,6 +65,7 @@ const toSquadPlayer = (
   sourceTeamNameById: Map<string, string>
 ): SquadPlayer => ({
   id: player.id,
+  teamMemberId: relation.source_player_id ?? undefined,
   name: player.name,
   positionLabel: player.position_label,
   number: player.number ?? undefined,
@@ -331,7 +332,7 @@ const createOrReplaceTeamSquad = async (params: {
         is_captain: captainTarget ? captainTarget === inserted.id : false,
         is_substitute: substituteTargets.includes(inserted.id),
         source_team_id: player.sourceTeamId ?? null,
-        source_player_id: player.sourcePlayerId ?? null,
+          source_player_id: player.teamMemberId ?? player.sourcePlayerId ?? null,
         updated_at: new Date().toISOString(),
       };
     })
@@ -589,6 +590,7 @@ export const listTeamPlayerCandidates = async (targetTeamId: string) => {
     vestColor: player.vest_color ?? undefined,
     photoUrl: player.photo_url ?? undefined,
     sourceTeamId: player.team_id,
+    teamMemberId: player.id,
     sourcePlayerId: player.id,
   }));
 

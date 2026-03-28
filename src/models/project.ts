@@ -45,6 +45,10 @@ export type Project = {
   };
   sessionNotes: string;
   sessionNotesFields?: Board["notesFields"];
+  teamContext?: {
+    homeTeamId?: string;
+    awayTeamId?: string;
+  };
   boards: Board[];
   squads: Squad[];
   activeBoardId?: string;

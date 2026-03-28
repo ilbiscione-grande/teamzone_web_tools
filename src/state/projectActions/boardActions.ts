@@ -123,12 +123,14 @@ export const createBoardActions: StateCreator<
       }
       const squadIdMap = new Map<string, string>();
       const playerIdMap = new Map<string, string>();
+      const sourceTeamMemberIdByPlayerId = new Map<string, string | undefined>();
       const clonedSquads = (snapshot.squads ?? []).map((squad) => {
         const nextSquadId = createId();
         squadIdMap.set(squad.id, nextSquadId);
         const players = squad.players.map((player) => {
           const nextPlayerId = createId();
           playerIdMap.set(player.id, nextPlayerId);
+          sourceTeamMemberIdByPlayerId.set(player.id, player.teamMemberId);
           return { ...player, id: nextPlayerId };
         });
         return { ...squad, id: nextSquadId, players };
@@ -183,6 +185,9 @@ export const createBoardActions: StateCreator<
             return {
               ...item,
               squadPlayerId: playerIdMap.get(item.squadPlayerId),
+              teamMemberId:
+                item.teamMemberId ??
+                sourceTeamMemberIdByPlayerId.get(item.squadPlayerId),
             };
           }
           return item;

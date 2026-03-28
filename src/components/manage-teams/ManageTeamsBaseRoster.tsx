@@ -11,8 +11,6 @@ type LinkedMember = {
 type ManageTeamsBaseRosterProps = {
   manageSquadId: string;
   filteredManageBasePlayers: SquadPlayer[];
-  editableSquadSubstituteIds: string[];
-  editableSquadCaptainId?: string;
   manageSortIndicator: (key: "default" | "name" | "position" | "number") => string;
   managedDirectoryMemberMap: Map<string, LinkedMember>;
   onToggleManagePlayersSort: (key: "default" | "name" | "position" | "number") => void;
@@ -21,10 +19,10 @@ type ManageTeamsBaseRosterProps = {
     playerId: string,
     payload: Partial<SquadPlayer>
   ) => void;
-  onUpdateEditableSquad: (payload: {
-    captainId?: string;
-    substituteIds?: string[];
-  }) => void;
+  onToggleCaptain: (playerId: string) => void;
+  onToggleSubstitute: (playerId: string) => void;
+  isCaptain: (playerId: string) => boolean;
+  isSubstitute: (playerId: string) => boolean;
   onRemoveSquadPlayer: (squadId: string, playerId: string) => void;
   positionOptions: readonly string[];
 };
@@ -48,13 +46,14 @@ const compactPositionLabel = (value?: string | null) => {
 export default function ManageTeamsBaseRoster({
   manageSquadId,
   filteredManageBasePlayers,
-  editableSquadSubstituteIds,
-  editableSquadCaptainId,
   manageSortIndicator,
   managedDirectoryMemberMap,
   onToggleManagePlayersSort,
   onUpdateSquadPlayer,
-  onUpdateEditableSquad,
+  onToggleCaptain,
+  onToggleSubstitute,
+  isCaptain,
+  isSubstitute,
   onRemoveSquadPlayer,
   positionOptions,
 }: ManageTeamsBaseRosterProps) {
@@ -68,11 +67,13 @@ export default function ManageTeamsBaseRoster({
           {filteredManageBasePlayers.map((player) => {
             const linkedMember =
               managedDirectoryMemberMap.get(player.id) ??
-              (player.sourcePlayerId
-                ? managedDirectoryMemberMap.get(player.sourcePlayerId)
+              (player.teamMemberId
+                ? managedDirectoryMemberMap.get(player.teamMemberId)
+                : player.sourcePlayerId
+                  ? managedDirectoryMemberMap.get(player.sourcePlayerId)
                 : undefined);
-            const isCaptain = editableSquadCaptainId === player.id;
-            const isSub = editableSquadSubstituteIds.includes(player.id);
+            const playerIsCaptain = isCaptain(player.id);
+            const playerIsSub = isSubstitute(player.id);
             return (
               <div
                 key={player.id}
@@ -171,30 +172,21 @@ export default function ManageTeamsBaseRoster({
                   </label>
                   <button
                     className={`rounded-xl border py-2 ${
-                      isCaptain
+                      playerIsCaptain
                         ? "border-[var(--accent-0)] text-[var(--accent-0)]"
                         : "border-[var(--line)] text-[var(--ink-1)]"
                     }`}
-                    onClick={() =>
-                      onUpdateEditableSquad({
-                        captainId: isCaptain ? undefined : player.id,
-                      })
-                    }
+                    onClick={() => onToggleCaptain(player.id)}
                   >
                     Captain
                   </button>
                   <button
                     className={`rounded-xl border py-2 ${
-                      isSub
+                      playerIsSub
                         ? "border-[var(--accent-0)] text-[var(--accent-0)]"
                         : "border-[var(--line)] text-[var(--ink-1)]"
                     }`}
-                    onClick={() => {
-                      const next = isSub
-                        ? editableSquadSubstituteIds.filter((id) => id !== player.id)
-                        : [...editableSquadSubstituteIds, player.id];
-                      onUpdateEditableSquad({ substituteIds: next });
-                    }}
+                    onClick={() => onToggleSubstitute(player.id)}
                   >
                     Sub
                   </button>
@@ -244,11 +236,13 @@ export default function ManageTeamsBaseRoster({
         {filteredManageBasePlayers.map((player) => {
           const linkedMember =
             managedDirectoryMemberMap.get(player.id) ??
-            (player.sourcePlayerId
-              ? managedDirectoryMemberMap.get(player.sourcePlayerId)
+            (player.teamMemberId
+              ? managedDirectoryMemberMap.get(player.teamMemberId)
+              : player.sourcePlayerId
+                ? managedDirectoryMemberMap.get(player.sourcePlayerId)
               : undefined);
-          const isCaptain = editableSquadCaptainId === player.id;
-          const isSub = editableSquadSubstituteIds.includes(player.id);
+          const playerIsCaptain = isCaptain(player.id);
+          const playerIsSub = isSubstitute(player.id);
           return (
             <div
               key={player.id}
@@ -352,15 +346,11 @@ export default function ManageTeamsBaseRoster({
               <div className="flex h-full w-full items-center justify-center">
                 <button
                   className={`h-4 w-4 rounded-full border ${
-                    isCaptain
+                    playerIsCaptain
                       ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
                       : "border-[var(--line)]"
                   }`}
-                  onClick={() =>
-                    onUpdateEditableSquad({
-                      captainId: isCaptain ? undefined : player.id,
-                    })
-                  }
+                  onClick={() => onToggleCaptain(player.id)}
                   title="Captain"
                   aria-label="Captain"
                 />
@@ -368,16 +358,11 @@ export default function ManageTeamsBaseRoster({
               <div className="flex h-full w-full items-center justify-center">
                 <button
                   className={`h-4 w-4 rounded-full border ${
-                    isSub
+                    playerIsSub
                       ? "border-[var(--accent-0)] bg-[var(--accent-0)]"
                       : "border-[var(--line)]"
                   }`}
-                  onClick={() => {
-                    const next = isSub
-                      ? editableSquadSubstituteIds.filter((id) => id !== player.id)
-                      : [...editableSquadSubstituteIds, player.id];
-                    onUpdateEditableSquad({ substituteIds: next });
-                  }}
+                  onClick={() => onToggleSubstitute(player.id)}
                   title="Substitute"
                   aria-label="Substitute"
                 />

@@ -2597,6 +2597,8 @@ export default function ProjectList() {
                             pitchShape: board.pitchShape,
                           }))
                         : undefined,
+                    homeTeamId: selectedHomeTeam?.id,
+                    awayTeamId: selectedAwayTeam?.id,
                     homeSquadPreset,
                     awaySquadPreset,
                     startingFormation:

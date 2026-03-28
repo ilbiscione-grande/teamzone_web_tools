@@ -50,6 +50,8 @@ export type ProjectActions = {
         pitchOverlay?: Board["pitchOverlay"];
         pitchShape?: Project["settings"]["defaultPitchShape"];
       }[];
+      homeTeamId?: string;
+      awayTeamId?: string;
       homeSquadPreset?: Squad;
       awaySquadPreset?: Squad;
       startingFormation?: string;

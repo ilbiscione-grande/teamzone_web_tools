@@ -107,8 +107,11 @@ const isDrawable = (value: unknown): boolean => {
 const isSquadPlayer = (value: unknown) =>
   isObject(value) &&
   isString(value.id) &&
+  (value.teamMemberId === undefined || isString(value.teamMemberId)) &&
   isString(value.name) &&
   isString(value.positionLabel) &&
+  (value.guest === undefined || isBoolean(value.guest)) &&
+  (value.active === undefined || isBoolean(value.active)) &&
   (value.number === undefined || isFiniteNumber(value.number));
 
 const isSquad = (value: unknown) =>
@@ -122,6 +125,11 @@ const isSquad = (value: unknown) =>
   Array.isArray(value.players) &&
   value.players.every(isSquadPlayer) &&
   (value.substituteIds === undefined || isStringArray(value.substituteIds));
+
+const isTeamContext = (value: unknown) =>
+  isObject(value) &&
+  (value.homeTeamId === undefined || isString(value.homeTeamId)) &&
+  (value.awayTeamId === undefined || isString(value.awayTeamId));
 
 const isPlayerLink = (value: unknown) =>
   isObject(value) &&
@@ -181,6 +189,7 @@ const isProject = (value: unknown): value is Project => {
     typeof candidate.updatedAt === "string" &&
     typeof candidate.schemaVersion === "number" &&
     typeof candidate.sessionNotes === "string" &&
+    (candidate.teamContext === undefined || isTeamContext(candidate.teamContext)) &&
     isObject(candidate.settings) &&
     Array.isArray(candidate.boards) &&
     candidate.boards.every(isBoard) &&

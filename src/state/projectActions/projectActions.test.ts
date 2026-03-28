@@ -44,7 +44,8 @@ const createTestStore = () =>
 
 const createPlayerObject = (
   id: string,
-  squadPlayerId?: string
+  squadPlayerId?: string,
+  teamMemberId?: string
 ): DrawableObject => ({
   id,
   type: "player",
@@ -62,6 +63,7 @@ const createPlayerObject = (
   locked: false,
   visible: true,
   squadPlayerId,
+  teamMemberId,
   showName: true,
   showPosition: true,
   showNumber: false,
@@ -227,6 +229,64 @@ describe("project actions", () => {
     });
   });
 
+  it("propagates teamMemberId with squad player links across frames", () => {
+    const useStore = createTestStore();
+    const project = createDefaultProject("Dynamic Project");
+    const squad = project.squads[0]!;
+    squad.players = [
+      {
+        id: "squad-player-1",
+        teamMemberId: "team-member-1",
+        name: "Player One",
+        positionLabel: "RB",
+      },
+      {
+        id: "squad-player-2",
+        teamMemberId: "team-member-2",
+        name: "Player Two",
+        positionLabel: "CM",
+      },
+    ];
+    const board = project.boards[0]!;
+    board.mode = "DYNAMIC";
+    board.frames = [
+      {
+        ...board.frames[0]!,
+        id: "frame-1",
+        objects: [
+          createPlayerObject("shared-player", "squad-player-1", "team-member-1"),
+        ],
+      },
+      {
+        ...board.frames[0]!,
+        id: "frame-2",
+        objects: [
+          createPlayerObject("shared-player", "squad-player-1", "team-member-1"),
+        ],
+      },
+    ];
+    useStore.setState({
+      project,
+      activeProjectId: project.id,
+    });
+
+    useStore.getState().updateObject(board.id, 0, "shared-player", {
+      squadPlayerId: "squad-player-2",
+      teamMemberId: "team-member-2",
+    } as Partial<DrawableObject>);
+
+    const frames = useStore.getState().project?.boards[0]?.frames ?? [];
+    expect(
+      frames.every(
+        (frame) =>
+          frame.objects[0] &&
+          frame.objects[0].type === "player" &&
+          frame.objects[0].squadPlayerId === "squad-player-2" &&
+          frame.objects[0].teamMemberId === "team-member-2"
+      )
+    ).toBe(true);
+  });
+
   it("adds, updates and removes squad players while updating project timestamp", () => {
     const useStore = createTestStore();
     const project = createDefaultProject("Squad Project");
@@ -253,5 +313,40 @@ describe("project actions", () => {
     const squad = useStore.getState().project?.squads.find((item) => item.id === squadId);
     expect(squad?.players.find((entry) => entry.id === player.id)).toBeUndefined();
     expect(useStore.getState().project?.updatedAt).not.toBe(beforeUpdatedAt);
+  });
+
+  it("preserves teamMemberId when creating squads from presets", () => {
+    const project = createDefaultProject("Preset Project", {
+      homeTeamId: "team-home",
+      awayTeamId: "team-away",
+      homeSquadPreset: {
+        id: "preset-home",
+        name: "Preset Home",
+        kit: {
+          shirt: "#111111",
+          shorts: "#222222",
+          socks: "#333333",
+        },
+        players: [
+          {
+            id: "preset-player-1",
+            teamMemberId: "team-member-1",
+            name: "Preset Player",
+            positionLabel: "GK",
+            number: 1,
+          },
+        ],
+      },
+    });
+
+    expect(project.squads[0]?.players[0]).toMatchObject({
+      name: "Preset Player",
+      teamMemberId: "team-member-1",
+    });
+    expect(project.teamContext).toEqual({
+      homeTeamId: "team-home",
+      awayTeamId: "team-away",
+    });
+    expect(project.squads[0]?.players[0]?.id).not.toBe("preset-player-1");
   });
 });

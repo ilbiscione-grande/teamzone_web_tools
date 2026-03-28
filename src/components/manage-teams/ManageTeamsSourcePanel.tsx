@@ -23,6 +23,8 @@ type ManageTeamsDirectoryOption = {
 type ManageTeamsSourcePanelProps = {
   canUsePresetStorage: boolean;
   managedDirectoryTeam: ManageTeamsSourceTeam | null;
+  currentSourceName?: string | null;
+  currentSourceDescription?: string | null;
   manageDirectoryTeams: ManageTeamsDirectoryOption[];
   manageSelectedDirectoryTeamId: string;
   selectedManageDirectoryTeam: ManageTeamsDirectoryOption | null;
@@ -37,6 +39,8 @@ type ManageTeamsSourcePanelProps = {
 export default function ManageTeamsSourcePanel({
   canUsePresetStorage,
   managedDirectoryTeam,
+  currentSourceName,
+  currentSourceDescription,
   manageDirectoryTeams,
   manageSelectedDirectoryTeamId,
   selectedManageDirectoryTeam,
@@ -88,9 +92,17 @@ export default function ManageTeamsSourcePanel({
                 ) : null}
               </div>
             </div>
+          ) : currentSourceName ? (
+            <div className="mt-2 space-y-2">
+              <p className="text-sm text-[var(--ink-0)]">{currentSourceName}</p>
+              <p className="text-xs text-[var(--ink-1)]">
+                {currentSourceDescription ??
+                  "This side is linked to a saved team outside the club directory view."}
+              </p>
+            </div>
           ) : (
             <p className="mt-2 text-xs text-[var(--ink-1)]">
-              This side is currently using a local project squad. Saving a reusable team does not automatically relink the current board to that saved team.
+              This side is currently using a local project squad. Saving creates and links a reusable team for this side.
             </p>
           )}
         </div>
@@ -98,10 +110,12 @@ export default function ManageTeamsSourcePanel({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                Save reusable team
+                Save team
               </p>
               <p className="text-[11px] text-[var(--ink-1)]">
-                Makes this side available in future projects.
+                {currentSourceName
+                  ? "Updates the linked team roster for this side."
+                  : "Creates a reusable team and links this side to it."}
               </p>
             </div>
             {canUsePresetStorage ? (
@@ -109,7 +123,7 @@ export default function ManageTeamsSourcePanel({
                 className="rounded-full border border-[var(--accent-0)] px-4 py-2 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
                 onClick={onSaveReusableTeam}
               >
-                Save reusable team
+                {currentSourceName ? "Update linked team" : "Create linked team"}
               </button>
             ) : (
               <p className="text-[11px] text-[var(--ink-1)]">Paid plan required.</p>

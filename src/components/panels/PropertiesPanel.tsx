@@ -4,7 +4,11 @@ import { useState } from "react";
 import type { DrawableAnimation, DrawableObject, TextLabel } from "@/models";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
-import { getActiveBoard, getBoardSquads } from "@/utils/board";
+import {
+  getActiveBoard,
+  getBoardSquads,
+  getPlayerTokenLinkKey,
+} from "@/utils/board";
 import { clone } from "@/utils/clone";
 import { createId } from "@/utils/id";
 import ColorPalettePicker from "@/components/ColorPalettePicker";
@@ -136,6 +140,9 @@ export default function PropertiesPanel({
       squad?.players.forEach((player) => {
         const label = player.name || player.positionLabel || "";
         map.set(player.id, label);
+        if (player.teamMemberId) {
+          map.set(player.teamMemberId, label);
+        }
       });
     });
     return map;
@@ -156,6 +163,9 @@ export default function PropertiesPanel({
     memoBoardSquads.all.forEach((squad) => {
       squad.players.forEach((player) => {
         map.set(player.id, player);
+        if (player.teamMemberId) {
+          map.set(player.teamMemberId, player);
+        }
       });
     });
     return map;
@@ -165,6 +175,9 @@ export default function PropertiesPanel({
     memoBoardSquads.all.forEach((squad) => {
       squad.players.forEach((player) => {
         map.set(player.id, squad.id);
+        if (player.teamMemberId) {
+          map.set(player.teamMemberId, squad.id);
+        }
       });
     });
     return map;
@@ -202,8 +215,8 @@ export default function PropertiesPanel({
       frame.objects.flatMap((item) =>
         item.type === "player" &&
         item.id !== target?.id &&
-        item.squadPlayerId
-          ? [item.squadPlayerId]
+        getPlayerTokenLinkKey(item)
+          ? [getPlayerTokenLinkKey(item)!]
           : []
       )
     )
@@ -309,9 +322,8 @@ export default function PropertiesPanel({
       (item) => item.id === playerId && item.type === "player"
     );
     if (playerObject && "squadPlayerId" in playerObject) {
-      const name = playerObject.squadPlayerId
-        ? playerNameById.get(playerObject.squadPlayerId)
-        : "";
+      const linkedPlayerKey = getPlayerTokenLinkKey(playerObject);
+      const name = linkedPlayerKey ? playerNameById.get(linkedPlayerKey) : "";
       if (name) {
         return name;
       }
@@ -931,6 +943,7 @@ export default function PropertiesPanel({
                         : undefined;
                       update({
                         squadPlayerId: nextSquadPlayerId,
+                        teamMemberId: linkedPlayer?.teamMemberId,
                         boardPositionLabel:
                           target.boardPositionLabel ?? linkedPlayer?.positionLabel,
                       });

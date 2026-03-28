@@ -326,6 +326,8 @@ export const createDefaultProject = (
       pitchRotation?: Board["pitchRotation"];
       playerLabel?: Board["playerLabel"];
       boardTemplates?: CreateBoardTemplate[];
+      homeTeamId?: string;
+      awayTeamId?: string;
       homeSquadPreset?: Squad;
       awaySquadPreset?: Squad;
       startingFormation?: string;
@@ -424,6 +426,7 @@ export const createDefaultProject = (
           }
           const token = createPlayer(position, 1.5, squad.kit.shirt);
           token.squadPlayerId = player.id;
+          token.teamMemberId = player.teamMemberId;
           token.showName = targetBoard.playerLabel.showName;
           token.showPosition = targetBoard.playerLabel.showPosition;
           token.showNumber = targetBoard.playerLabel.showNumber;
@@ -458,6 +461,13 @@ export const createDefaultProject = (
     },
     sessionNotes: "",
     sessionNotesFields: {},
+    teamContext:
+      options?.homeTeamId || options?.awayTeamId
+        ? {
+            homeTeamId: options?.homeTeamId,
+            awayTeamId: options?.awayTeamId,
+          }
+        : undefined,
     boards,
     squads: [homeSquad, awaySquad],
     activeBoardId: boards[0]?.id,

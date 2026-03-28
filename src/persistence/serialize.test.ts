@@ -48,6 +48,10 @@ describe("serialize/deserialize", () => {
         coachInstructions: "Play forward when possible",
       },
     },
+    teamContext: {
+      homeTeamId: "team-home",
+      awayTeamId: "team-away",
+    },
     squads: [
       {
         id: "squad-home",
@@ -63,6 +67,7 @@ describe("serialize/deserialize", () => {
         players: [
           {
             id: "player-home-1",
+            teamMemberId: "member-home-1",
             name: "Home One",
             positionLabel: "GK",
             active: true,

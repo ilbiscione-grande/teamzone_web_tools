@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { SquadPlayer } from "@/models";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
-import { getActiveBoard, getBoardSquads } from "@/utils/board";
+import { getActiveBoard, getBoardOverridePlayerKey, getBoardSquads } from "@/utils/board";
 import { createId } from "@/utils/id";
 
 type SquadSortKey = "default" | "name" | "position" | "number";
@@ -175,12 +175,19 @@ export default function SquadEditor() {
   };
 
   const togglePlayerVisible = (playerId: string, nextVisible: boolean) => {
+    const overridePlayer =
+      baseSquad?.players.find((item) => item.id === playerId) ??
+      activeSquad?.players.find((item) => item.id === playerId);
+    const overrideKey = overridePlayer
+      ? getBoardOverridePlayerKey(overridePlayer)
+      : playerId;
     updateActiveOverride((current) => {
       const hidden = new Set(current.hiddenPlayerIds ?? []);
       if (nextVisible) {
         hidden.delete(playerId);
+        hidden.delete(overrideKey);
       } else {
-        hidden.add(playerId);
+        hidden.add(overrideKey);
       }
       return {
         ...current,
@@ -202,12 +209,14 @@ export default function SquadEditor() {
         return { ...current, guestPlayers: guests };
       }
       const nextOverrides = { ...(current.positionOverrides ?? {}) };
-      const basePosition =
-        baseSquad?.players.find((item) => item.id === playerId)?.positionLabel ?? "";
+      const basePlayer = baseSquad?.players.find((item) => item.id === playerId);
+      const overrideKey = basePlayer ? getBoardOverridePlayerKey(basePlayer) : playerId;
+      const basePosition = basePlayer?.positionLabel ?? "";
       if (!trimmed || trimmed === basePosition) {
         delete nextOverrides[playerId];
+        delete nextOverrides[overrideKey];
       } else {
-        nextOverrides[playerId] = trimmed;
+        nextOverrides[overrideKey] = trimmed;
       }
       return { ...current, positionOverrides: nextOverrides };
     });

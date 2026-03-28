@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Board, PlayerToken, Project, Squad, SquadPlayer } from "@/models";
 import { can } from "@/utils/plan";
-import { getBoardSquads } from "@/utils/board";
+import {
+  getBoardOverridePlayerKey,
+  getBoardSquads,
+  getPlayerTokenLinkKey,
+} from "@/utils/board";
 import { useProjectStore } from "@/state/useProjectStore";
 import { useEditorStore } from "@/state/useEditorStore";
 import { getStageRef } from "@/utils/stageRef";
@@ -1041,21 +1045,28 @@ export default function MatchGraphicsModal({
     if (!exportSelectedSquad) {
       return { starters: [] as PresentPlayer[], substitutes: [] as PresentPlayer[] };
     }
-    const playerIds = new Set(exportSelectedSquad.players.map((player) => player.id));
+    const playerIds = new Set(
+      exportSelectedSquad.players.map((player) => getBoardOverridePlayerKey(player))
+    );
     const tokens = (board.frames[board.activeFrameIndex]?.objects ?? [])
       .filter((item): item is PlayerToken => item.type === "player")
-      .filter((item) => item.squadPlayerId && playerIds.has(item.squadPlayerId));
+      .filter(
+        (item) =>
+          getPlayerTokenLinkKey(item) &&
+          playerIds.has(getPlayerTokenLinkKey(item)!)
+      );
     const tokenByPlayerId = new Map<string, PlayerToken>();
     tokens.forEach((token) => {
-      if (token.squadPlayerId && !tokenByPlayerId.has(token.squadPlayerId)) {
-        tokenByPlayerId.set(token.squadPlayerId, token);
+      const tokenKey = getPlayerTokenLinkKey(token);
+      if (tokenKey && !tokenByPlayerId.has(tokenKey)) {
+        tokenByPlayerId.set(tokenKey, token);
       }
     });
     const presentPlayers = exportSelectedSquad.players
-      .filter((player) => tokenByPlayerId.has(player.id))
+      .filter((player) => tokenByPlayerId.has(getBoardOverridePlayerKey(player)))
       .map((player) => ({
         player,
-        token: tokenByPlayerId.get(player.id)!,
+        token: tokenByPlayerId.get(getBoardOverridePlayerKey(player))!,
       }));
     const substituteIds = new Set(exportSelectedSquad.substituteIds ?? []);
     const starters = presentPlayers

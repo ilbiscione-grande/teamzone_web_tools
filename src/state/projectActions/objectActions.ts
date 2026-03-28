@@ -1,6 +1,7 @@
 import type { StateCreator } from "zustand";
 import type { ProjectActions, ProjectStore } from "./types";
 import type { DrawableObject, PlayerToken } from "@/models";
+import { getPlayerTokenLinkKey } from "@/utils/board";
 
 type ObjectActionSlice = Pick<
   ProjectActions,
@@ -71,6 +72,8 @@ export const createObjectActions: StateCreator<
       ) {
         const nextSquadPlayerId = (payload as { squadPlayerId?: string })
           .squadPlayerId;
+        const nextTeamMemberId = (payload as { teamMemberId?: string })
+          .teamMemberId;
         const linkedSquadPlayerPosition = nextSquadPlayerId
           ? state.project?.squads
               .flatMap((squad) => squad.players)
@@ -87,6 +90,7 @@ export const createObjectActions: StateCreator<
           const match = entry.objects.find((item) => item.id === objectId);
           if (match && match.type === "player") {
             match.squadPlayerId = nextSquadPlayerId;
+            match.teamMemberId = nextTeamMemberId;
             if (
               nextSquadPlayerId &&
               !(match as PlayerToken).boardPositionLabel &&
@@ -100,12 +104,15 @@ export const createObjectActions: StateCreator<
             return;
           }
           entry.objects.forEach((item) => {
+            const nextLinkKey = nextTeamMemberId ?? nextSquadPlayerId;
             if (
               item.id !== objectId &&
               item.type === "player" &&
-              item.squadPlayerId === nextSquadPlayerId
+              nextLinkKey &&
+              getPlayerTokenLinkKey(item) === nextLinkKey
             ) {
               item.squadPlayerId = undefined;
+              item.teamMemberId = undefined;
             }
           });
         });

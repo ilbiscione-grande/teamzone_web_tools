@@ -11,7 +11,7 @@ import { fetchTeamsWithSquad } from "@/persistence/teamSquads";
 
 type ClubMembershipRow = {
   club_id: string;
-  membership_role: string;
+  club_role: string;
   is_club_admin: boolean;
   clubs: {
     id: string;
@@ -45,7 +45,7 @@ type TeamMemberRow = {
   team_id: string;
   user_id: string | null;
   display_name: string | null;
-  member_role: string | null;
+  team_role: string | null;
   team_position: string | null;
   is_team_admin: boolean | null;
   is_guest: boolean | null;
@@ -67,9 +67,10 @@ const buildSquadFromMembers = (
         (a.display_name ?? "").localeCompare(b.display_name ?? "", "sv")
     );
   const players: SquadPlayer[] = orderedMembers
-    .filter((member) => member.member_role === "player" || member.is_guest === true)
+    .filter((member) => member.team_role === "player" || member.is_guest === true)
     .map((member) => ({
       id: member.id,
+      teamMemberId: member.id,
       name: member.display_name?.trim() || "Unnamed member",
       positionLabel: member.team_position?.trim() || "POS",
       guest: member.is_guest ?? false,
@@ -100,7 +101,7 @@ const toDirectoryMember = (member: TeamMemberRow): TeamDirectoryMember => ({
   id: member.id,
   userId: member.user_id,
   displayName: member.display_name?.trim() || "Unnamed member",
-  memberRole: member.member_role?.trim() || "other",
+  memberRole: member.team_role?.trim() || "other",
   teamPosition: member.team_position,
   isTeamAdmin: member.is_team_admin ?? false,
   isGuest: member.is_guest ?? false,
@@ -225,7 +226,7 @@ export const buildTeamDirectory = (params: {
         slug: club.slug ?? null,
         logoUrl: club.logo_url ?? null,
         status: club.status,
-        membershipRole: membership.membership_role,
+        membershipRole: membership.club_role,
         isCurrentUserClubAdmin: membership.is_club_admin,
         teams,
       };
@@ -251,7 +252,7 @@ export const fetchClubTeamDirectory = async () => {
   const { data: clubMembershipData, error: clubMembershipError } = await supabase
     .from("club_members")
     .select(
-      "club_id,membership_role,is_club_admin,clubs(id,name,slug,logo_url,status)"
+      "club_id,club_role,is_club_admin,clubs(id,name,slug,logo_url,status)"
     )
     .eq("user_id", currentUserId);
 
@@ -299,7 +300,7 @@ export const fetchClubTeamDirectory = async () => {
   const { data: teamMembersData, error: teamMembersError } = await supabase
     .from("team_members")
     .select(
-      "id,team_id,user_id,display_name,member_role,team_position,is_team_admin,is_guest,is_active,shirt_number,photo_url,sort_order"
+      "id,team_id,user_id,display_name,team_role,team_position,is_team_admin,is_guest,is_active,shirt_number,photo_url,sort_order"
     )
     .in("team_id", teamIds);
 

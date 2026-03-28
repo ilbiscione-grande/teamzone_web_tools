@@ -32,6 +32,7 @@ import type {
   TextLabel,
 } from "@/models";
 import type { Tool } from "@/state/useEditorStore";
+import { getPlayerTokenLinkKey } from "@/utils/board";
 
 const getLineOutlineWidth = (strokeWidth: number) =>
   Math.max(0.15, strokeWidth * 0.6);
@@ -508,24 +509,27 @@ export default function BoardObject({
 
   if (object.type === "player") {
     const player = object as PlayerToken;
-    const fillColor = player.squadPlayerId
-      ? kitByPlayerId[player.squadPlayerId] ?? player.style.fill
+    const playerKey = getPlayerTokenLinkKey(player);
+    const fillColor = playerKey
+      ? kitByPlayerId[playerKey] ?? player.style.fill
       : player.style.fill === "#f9bf4a"
         ? defaultPlayerFill
         : player.style.fill;
     const secondaryFillColor =
-      (player.squadPlayerId
-        ? secondaryKitByPlayerId[player.squadPlayerId]
+      (playerKey
+        ? secondaryKitByPlayerId[playerKey]
         : undefined) ??
       fillColor;
-    const jerseyType = ((player.squadPlayerId
-      ? jerseyTypeByPlayerId[player.squadPlayerId]
+    const jerseyType = ((playerKey
+      ? jerseyTypeByPlayerId[playerKey]
       : undefined) ?? "solid") as JerseyType;
     const vestColor =
       player.vestColor ??
-      (player.squadPlayerId ? vestByPlayerId[player.squadPlayerId] : undefined);
-    const squadPlayer = player.squadPlayerId
-      ? squadPlayers.find((item) => item.id === player.squadPlayerId)
+      (playerKey ? vestByPlayerId[playerKey] : undefined);
+    const squadPlayer = playerKey
+      ? squadPlayers.find(
+          (item) => item.id === playerKey || item.teamMemberId === playerKey
+        )
       : undefined;
     const compactName = (() => {
       const value = squadPlayer?.name?.trim();
