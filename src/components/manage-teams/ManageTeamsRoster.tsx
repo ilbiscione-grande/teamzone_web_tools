@@ -65,7 +65,7 @@ export default function ManageTeamsRoster({
 }: ManageTeamsRosterProps) {
   return (
     <>
-      <div className="space-y-4 rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-4 lg:p-5">
+      <div className="space-y-3 rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-4 lg:p-5">
         {manageSquad ? (
           <>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -106,11 +106,6 @@ export default function ManageTeamsRoster({
                 Guests: {manageMembershipSummary.guests}
               </span>
             </div>
-            <p className="text-[11px] text-[var(--ink-1)]">
-              {manageRosterView === "base"
-                ? "Team roster changes the reusable squad for this side."
-                : "Match board changes only the current board layout and guests."}
-            </p>
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
               <input
                 className="h-8 flex-1 rounded-full border border-[var(--line)] bg-transparent px-3 text-[11px] text-[var(--ink-0)]"
@@ -143,24 +138,19 @@ export default function ManageTeamsRoster({
               ) : null}
             </div>
             {manageRosterView === "base" ? (
-              <div className="space-y-2">
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                  <button
-                    className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                    onClick={onAddMember}
-                  >
-                    Add player
-                  </button>
-                  <button
-                    className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
-                    onClick={onAddGuestMember}
-                  >
-                    Add guest
-                  </button>
-                </div>
-                <p className="text-[10px] text-[var(--ink-1)]">
-                  Use this view to maintain the reusable side roster.
-                </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={onAddMember}
+                >
+                  Add player
+                </button>
+                <button
+                  className="rounded-full border border-[var(--accent-0)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
+                  onClick={onAddGuestMember}
+                >
+                  Add guest
+                </button>
               </div>
             ) : (
               <details className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/35">
@@ -227,13 +217,6 @@ export default function ManageTeamsRoster({
         ) : (
           <p className="text-xs text-[var(--ink-1)]">No team data available.</p>
         )}
-      </div>
-      <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25 px-4 py-3 text-[11px] text-[var(--ink-1)]">
-        You are editing the{" "}
-        <span className="text-[var(--accent-0)]">
-          {manageSide === "home" ? "Home" : "Away"}
-        </span>{" "}
-        side. Use the header actions to use this roster for Home or Away.
       </div>
     </>
   );

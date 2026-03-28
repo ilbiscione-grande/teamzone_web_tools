@@ -129,11 +129,7 @@ export default function ManageTeamsBaseRoster({
                         </span>
                       ) : null}
                     </>
-                  ) : (
-                    <span className="rounded-full border border-[var(--accent-1)] px-1.5 py-0.5 text-[var(--accent-1)]">
-                      Local
-                    </span>
-                  )}
+                  ) : null}
                   {player.guest ? (
                     <span className="rounded-full border border-[var(--accent-0)] px-1.5 py-0.5 text-[var(--accent-0)]">
                       Guest
@@ -321,11 +317,7 @@ export default function ManageTeamsBaseRoster({
                         </span>
                       ) : null}
                     </>
-                  ) : (
-                    <span className="rounded-full border border-[var(--accent-1)] px-1.5 py-0.5 text-[var(--accent-1)]">
-                      Local
-                    </span>
-                  )}
+                  ) : null}
                   {player.guest ? (
                     <span className="rounded-full border border-[var(--accent-0)] px-1.5 py-0.5 text-[var(--accent-0)]">
                       Guest
