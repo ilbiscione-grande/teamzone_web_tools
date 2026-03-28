@@ -132,6 +132,7 @@ export default function TopBar() {
     (state) => state.setActiveFrameIndex
   );
   const updateSquad = useProjectStore((state) => state.updateSquad);
+  const addSquadWithData = useProjectStore((state) => state.addSquadWithData);
   const addSquadPlayer = useProjectStore((state) => state.addSquadPlayer);
   const updateSquadPlayer = useProjectStore((state) => state.updateSquadPlayer);
   const removeSquadPlayer = useProjectStore((state) => state.removeSquadPlayer);
@@ -750,6 +751,62 @@ export default function TopBar() {
     );
   };
 
+  const cloneSquadIntoTargetSide = (
+    sourceSquad: SquadPreset["squad"],
+    side: "home" | "away"
+  ) => {
+    if (!activeBoard) {
+      setManagePresetStatus("No active board available.");
+      return null;
+    }
+    const targetSquadId =
+      side === "home" ? activeBoard.homeSquadId : activeBoard.awaySquadId;
+    const targetSquad =
+      project?.squads.find((item) => item.id === targetSquadId) ?? null;
+
+    const playerIdMap = new Map<string, string>();
+    const nextPlayers = sourceSquad.players.map((player, index) => {
+      const targetPlayerId = targetSquad?.players[index]?.id ?? createId();
+      playerIdMap.set(player.id, targetPlayerId);
+      return {
+        ...player,
+        id: targetPlayerId,
+      };
+    });
+
+    const nextCaptainId = sourceSquad.captainId
+      ? playerIdMap.get(sourceSquad.captainId)
+      : undefined;
+    const nextSubstituteIds = (sourceSquad.substituteIds ?? [])
+      .map((id) => playerIdMap.get(id))
+      .filter((id): id is string => Boolean(id));
+
+    const nextPayload = {
+      name: sourceSquad.name,
+      clubLogo: sourceSquad.clubLogo,
+      kit: { ...sourceSquad.kit },
+      captainId: nextCaptainId,
+      substituteIds: nextSubstituteIds,
+      players: nextPlayers,
+    };
+
+    if (targetSquad) {
+      updateSquad(targetSquad.id, nextPayload);
+      return targetSquad.id;
+    }
+
+    const nextSquadId = createId();
+    addSquadWithData({
+      id: nextSquadId,
+      ...nextPayload,
+    });
+    updateBoard(activeBoard.id, {
+      homeSquadId: side === "home" ? nextSquadId : activeBoard.homeSquadId,
+      awaySquadId: side === "away" ? nextSquadId : activeBoard.awaySquadId,
+    });
+    return nextSquadId;
+  };
+
   const loadDirectoryTeamIntoSide = (teamId: string, side: "home" | "away") => {
     const selectedTeam =
       manageDirectoryTeams.find((team) => team.teamId === teamId) ?? null;
@@ -757,22 +814,10 @@ export default function TopBar() {
       setManagePresetStatus("Select a team to load.");
       return;
     }
-    const targetSquadId =
-      side === "home" ? activeBoard?.homeSquadId : activeBoard?.awaySquadId;
-    const targetSquad =
-      project?.squads.find((item) => item.id === targetSquadId) ?? null;
-    if (!targetSquad) {
-      setManagePresetStatus("No target squad available on this board.");
+    const nextSquadId = cloneSquadIntoTargetSide(selectedTeam.squad, side);
+    if (!nextSquadId) {
       return;
     }
-    updateSquad(targetSquad.id, {
-      name: selectedTeam.squad.name,
-      clubLogo: selectedTeam.squad.clubLogo,
-      kit: { ...selectedTeam.squad.kit },
-      captainId: selectedTeam.squad.captainId,
-      substituteIds: [...(selectedTeam.squad.substituteIds ?? [])],
-      players: selectedTeam.squad.players.map((player) => ({ ...player })),
-    });
     setManageSide(side);
     setManageSelectedDirectoryTeamId(teamId);
     setManagePresetStatus(
@@ -783,14 +828,14 @@ export default function TopBar() {
   };
 
   const setManagedTeamToSide = (side: "home" | "away") => {
-    if (!manageSquad || !activeBoard) {
+    if (!manageSquad) {
       setManagePresetStatus("No team data available.");
       return;
     }
-    updateBoard(activeBoard.id, {
-      homeSquadId: side === "home" ? manageSquad.id : activeBoard.homeSquadId,
-      awaySquadId: side === "away" ? manageSquad.id : activeBoard.awaySquadId,
-    });
+    const nextSquadId = cloneSquadIntoTargetSide(manageSquad, side);
+    if (!nextSquadId) {
+      return;
+    }
     setManageSide(side);
     setManagePresetStatus(
       side === "home" ? "Set as Home team." : "Set as Away team."
