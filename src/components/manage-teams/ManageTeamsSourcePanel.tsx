@@ -49,162 +49,127 @@ export default function ManageTeamsSourcePanel({
 }: ManageTeamsSourcePanelProps) {
   return (
     <>
-      <details className="group rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25" open>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <p className="shrink-0 text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-              Source & reuse
-            </p>
-            <p className="truncate text-[11px] text-[var(--ink-1)]">
-              {managedDirectoryTeam
-                ? `${managedDirectoryTeam.clubName} / ${managedDirectoryTeam.teamName}`
-                : "This side is currently using a local project squad."}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-            {managedDirectoryTeam ? (
-              <>
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
+          <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+            Current source
+          </p>
+          {managedDirectoryTeam ? (
+            <div className="mt-2 space-y-2">
+              <p className="text-sm text-[var(--ink-0)]">
+                {managedDirectoryTeam.clubName} / {managedDirectoryTeam.teamName}
+              </p>
+              <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                 <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                  {managedDirectoryTeam.teamType}
+                  Club role: {managedDirectoryTeam.clubMembershipRole}
                 </span>
+                <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                  Team type: {managedDirectoryTeam.teamType}
+                </span>
+                {managedDirectoryTeam.ageGroup ? (
+                  <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                    {managedDirectoryTeam.ageGroup}
+                  </span>
+                ) : null}
+                {managedDirectoryTeam.seasonLabel ? (
+                  <span className="rounded-full border border-[var(--line)] px-2 py-1">
+                    {managedDirectoryTeam.seasonLabel}
+                  </span>
+                ) : null}
+                {managedDirectoryTeam.isCurrentUserClubAdmin ? (
+                  <span className="rounded-full border border-[var(--accent-2)] px-2 py-1 text-[var(--accent-2)]">
+                    Club admin
+                  </span>
+                ) : null}
                 {managedDirectoryTeam.isCurrentUserTeamAdmin ? (
                   <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[var(--accent-0)]">
                     Team admin
                   </span>
                 ) : null}
-              </>
-            ) : (
-              <span className="rounded-full border border-[var(--accent-1)] px-2 py-1 text-[var(--accent-1)]">
-                Local squad
-              </span>
-            )}
-            <span className="transition-transform group-open:rotate-180">⌄</span>
-          </div>
-        </summary>
-        <div className="space-y-4 border-t border-[var(--line)] px-4 py-4">
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
-            <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-              Current source
-            </p>
-            {managedDirectoryTeam ? (
-              <div className="mt-2 space-y-2">
-                <p className="text-sm text-[var(--ink-0)]">
-                  {managedDirectoryTeam.clubName} / {managedDirectoryTeam.teamName}
-                </p>
-                <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                  <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                    Club role: {managedDirectoryTeam.clubMembershipRole}
-                  </span>
-                  <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                    Team type: {managedDirectoryTeam.teamType}
-                  </span>
-                  {managedDirectoryTeam.ageGroup ? (
-                    <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                      {managedDirectoryTeam.ageGroup}
-                    </span>
-                  ) : null}
-                  {managedDirectoryTeam.seasonLabel ? (
-                    <span className="rounded-full border border-[var(--line)] px-2 py-1">
-                      {managedDirectoryTeam.seasonLabel}
-                    </span>
-                  ) : null}
-                  {managedDirectoryTeam.isCurrentUserClubAdmin ? (
-                    <span className="rounded-full border border-[var(--accent-2)] px-2 py-1 text-[var(--accent-2)]">
-                      Club admin
-                    </span>
-                  ) : null}
-                  {managedDirectoryTeam.isCurrentUserTeamAdmin ? (
-                    <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[var(--accent-0)]">
-                      Team admin
-                    </span>
-                  ) : null}
-                </div>
               </div>
-            ) : (
-              <p className="mt-2 text-xs text-[var(--ink-1)]">
-                This side is currently using a local project squad. Saving a reusable team does not automatically relink the current board to that saved team.
-              </p>
-            )}
-          </div>
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Save reusable team
-                </p>
-                <p className="text-[11px] text-[var(--ink-1)]">
-                  Makes this side available in future projects.
-                </p>
-              </div>
-              {canUsePresetStorage ? (
-                <button
-                  className="rounded-full border border-[var(--accent-0)] px-4 py-2 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
-                  onClick={onSaveReusableTeam}
-                >
-                  Save reusable team
-                </button>
-              ) : (
-                <p className="text-[11px] text-[var(--ink-1)]">
-                  Paid plan required.
-                </p>
-              )}
             </div>
-          </div>
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
-            <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-              Load team
+          ) : (
+            <p className="mt-2 text-xs text-[var(--ink-1)]">
+              This side is currently using a local project squad. Saving a reusable team does not automatically relink the current board to that saved team.
             </p>
-            {manageDirectoryTeams.length > 0 ? (
-              <>
-                <select
-                  className="mt-2 h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                  value={manageSelectedDirectoryTeamId}
-                  onChange={(event) => onManageSelectedDirectoryTeamIdChange(event.target.value)}
-                >
-                  {manageDirectoryTeams.map((team) => (
-                    <option key={team.teamId} value={team.teamId} className="bg-slate-900">
-                      {team.clubName} / {team.teamName}
-                    </option>
-                  ))}
-                </select>
-                {selectedManageDirectoryTeam ? (
-                  <p className="mt-2 text-[11px] text-[var(--ink-1)]">
-                    {selectedManageDirectoryTeam.teamType}
-                    {selectedManageDirectoryTeam.ageGroup
-                      ? ` • ${selectedManageDirectoryTeam.ageGroup}`
-                      : ""}
-                    {selectedManageDirectoryTeam.seasonLabel
-                      ? ` • ${selectedManageDirectoryTeam.seasonLabel}`
-                      : ""}
-                  </p>
-                ) : null}
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <button
-                    className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                    onClick={() =>
-                      onLoadDirectoryTeamIntoSide(manageSelectedDirectoryTeamId, "home")
-                    }
-                  >
-                    Use as Home
-                  </button>
-                  <button
-                    className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                    onClick={() =>
-                      onLoadDirectoryTeamIntoSide(manageSelectedDirectoryTeamId, "away")
-                    }
-                  >
-                    Use as Away
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="mt-2 text-xs text-[var(--ink-1)]">
-                No club teams available yet for this account.
+          )}
+        </div>
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                Save reusable team
               </p>
+              <p className="text-[11px] text-[var(--ink-1)]">
+                Makes this side available in future projects.
+              </p>
+            </div>
+            {canUsePresetStorage ? (
+              <button
+                className="rounded-full border border-[var(--accent-0)] px-4 py-2 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
+                onClick={onSaveReusableTeam}
+              >
+                Save reusable team
+              </button>
+            ) : (
+              <p className="text-[11px] text-[var(--ink-1)]">Paid plan required.</p>
             )}
           </div>
         </div>
-      </details>
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
+          <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+            Load team
+          </p>
+          {manageDirectoryTeams.length > 0 ? (
+            <>
+              <select
+                className="mt-2 h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                value={manageSelectedDirectoryTeamId}
+                onChange={(event) => onManageSelectedDirectoryTeamIdChange(event.target.value)}
+              >
+                {manageDirectoryTeams.map((team) => (
+                  <option key={team.teamId} value={team.teamId} className="bg-slate-900">
+                    {team.clubName} / {team.teamName}
+                  </option>
+                ))}
+              </select>
+              {selectedManageDirectoryTeam ? (
+                <p className="mt-2 text-[11px] text-[var(--ink-1)]">
+                  {selectedManageDirectoryTeam.teamType}
+                  {selectedManageDirectoryTeam.ageGroup
+                    ? ` • ${selectedManageDirectoryTeam.ageGroup}`
+                    : ""}
+                  {selectedManageDirectoryTeam.seasonLabel
+                    ? ` • ${selectedManageDirectoryTeam.seasonLabel}`
+                    : ""}
+                </p>
+              ) : null}
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={() =>
+                    onLoadDirectoryTeamIntoSide(manageSelectedDirectoryTeamId, "home")
+                  }
+                >
+                  Use as Home
+                </button>
+                <button
+                  className="rounded-full border border-[var(--line)] px-3 py-2 text-[11px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                  onClick={() =>
+                    onLoadDirectoryTeamIntoSide(manageSelectedDirectoryTeamId, "away")
+                  }
+                >
+                  Use as Away
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="mt-2 text-xs text-[var(--ink-1)]">
+              No club teams available yet for this account.
+            </p>
+          )}
+        </div>
+      </div>
       {squadPresetsLoading ? (
         <p className="text-xs text-[var(--ink-1)]">Loading teams...</p>
       ) : null}

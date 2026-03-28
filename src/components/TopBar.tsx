@@ -2466,8 +2466,8 @@ export default function TopBar() {
           onClose={closeSquadPresetsModal}
         >
                 <div className="px-4 py-4 text-xs text-[var(--ink-1)] sm:px-6" data-scrollable>
-                  <div className="mx-auto max-w-5xl space-y-4">
-                    <div className="space-y-4">
+                <div className="mx-auto max-w-5xl">
+                  <div className="relative">
                     <ManageTeamsRoster
                       manageSquad={manageSquad}
                       manageSide={manageSide}
@@ -2567,34 +2567,53 @@ export default function TopBar() {
                         ) : null}
                       </ManageTeamsRoster>
                     </div>
-                    {manageTopPanel === "source" ? (
-                      <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
-                        <ManageTeamsSourcePanel
-                          canUsePresetStorage={canUsePresetStorage}
-                          managedDirectoryTeam={managedDirectoryTeam}
-                        manageDirectoryTeams={manageDirectoryTeams}
-                        manageSelectedDirectoryTeamId={manageSelectedDirectoryTeamId}
-                        selectedManageDirectoryTeam={selectedManageDirectoryTeam}
-                        squadPresetsLoading={squadPresetsLoading}
-                        squadPresetsError={squadPresetsError}
-                        managePresetStatus={managePresetStatus}
-                          onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
-                          onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
-                          onSaveReusableTeam={saveManagePreset}
-                        />
-                      </div>
-                    ) : null}
-                    {manageTopPanel === "appearance" ? (
-                      <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
-                        <ManageTeamsTeamSetup
-                          editableSquad={editableSquad}
-                          jerseyType={jerseyType}
-                        shirtTypes={SHIRT_TYPES}
-                        manageLogoRef={manageLogoRef}
-                          updateEditableSquad={updateEditableSquad}
-                          onJerseyTypeChange={setJerseyType}
-                          renderShirtIcon={renderShirtIcon}
-                        />
+                    {manageTopPanel !== "none" ? (
+                      <div className="absolute inset-0 z-20 flex items-start justify-center rounded-[28px] bg-black/35 p-3 backdrop-blur-[1px] sm:p-5">
+                        <div className="w-full max-w-3xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-2xl shadow-black/35 sm:p-5">
+                          <div className="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] uppercase tracking-widest text-[var(--accent-0)]">
+                                {manageTopPanel === "source" ? "Source" : "Appearance"}
+                              </p>
+                              <p className="text-xs text-[var(--ink-1)]">
+                                {manageTopPanel === "source"
+                                  ? "Load teams, inspect the current source, or save this side for reuse."
+                                  : "Update the visual setup for the currently edited side."}
+                              </p>
+                            </div>
+                            <button
+                              className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                              onClick={() => setManageTopPanel("none")}
+                            >
+                              Close
+                            </button>
+                          </div>
+                          {manageTopPanel === "source" ? (
+                            <ManageTeamsSourcePanel
+                              canUsePresetStorage={canUsePresetStorage}
+                              managedDirectoryTeam={managedDirectoryTeam}
+                              manageDirectoryTeams={manageDirectoryTeams}
+                              manageSelectedDirectoryTeamId={manageSelectedDirectoryTeamId}
+                              selectedManageDirectoryTeam={selectedManageDirectoryTeam}
+                              squadPresetsLoading={squadPresetsLoading}
+                              squadPresetsError={squadPresetsError}
+                              managePresetStatus={managePresetStatus}
+                              onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
+                              onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
+                              onSaveReusableTeam={saveManagePreset}
+                            />
+                          ) : (
+                            <ManageTeamsTeamSetup
+                              editableSquad={editableSquad}
+                              jerseyType={jerseyType}
+                              shirtTypes={SHIRT_TYPES}
+                              manageLogoRef={manageLogoRef}
+                              updateEditableSquad={updateEditableSquad}
+                              onJerseyTypeChange={setJerseyType}
+                              renderShirtIcon={renderShirtIcon}
+                            />
+                          )}
+                        </div>
                       </div>
                     ) : null}
                   </div>

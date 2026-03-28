@@ -37,22 +37,29 @@ Den framtida modellen ska stotta:
 
 - en klubb med flera lag
 - flera anvandare i samma lag
+- att samma anvandare kan vara med i flera klubbar
+- att samma anvandare kan vara med i flera lag, i samma eller olika klubbar
 - olika roller och positioner per lag
+- olika roller pa klubbniva och lagniva for samma anvandare
 - klubbadmin och lagadmin
 - att samma anvandare kan vara kopplad till flera lag
 - att samma anvandare kan ha olika roller i olika lag
 - att projekt far en grundtrupp fran valt lag
 - att boards fortfarande kan ha lokala overrides utan att skriva over grunddatan
+- att modellen pa sikt kan delas med Teamzone som gemensam klubb-/lagdomän
 
 ## Grundprinciper
 
 Foljande principer ska styra implementationen:
 
 - auth-anvandaren ar inte samma sak som lagmedlem i domanmodellen
-- roller och positioner ska ligga pa relationen mellan anvandare och lag, inte globalt pa anvandaren
+- roller och admin ska ligga pa medlemskap, inte globalt pa anvandaren
+- klubbroll, lagroll och position/funktion ar tre olika begrepp och ska inte blandas ihop
 - klubb och lag ska vara egna entiteter
+- lagets grundtrupp ar den primara sanningskallan for spelare
 - projektets `squads` ska vara arbetskopior/snapshots, inte den primara sanningskallan for organisationsdata
 - board-lokala avvikelser ska fortsatt lagras separat via overrides
+- en board ska referera till lagets spelare, inte aga dem
 
 ## Rekommenderad datamodell
 
@@ -130,23 +137,34 @@ Foreslagna falt:
 - `id`
 - `club_id`
 - `user_id`
-- `membership_role`
+- `club_role`
 - `is_club_admin`
 - `created_at`
 - `updated_at`
 
-Exempel pa `membership_role`:
+Exempel pa `club_role`:
 
 - `member`
 - `staff`
 - `board`
-- `support`
+- `guardian`
+- `other`
 
 Ansvar:
 
 - avgor om en anvandare hor till klubben
 - ger klubbniva for adminrattigheter
 - gor att klubbadmin inte maste hardkodas pa endast ett fält i `clubs`
+
+Notering:
+
+`club_role` beskriver vilken typ av medlem personen ar i klubben.
+`is_club_admin` beskriver om personen far administrera klubben.
+
+Detta betyder att nagon till exempel kan vara:
+
+- `club_role = staff`
+- `is_club_admin = true`
 
 Notering:
 
@@ -163,7 +181,7 @@ Foreslagna falt:
 - `club_member_id` nullable
 - `user_id` nullable
 - `display_name`
-- `member_role`
+- `team_role`
 - `team_position`
 - `is_team_admin`
 - `is_guest`
@@ -175,11 +193,13 @@ Foreslagna falt:
 - `created_at`
 - `updated_at`
 
-Exempel pa `member_role`:
+Exempel pa `team_role`:
 
-- `player`
 - `leader`
+- `player`
 - `guardian`
+- `relative`
+- `staff`
 - `other`
 
 Exempel pa `team_position`:
@@ -188,16 +208,94 @@ Exempel pa `team_position`:
 - `assistant_coach`
 - `team_manager`
 - `goalkeeper`
+- `center_back`
+- `central_midfielder`
+- `central_forward`
 - `right_forward`
-- `center_midfielder`
 - `parent`
+- `guardian_contact`
 - `other`
 
 Ansvar:
 
-- beskriver en persons roll i just detta lag
+- beskriver vilken typ av person nagon ar i laget via `team_role`
+- beskriver personens funktion eller spelposition i laget via `team_position`
 - gor det mojligt att ha olika roller och positioner i olika lag
 - ar den naturliga källan till grundtruppen i projekt
+
+Viktig princip:
+
+- `team_role` svarar pa vem personen ar i laget
+- `team_position` svarar pa vad personen gor i laget
+- `is_team_admin` svarar pa vilka rattigheter personen har i laget
+
+Exempel:
+
+- `team_role = leader`, `team_position = head_coach`
+- `team_role = player`, `team_position = goalkeeper`
+- `team_role = guardian`, `team_position = parent`
+
+Detta ar avgorande for att undvika att roller, funktioner och rattigheter blandas i samma fält.
+
+## Skillnaden mellan klubbroll, lagroll och position
+
+Den framtida modellen ska uttryckligen skilja pa tre olika nivaer:
+
+### Klubbroll
+
+Ligger pa `club_members.club_role`.
+
+Exempel:
+
+- `member`
+- `staff`
+- `board`
+- `guardian`
+
+Beskriver hur personen hor till klubben.
+
+### Lagroll
+
+Ligger pa `team_members.team_role`.
+
+Exempel:
+
+- `leader`
+- `player`
+- `guardian`
+- `relative`
+
+Beskriver vilken typ av person personen ar i laget.
+
+### Position eller funktion
+
+Ligger pa `team_members.team_position`.
+
+Exempel:
+
+- `head_coach`
+- `team_manager`
+- `goalkeeper`
+- `central_forward`
+- `parent`
+- `guardian_contact`
+
+Beskriver personens funktion eller spelposition i laget.
+
+### Adminflaggar
+
+Ska fortsatt vara separata boolska rattighetsfalt:
+
+- `club_members.is_club_admin`
+- `team_members.is_team_admin`
+
+Detta gor att samma anvandare kan vara:
+
+- klubbadmin i klubb A
+- vanlig medlem i klubb B
+- ledare och huvudtranare i lag 1
+- vardnadshavare i lag 2
+- lagadmin i lag 1 men inte i lag 2
 
 ## Var `guest` bor ligga
 
@@ -236,6 +334,12 @@ Det gor att:
 - projektet kan arbeta offline och lokalt
 - tavlan ar fortfarande snabb att jobba i utan att varje rendering gor databasuppslag
 
+Viktig princip:
+
+- lagets grundtrupp ar sanningskallan
+- projektets squad ar en arbetskopia
+- boarden ska inte aga spelaren, bara referera till den eller overrida den
+
 ### Board-lokala andringar
 
 Board-lokala andringar ska fortsatt ligga i `board.squadOverrides`.
@@ -244,6 +348,7 @@ Det omfattar exempelvis:
 
 - dolda spelare
 - board-specifika positionsetiketter
+- board-specifika nummer
 - board-gaster
 
 Detta ska inte skriva over:
@@ -251,6 +356,18 @@ Detta ska inte skriva over:
 - klubbens lagstruktur
 - lagets grundtrupp
 - team members i databasen
+
+Rekommendation pa sikt:
+
+- `SquadPlayer` bor kunna innehalla `teamMemberId`
+- boardens objekt och tokens bor i slutandan referera till `teamMemberId`
+- boardoverride ska bara lagra skillnader, till exempel:
+  - `override_number`
+  - `override_position`
+  - `hidden`
+  - `display_name_override`
+
+Detta ar precis den modell som behovs for att en spelare normalt ar `CAM` i laget men spelar `CF` i en viss matchboard.
 
 ## Rekommenderade tabeller
 
@@ -260,6 +377,15 @@ Miniminiva for ny databasstruktur:
 - `club_members`
 - `teams`
 - `team_members`
+
+Taktikdelen bor pa sikt kompletteras med:
+
+- `projects`
+- `boards`
+- `board_team_selections`
+- `board_player_overrides`
+
+Detta gor det mojligt att halla organisationsdata och taktisk presentationsdata separerade.
 
 Mojliga kompletteringar senare:
 
@@ -304,6 +430,47 @@ Detta forenklar:
 - gaststatus
 - koppling till auth-anvandare
 - framtida funktioner som narvaro, laguttagning och kommunikation
+
+## Gemensam domän med Teamzone
+
+For att modellen ska kunna delas mellan Tacticsboard och Teamzone bor ansvaret delas sa har:
+
+### Gemensam domän mellan apparna
+
+Tabeller och begrepp som bor vara gemensamma:
+
+- `users`
+- `clubs`
+- `club_members`
+- `teams`
+- `team_members`
+
+Detta ar den gemensamma organisations- och lagdomänen.
+
+### Tacticsboard-specifik domän
+
+Begrepp som primart hor till taktikappen:
+
+- `projects`
+- `boards`
+- `board objects`
+- `board_team_selections`
+- `board_player_overrides`
+
+### Teamzone-specifik domän
+
+Begrepp som Teamzone sedan kan bygga vidare pa:
+
+- kallelser till match och traning
+- narvaro
+- lagkommunikation
+- spelar- och vardnadshavarkontakter
+
+Rekommenderad riktning:
+
+- Teamzone och Tacticsboard ska dela samma klubb-/lag-/medlemskapsmodell
+- Tacticsboard ska konsumera lagets grundtrupp från den delade modellen
+- Teamzone ska pa sikt kunna lasa samma lag och medlemmar utan specialmappning
 
 ## Rekommenderad migrationsstrategi
 
@@ -360,6 +527,7 @@ Vid nytt projekt:
 Mal:
 
 - grundtruppen i nya projekt kommer alltid fran lagets faktiska medlemslista
+- boarden kan sedan overrida nummer och position utan att skriva over lagets grunddata
 
 ### Fas 5: Behall board-overrides som separat lager
 
@@ -408,6 +576,15 @@ Uppdatera projektkonsolen sa att nytt projekt kan:
 
 Uppdatera editorn sa att `SquadPlayer` pa sikt kan peka mot ett stabilt lagmedlemskap, exempelvis `teamMemberId`.
 
+### Steg 5
+
+Uppdatera board- och exportfloden sa att de i forsta hand arbetar mot:
+
+- lagets grundtrupp
+- boardens overrides
+
+i stallet for att behandla projektlokala squadkopior som primar sanningskalla.
+
 ## Foreslagna modellandringar i frontend
 
 Nuvarande `SquadPlayer` bor pa sikt utokas med en stabil referens:
@@ -420,6 +597,14 @@ Nuvarande `Project` bor pa sikt kunna innehalla:
 - `teamContext?: { homeTeamId?: string; awayTeamId?: string }`
 
 Detta ar inte ett krav i fas 1, men bor vara malbilden.
+
+Pa sikt bor boardoverride kunna uttryckas uttryckligen som:
+
+- `teamMemberId`
+- `overrideNumber`
+- `overridePosition`
+- `hidden`
+- `guest`
 
 ## Oppna beslut
 
@@ -437,9 +622,12 @@ Foljande frgor maste beslutas innan implementation:
 Rekommenderad forsta implementation:
 
 1. bygg `clubs`, `club_members`, `teams`, `team_members`
-2. lat `team_members` vara primar sanningskalla for lagets personer
-3. lagg admin pa klubb- och lagniva i medlemskapen
-4. lat projekt skapa snapshots fran valt lag
-5. behall board-overrides som lokalt presentationslager
+2. lat `club_members.club_role` och `team_members.team_role` beskriva medlemskapstyper
+3. lat `team_members.team_position` beskriva funktion eller spelposition
+4. lagg admin pa klubb- och lagniva i medlemskapen via separata adminflaggor
+5. lat `team_members` vara primar sanningskalla for lagets personer
+6. lat projekt skapa snapshots fran valt lag
+7. behall board-overrides som lokalt presentationslager
+8. bygg pa sikt Tacticsboard och Teamzone mot samma gemensamma klubb-/lagdomän
 
 Detta ger en modell som ar tillrackligt stark for verkliga klubb- och lagfloden utan att tvinga editorn att bli tung eller databasberoende i varje interaktion.

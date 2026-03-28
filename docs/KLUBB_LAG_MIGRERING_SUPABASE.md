@@ -12,6 +12,7 @@ Det beskriver:
 - forslag pa RLS-riktning
 - stegvis migrering av befintlig data
 - hur appkoden bor fasas over
+- hur den gemensamma domanen med Teamzone bor forhallla sig till taktiska board-overrides
 
 ## Nuvarande schema
 
@@ -39,10 +40,11 @@ Begransningar:
 
 - `teams.owner_id` gor laget beroende av en primar anvandare
 - klubbniva saknas
-- roller och positioner ligger inte pa medlemskapsniva
+- klubbroll, lagroll och position/funktion ar inte tydligt separerade
 - `team_players` ar inte samma sak som anvandare eller lagmedlemmar
 - det finns ingen tydlig modell for vardnadshavare, ledare eller flera typer av roller i samma lag
 - adminrattigheter pa klubb- och lagniva ar inte explicit modellerade
+- boarden arbetar fortfarande for mycket med projektlokala squadkopior i stallet for att tydligt referera till lagets grundtrupp
 
 ## Malbild for schema
 
@@ -54,6 +56,13 @@ Malet ar att ga mot fyra primara tabeller:
 - `team_members`
 
 Pa sikt bor `team_members` vara primar sanningskalla for alla personer i laget.
+
+Taktiklagret bor ovanpa detta ga mot:
+
+- `projects`
+- `boards`
+- `board_team_selections`
+- `board_player_overrides`
 
 ## Rekommenderad slutmodell
 
@@ -87,7 +96,7 @@ create table if not exists club_members (
   id uuid primary key default gen_random_uuid(),
   club_id uuid not null references clubs(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  membership_role text not null default 'member',
+  club_role text not null default 'member',
   is_club_admin boolean not null default false,
   status text not null default 'active',
   created_at timestamptz not null default now(),
@@ -139,7 +148,7 @@ Rekommenderade nya kolumner:
 ```sql
 alter table team_members add column if not exists club_member_id uuid references club_members(id) on delete set null;
 alter table team_members add column if not exists display_name text;
-alter table team_members add column if not exists member_role text not null default 'other';
+alter table team_members add column if not exists team_role text not null default 'other';
 alter table team_members add column if not exists team_position text;
 alter table team_members add column if not exists is_team_admin boolean not null default false;
 alter table team_members add column if not exists is_guest boolean not null default false;
@@ -157,23 +166,41 @@ Rekommenderade index:
 
 ```sql
 create index if not exists team_members_team_idx on team_members(team_id);
-create index if not exists team_members_team_role_idx on team_members(team_id, member_role);
+create index if not exists team_members_team_role_idx on team_members(team_id, team_role);
 create index if not exists team_members_team_admin_idx on team_members(team_id, is_team_admin);
 create index if not exists team_members_club_member_idx on team_members(club_member_id);
+create index if not exists team_members_team_position_idx on team_members(team_id, team_position);
 ```
 
 ## Rekommenderade enum-liknande textvarder
 
 For enkel migrering rekommenderas textkolumner med appvalidering i forsta fas, snarare an Postgres enum direkt.
 
-### `member_role`
+### `club_role`
 
 Foreslagna varden:
 
-- `player`
-- `leader`
+- `member`
+- `staff`
+- `board`
 - `guardian`
 - `other`
+
+`club_role` beskriver hur personen hor till klubben.
+`is_club_admin` beskriver behorighet.
+
+### `team_role`
+
+Foreslagna varden:
+
+- `leader`
+- `player`
+- `guardian`
+- `relative`
+- `staff`
+- `other`
+
+`team_role` beskriver vilken typ av person personen ar i laget.
 
 ### `team_position`
 
@@ -186,21 +213,53 @@ Foreslagna varden:
 - `right_back`
 - `center_back`
 - `left_back`
-- `midfielder`
+- `defensive_midfielder`
+- `central_midfielder`
+- `attacking_midfielder`
 - `right_forward`
+- `central_forward`
 - `left_forward`
 - `striker`
 - `parent`
+- `guardian_contact`
 - `other`
 
-### `membership_role` pa klubbniva
+`team_position` beskriver funktion eller spelposition i laget.
 
-Foreslagna varden:
+## Rekommenderad domanindelning
 
-- `member`
-- `staff`
-- `board`
-- `support`
+For att Tacticsboard och Teamzone ska kunna dela samma grundmodell bor domanen delas upp sa har:
+
+### Gemensam organisationsdomän
+
+Gemensamma tabeller:
+
+- `users`
+- `clubs`
+- `club_members`
+- `teams`
+- `team_members`
+
+Detta ar sanningskallan for:
+
+- klubbar
+- lag
+- medlemskap
+- klubbroller
+- lagroller
+- positioner/funktioner
+- klubbadmin och lagadmin
+
+### Tacticsboard-specifikt lager
+
+Taktikappen bor ovanpa den gemensamma domanen arbeta med:
+
+- `projects`
+- `boards`
+- `board_team_selections`
+- `board_player_overrides`
+
+Det ar i detta lager som matchspecifika avvikelser ska ligga.
 
 ## Rekommenderad syn pa gamla tabeller
 
@@ -278,7 +337,7 @@ For varje rad i `team_players`:
 
 1. skapa en `team_members`-rad
 2. satt `display_name = team_players.name`
-3. satt `member_role = 'player'`
+3. satt `team_role = 'player'`
 4. satt `team_position = team_players.position_label`
 5. satt `shirt_number = team_players.number`
 6. satt `photo_url = team_players.photo_url`
@@ -295,7 +354,7 @@ For att inte tappa dagens lagagarskap:
 
 1. skapa eller uppdatera en `team_members`-rad for `teams.owner_id`
 2. satt:
-   - `member_role = 'leader'`
+   - `team_role = 'leader'`
    - `team_position = 'head_coach'`
    - `is_team_admin = true`
 
@@ -321,6 +380,25 @@ Nar admin- och lagfloden ar uppdaterade:
 - nytt projekt valjer `team_id`
 - projektets `squads` skapas som snapshot fran `team_members`
 - board-lokala overrides fortsatter som idag
+
+### Fas 7b: Tydlig separation mellan grundtrupp och boardoverride
+
+Efter att projekt borjat lasa fran `team_members` bor modellen i koden flyttas mot:
+
+- lagets grundtrupp som sanningskalla
+- boardoverride som skillnadslager
+
+Rekommenderad riktning:
+
+- `SquadPlayer` far stabil referens till `teamMemberId`
+- boardobjekt och spelarlankar bor pa sikt referera till `teamMemberId`
+- boardens avvikelser uttrycks separat, till exempel:
+  - `override_number`
+  - `override_position`
+  - `hidden`
+  - `guest`
+
+Detta ar nodvandigt for att exempelvis en `CAM` i lagets grundtrupp ska kunna spela `CF` pa en specifik board utan att lagets basdata skrivs over.
 
 ### Fas 8: Fasa ut gammal lagersmodell
 
@@ -376,6 +454,12 @@ Select:
 Insert/Update/Delete:
 
 - teamadmin eller klubbadmin
+
+RLS bor uttryckligen tillata att samma anvandare:
+
+- ar klubbadmin i flera klubbar
+- ar lagadmin i flera lag
+- har olika `club_role` och `team_role` i olika medlemskap
 
 ## Exempel pa RLS-logik
 
@@ -449,6 +533,15 @@ Ny riktning:
 - `Manage teams` blir pa sikt `Manage club and teams`
 - nytt projekt far val av klubb och lag
 - grundtruppen kommer fran valt lag
+- boarden overlagrar bara lagets grundtrupp i stallet for att aga en separat spelarmodell
+
+### Editor och boardflode
+
+Kodfloden bor pa sikt justeras sa att:
+
+- tokens pa planen pekar mot `teamMemberId`
+- projektets squad ar en snapshot for arbetsflode och offline-stod
+- boarden bara sparar de avvikelser som behovs for den aktuella matchen eller tavlan
 
 ## Rekommenderad forsta SQL-release
 
@@ -471,6 +564,7 @@ Innan schemaforandringen genomfors bor foljande beslutas:
 - om ett lag alltid maste tillhora en klubb
 - om `primary_admin_user_id` ska finnas kvar eller bara vara en av flera klubbadmins
 - om `team_position` ska vara fri text eller styrd lista
+- om `club_role`, `team_role` och `team_position` ska valideras via appkod, check constraints eller separata referenstabeller
 - om vardnadshavare maste kunna existera utan auth-konto
 - om en och samma person kan ha flera medlemskap i samma lag over tid
 - om sasongstillhorighet ska in redan nu eller vanta

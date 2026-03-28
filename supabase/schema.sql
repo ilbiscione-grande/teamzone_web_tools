@@ -621,7 +621,7 @@ create table if not exists club_members (
   id uuid primary key default gen_random_uuid(),
   club_id uuid not null references clubs(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  membership_role text not null default 'member',
+  club_role text not null default 'member',
   is_club_admin boolean not null default false,
   status text not null default 'active',
   created_at timestamptz not null default now(),
@@ -825,9 +825,47 @@ create index if not exists team_members_user_id_idx on team_members(user_id);
 
 alter table team_members alter column user_id drop not null;
 
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'club_members'
+      and column_name = 'membership_role'
+  ) and not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'club_members'
+      and column_name = 'club_role'
+  ) then
+    alter table public.club_members rename column membership_role to club_role;
+  end if;
+end $$;
+
 alter table team_members add column if not exists club_member_id uuid references club_members(id) on delete set null;
 alter table team_members add column if not exists display_name text;
-alter table team_members add column if not exists member_role text not null default 'other';
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'team_members'
+      and column_name = 'member_role'
+  ) and not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'team_members'
+      and column_name = 'team_role'
+  ) then
+    alter table public.team_members rename column member_role to team_role;
+  end if;
+end $$;
+
+alter table team_members add column if not exists team_role text not null default 'other';
 alter table team_members add column if not exists team_position text;
 alter table team_members add column if not exists is_team_admin boolean not null default false;
 alter table team_members add column if not exists is_guest boolean not null default false;
@@ -841,9 +879,150 @@ alter table team_members add column if not exists metadata jsonb not null defaul
 alter table team_members add column if not exists updated_at timestamptz not null default now();
 
 create index if not exists team_members_team_idx on team_members(team_id);
-create index if not exists team_members_team_role_idx on team_members(team_id, member_role);
+create index if not exists team_members_team_role_idx on team_members(team_id, team_role);
 create index if not exists team_members_team_admin_idx on team_members(team_id, is_team_admin);
 create index if not exists team_members_club_member_idx on team_members(club_member_id);
+create index if not exists team_members_team_position_idx on team_members(team_id, team_position);
+
+create table if not exists board_team_selections (
+  id uuid primary key default gen_random_uuid(),
+  board_id text not null references project_boards(id) on delete cascade,
+  side text not null check (side in ('home', 'away')),
+  team_id uuid not null references teams(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(board_id, side)
+);
+
+create index if not exists board_team_selections_board_idx on board_team_selections(board_id);
+create index if not exists board_team_selections_team_idx on board_team_selections(team_id);
+
+create table if not exists board_player_overrides (
+  id uuid primary key default gen_random_uuid(),
+  board_id text not null references project_boards(id) on delete cascade,
+  team_member_id uuid not null references team_members(id) on delete cascade,
+  override_number integer,
+  override_position text,
+  display_name_override text,
+  is_hidden boolean not null default false,
+  is_guest boolean not null default false,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(board_id, team_member_id)
+);
+
+create index if not exists board_player_overrides_board_idx on board_player_overrides(board_id);
+create index if not exists board_player_overrides_team_member_idx on board_player_overrides(team_member_id);
+
+alter table board_team_selections enable row level security;
+alter table board_player_overrides enable row level security;
+
+drop policy if exists "Users can view their board team selections" on board_team_selections;
+drop policy if exists "Users can insert their board team selections" on board_team_selections;
+drop policy if exists "Users can update their board team selections" on board_team_selections;
+drop policy if exists "Users can delete their board team selections" on board_team_selections;
+
+create policy "Users can view their board team selections"
+on board_team_selections
+for select
+using (
+  exists (
+    select 1
+    from project_boards pb
+    where pb.id = board_team_selections.board_id
+      and pb.user_id = auth.uid()
+  )
+);
+
+create policy "Users can insert their board team selections"
+on board_team_selections
+for insert
+with check (
+  exists (
+    select 1
+    from project_boards pb
+    where pb.id = board_team_selections.board_id
+      and pb.user_id = auth.uid()
+  )
+);
+
+create policy "Users can update their board team selections"
+on board_team_selections
+for update
+using (
+  exists (
+    select 1
+    from project_boards pb
+    where pb.id = board_team_selections.board_id
+      and pb.user_id = auth.uid()
+  )
+);
+
+create policy "Users can delete their board team selections"
+on board_team_selections
+for delete
+using (
+  exists (
+    select 1
+    from project_boards pb
+    where pb.id = board_team_selections.board_id
+      and pb.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Users can view their board player overrides" on board_player_overrides;
+drop policy if exists "Users can insert their board player overrides" on board_player_overrides;
+drop policy if exists "Users can update their board player overrides" on board_player_overrides;
+drop policy if exists "Users can delete their board player overrides" on board_player_overrides;
+
+create policy "Users can view their board player overrides"
+on board_player_overrides
+for select
+using (
+  exists (
+    select 1
+    from project_boards pb
+    where pb.id = board_player_overrides.board_id
+      and pb.user_id = auth.uid()
+  )
+);
+
+create policy "Users can insert their board player overrides"
+on board_player_overrides
+for insert
+with check (
+  exists (
+    select 1
+    from project_boards pb
+    where pb.id = board_player_overrides.board_id
+      and pb.user_id = auth.uid()
+  )
+);
+
+create policy "Users can update their board player overrides"
+on board_player_overrides
+for update
+using (
+  exists (
+    select 1
+    from project_boards pb
+    where pb.id = board_player_overrides.board_id
+      and pb.user_id = auth.uid()
+  )
+);
+
+create policy "Users can delete their board player overrides"
+on board_player_overrides
+for delete
+using (
+  exists (
+    select 1
+    from project_boards pb
+    where pb.id = board_player_overrides.board_id
+      and pb.user_id = auth.uid()
+  )
+);
 
 create table if not exists team_squads (
   id uuid primary key default gen_random_uuid(),
@@ -1330,7 +1509,7 @@ where teams.club_id is null
 insert into club_members (
   club_id,
   user_id,
-  membership_role,
+  club_role,
   is_club_admin,
   status
 )
@@ -1354,7 +1533,7 @@ insert into team_members (
   user_id,
   role,
   display_name,
-  member_role,
+  team_role,
   team_position,
   is_team_admin,
   is_guest,
@@ -1367,7 +1546,7 @@ select
   t.owner_id as user_id,
   'owner' as role,
   null as display_name,
-  'leader' as member_role,
+  'leader' as team_role,
   'head_coach' as team_position,
   true as is_team_admin,
   false as is_guest,
@@ -1400,7 +1579,7 @@ insert into team_members (
   user_id,
   role,
   display_name,
-  member_role,
+  team_role,
   team_position,
   is_team_admin,
   is_guest,
@@ -1416,7 +1595,7 @@ select
   null as user_id,
   'member' as role,
   tp.name as display_name,
-  'player' as member_role,
+  'player' as team_role,
   tp.position_label as team_position,
   false as is_team_admin,
   false as is_guest,
@@ -1442,5 +1621,5 @@ where not exists (
     and tm.user_id is null
     and tm.display_name = tp.name
     and coalesce(tm.shirt_number, -1) = coalesce(tp.number, -1)
-    and tm.member_role = 'player'
+    and tm.team_role = 'player'
 );
