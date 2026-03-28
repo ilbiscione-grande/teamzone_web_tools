@@ -433,6 +433,10 @@ export default function TopBar() {
     manageSide === "home" ? activeBoard?.homeSquadId : activeBoard?.awaySquadId;
   const manageBaseSquad =
     project?.squads.find((item) => item.id === manageSquadId) ?? null;
+  const currentHomeManagedSquad =
+    project?.squads.find((item) => item.id === activeBoard?.homeSquadId) ?? null;
+  const currentAwayManagedSquad =
+    project?.squads.find((item) => item.id === activeBoard?.awaySquadId) ?? null;
   const manageBoardSquad =
     manageSide === "home" ? boardSquads.home : boardSquads.away;
   const manageSquad = manageBaseSquad;
@@ -779,25 +783,13 @@ export default function TopBar() {
   };
 
   const setManagedTeamToSide = (side: "home" | "away") => {
-    if (!manageSquad) {
+    if (!manageSquad || !activeBoard) {
       setManagePresetStatus("No team data available.");
       return;
     }
-    const targetSquadId =
-      side === "home" ? activeBoard?.homeSquadId : activeBoard?.awaySquadId;
-    const targetSquad =
-      project?.squads.find((item) => item.id === targetSquadId) ?? null;
-    if (!targetSquad) {
-      setManagePresetStatus("No target squad available on this board.");
-      return;
-    }
-    updateSquad(targetSquad.id, {
-      name: manageSquad.name,
-      clubLogo: manageSquad.clubLogo,
-      kit: { ...manageSquad.kit },
-      captainId: manageSquad.captainId,
-      substituteIds: [...(manageSquad.substituteIds ?? [])],
-      players: manageSquad.players.map((player) => ({ ...player })),
+    updateBoard(activeBoard.id, {
+      homeSquadId: side === "home" ? manageSquad.id : activeBoard.homeSquadId,
+      awaySquadId: side === "away" ? manageSquad.id : activeBoard.awaySquadId,
     });
     setManageSide(side);
     setManagePresetStatus(
@@ -2386,7 +2378,7 @@ export default function TopBar() {
                     ))}
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
                     <span className="rounded-full border border-[var(--line)] px-2.5 py-1">
                       Active side: {manageSide}
                     </span>
@@ -2395,6 +2387,12 @@ export default function TopBar() {
                     </span>
                     <span className="rounded-full border border-[var(--line)] px-2.5 py-1">
                       Scope: Project / board
+                    </span>
+                    <span className="rounded-full border border-[var(--line)] px-2.5 py-1 normal-case tracking-normal">
+                      Home linked: {currentHomeManagedSquad?.name ?? "None"}
+                    </span>
+                    <span className="rounded-full border border-[var(--line)] px-2.5 py-1 normal-case tracking-normal">
+                      Away linked: {currentAwayManagedSquad?.name ?? "None"}
                     </span>
                   </div>
                 </div>

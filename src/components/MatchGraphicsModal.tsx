@@ -786,7 +786,7 @@ const renderStartingXiGraphic = async (params: {
           const label = entry.player.name.toUpperCase();
           ctx.save();
           ctx.translate(x, y);
-          ctx.rotate(Math.PI / 2);
+          ctx.rotate(-Math.PI / 2);
           ctx.fillStyle = "rgba(8,21,23,0.74)";
           ctx.beginPath();
           ctx.roundRect(-46, -9, 92, 18, 9);
