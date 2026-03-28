@@ -1026,6 +1026,14 @@ export default function TopBar() {
       setManagePresetStatus("No team data available.");
       return;
     }
+    if (side === manageSide) {
+      setManagePresetStatus(
+        side === "home"
+          ? "You are already editing the Home team."
+          : "You are already editing the Away team."
+      );
+      return;
+    }
     const nextSquadId = cloneSquadIntoTargetSide(manageSquad, side);
     if (!nextSquadId) {
       return;
@@ -1033,7 +1041,9 @@ export default function TopBar() {
     setProjectTeamContextForSide(side, manageLinkedTeamId);
     setManageSide(side);
     setManagePresetStatus(
-      side === "home" ? "Set as Home team." : "Set as Away team."
+      side === "home"
+        ? "Current side copied to Home team."
+        : "Current side copied to Away team."
     );
   };
   const toggleManagePlayersSort = (key: ManagePlayersSortKey) => {

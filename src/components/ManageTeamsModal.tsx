@@ -103,16 +103,18 @@ export default function ManageTeamsModal({
         <div className="sticky bottom-0 z-10 border-t border-[var(--line)] bg-[color:color-mix(in_srgb,var(--panel)_96%,transparent)] px-4 py-3 backdrop-blur sm:px-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button
-              className="rounded-full border border-[var(--line)] px-4 py-2 text-[11px] uppercase tracking-wide text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              className="rounded-full border border-[var(--line)] px-4 py-2 text-[11px] uppercase tracking-wide text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] disabled:cursor-not-allowed disabled:opacity-50"
               onClick={onApplyToHome}
+              disabled={manageSide === "home"}
             >
-              Use for Home
+              Copy to Home
             </button>
             <button
-              className="rounded-full border border-[var(--line)] px-4 py-2 text-[11px] uppercase tracking-wide text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+              className="rounded-full border border-[var(--line)] px-4 py-2 text-[11px] uppercase tracking-wide text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] disabled:cursor-not-allowed disabled:opacity-50"
               onClick={onApplyToAway}
+              disabled={manageSide === "away"}
             >
-              Use for Away
+              Copy to Away
             </button>
           </div>
         </div>
