@@ -587,8 +587,10 @@ export const ensureBoardSquads = (project: Project): Project => {
         object.squadPlayerId = awayCandidate.id;
         return;
       }
-      object.squadPlayerId =
-        object.position.x <= PITCH_LENGTH / 2 ? homeCandidate.id : awayCandidate.id;
+      const homeOnLeft = board.pitchRotation !== 180;
+      const useHomeCandidate =
+        object.position.x <= PITCH_LENGTH / 2 ? homeOnLeft : !homeOnLeft;
+      object.squadPlayerId = useHomeCandidate ? homeCandidate.id : awayCandidate.id;
     };
 
     board.frames.forEach((frame) => {

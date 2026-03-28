@@ -11,7 +11,8 @@ const PITCH_MID_X = 105 / 2;
 
 export const resolvePlayerTokenSquadPlayer = (
   token: Pick<PlayerToken, "position" | "squadPlayerId" | "teamMemberId">,
-  squads: { home?: Squad; away?: Squad }
+  squads: { home?: Squad; away?: Squad },
+  board?: Pick<Board, "pitchRotation">
 ): SquadPlayer | undefined => {
   const homePlayers = squads.home?.players ?? [];
   const awayPlayers = squads.away?.players ?? [];
@@ -37,7 +38,15 @@ export const resolvePlayerTokenSquadPlayer = (
   if (awayByMember && !homeByMember) {
     return awayByMember;
   }
-  const inferredSide = token.position.x <= PITCH_MID_X ? "home" : "away";
+  const homeOnLeft = board?.pitchRotation !== 180;
+  const inferredSide =
+    token.position.x <= PITCH_MID_X
+      ? homeOnLeft
+        ? "home"
+        : "away"
+      : homeOnLeft
+        ? "away"
+        : "home";
   const inferredMatch = inferredSide === "home" ? homeByMember : awayByMember;
   const oppositeMatch = inferredSide === "home" ? awayByMember : homeByMember;
   if (

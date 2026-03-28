@@ -1082,7 +1082,7 @@ export default function BoardCanvas({
       if (item.type !== "player") {
         return;
       }
-      const resolved = resolvePlayerTokenSquadPlayer(item, boardSquads);
+      const resolved = resolvePlayerTokenSquadPlayer(item, boardSquads, board);
       if (resolved) {
         map.set(item.id, resolved);
       }
