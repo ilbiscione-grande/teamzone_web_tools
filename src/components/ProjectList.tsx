@@ -2171,7 +2171,7 @@ export default function ProjectList() {
                 ) : adminUsersError ? (
                   <p className="text-xs text-[var(--accent-1)]">{adminUsersError}</p>
                 ) : (
-                  <div className="max-h-[58vh] space-y-2 overflow-y-auto pr-1">
+                  <div className="space-y-2 pr-1">
                     {paginatedAdminUsers.map((user) => (
                         <article
                           key={user.id}
@@ -2276,7 +2276,7 @@ export default function ProjectList() {
                                     {activeAdminMemberships.clubMemberships.map((membership) => (
                                       <div
                                         key={membership.id}
-                                        className="grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2 md:grid-cols-[minmax(0,1fr)_120px_110px_auto]"
+                                        className="grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3"
                                       >
                                         <div>
                                           <p className="text-xs text-[var(--ink-0)]">
@@ -2354,7 +2354,10 @@ export default function ProjectList() {
                                         </button>
                                       </div>
                                     ))}
-                                    <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-2 md:grid-cols-[minmax(0,1fr)_120px_110px_auto]">
+                                    <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-3">
+                                      <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                                        Add existing club
+                                      </p>
                                       <select
                                         className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                                         value={adminNewClubId}
@@ -2396,7 +2399,10 @@ export default function ProjectList() {
                                         Add club
                                       </button>
                                     </div>
-                                    <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-2 md:grid-cols-[minmax(0,1fr)_120px_auto]">
+                                    <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-3">
+                                      <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                                        Create new club
+                                      </p>
                                       <input
                                         className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                                         value={adminNewClubName}
@@ -2436,7 +2442,7 @@ export default function ProjectList() {
                                     {activeAdminMemberships.teamMemberships.map((membership) => (
                                       <div
                                         key={membership.id}
-                                        className="grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2 md:grid-cols-[minmax(0,1fr)_120px_120px_110px_auto]"
+                                        className="grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3"
                                       >
                                         <div>
                                           <p className="text-xs text-[var(--ink-0)]">
@@ -2538,7 +2544,10 @@ export default function ProjectList() {
                                         </button>
                                       </div>
                                     ))}
-                                    <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_120px_110px_auto]">
+                                    <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-3">
+                                      <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                                        Add existing team
+                                      </p>
                                       <select
                                         className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                                         value={adminNewTeamClubId}
@@ -2597,7 +2606,10 @@ export default function ProjectList() {
                                         Add team
                                       </button>
                                     </div>
-                                    <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_120px_110px_auto]">
+                                    <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-3">
+                                      <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                                        Create new team
+                                      </p>
                                       <select
                                         className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                                         value={adminNewTeamClubId}
