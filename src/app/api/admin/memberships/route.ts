@@ -142,6 +142,45 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  if (kind === "create_club") {
+    const clubName = String(body.clubName ?? "").trim();
+    const clubRole = String(body.clubRole ?? "member").trim() || "member";
+    const isClubAdmin = body.isClubAdmin === true;
+    if (!clubName) {
+      return NextResponse.json({ error: "Missing club name." }, { status: 400 });
+    }
+    const { data: club, error: clubError } = await admin.service
+      .from("clubs")
+      .insert({
+        name: clubName,
+        created_by_user_id: userId,
+        primary_admin_user_id: userId,
+        updated_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    if (clubError || !club) {
+      return NextResponse.json(
+        { error: clubError?.message ?? "Could not create club." },
+        { status: 500 }
+      );
+    }
+    const { error: membershipError } = await admin.service.from("club_members").upsert(
+        {
+          club_id: club.id,
+          user_id: userId,
+          club_role: clubRole,
+          is_club_admin: true,
+          updated_at: new Date().toISOString(),
+        },
+      { onConflict: "club_id,user_id" }
+    );
+    if (membershipError) {
+      return NextResponse.json({ error: membershipError.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   if (kind === "team") {
     const teamId = String(body.teamId ?? "").trim();
     const teamRole = String(body.teamRole ?? "other").trim() || "other";
@@ -192,6 +231,83 @@ export async function POST(request: Request) {
     );
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (kind === "create_team") {
+    const clubId = String(body.clubId ?? "").trim();
+    const teamName = String(body.teamName ?? "").trim();
+    const teamType = String(body.teamType ?? "other").trim() || "other";
+    const ageGroup =
+      typeof body.ageGroup === "string" && body.ageGroup.trim() ? body.ageGroup.trim() : null;
+    const seasonLabel =
+      typeof body.seasonLabel === "string" && body.seasonLabel.trim()
+        ? body.seasonLabel.trim()
+        : null;
+    const teamRole = String(body.teamRole ?? "leader").trim() || "leader";
+    const teamPosition =
+      typeof body.teamPosition === "string" && body.teamPosition.trim()
+        ? body.teamPosition.trim()
+        : null;
+    const isTeamAdmin = body.isTeamAdmin !== false;
+    if (!clubId || !teamName) {
+      return NextResponse.json(
+        { error: "Missing club id or team name." },
+        { status: 400 }
+      );
+    }
+
+    const { data: clubMember } = await admin.service
+      .from("club_members")
+      .upsert(
+        {
+          club_id: clubId,
+          user_id: userId,
+          club_role: "member",
+          is_club_admin: false,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "club_id,user_id" }
+      )
+      .select("id")
+      .single();
+
+    const { data: team, error: teamInsertError } = await admin.service
+      .from("teams")
+      .insert({
+        owner_id: userId,
+        club_id: clubId,
+        name: teamName,
+        team_type: teamType,
+        age_group: ageGroup,
+        season_label: seasonLabel,
+        updated_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    if (teamInsertError || !team) {
+      return NextResponse.json(
+        { error: teamInsertError?.message ?? "Could not create team." },
+        { status: 500 }
+      );
+    }
+
+    const { error: teamMemberError } = await admin.service.from("team_members").upsert(
+      {
+        team_id: team.id,
+        user_id: userId,
+        club_member_id: clubMember?.id ?? null,
+        display_name: null,
+        team_role: teamRole,
+        team_position: teamPosition,
+        is_team_admin: isTeamAdmin,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "team_id,user_id" }
+    );
+    if (teamMemberError) {
+      return NextResponse.json({ error: teamMemberError.message }, { status: 500 });
     }
     return NextResponse.json({ ok: true });
   }

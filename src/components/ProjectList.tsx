@@ -58,7 +58,9 @@ import {
   fetchAdminReports,
   fetchAdminUserMemberships,
   fetchAdminUsers,
+  createAdminClub,
   createAdminUserClubMembership,
+  createAdminTeam,
   createAdminUserTeamMembership,
   updateAdminUserClubMembership,
   updateAdminUserTeamMembership,
@@ -201,10 +203,15 @@ export default function ProjectList() {
   );
   const [adminMembershipsError, setAdminMembershipsError] = useState<string | null>(null);
   const [adminNewClubId, setAdminNewClubId] = useState("");
+  const [adminNewClubName, setAdminNewClubName] = useState("");
   const [adminNewClubRole, setAdminNewClubRole] = useState("member");
   const [adminNewClubAdmin, setAdminNewClubAdmin] = useState(false);
   const [adminNewTeamClubId, setAdminNewTeamClubId] = useState("");
   const [adminNewTeamId, setAdminNewTeamId] = useState("");
+  const [adminNewTeamName, setAdminNewTeamName] = useState("");
+  const [adminNewTeamType, setAdminNewTeamType] = useState("other");
+  const [adminNewTeamAgeGroup, setAdminNewTeamAgeGroup] = useState("");
+  const [adminNewTeamSeasonLabel, setAdminNewTeamSeasonLabel] = useState("");
   const [adminNewTeamRole, setAdminNewTeamRole] = useState("player");
   const [adminNewTeamPosition, setAdminNewTeamPosition] = useState("");
   const [adminNewTeamAdmin, setAdminNewTeamAdmin] = useState(false);
@@ -1097,10 +1104,15 @@ export default function ProjectList() {
     const firstTeamId =
       result.memberships.teams.find((team) => team.clubId === firstTeamClubId)?.id ?? "";
     setAdminNewClubId(firstClubId);
+    setAdminNewClubName("");
     setAdminNewClubRole("member");
     setAdminNewClubAdmin(false);
     setAdminNewTeamClubId(firstTeamClubId);
     setAdminNewTeamId(firstTeamId);
+    setAdminNewTeamName("");
+    setAdminNewTeamType("other");
+    setAdminNewTeamAgeGroup("");
+    setAdminNewTeamSeasonLabel("");
     setAdminNewTeamRole("player");
     setAdminNewTeamPosition("");
     setAdminNewTeamAdmin(false);
@@ -1180,6 +1192,28 @@ export default function ProjectList() {
     setAdminUpdatingUserId(null);
   };
 
+  const createAdminClubForUser = async (userId: string) => {
+    if (!adminNewClubName.trim()) {
+      setAdminMembershipsError("Enter a club name.");
+      return;
+    }
+    setAdminUpdatingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await createAdminClub({
+      userId,
+      clubName: adminNewClubName,
+      clubRole: adminNewClubRole,
+      isClubAdmin: true,
+    });
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    await loadAdminMembershipsForUser(userId);
+    setAdminUpdatingUserId(null);
+  };
+
   const addAdminTeamMembership = async (userId: string) => {
     if (!adminNewTeamId) {
       setAdminMembershipsError("Select a team.");
@@ -1190,6 +1224,33 @@ export default function ProjectList() {
     const result = await createAdminUserTeamMembership({
       userId,
       teamId: adminNewTeamId,
+      teamRole: adminNewTeamRole,
+      teamPosition: adminNewTeamPosition,
+      isTeamAdmin: adminNewTeamAdmin,
+    });
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    await loadAdminMembershipsForUser(userId);
+    setAdminUpdatingUserId(null);
+  };
+
+  const createAdminTeamForUser = async (userId: string) => {
+    if (!adminNewTeamClubId || !adminNewTeamName.trim()) {
+      setAdminMembershipsError("Select a club and enter a team name.");
+      return;
+    }
+    setAdminUpdatingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await createAdminTeam({
+      userId,
+      clubId: adminNewTeamClubId,
+      teamName: adminNewTeamName,
+      teamType: adminNewTeamType,
+      ageGroup: adminNewTeamAgeGroup,
+      seasonLabel: adminNewTeamSeasonLabel,
       teamRole: adminNewTeamRole,
       teamPosition: adminNewTeamPosition,
       isTeamAdmin: adminNewTeamAdmin,
@@ -2335,6 +2396,33 @@ export default function ProjectList() {
                                         Add club
                                       </button>
                                     </div>
+                                    <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-2 md:grid-cols-[minmax(0,1fr)_120px_auto]">
+                                      <input
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewClubName}
+                                        onChange={(event) => setAdminNewClubName(event.target.value)}
+                                        placeholder="Create new club"
+                                      />
+                                      <select
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewClubRole}
+                                        onChange={(event) => setAdminNewClubRole(event.target.value)}
+                                      >
+                                        {["member", "staff", "board", "guardian", "other"].map(
+                                          (option) => (
+                                            <option key={`new-club-role-${option}`} value={option}>
+                                              {option}
+                                            </option>
+                                          )
+                                        )}
+                                      </select>
+                                      <button
+                                        className="rounded-full border border-[var(--accent-2)] px-3 py-2 text-[10px] uppercase tracking-wide text-[var(--accent-2)]"
+                                        onClick={() => void createAdminClubForUser(user.id)}
+                                      >
+                                        Create club
+                                      </button>
+                                    </div>
                                   </div>
                                   <div className="space-y-2">
                                     <div className="flex items-center justify-between gap-2">
@@ -2507,6 +2595,49 @@ export default function ProjectList() {
                                         onClick={() => void addAdminTeamMembership(user.id)}
                                       >
                                         Add team
+                                      </button>
+                                    </div>
+                                    <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_120px_110px_auto]">
+                                      <select
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewTeamClubId}
+                                        onChange={(event) => setAdminNewTeamClubId(event.target.value)}
+                                      >
+                                        {activeAdminMemberships.clubs.map((club) => (
+                                          <option key={`new-team-club-${club.id}`} value={club.id}>
+                                            {club.name}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <input
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewTeamName}
+                                        onChange={(event) => setAdminNewTeamName(event.target.value)}
+                                        placeholder="Create new team"
+                                      />
+                                      <input
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewTeamType}
+                                        onChange={(event) => setAdminNewTeamType(event.target.value)}
+                                        placeholder="Type"
+                                      />
+                                      <input
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewTeamAgeGroup}
+                                        onChange={(event) => setAdminNewTeamAgeGroup(event.target.value)}
+                                        placeholder="Age group"
+                                      />
+                                      <input
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewTeamSeasonLabel}
+                                        onChange={(event) => setAdminNewTeamSeasonLabel(event.target.value)}
+                                        placeholder="Season"
+                                      />
+                                      <button
+                                        className="rounded-full border border-[var(--accent-2)] px-3 py-2 text-[10px] uppercase tracking-wide text-[var(--accent-2)]"
+                                        onClick={() => void createAdminTeamForUser(user.id)}
+                                      >
+                                        Create team
                                       </button>
                                     </div>
                                   </div>

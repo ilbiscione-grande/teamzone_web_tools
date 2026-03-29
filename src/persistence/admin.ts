@@ -236,6 +236,49 @@ export const createAdminUserTeamMembership = async (payload: {
   return { ok: true as const };
 };
 
+export const createAdminClub = async (payload: {
+  userId: string;
+  clubName: string;
+  clubRole: string;
+  isClubAdmin: boolean;
+}) => {
+  const result = await adminFetch("/api/admin/memberships", {
+    method: "POST",
+    body: JSON.stringify({
+      kind: "create_club",
+      ...payload,
+    }),
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const };
+};
+
+export const createAdminTeam = async (payload: {
+  userId: string;
+  clubId: string;
+  teamName: string;
+  teamType: string;
+  ageGroup?: string | null;
+  seasonLabel?: string | null;
+  teamRole: string;
+  teamPosition?: string | null;
+  isTeamAdmin: boolean;
+}) => {
+  const result = await adminFetch("/api/admin/memberships", {
+    method: "POST",
+    body: JSON.stringify({
+      kind: "create_team",
+      ...payload,
+    }),
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const };
+};
+
 export const updateAdminUserTeamMembership = async (payload: {
   membershipId: string;
   teamRole: string;
