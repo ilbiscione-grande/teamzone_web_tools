@@ -22,6 +22,9 @@ type TeamMembershipRow = {
     id: string;
     name: string;
     club_id: string | null;
+    team_type: string | null;
+    age_group: string | null;
+    season_label: string | null;
   } | null;
 };
 
@@ -61,7 +64,7 @@ export async function GET(request: Request) {
         .eq("user_id", userId),
       admin.service
         .from("team_members")
-        .select("id,team_id,team_role,team_position,is_team_admin,teams(id,name,club_id)")
+        .select("id,team_id,team_role,team_position,is_team_admin,teams(id,name,club_id,team_type,age_group,season_label)")
         .eq("user_id", userId),
     ]);
 
@@ -98,6 +101,9 @@ export async function GET(request: Request) {
           teamId: membership.team_id,
           clubId: membership.teams?.club_id as string,
           teamName: membership.teams?.name ?? "Team",
+          teamType: membership.teams?.team_type ?? "other",
+          ageGroup: membership.teams?.age_group ?? null,
+          seasonLabel: membership.teams?.season_label ?? null,
           teamRole: membership.team_role ?? "other",
           teamPosition: membership.team_position,
           isTeamAdmin: membership.is_team_admin === true,
@@ -323,12 +329,12 @@ export async function PATCH(request: Request) {
 
   const body = (await request.json()) as Record<string, unknown>;
   const kind = String(body.kind ?? "").trim();
-  const membershipId = String(body.membershipId ?? "").trim();
-  if (!membershipId) {
-    return NextResponse.json({ error: "Missing membership id." }, { status: 400 });
-  }
 
   if (kind === "club") {
+    const membershipId = String(body.membershipId ?? "").trim();
+    if (!membershipId) {
+      return NextResponse.json({ error: "Missing membership id." }, { status: 400 });
+    }
     const clubRole = String(body.clubRole ?? "member").trim() || "member";
     const isClubAdmin = body.isClubAdmin === true;
     const { error } = await admin.service
@@ -346,6 +352,10 @@ export async function PATCH(request: Request) {
   }
 
   if (kind === "team") {
+    const membershipId = String(body.membershipId ?? "").trim();
+    if (!membershipId) {
+      return NextResponse.json({ error: "Missing membership id." }, { status: 400 });
+    }
     const teamRole = String(body.teamRole ?? "other").trim() || "other";
     const teamPosition =
       typeof body.teamPosition === "string" && body.teamPosition.trim()
@@ -361,6 +371,54 @@ export async function PATCH(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", membershipId);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (kind === "club_details") {
+    const clubId = String(body.clubId ?? "").trim();
+    const clubName = String(body.clubName ?? "").trim();
+    if (!clubId || !clubName) {
+      return NextResponse.json({ error: "Missing club id or name." }, { status: 400 });
+    }
+    const { error } = await admin.service
+      .from("clubs")
+      .update({
+        name: clubName,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", clubId);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (kind === "team_details") {
+    const teamId = String(body.teamId ?? "").trim();
+    const teamName = String(body.teamName ?? "").trim();
+    const teamType = String(body.teamType ?? "other").trim() || "other";
+    const ageGroup =
+      typeof body.ageGroup === "string" && body.ageGroup.trim() ? body.ageGroup.trim() : null;
+    const seasonLabel =
+      typeof body.seasonLabel === "string" && body.seasonLabel.trim()
+        ? body.seasonLabel.trim()
+        : null;
+    if (!teamId || !teamName) {
+      return NextResponse.json({ error: "Missing team id or name." }, { status: 400 });
+    }
+    const { error } = await admin.service
+      .from("teams")
+      .update({
+        name: teamName,
+        team_type: teamType,
+        age_group: ageGroup,
+        season_label: seasonLabel,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", teamId);
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }

@@ -62,6 +62,8 @@ import {
   createAdminUserClubMembership,
   createAdminTeam,
   createAdminUserTeamMembership,
+  updateAdminClubDetails,
+  updateAdminTeamDetails,
   updateAdminUserClubMembership,
   updateAdminUserTeamMembership,
   updateAdminUserFlags,
@@ -1181,6 +1183,47 @@ export default function ProjectList() {
       teamRole: membership.teamRole,
       teamPosition: membership.teamPosition,
       isTeamAdmin: membership.isTeamAdmin,
+    });
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    await loadAdminMembershipsForUser(userId);
+    setAdminUpdatingUserId(null);
+  };
+
+  const saveAdminClubDetails = async (
+    userId: string,
+    membership: AdminClubMembershipRow
+  ) => {
+    setAdminUpdatingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await updateAdminClubDetails({
+      clubId: membership.clubId,
+      clubName: membership.clubName,
+    });
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    await loadAdminMembershipsForUser(userId);
+    setAdminUpdatingUserId(null);
+  };
+
+  const saveAdminTeamDetails = async (
+    userId: string,
+    membership: AdminTeamMembershipRow
+  ) => {
+    setAdminUpdatingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await updateAdminTeamDetails({
+      teamId: membership.teamId,
+      teamName: membership.teamName,
+      teamType: membership.teamType,
+      ageGroup: membership.ageGroup,
+      seasonLabel: membership.seasonLabel,
     });
     if (!result.ok) {
       setAdminMembershipsError(result.error);
@@ -3109,9 +3152,27 @@ export default function ProjectList() {
                         key={membership.id}
                         className="grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3"
                       >
-                        <p className="text-sm text-[var(--ink-0)]">
-                          {membership.clubName}
-                        </p>
+                        <input
+                          className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                          value={membership.clubName}
+                          onChange={(event) =>
+                            setAdminMemberships((prev) => ({
+                              ...prev,
+                              [activeAdminMembershipUser.id]: {
+                                ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                clubMemberships: (
+                                  prev[activeAdminMembershipUser.id]?.clubMemberships ??
+                                  activeAdminMemberships.clubMemberships
+                                ).map((entry) =>
+                                  entry.id === membership.id
+                                    ? { ...entry, clubName: event.target.value }
+                                    : entry
+                                ),
+                              },
+                            }))
+                          }
+                          placeholder="Club name"
+                        />
                         <select
                           className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                           value={membership.clubRole}
@@ -3161,20 +3222,36 @@ export default function ProjectList() {
                           />
                           Club admin
                         </label>
-                        <button
-                          className="rounded-full border border-[var(--line)] px-3 py-2 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                          onClick={() =>
-                            void saveAdminClubMembership(
-                              activeAdminMembershipUser.id,
-                              (
-                                adminMemberships[activeAdminMembershipUser.id]?.clubMemberships ??
-                                activeAdminMemberships.clubMemberships
-                              ).find((entry) => entry.id === membership.id) ?? membership
-                            )
-                          }
-                        >
-                          Save
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            className="rounded-full border border-[var(--accent-2)] px-3 py-2 text-[10px] uppercase tracking-wide text-[var(--accent-2)] hover:brightness-110"
+                            onClick={() =>
+                              void saveAdminClubDetails(
+                                activeAdminMembershipUser.id,
+                                (
+                                  adminMemberships[activeAdminMembershipUser.id]?.clubMemberships ??
+                                  activeAdminMemberships.clubMemberships
+                                ).find((entry) => entry.id === membership.id) ?? membership
+                              )
+                            }
+                          >
+                            Save club
+                          </button>
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-2 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                            onClick={() =>
+                              void saveAdminClubMembership(
+                                activeAdminMembershipUser.id,
+                                (
+                                  adminMemberships[activeAdminMembershipUser.id]?.clubMemberships ??
+                                  activeAdminMemberships.clubMemberships
+                                ).find((entry) => entry.id === membership.id) ?? membership
+                              )
+                            }
+                          >
+                            Save membership
+                          </button>
+                        </div>
                       </div>
                     ))}
                     <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-3">
@@ -3261,9 +3338,92 @@ export default function ProjectList() {
                         key={membership.id}
                         className="grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3"
                       >
-                        <p className="text-sm text-[var(--ink-0)]">
-                          {membership.teamName}
-                        </p>
+                        <input
+                          className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
+                          value={membership.teamName}
+                          onChange={(event) =>
+                            setAdminMemberships((prev) => ({
+                              ...prev,
+                              [activeAdminMembershipUser.id]: {
+                                ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                teamMemberships: (
+                                  prev[activeAdminMembershipUser.id]?.teamMemberships ??
+                                  activeAdminMemberships.teamMemberships
+                                ).map((entry) =>
+                                  entry.id === membership.id
+                                    ? { ...entry, teamName: event.target.value }
+                                    : entry
+                                ),
+                              },
+                            }))
+                          }
+                          placeholder="Team name"
+                        />
+                        <input
+                          className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                          value={membership.teamType}
+                          onChange={(event) =>
+                            setAdminMemberships((prev) => ({
+                              ...prev,
+                              [activeAdminMembershipUser.id]: {
+                                ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                teamMemberships: (
+                                  prev[activeAdminMembershipUser.id]?.teamMemberships ??
+                                  activeAdminMemberships.teamMemberships
+                                ).map((entry) =>
+                                  entry.id === membership.id
+                                    ? { ...entry, teamType: event.target.value }
+                                    : entry
+                                ),
+                              },
+                            }))
+                          }
+                          placeholder="Type"
+                        />
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <input
+                            className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                            value={membership.ageGroup ?? ""}
+                            onChange={(event) =>
+                              setAdminMemberships((prev) => ({
+                                ...prev,
+                                [activeAdminMembershipUser.id]: {
+                                  ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                  teamMemberships: (
+                                    prev[activeAdminMembershipUser.id]?.teamMemberships ??
+                                    activeAdminMemberships.teamMemberships
+                                  ).map((entry) =>
+                                    entry.id === membership.id
+                                      ? { ...entry, ageGroup: event.target.value || null }
+                                      : entry
+                                  ),
+                                },
+                              }))
+                            }
+                            placeholder="Age group"
+                          />
+                          <input
+                            className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                            value={membership.seasonLabel ?? ""}
+                            onChange={(event) =>
+                              setAdminMemberships((prev) => ({
+                                ...prev,
+                                [activeAdminMembershipUser.id]: {
+                                  ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                  teamMemberships: (
+                                    prev[activeAdminMembershipUser.id]?.teamMemberships ??
+                                    activeAdminMemberships.teamMemberships
+                                  ).map((entry) =>
+                                    entry.id === membership.id
+                                      ? { ...entry, seasonLabel: event.target.value || null }
+                                      : entry
+                                  ),
+                                },
+                              }))
+                            }
+                            placeholder="Season"
+                          />
+                        </div>
                         <select
                           className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                           value={membership.teamRole}
@@ -3336,20 +3496,36 @@ export default function ProjectList() {
                           />
                           Team admin
                         </label>
-                        <button
-                          className="rounded-full border border-[var(--line)] px-3 py-2 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                          onClick={() =>
-                            void saveAdminTeamMembership(
-                              activeAdminMembershipUser.id,
-                              (
-                                adminMemberships[activeAdminMembershipUser.id]?.teamMemberships ??
-                                activeAdminMemberships.teamMemberships
-                              ).find((entry) => entry.id === membership.id) ?? membership
-                            )
-                          }
-                        >
-                          Save
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            className="rounded-full border border-[var(--accent-2)] px-3 py-2 text-[10px] uppercase tracking-wide text-[var(--accent-2)] hover:brightness-110"
+                            onClick={() =>
+                              void saveAdminTeamDetails(
+                                activeAdminMembershipUser.id,
+                                (
+                                  adminMemberships[activeAdminMembershipUser.id]?.teamMemberships ??
+                                  activeAdminMemberships.teamMemberships
+                                ).find((entry) => entry.id === membership.id) ?? membership
+                              )
+                            }
+                          >
+                            Save team
+                          </button>
+                          <button
+                            className="rounded-full border border-[var(--line)] px-3 py-2 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                            onClick={() =>
+                              void saveAdminTeamMembership(
+                                activeAdminMembershipUser.id,
+                                (
+                                  adminMemberships[activeAdminMembershipUser.id]?.teamMemberships ??
+                                  activeAdminMemberships.teamMemberships
+                                ).find((entry) => entry.id === membership.id) ?? membership
+                              )
+                            }
+                          >
+                            Save membership
+                          </button>
+                        </div>
                       </div>
                     ))}
                     <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-3">

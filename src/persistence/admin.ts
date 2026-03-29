@@ -35,6 +35,9 @@ export type AdminTeamMembershipRow = {
   teamId: string;
   clubId: string;
   teamName: string;
+  teamType: string;
+  ageGroup: string | null;
+  seasonLabel: string | null;
   teamRole: string;
   teamPosition: string | null;
   isTeamAdmin: boolean;
@@ -289,6 +292,43 @@ export const updateAdminUserTeamMembership = async (payload: {
     method: "PATCH",
     body: JSON.stringify({
       kind: "team",
+      ...payload,
+    }),
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const };
+};
+
+export const updateAdminClubDetails = async (payload: {
+  clubId: string;
+  clubName: string;
+}) => {
+  const result = await adminFetch("/api/admin/memberships", {
+    method: "PATCH",
+    body: JSON.stringify({
+      kind: "club_details",
+      ...payload,
+    }),
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const };
+};
+
+export const updateAdminTeamDetails = async (payload: {
+  teamId: string;
+  teamName: string;
+  teamType: string;
+  ageGroup?: string | null;
+  seasonLabel?: string | null;
+}) => {
+  const result = await adminFetch("/api/admin/memberships", {
+    method: "PATCH",
+    body: JSON.stringify({
+      kind: "team_details",
       ...payload,
     }),
   });
