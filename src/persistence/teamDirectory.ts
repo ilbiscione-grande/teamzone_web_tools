@@ -318,3 +318,58 @@ export const fetchClubTeamDirectory = async () => {
     }),
   };
 };
+
+export const updateClubDirectoryDetails = async (payload: {
+  id: string;
+  name: string;
+  logoUrl?: string | null;
+}) => {
+  if (!supabase) {
+    return { ok: false as const, error: "Supabase not configured." };
+  }
+  const nextName = payload.name.trim();
+  if (!nextName) {
+    return { ok: false as const, error: "Enter a club name." };
+  }
+  const { error } = await supabase
+    .from("clubs")
+    .update({
+      name: nextName,
+      logo_url: payload.logoUrl ?? null,
+    })
+    .eq("id", payload.id);
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+  return { ok: true as const };
+};
+
+export const updateTeamDirectoryDetails = async (payload: {
+  id: string;
+  name: string;
+  teamType: string;
+  ageGroup?: string | null;
+  seasonLabel?: string | null;
+}) => {
+  if (!supabase) {
+    return { ok: false as const, error: "Supabase not configured." };
+  }
+  const nextName = payload.name.trim();
+  if (!nextName) {
+    return { ok: false as const, error: "Enter a team name." };
+  }
+  const nextTeamType = payload.teamType.trim() || "other";
+  const { error } = await supabase
+    .from("teams")
+    .update({
+      name: nextName,
+      team_type: nextTeamType,
+      age_group: payload.ageGroup?.trim() || null,
+      season_label: payload.seasonLabel?.trim() || null,
+    })
+    .eq("id", payload.id);
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+  return { ok: true as const };
+};

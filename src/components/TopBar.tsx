@@ -40,7 +40,11 @@ import { createId } from "@/utils/id";
 import {
   updateTeamWithSquad,
 } from "@/persistence/teamSquads";
-import { fetchClubTeamDirectory } from "@/persistence/teamDirectory";
+import {
+  fetchClubTeamDirectory,
+  updateClubDirectoryDetails,
+  updateTeamDirectoryDetails,
+} from "@/persistence/teamDirectory";
 import { saveDefaultTeamSquad } from "@/persistence/defaultTeamSquads";
 import { saveDefaultLinkedTeam } from "@/persistence/defaultLinkedTeams";
 import {
@@ -205,6 +209,12 @@ export default function TopBar() {
   const [managePresetStatus, setManagePresetStatus] = useState<string | null>(
     null
   );
+  const [manageClubNameDraft, setManageClubNameDraft] = useState("");
+  const [manageTeamNameDraft, setManageTeamNameDraft] = useState("");
+  const [manageTeamTypeDraft, setManageTeamTypeDraft] = useState("other");
+  const [manageAgeGroupDraft, setManageAgeGroupDraft] = useState("");
+  const [manageSeasonLabelDraft, setManageSeasonLabelDraft] = useState("");
+  const [manageDetailsSaving, setManageDetailsSaving] = useState(false);
   const [manageTopPanel, setManageTopPanel] =
     useState<ManageTeamsTopPanel>("none");
   const [jerseyType, setJerseyType] = useState<JerseyType>("solid");
@@ -235,6 +245,27 @@ export default function TopBar() {
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
   const showAds = plan === "FREE";
   const canUseTemplates = plan === "PAID" && !!authUser;
+  const refreshManageTeamDirectory = async () => {
+    if (!authUser || plan !== "PAID") {
+      setSquadPresets([]);
+      setSquadPresetDirectory([]);
+      setSquadPresetsError(null);
+      return;
+    }
+    setSquadPresetsLoading(true);
+    setSquadPresetsError(null);
+    const result = await fetchClubTeamDirectory();
+    if (!result.ok) {
+      setSquadPresetsError(result.error);
+      setSquadPresets([]);
+      setSquadPresetDirectory([]);
+      setSquadPresetsLoading(false);
+      return;
+    }
+    setSquadPresetDirectory(result.clubs);
+    setSquadPresets(flattenDirectoryTeamsToPresets(result.clubs));
+    setSquadPresetsLoading(false);
+  };
   const showPlanGraceWarning =
     plan === "AUTH" &&
     authUser &&
@@ -368,28 +399,10 @@ export default function TopBar() {
   useEffect(() => {
     if (!squadPresetsOpen) {
       setManageSelectedDirectoryTeamId("");
+      setManageSelectedDirectoryClubId("");
       return;
     }
-    if (!authUser || plan !== "PAID") {
-      setSquadPresets([]);
-      setSquadPresetDirectory([]);
-      setSquadPresetsError(null);
-      return;
-    }
-    setSquadPresetsLoading(true);
-    setSquadPresetsError(null);
-    fetchClubTeamDirectory()
-      .then((result) => {
-        if (!result.ok) {
-          setSquadPresetsError(result.error);
-          setSquadPresets([]);
-          setSquadPresetDirectory([]);
-          return;
-        }
-        setSquadPresetDirectory(result.clubs);
-        setSquadPresets(flattenDirectoryTeamsToPresets(result.clubs));
-      })
-      .finally(() => setSquadPresetsLoading(false));
+    void refreshManageTeamDirectory();
   }, [squadPresetsOpen, authUser, plan]);
   useEffect(() => {
     if (!manageTemplatesOpen) {
@@ -557,6 +570,13 @@ export default function TopBar() {
     });
     return { linkedMembers, localOnly, guests };
   }, [manageBaseRosterRows]);
+  useEffect(() => {
+    setManageClubNameDraft(managedDirectoryTeam?.clubName ?? "");
+    setManageTeamNameDraft(managedDirectoryTeam?.teamName ?? manageSquad?.name ?? "");
+    setManageTeamTypeDraft(managedDirectoryTeam?.teamType ?? "other");
+    setManageAgeGroupDraft(managedDirectoryTeam?.ageGroup ?? "");
+    setManageSeasonLabelDraft(managedDirectoryTeam?.seasonLabel ?? "");
+  }, [managedDirectoryTeam, manageSquad?.name]);
   useEffect(() => {
     if (!squadPresetsOpen) {
       return;
@@ -1082,6 +1102,44 @@ export default function TopBar() {
       awaySquadId: side === "away" ? nextSquadId : activeBoard.awaySquadId,
     });
     return nextSquadId;
+  };
+
+  const saveManageDirectoryDetails = async () => {
+    if (!managedDirectoryTeam) {
+      setManagePresetStatus("This side is not linked to a team yet.");
+      return;
+    }
+    setManageDetailsSaving(true);
+    setManagePresetStatus(null);
+    try {
+      if (managedDirectoryTeam.isCurrentUserClubAdmin) {
+        const clubResult = await updateClubDirectoryDetails({
+          id: managedDirectoryTeam.clubId,
+          name: manageClubNameDraft,
+        });
+        if (!clubResult.ok) {
+          setManagePresetStatus(clubResult.error);
+          return;
+        }
+      }
+      if (managedDirectoryTeam.isCurrentUserTeamAdmin) {
+        const teamResult = await updateTeamDirectoryDetails({
+          id: managedDirectoryTeam.teamId,
+          name: manageTeamNameDraft,
+          teamType: manageTeamTypeDraft,
+          ageGroup: manageAgeGroupDraft,
+          seasonLabel: manageSeasonLabelDraft,
+        });
+        if (!teamResult.ok) {
+          setManagePresetStatus(teamResult.error);
+          return;
+        }
+      }
+      await refreshManageTeamDirectory();
+      setManagePresetStatus("Linked club/team details updated.");
+    } finally {
+      setManageDetailsSaving(false);
+    }
   };
 
   const loadDirectoryTeamIntoSide = (teamId: string, side: "home" | "away") => {
@@ -2952,10 +3010,22 @@ export default function TopBar() {
                               squadPresetsLoading={squadPresetsLoading}
                               squadPresetsError={squadPresetsError}
                               managePresetStatus={managePresetStatus}
+                              manageClubNameDraft={manageClubNameDraft}
+                              manageTeamNameDraft={manageTeamNameDraft}
+                              manageTeamTypeDraft={manageTeamTypeDraft}
+                              manageAgeGroupDraft={manageAgeGroupDraft}
+                              manageSeasonLabelDraft={manageSeasonLabelDraft}
+                              manageDetailsSaving={manageDetailsSaving}
                               onCurrentActiveClubIdChange={setCurrentActiveClub}
                               onCurrentActiveTeamIdChange={setCurrentActiveTeamById}
                               onManageSelectedDirectoryClubIdChange={setManageSelectedDirectoryClubId}
                               onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
+                              onManageClubNameDraftChange={setManageClubNameDraft}
+                              onManageTeamNameDraftChange={setManageTeamNameDraft}
+                              onManageTeamTypeDraftChange={setManageTeamTypeDraft}
+                              onManageAgeGroupDraftChange={setManageAgeGroupDraft}
+                              onManageSeasonLabelDraftChange={setManageSeasonLabelDraft}
+                              onSaveManageDirectoryDetails={saveManageDirectoryDetails}
                               onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
                               onSaveReusableTeam={saveManagePreset}
                               onSetManagedTeamAsCurrent={

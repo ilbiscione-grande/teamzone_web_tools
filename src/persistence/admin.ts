@@ -11,6 +11,42 @@ export type AdminUserRow = {
   updatedAt: string;
 };
 
+export type AdminClubOption = {
+  id: string;
+  name: string;
+};
+
+export type AdminTeamOption = {
+  id: string;
+  clubId: string;
+  name: string;
+};
+
+export type AdminClubMembershipRow = {
+  id: string;
+  clubId: string;
+  clubName: string;
+  clubRole: string;
+  isClubAdmin: boolean;
+};
+
+export type AdminTeamMembershipRow = {
+  id: string;
+  teamId: string;
+  clubId: string;
+  teamName: string;
+  teamRole: string;
+  teamPosition: string | null;
+  isTeamAdmin: boolean;
+};
+
+export type AdminUserMemberships = {
+  clubs: AdminClubOption[];
+  teams: AdminTeamOption[];
+  clubMemberships: AdminClubMembershipRow[];
+  teamMemberships: AdminTeamMembershipRow[];
+};
+
 export type AdminReportRow = {
   id: string;
   created_at: string;
@@ -122,6 +158,101 @@ export type AdminAnalyticsResponse = {
     error: number;
     errorRate: number;
   }[];
+};
+
+export const fetchAdminUserMemberships = async (userId: string) => {
+  const result = await adminFetch(`/api/admin/memberships?userId=${encodeURIComponent(userId)}`);
+  if (!result.ok) {
+    return result;
+  }
+  const payload = result.payload as {
+    memberships?: AdminUserMemberships;
+  };
+  return {
+    ok: true as const,
+    memberships: payload.memberships ?? {
+      clubs: [],
+      teams: [],
+      clubMemberships: [],
+      teamMemberships: [],
+    },
+  };
+};
+
+export const createAdminUserClubMembership = async (payload: {
+  userId: string;
+  clubId: string;
+  clubRole: string;
+  isClubAdmin: boolean;
+}) => {
+  const result = await adminFetch("/api/admin/memberships", {
+    method: "POST",
+    body: JSON.stringify({
+      kind: "club",
+      ...payload,
+    }),
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const };
+};
+
+export const updateAdminUserClubMembership = async (payload: {
+  membershipId: string;
+  clubRole: string;
+  isClubAdmin: boolean;
+}) => {
+  const result = await adminFetch("/api/admin/memberships", {
+    method: "PATCH",
+    body: JSON.stringify({
+      kind: "club",
+      ...payload,
+    }),
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const };
+};
+
+export const createAdminUserTeamMembership = async (payload: {
+  userId: string;
+  teamId: string;
+  teamRole: string;
+  teamPosition?: string | null;
+  isTeamAdmin: boolean;
+}) => {
+  const result = await adminFetch("/api/admin/memberships", {
+    method: "POST",
+    body: JSON.stringify({
+      kind: "team",
+      ...payload,
+    }),
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const };
+};
+
+export const updateAdminUserTeamMembership = async (payload: {
+  membershipId: string;
+  teamRole: string;
+  teamPosition?: string | null;
+  isTeamAdmin: boolean;
+}) => {
+  const result = await adminFetch("/api/admin/memberships", {
+    method: "PATCH",
+    body: JSON.stringify({
+      kind: "team",
+      ...payload,
+    }),
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const };
 };
 
 export const fetchAdminAnalytics = async () => {

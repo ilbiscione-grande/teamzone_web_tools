@@ -56,8 +56,16 @@ import { fetchClubTeamDirectory } from "@/persistence/teamDirectory";
 import {
   fetchAdminAnalytics,
   fetchAdminReports,
+  fetchAdminUserMemberships,
   fetchAdminUsers,
+  createAdminUserClubMembership,
+  createAdminUserTeamMembership,
+  updateAdminUserClubMembership,
+  updateAdminUserTeamMembership,
   updateAdminUserFlags,
+  type AdminClubMembershipRow,
+  type AdminTeamMembershipRow,
+  type AdminUserMemberships,
   type AdminReportRow,
   type AdminAnalyticsResponse,
   type AdminUserRow,
@@ -182,6 +190,24 @@ export default function ProjectList() {
   const [adminUpdatingUserId, setAdminUpdatingUserId] = useState<string | null>(
     null
   );
+  const [adminMembershipEditorUserId, setAdminMembershipEditorUserId] = useState<string | null>(
+    null
+  );
+  const [adminMemberships, setAdminMemberships] = useState<Record<string, AdminUserMemberships>>(
+    {}
+  );
+  const [adminMembershipsLoadingUserId, setAdminMembershipsLoadingUserId] = useState<string | null>(
+    null
+  );
+  const [adminMembershipsError, setAdminMembershipsError] = useState<string | null>(null);
+  const [adminNewClubId, setAdminNewClubId] = useState("");
+  const [adminNewClubRole, setAdminNewClubRole] = useState("member");
+  const [adminNewClubAdmin, setAdminNewClubAdmin] = useState(false);
+  const [adminNewTeamClubId, setAdminNewTeamClubId] = useState("");
+  const [adminNewTeamId, setAdminNewTeamId] = useState("");
+  const [adminNewTeamRole, setAdminNewTeamRole] = useState("player");
+  const [adminNewTeamPosition, setAdminNewTeamPosition] = useState("");
+  const [adminNewTeamAdmin, setAdminNewTeamAdmin] = useState(false);
   const [adminQuery, setAdminQuery] = useState("");
   const [adminUsersPage, setAdminUsersPage] = useState(1);
   const [recentProjectsPage, setRecentProjectsPage] = useState(1);
@@ -270,6 +296,12 @@ export default function ProjectList() {
     (adminUsersPage - 1) * adminUsersPageSize,
     adminUsersPage * adminUsersPageSize
   );
+  const activeAdminMemberships = adminMembershipEditorUserId
+    ? adminMemberships[adminMembershipEditorUserId] ?? null
+    : null;
+  const adminAvailableTeamsForNewMembership = activeAdminMemberships
+    ? activeAdminMemberships.teams.filter((team) => team.clubId === adminNewTeamClubId)
+    : [];
 
   const getBoardTemplates = (
     mode: "training" | "match" | "education",
@@ -950,6 +982,22 @@ export default function ProjectList() {
   }, [consoleTab, authUser?.isAdmin]);
 
   useEffect(() => {
+    if (!activeAdminMemberships) {
+      return;
+    }
+    const nextTeamId =
+      activeAdminMemberships.teams.find((team) => team.clubId === adminNewTeamClubId)?.id ?? "";
+    setAdminNewTeamId((current) =>
+      current &&
+      activeAdminMemberships.teams.some(
+        (team) => team.id === current && team.clubId === adminNewTeamClubId
+      )
+        ? current
+        : nextTeamId
+    );
+  }, [activeAdminMemberships, adminNewTeamClubId]);
+
+  useEffect(() => {
     setAdminUsersPage(1);
   }, [adminQuery]);
 
@@ -1029,6 +1077,130 @@ export default function ProjectList() {
     );
     openProjectFromData(duplicate);
     setError(null);
+  };
+
+  const loadAdminMembershipsForUser = async (userId: string) => {
+    setAdminMembershipsLoadingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await fetchAdminUserMemberships(userId);
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminMembershipsLoadingUserId(null);
+      return;
+    }
+    setAdminMemberships((prev) => ({
+      ...prev,
+      [userId]: result.memberships,
+    }));
+    const firstClubId = result.memberships.clubs[0]?.id ?? "";
+    const firstTeamClubId = result.memberships.clubs[0]?.id ?? "";
+    const firstTeamId =
+      result.memberships.teams.find((team) => team.clubId === firstTeamClubId)?.id ?? "";
+    setAdminNewClubId(firstClubId);
+    setAdminNewClubRole("member");
+    setAdminNewClubAdmin(false);
+    setAdminNewTeamClubId(firstTeamClubId);
+    setAdminNewTeamId(firstTeamId);
+    setAdminNewTeamRole("player");
+    setAdminNewTeamPosition("");
+    setAdminNewTeamAdmin(false);
+    setAdminMembershipsLoadingUserId(null);
+  };
+
+  const toggleAdminMembershipEditor = async (userId: string) => {
+    if (adminMembershipEditorUserId === userId) {
+      setAdminMembershipEditorUserId(null);
+      setAdminMembershipsError(null);
+      return;
+    }
+    setAdminMembershipEditorUserId(userId);
+    await loadAdminMembershipsForUser(userId);
+  };
+
+  const saveAdminClubMembership = async (
+    userId: string,
+    membership: AdminClubMembershipRow
+  ) => {
+    setAdminUpdatingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await updateAdminUserClubMembership({
+      membershipId: membership.id,
+      clubRole: membership.clubRole,
+      isClubAdmin: membership.isClubAdmin,
+    });
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    await loadAdminMembershipsForUser(userId);
+    setAdminUpdatingUserId(null);
+  };
+
+  const saveAdminTeamMembership = async (
+    userId: string,
+    membership: AdminTeamMembershipRow
+  ) => {
+    setAdminUpdatingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await updateAdminUserTeamMembership({
+      membershipId: membership.id,
+      teamRole: membership.teamRole,
+      teamPosition: membership.teamPosition,
+      isTeamAdmin: membership.isTeamAdmin,
+    });
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    await loadAdminMembershipsForUser(userId);
+    setAdminUpdatingUserId(null);
+  };
+
+  const addAdminClubMembership = async (userId: string) => {
+    if (!adminNewClubId) {
+      setAdminMembershipsError("Select a club.");
+      return;
+    }
+    setAdminUpdatingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await createAdminUserClubMembership({
+      userId,
+      clubId: adminNewClubId,
+      clubRole: adminNewClubRole,
+      isClubAdmin: adminNewClubAdmin,
+    });
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    await loadAdminMembershipsForUser(userId);
+    setAdminUpdatingUserId(null);
+  };
+
+  const addAdminTeamMembership = async (userId: string) => {
+    if (!adminNewTeamId) {
+      setAdminMembershipsError("Select a team.");
+      return;
+    }
+    setAdminUpdatingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await createAdminUserTeamMembership({
+      userId,
+      teamId: adminNewTeamId,
+      teamRole: adminNewTeamRole,
+      teamPosition: adminNewTeamPosition,
+      isTeamAdmin: adminNewTeamAdmin,
+    });
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    await loadAdminMembershipsForUser(userId);
+    setAdminUpdatingUserId(null);
   };
 
   const onShareProject = async () => {
@@ -2008,7 +2180,340 @@ export default function ProjectList() {
                               />
                               Admin
                             </label>
+                            <button
+                              className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                              onClick={() => void toggleAdminMembershipEditor(user.id)}
+                            >
+                              {adminMembershipEditorUserId === user.id
+                                ? "Hide memberships"
+                                : "Memberships"}
+                            </button>
                           </div>
+                          {adminMembershipEditorUserId === user.id ? (
+                            <div className="mt-3 space-y-3 rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/50 p-3">
+                              {adminMembershipsLoadingUserId === user.id ? (
+                                <p className="text-[11px] text-[var(--ink-1)]">
+                                  Loading memberships...
+                                </p>
+                              ) : null}
+                              {adminMembershipsError ? (
+                                <p className="text-[11px] text-[var(--accent-1)]">
+                                  {adminMembershipsError}
+                                </p>
+                              ) : null}
+                              {activeAdminMemberships ? (
+                                <>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                                        Club memberships
+                                      </p>
+                                      <span className="text-[10px] text-[var(--ink-1)]">
+                                        {activeAdminMemberships.clubMemberships.length}
+                                      </span>
+                                    </div>
+                                    {activeAdminMemberships.clubMemberships.map((membership) => (
+                                      <div
+                                        key={membership.id}
+                                        className="grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2 md:grid-cols-[minmax(0,1fr)_120px_110px_auto]"
+                                      >
+                                        <div>
+                                          <p className="text-xs text-[var(--ink-0)]">
+                                            {membership.clubName}
+                                          </p>
+                                        </div>
+                                        <select
+                                          className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                          value={membership.clubRole}
+                                          onChange={(event) =>
+                                            setAdminMemberships((prev) => ({
+                                              ...prev,
+                                              [user.id]: {
+                                                ...(prev[user.id] ?? activeAdminMemberships),
+                                                clubMemberships: (
+                                                  prev[user.id]?.clubMemberships ??
+                                                  activeAdminMemberships.clubMemberships
+                                                ).map((entry) =>
+                                                  entry.id === membership.id
+                                                    ? { ...entry, clubRole: event.target.value }
+                                                    : entry
+                                                ),
+                                              },
+                                            }))
+                                          }
+                                        >
+                                          {["member", "staff", "board", "guardian", "other"].map(
+                                            (option) => (
+                                              <option key={option} value={option}>
+                                                {option}
+                                              </option>
+                                            )
+                                          )}
+                                        </select>
+                                        <label className="inline-flex items-center gap-2 text-xs text-[var(--ink-0)]">
+                                          <input
+                                            type="checkbox"
+                                            checked={membership.isClubAdmin}
+                                            onChange={(event) =>
+                                              setAdminMemberships((prev) => ({
+                                                ...prev,
+                                                [user.id]: {
+                                                  ...(prev[user.id] ?? activeAdminMemberships),
+                                                  clubMemberships: (
+                                                    prev[user.id]?.clubMemberships ??
+                                                    activeAdminMemberships.clubMemberships
+                                                  ).map((entry) =>
+                                                    entry.id === membership.id
+                                                      ? {
+                                                          ...entry,
+                                                          isClubAdmin: event.target.checked,
+                                                        }
+                                                      : entry
+                                                  ),
+                                                },
+                                              }))
+                                            }
+                                          />
+                                          Club admin
+                                        </label>
+                                        <button
+                                          className="rounded-full border border-[var(--line)] px-3 py-2 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                                          onClick={() =>
+                                            void saveAdminClubMembership(
+                                              user.id,
+                                              (
+                                                adminMemberships[user.id]?.clubMemberships ??
+                                                activeAdminMemberships.clubMemberships
+                                              ).find((entry) => entry.id === membership.id) ??
+                                                membership
+                                            )
+                                          }
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                    ))}
+                                    <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-2 md:grid-cols-[minmax(0,1fr)_120px_110px_auto]">
+                                      <select
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewClubId}
+                                        onChange={(event) => setAdminNewClubId(event.target.value)}
+                                      >
+                                        {activeAdminMemberships.clubs.map((club) => (
+                                          <option key={club.id} value={club.id}>
+                                            {club.name}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <select
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewClubRole}
+                                        onChange={(event) => setAdminNewClubRole(event.target.value)}
+                                      >
+                                        {["member", "staff", "board", "guardian", "other"].map(
+                                          (option) => (
+                                            <option key={option} value={option}>
+                                              {option}
+                                            </option>
+                                          )
+                                        )}
+                                      </select>
+                                      <label className="inline-flex items-center gap-2 text-xs text-[var(--ink-0)]">
+                                        <input
+                                          type="checkbox"
+                                          checked={adminNewClubAdmin}
+                                          onChange={(event) =>
+                                            setAdminNewClubAdmin(event.target.checked)
+                                          }
+                                        />
+                                        Club admin
+                                      </label>
+                                      <button
+                                        className="rounded-full border border-[var(--accent-0)] px-3 py-2 text-[10px] uppercase tracking-wide text-[var(--accent-0)]"
+                                        onClick={() => void addAdminClubMembership(user.id)}
+                                      >
+                                        Add club
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                                        Team memberships
+                                      </p>
+                                      <span className="text-[10px] text-[var(--ink-1)]">
+                                        {activeAdminMemberships.teamMemberships.length}
+                                      </span>
+                                    </div>
+                                    {activeAdminMemberships.teamMemberships.map((membership) => (
+                                      <div
+                                        key={membership.id}
+                                        className="grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2 md:grid-cols-[minmax(0,1fr)_120px_120px_110px_auto]"
+                                      >
+                                        <div>
+                                          <p className="text-xs text-[var(--ink-0)]">
+                                            {membership.teamName}
+                                          </p>
+                                        </div>
+                                        <select
+                                          className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                          value={membership.teamRole}
+                                          onChange={(event) =>
+                                            setAdminMemberships((prev) => ({
+                                              ...prev,
+                                              [user.id]: {
+                                                ...(prev[user.id] ?? activeAdminMemberships),
+                                                teamMemberships: (
+                                                  prev[user.id]?.teamMemberships ??
+                                                  activeAdminMemberships.teamMemberships
+                                                ).map((entry) =>
+                                                  entry.id === membership.id
+                                                    ? { ...entry, teamRole: event.target.value }
+                                                    : entry
+                                                ),
+                                              },
+                                            }))
+                                          }
+                                        >
+                                          {["leader", "player", "guardian", "relative", "staff", "other"].map(
+                                            (option) => (
+                                              <option key={option} value={option}>
+                                                {option}
+                                              </option>
+                                            )
+                                          )}
+                                        </select>
+                                        <input
+                                          className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                          value={membership.teamPosition ?? ""}
+                                          onChange={(event) =>
+                                            setAdminMemberships((prev) => ({
+                                              ...prev,
+                                              [user.id]: {
+                                                ...(prev[user.id] ?? activeAdminMemberships),
+                                                teamMemberships: (
+                                                  prev[user.id]?.teamMemberships ??
+                                                  activeAdminMemberships.teamMemberships
+                                                ).map((entry) =>
+                                                  entry.id === membership.id
+                                                    ? {
+                                                        ...entry,
+                                                        teamPosition: event.target.value,
+                                                      }
+                                                    : entry
+                                                ),
+                                              },
+                                            }))
+                                          }
+                                          placeholder="Position"
+                                        />
+                                        <label className="inline-flex items-center gap-2 text-xs text-[var(--ink-0)]">
+                                          <input
+                                            type="checkbox"
+                                            checked={membership.isTeamAdmin}
+                                            onChange={(event) =>
+                                              setAdminMemberships((prev) => ({
+                                                ...prev,
+                                                [user.id]: {
+                                                  ...(prev[user.id] ?? activeAdminMemberships),
+                                                  teamMemberships: (
+                                                    prev[user.id]?.teamMemberships ??
+                                                    activeAdminMemberships.teamMemberships
+                                                  ).map((entry) =>
+                                                    entry.id === membership.id
+                                                      ? {
+                                                          ...entry,
+                                                          isTeamAdmin: event.target.checked,
+                                                        }
+                                                      : entry
+                                                  ),
+                                                },
+                                              }))
+                                            }
+                                          />
+                                          Team admin
+                                        </label>
+                                        <button
+                                          className="rounded-full border border-[var(--line)] px-3 py-2 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                                          onClick={() =>
+                                            void saveAdminTeamMembership(
+                                              user.id,
+                                              (
+                                                adminMemberships[user.id]?.teamMemberships ??
+                                                activeAdminMemberships.teamMemberships
+                                              ).find((entry) => entry.id === membership.id) ??
+                                                membership
+                                            )
+                                          }
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                    ))}
+                                    <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_120px_110px_auto]">
+                                      <select
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewTeamClubId}
+                                        onChange={(event) => setAdminNewTeamClubId(event.target.value)}
+                                      >
+                                        {activeAdminMemberships.clubs.map((club) => (
+                                          <option key={club.id} value={club.id}>
+                                            {club.name}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <select
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewTeamId}
+                                        onChange={(event) => setAdminNewTeamId(event.target.value)}
+                                      >
+                                        {adminAvailableTeamsForNewMembership.map((team) => (
+                                          <option key={team.id} value={team.id}>
+                                            {team.name}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <select
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewTeamRole}
+                                        onChange={(event) => setAdminNewTeamRole(event.target.value)}
+                                      >
+                                        {["leader", "player", "guardian", "relative", "staff", "other"].map(
+                                          (option) => (
+                                            <option key={option} value={option}>
+                                              {option}
+                                            </option>
+                                          )
+                                        )}
+                                      </select>
+                                      <input
+                                        className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                                        value={adminNewTeamPosition}
+                                        onChange={(event) => setAdminNewTeamPosition(event.target.value)}
+                                        placeholder="Position"
+                                      />
+                                      <label className="inline-flex items-center gap-2 text-xs text-[var(--ink-0)]">
+                                        <input
+                                          type="checkbox"
+                                          checked={adminNewTeamAdmin}
+                                          onChange={(event) =>
+                                            setAdminNewTeamAdmin(event.target.checked)
+                                          }
+                                        />
+                                        Team admin
+                                      </label>
+                                      <button
+                                        className="rounded-full border border-[var(--accent-0)] px-3 py-2 text-[10px] uppercase tracking-wide text-[var(--accent-0)]"
+                                        onClick={() => void addAdminTeamMembership(user.id)}
+                                      >
+                                        Add team
+                                      </button>
+                                    </div>
+                                  </div>
+                                </>
+                              ) : null}
+                            </div>
+                          ) : null}
                         </article>
                       ))}
                     {filteredAdminUsers.length > adminUsersPageSize ? (
