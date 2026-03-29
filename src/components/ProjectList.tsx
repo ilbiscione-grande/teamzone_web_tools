@@ -197,6 +197,7 @@ export default function ProjectList() {
   const [adminMembershipEditorUserId, setAdminMembershipEditorUserId] = useState<string | null>(
     null
   );
+  const [adminMembershipTab, setAdminMembershipTab] = useState<"clubs" | "teams">("clubs");
   const [adminMemberships, setAdminMemberships] = useState<Record<string, AdminUserMemberships>>(
     {}
   );
@@ -1148,6 +1149,7 @@ export default function ProjectList() {
       setAdminMembershipsError(null);
       return;
     }
+    setAdminMembershipTab("clubs");
     setAdminMembershipEditorUserId(userId);
     await loadAdminMembershipsForUser(userId);
   };
@@ -3137,7 +3139,26 @@ export default function ProjectList() {
                 </p>
               ) : null}
               {activeAdminMemberships ? (
-                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    {[
+                      { id: "clubs", label: `Clubs (${activeAdminMemberships.clubMemberships.length})` },
+                      { id: "teams", label: `Teams (${activeAdminMemberships.teamMemberships.length})` },
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        className={`rounded-full border px-4 py-2 text-[11px] uppercase tracking-wide transition ${
+                          adminMembershipTab === tab.id
+                            ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                            : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                        }`}
+                        onClick={() => setAdminMembershipTab(tab.id as "clubs" | "teams")}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                  {adminMembershipTab === "clubs" ? (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -3324,6 +3345,7 @@ export default function ProjectList() {
                       </button>
                     </div>
                   </div>
+                  ) : (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -3635,6 +3657,7 @@ export default function ProjectList() {
                       </button>
                     </div>
                   </div>
+                  )}
                 </div>
               ) : null}
             </div>
