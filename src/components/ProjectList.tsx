@@ -8,6 +8,7 @@ import type {
   BoardSharePermission,
   Project,
   PublicProject,
+  Squad,
   TeamDirectoryClub,
   TeamDirectoryTeam,
 } from "@/models";
@@ -45,7 +46,6 @@ import {
   loadProjectTemplates,
   type ProjectTemplate,
 } from "@/persistence/projectTemplates";
-import { loadDefaultTeamSquads } from "@/persistence/defaultTeamSquads";
 import { loadDefaultLinkedTeams } from "@/persistence/defaultLinkedTeams";
 import {
   loadActiveTeamSelection,
@@ -845,6 +845,24 @@ export default function ProjectList() {
 
   const selectedHomeTeam = getCreateTeamById(selectedHomeTeamId);
   const selectedAwayTeam = getCreateTeamById(selectedAwayTeamId);
+  const createEmptySquadPreset = (
+    sideName: string,
+    kit: {
+      shirt: string;
+      shirtSecondary?: string;
+      shorts: string;
+      socks: string;
+      vest?: string;
+      jerseyType?: "solid" | "split" | "stripe" | "sash" | "pinstripe";
+    }
+  ): Squad => ({
+    id: createId(),
+    name: sideName,
+    kit: { ...kit },
+    players: [],
+    substituteIds: [],
+  });
+
   useEffect(() => {
     if (selectedHomeTeam) {
       setHomeKit({
@@ -2989,9 +3007,10 @@ export default function ProjectList() {
                   const templates = createTemplateOptions.filter((board) =>
                     createBoards.includes(board.id)
                   );
-                  const defaultTeamSquads = loadDefaultTeamSquads(authUser?.id ?? null);
-                  const homeSquadPreset = selectedHomeTeam?.squad ?? defaultTeamSquads.home;
-                  const awaySquadPreset = selectedAwayTeam?.squad ?? defaultTeamSquads.away;
+                  const homeSquadPreset =
+                    selectedHomeTeam?.squad ?? createEmptySquadPreset("Home", homeKit);
+                  const awaySquadPreset =
+                    selectedAwayTeam?.squad ?? createEmptySquadPreset("Away", awayKit);
                   createProject(name.trim(), {
                     homeKit,
                     awayKit,
