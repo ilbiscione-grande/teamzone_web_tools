@@ -50,22 +50,10 @@ type ManageTeamsSourcePanelProps = {
   squadPresetsLoading: boolean;
   squadPresetsError: string | null;
   managePresetStatus: string | null;
-  manageClubNameDraft: string;
-  manageTeamNameDraft: string;
-  manageTeamTypeDraft: string;
-  manageAgeGroupDraft: string;
-  manageSeasonLabelDraft: string;
-  manageDetailsSaving: boolean;
   onCurrentActiveClubIdChange: (clubId: string) => void;
   onCurrentActiveTeamIdChange: (teamId: string) => void;
   onManageSelectedDirectoryClubIdChange: (clubId: string) => void;
   onManageSelectedDirectoryTeamIdChange: (teamId: string) => void;
-  onManageClubNameDraftChange: (value: string) => void;
-  onManageTeamNameDraftChange: (value: string) => void;
-  onManageTeamTypeDraftChange: (value: string) => void;
-  onManageAgeGroupDraftChange: (value: string) => void;
-  onManageSeasonLabelDraftChange: (value: string) => void;
-  onSaveManageDirectoryDetails: () => void;
   onLoadDirectoryTeamIntoSide: (teamId: string, side: "home" | "away") => void;
   onSaveReusableTeam: () => void;
   onSetManagedTeamAsCurrent?: (() => void) | null;
@@ -89,22 +77,10 @@ export default function ManageTeamsSourcePanel({
   squadPresetsLoading,
   squadPresetsError,
   managePresetStatus,
-  manageClubNameDraft,
-  manageTeamNameDraft,
-  manageTeamTypeDraft,
-  manageAgeGroupDraft,
-  manageSeasonLabelDraft,
-  manageDetailsSaving,
   onCurrentActiveClubIdChange,
   onCurrentActiveTeamIdChange,
   onManageSelectedDirectoryClubIdChange,
   onManageSelectedDirectoryTeamIdChange,
-  onManageClubNameDraftChange,
-  onManageTeamNameDraftChange,
-  onManageTeamTypeDraftChange,
-  onManageAgeGroupDraftChange,
-  onManageSeasonLabelDraftChange,
-  onSaveManageDirectoryDetails,
   onLoadDirectoryTeamIntoSide,
   onSaveReusableTeam,
   onSetManagedTeamAsCurrent,
@@ -226,84 +202,14 @@ export default function ManageTeamsSourcePanel({
             </p>
           )}
         </div>
-        {managedDirectoryTeam ? (
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Edit linked details
-                </p>
-                <p className="mt-1 text-[11px] text-[var(--ink-1)]">
-                  Update the linked club and team names and team metadata here.
-                </p>
-              </div>
-              <button
-                className="rounded-full border border-[var(--accent-0)] px-4 py-2 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={onSaveManageDirectoryDetails}
-                disabled={manageDetailsSaving}
-              >
-                {manageDetailsSaving ? "Saving..." : "Save details"}
-              </button>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1">
-                <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Club name
-                </span>
-                <input
-                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                  value={manageClubNameDraft}
-                  onChange={(event) => onManageClubNameDraftChange(event.target.value)}
-                  disabled={!managedDirectoryTeam.isCurrentUserClubAdmin}
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Team name
-                </span>
-                <input
-                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                  value={manageTeamNameDraft}
-                  onChange={(event) => onManageTeamNameDraftChange(event.target.value)}
-                  disabled={!managedDirectoryTeam.isCurrentUserTeamAdmin}
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Team type
-                </span>
-                <input
-                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                  value={manageTeamTypeDraft}
-                  onChange={(event) => onManageTeamTypeDraftChange(event.target.value)}
-                  disabled={!managedDirectoryTeam.isCurrentUserTeamAdmin}
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Age group
-                </span>
-                <input
-                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                  value={manageAgeGroupDraft}
-                  onChange={(event) => onManageAgeGroupDraftChange(event.target.value)}
-                  disabled={!managedDirectoryTeam.isCurrentUserTeamAdmin}
-                />
-              </label>
-              <label className="space-y-1 sm:col-span-2">
-                <span className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                  Season label
-                </span>
-                <input
-                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
-                  value={manageSeasonLabelDraft}
-                  onChange={(event) => onManageSeasonLabelDraftChange(event.target.value)}
-                  disabled={!managedDirectoryTeam.isCurrentUserTeamAdmin}
-                />
-              </label>
-            </div>
-          </div>
-        ) : null}
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
+          <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+            Club and team details
+          </p>
+          <p className="mt-2 text-[11px] text-[var(--ink-1)]">
+            Appearance in Team Manager is project-local. Edit club names, team names, metadata, and other shared defaults in Admin &gt; Memberships instead.
+          </p>
+        </div>
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
@@ -312,7 +218,7 @@ export default function ManageTeamsSourcePanel({
               </p>
               <p className="text-[11px] text-[var(--ink-1)]">
                 {currentSourceName
-                  ? "Updates the linked team's only roster."
+                  ? "Updates only the linked team roster. Appearance changes stay local to this project."
                   : "This side is not linked yet. Switch to one of your teams first."}
               </p>
             </div>
@@ -321,7 +227,7 @@ export default function ManageTeamsSourcePanel({
                 className="rounded-full border border-[var(--accent-0)] px-4 py-2 text-[11px] uppercase tracking-wide text-[var(--accent-0)] hover:brightness-110"
                 onClick={onSaveReusableTeam}
               >
-                Update linked team
+                Update linked roster
               </button>
             ) : (
               <p className="text-[11px] text-[var(--ink-1)]">Paid plan required.</p>
