@@ -26,6 +26,7 @@ export type AdminClubMembershipRow = {
   id: string;
   clubId: string;
   clubName: string;
+  clubLogoUrl: string | null;
   clubRole: string;
   isClubAdmin: boolean;
 };
@@ -35,9 +36,16 @@ export type AdminTeamMembershipRow = {
   teamId: string;
   clubId: string;
   teamName: string;
+  teamLogoUrl: string | null;
   teamType: string;
   ageGroup: string | null;
   seasonLabel: string | null;
+  kitShirt: string;
+  kitShirtSecondary: string;
+  kitShorts: string;
+  kitSocks: string;
+  kitVest: string | null;
+  kitJerseyType: "solid" | "split" | "stripe" | "sash" | "pinstripe";
   teamRole: string;
   teamPosition: string | null;
   isTeamAdmin: boolean;
@@ -304,6 +312,7 @@ export const updateAdminUserTeamMembership = async (payload: {
 export const updateAdminClubDetails = async (payload: {
   clubId: string;
   clubName: string;
+  clubLogoUrl?: string | null;
 }) => {
   const result = await adminFetch("/api/admin/memberships", {
     method: "PATCH",
@@ -321,9 +330,16 @@ export const updateAdminClubDetails = async (payload: {
 export const updateAdminTeamDetails = async (payload: {
   teamId: string;
   teamName: string;
+  teamLogoUrl?: string | null;
   teamType: string;
   ageGroup?: string | null;
   seasonLabel?: string | null;
+  kitShirt: string;
+  kitShirtSecondary: string;
+  kitShorts: string;
+  kitSocks: string;
+  kitVest?: string | null;
+  kitJerseyType: "solid" | "split" | "stripe" | "sash" | "pinstripe";
 }) => {
   const result = await adminFetch("/api/admin/memberships", {
     method: "PATCH",

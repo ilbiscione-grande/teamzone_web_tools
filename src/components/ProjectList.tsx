@@ -6,6 +6,7 @@ import { deserializeProject } from "@/persistence/serialize";
 import { loadProject } from "@/persistence/storage";
 import type {
   BoardSharePermission,
+  JerseyType,
   Project,
   PublicProject,
   Squad,
@@ -77,6 +78,13 @@ import {
 import { usePollLeader } from "@/hooks/usePollLeader";
 
 export default function ProjectList() {
+  const teamJerseyTypeOptions: JerseyType[] = [
+    "solid",
+    "split",
+    "stripe",
+    "sash",
+    "pinstripe",
+  ];
   type ShareListItem = {
     id: string;
     ownerId: string;
@@ -1204,6 +1212,7 @@ export default function ProjectList() {
     const result = await updateAdminClubDetails({
       clubId: membership.clubId,
       clubName: membership.clubName,
+      clubLogoUrl: membership.clubLogoUrl,
     });
     if (!result.ok) {
       setAdminMembershipsError(result.error);
@@ -1212,6 +1221,24 @@ export default function ProjectList() {
     }
     await loadAdminMembershipsForUser(userId);
     setAdminUpdatingUserId(null);
+  };
+
+  const patchAdminTeamMembershipDraft = (
+    userId: string,
+    membershipId: string,
+    patch: Partial<AdminTeamMembershipRow>
+  ) => {
+    setAdminMemberships((prev) => ({
+      ...prev,
+      [userId]: {
+        ...(prev[userId] ?? activeAdminMemberships),
+        teamMemberships: (
+          prev[userId]?.teamMemberships ?? activeAdminMemberships?.teamMemberships ?? []
+        ).map((entry) =>
+          entry.id === membershipId ? { ...entry, ...patch } : entry
+        ),
+      },
+    }));
   };
 
   const saveAdminTeamDetails = async (
@@ -1223,9 +1250,16 @@ export default function ProjectList() {
     const result = await updateAdminTeamDetails({
       teamId: membership.teamId,
       teamName: membership.teamName,
+      teamLogoUrl: membership.teamLogoUrl,
       teamType: membership.teamType,
       ageGroup: membership.ageGroup,
       seasonLabel: membership.seasonLabel,
+      kitShirt: membership.kitShirt,
+      kitShirtSecondary: membership.kitShirtSecondary,
+      kitShorts: membership.kitShorts,
+      kitSocks: membership.kitSocks,
+      kitVest: membership.kitVest,
+      kitJerseyType: membership.kitJerseyType,
     });
     if (!result.ok) {
       setAdminMembershipsError(result.error);
@@ -3173,6 +3207,30 @@ export default function ProjectList() {
                         key={membership.id}
                         className="grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3"
                       >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+                            {membership.clubLogoUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={membership.clubLogoUrl}
+                                alt={membership.clubName || "Club logo"}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                                No logo
+                              </span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Club appearance
+                            </p>
+                            <p className="text-xs text-[var(--ink-1)]">
+                              Shared logo for the whole club.
+                            </p>
+                          </div>
+                        </div>
                         <input
                           className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
                           value={membership.clubName}
@@ -3193,6 +3251,30 @@ export default function ProjectList() {
                             }))
                           }
                           placeholder="Club name"
+                        />
+                        <input
+                          className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                          value={membership.clubLogoUrl ?? ""}
+                          onChange={(event) =>
+                            setAdminMemberships((prev) => ({
+                              ...prev,
+                              [activeAdminMembershipUser.id]: {
+                                ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                clubMemberships: (
+                                  prev[activeAdminMembershipUser.id]?.clubMemberships ??
+                                  activeAdminMemberships.clubMemberships
+                                ).map((entry) =>
+                                  entry.id === membership.id
+                                    ? {
+                                        ...entry,
+                                        clubLogoUrl: event.target.value || null,
+                                      }
+                                    : entry
+                                ),
+                              },
+                            }))
+                          }
+                          placeholder="Club logo URL or data URL"
                         />
                         <select
                           className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
@@ -3360,45 +3442,63 @@ export default function ProjectList() {
                         key={membership.id}
                         className="grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3"
                       >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+                            {membership.teamLogoUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={membership.teamLogoUrl}
+                                alt={membership.teamName || "Team logo"}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                                No logo
+                              </span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Team appearance
+                            </p>
+                            <p className="text-xs text-[var(--ink-1)]">
+                              Shared logo for this team.
+                            </p>
+                          </div>
+                        </div>
                         <input
                           className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-sm text-[var(--ink-0)]"
                           value={membership.teamName}
                           onChange={(event) =>
-                            setAdminMemberships((prev) => ({
-                              ...prev,
-                              [activeAdminMembershipUser.id]: {
-                                ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
-                                teamMemberships: (
-                                  prev[activeAdminMembershipUser.id]?.teamMemberships ??
-                                  activeAdminMemberships.teamMemberships
-                                ).map((entry) =>
-                                  entry.id === membership.id
-                                    ? { ...entry, teamName: event.target.value }
-                                    : entry
-                                ),
-                              },
-                            }))
+                            patchAdminTeamMembershipDraft(
+                              activeAdminMembershipUser.id,
+                              membership.id,
+                              { teamName: event.target.value }
+                            )
                           }
                           placeholder="Team name"
                         />
                         <input
                           className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                          value={membership.teamLogoUrl ?? ""}
+                          onChange={(event) =>
+                            patchAdminTeamMembershipDraft(
+                              activeAdminMembershipUser.id,
+                              membership.id,
+                              { teamLogoUrl: event.target.value || null }
+                            )
+                          }
+                          placeholder="Team logo URL or data URL"
+                        />
+                        <input
+                          className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                           value={membership.teamType}
                           onChange={(event) =>
-                            setAdminMemberships((prev) => ({
-                              ...prev,
-                              [activeAdminMembershipUser.id]: {
-                                ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
-                                teamMemberships: (
-                                  prev[activeAdminMembershipUser.id]?.teamMemberships ??
-                                  activeAdminMemberships.teamMemberships
-                                ).map((entry) =>
-                                  entry.id === membership.id
-                                    ? { ...entry, teamType: event.target.value }
-                                    : entry
-                                ),
-                              },
-                            }))
+                            patchAdminTeamMembershipDraft(
+                              activeAdminMembershipUser.id,
+                              membership.id,
+                              { teamType: event.target.value }
+                            )
                           }
                           placeholder="Type"
                         />
@@ -3407,20 +3507,11 @@ export default function ProjectList() {
                             className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                             value={membership.ageGroup ?? ""}
                             onChange={(event) =>
-                              setAdminMemberships((prev) => ({
-                                ...prev,
-                                [activeAdminMembershipUser.id]: {
-                                  ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
-                                  teamMemberships: (
-                                    prev[activeAdminMembershipUser.id]?.teamMemberships ??
-                                    activeAdminMemberships.teamMemberships
-                                  ).map((entry) =>
-                                    entry.id === membership.id
-                                      ? { ...entry, ageGroup: event.target.value || null }
-                                      : entry
-                                  ),
-                                },
-                              }))
+                              patchAdminTeamMembershipDraft(
+                                activeAdminMembershipUser.id,
+                                membership.id,
+                                { ageGroup: event.target.value || null }
+                              )
                             }
                             placeholder="Age group"
                           />
@@ -3428,42 +3519,150 @@ export default function ProjectList() {
                             className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                             value={membership.seasonLabel ?? ""}
                             onChange={(event) =>
-                              setAdminMemberships((prev) => ({
-                                ...prev,
-                                [activeAdminMembershipUser.id]: {
-                                  ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
-                                  teamMemberships: (
-                                    prev[activeAdminMembershipUser.id]?.teamMemberships ??
-                                    activeAdminMemberships.teamMemberships
-                                  ).map((entry) =>
-                                    entry.id === membership.id
-                                      ? { ...entry, seasonLabel: event.target.value || null }
-                                      : entry
-                                  ),
-                                },
-                              }))
+                              patchAdminTeamMembershipDraft(
+                                activeAdminMembershipUser.id,
+                                membership.id,
+                                { seasonLabel: event.target.value || null }
+                              )
                             }
                             placeholder="Season"
                           />
+                        </div>
+                        <div className="grid gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/50 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                                Team kit
+                              </p>
+                              <p className="text-xs text-[var(--ink-1)]">
+                                Default appearance used when a new project starts from this team.
+                              </p>
+                            </div>
+                            <div className="flex items-end gap-2">
+                              {[
+                                membership.kitShirt,
+                                membership.kitShirtSecondary,
+                                membership.kitShorts,
+                                membership.kitSocks,
+                              ].map((color, index) => (
+                                <span
+                                  key={`${membership.id}-kit-swatch-${index}`}
+                                  className="h-7 w-7 rounded-full border border-[var(--line)]"
+                                  style={{ backgroundColor: color }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Shirt
+                              <input
+                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                                value={membership.kitShirt}
+                                onChange={(event) =>
+                                  patchAdminTeamMembershipDraft(
+                                    activeAdminMembershipUser.id,
+                                    membership.id,
+                                    { kitShirt: event.target.value }
+                                  )
+                                }
+                                placeholder="#e4573f"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Shirt secondary
+                              <input
+                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                                value={membership.kitShirtSecondary}
+                                onChange={(event) =>
+                                  patchAdminTeamMembershipDraft(
+                                    activeAdminMembershipUser.id,
+                                    membership.id,
+                                    { kitShirtSecondary: event.target.value }
+                                  )
+                                }
+                                placeholder="#f3f3f3"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Shorts
+                              <input
+                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                                value={membership.kitShorts}
+                                onChange={(event) =>
+                                  patchAdminTeamMembershipDraft(
+                                    activeAdminMembershipUser.id,
+                                    membership.id,
+                                    { kitShorts: event.target.value }
+                                  )
+                                }
+                                placeholder="#f3f3f3"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Socks
+                              <input
+                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                                value={membership.kitSocks}
+                                onChange={(event) =>
+                                  patchAdminTeamMembershipDraft(
+                                    activeAdminMembershipUser.id,
+                                    membership.id,
+                                    { kitSocks: event.target.value }
+                                  )
+                                }
+                                placeholder="#f3f3f3"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Vest
+                              <input
+                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                                value={membership.kitVest ?? ""}
+                                onChange={(event) =>
+                                  patchAdminTeamMembershipDraft(
+                                    activeAdminMembershipUser.id,
+                                    membership.id,
+                                    { kitVest: event.target.value || null }
+                                  )
+                                }
+                                placeholder="#f5d06a"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Jersey type
+                              <select
+                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                                value={membership.kitJerseyType}
+                                onChange={(event) =>
+                                  patchAdminTeamMembershipDraft(
+                                    activeAdminMembershipUser.id,
+                                    membership.id,
+                                    {
+                                      kitJerseyType:
+                                        event.target.value as AdminTeamMembershipRow["kitJerseyType"],
+                                    }
+                                  )
+                                }
+                              >
+                                {teamJerseyTypeOptions.map((option) => (
+                                  <option key={`${membership.id}-jersey-${option}`} value={option}>
+                                    {option}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
                         </div>
                         <select
                           className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                           value={membership.teamRole}
                           onChange={(event) =>
-                            setAdminMemberships((prev) => ({
-                              ...prev,
-                              [activeAdminMembershipUser.id]: {
-                                ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
-                                teamMemberships: (
-                                  prev[activeAdminMembershipUser.id]?.teamMemberships ??
-                                  activeAdminMemberships.teamMemberships
-                                ).map((entry) =>
-                                  entry.id === membership.id
-                                    ? { ...entry, teamRole: event.target.value }
-                                    : entry
-                                ),
-                              },
-                            }))
+                            patchAdminTeamMembershipDraft(
+                              activeAdminMembershipUser.id,
+                              membership.id,
+                              { teamRole: event.target.value }
+                            )
                           }
                         >
                           {["leader", "player", "guardian", "relative", "staff", "other"].map(
@@ -3478,20 +3677,11 @@ export default function ProjectList() {
                           className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                           value={membership.teamPosition ?? ""}
                           onChange={(event) =>
-                            setAdminMemberships((prev) => ({
-                              ...prev,
-                              [activeAdminMembershipUser.id]: {
-                                ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
-                                teamMemberships: (
-                                  prev[activeAdminMembershipUser.id]?.teamMemberships ??
-                                  activeAdminMemberships.teamMemberships
-                                ).map((entry) =>
-                                  entry.id === membership.id
-                                    ? { ...entry, teamPosition: event.target.value }
-                                    : entry
-                                ),
-                              },
-                            }))
+                            patchAdminTeamMembershipDraft(
+                              activeAdminMembershipUser.id,
+                              membership.id,
+                              { teamPosition: event.target.value }
+                            )
                           }
                           placeholder="Position"
                         />
@@ -3500,20 +3690,11 @@ export default function ProjectList() {
                             type="checkbox"
                             checked={membership.isTeamAdmin}
                             onChange={(event) =>
-                              setAdminMemberships((prev) => ({
-                                ...prev,
-                                [activeAdminMembershipUser.id]: {
-                                  ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
-                                  teamMemberships: (
-                                    prev[activeAdminMembershipUser.id]?.teamMemberships ??
-                                    activeAdminMemberships.teamMemberships
-                                  ).map((entry) =>
-                                    entry.id === membership.id
-                                      ? { ...entry, isTeamAdmin: event.target.checked }
-                                      : entry
-                                  ),
-                                },
-                              }))
+                              patchAdminTeamMembershipDraft(
+                                activeAdminMembershipUser.id,
+                                membership.id,
+                                { isTeamAdmin: event.target.checked }
+                              )
                             }
                           />
                           Team admin

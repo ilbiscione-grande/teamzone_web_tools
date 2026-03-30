@@ -66,6 +66,12 @@ describe("teamDirectory", () => {
           season_label: "2026",
           status: "active",
           club_logo: null,
+          kit_shirt: "#123456",
+          kit_shirt_secondary: "#abcdef",
+          kit_shorts: "#654321",
+          kit_socks: "#fedcba",
+          kit_vest: "#ffe066",
+          kit_jersey_type: "split",
         },
       ],
       teamMembers: [
@@ -107,6 +113,14 @@ describe("teamDirectory", () => {
       name: "Goalkeeper",
       positionLabel: "goalkeeper",
       number: 1,
+    });
+    expect(clubs[0]?.teams[0]?.squad.kit).toMatchObject({
+      shirt: "#123456",
+      shirtSecondary: "#abcdef",
+      shorts: "#654321",
+      socks: "#fedcba",
+      vest: "#ffe066",
+      jerseyType: "split",
     });
   });
 });

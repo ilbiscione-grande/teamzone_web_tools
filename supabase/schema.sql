@@ -808,6 +808,12 @@ alter table teams add column if not exists team_type text not null default 'othe
 alter table teams add column if not exists age_group text;
 alter table teams add column if not exists season_label text;
 alter table teams add column if not exists status text not null default 'active';
+alter table teams add column if not exists kit_shirt text not null default '#e4573f';
+alter table teams add column if not exists kit_shirt_secondary text not null default '#f3f3f3';
+alter table teams add column if not exists kit_shorts text not null default '#f3f3f3';
+alter table teams add column if not exists kit_socks text not null default '#f3f3f3';
+alter table teams add column if not exists kit_vest text;
+alter table teams add column if not exists kit_jersey_type text not null default 'solid';
 
 create index if not exists teams_club_id_idx on teams(club_id);
 create index if not exists teams_club_status_idx on teams(club_id, status);

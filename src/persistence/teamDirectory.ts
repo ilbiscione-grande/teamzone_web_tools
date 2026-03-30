@@ -38,6 +38,12 @@ type TeamRow = {
   season_label: string | null;
   status: string | null;
   club_logo: string | null;
+  kit_shirt: string | null;
+  kit_shirt_secondary: string | null;
+  kit_shorts: string | null;
+  kit_socks: string | null;
+  kit_vest: string | null;
+  kit_jersey_type: string | null;
 };
 
 type TeamMemberRow = {
@@ -56,7 +62,18 @@ type TeamMemberRow = {
 };
 
 const buildSquadFromMembers = (
-  team: Pick<TeamRow, "id" | "name" | "club_logo">,
+  team: Pick<
+    TeamRow,
+    | "id"
+    | "name"
+    | "club_logo"
+    | "kit_shirt"
+    | "kit_shirt_secondary"
+    | "kit_shorts"
+    | "kit_socks"
+    | "kit_vest"
+    | "kit_jersey_type"
+  >,
   members: TeamMemberRow[]
 ): Squad => {
   const orderedMembers = members
@@ -87,11 +104,18 @@ const buildSquadFromMembers = (
     name: team.name,
     clubLogo: team.club_logo ?? undefined,
     kit: {
-      shirt: "#e4573f",
-      shirtSecondary: "#f3f3f3",
-      shorts: "#f3f3f3",
-      socks: "#f3f3f3",
-      jerseyType: "solid",
+      shirt: team.kit_shirt ?? "#e4573f",
+      shirtSecondary: team.kit_shirt_secondary ?? "#f3f3f3",
+      shorts: team.kit_shorts ?? "#f3f3f3",
+      socks: team.kit_socks ?? "#f3f3f3",
+      vest: team.kit_vest ?? undefined,
+      jerseyType:
+        team.kit_jersey_type === "split" ||
+        team.kit_jersey_type === "stripe" ||
+        team.kit_jersey_type === "sash" ||
+        team.kit_jersey_type === "pinstripe"
+          ? team.kit_jersey_type
+          : "solid",
     },
     players,
   };
@@ -277,7 +301,7 @@ export const fetchClubTeamDirectory = async () => {
   const { data: teamData, error: teamError } = await supabase
     .from("teams")
     .select(
-      "id,club_id,name,slug,team_type,age_group,season_label,status,club_logo"
+      "id,club_id,name,slug,team_type,age_group,season_label,status,club_logo,kit_shirt,kit_shirt_secondary,kit_shorts,kit_socks,kit_vest,kit_jersey_type"
     )
     .in("club_id", clubIds)
     .order("name", { ascending: true });
@@ -350,6 +374,13 @@ export const updateTeamDirectoryDetails = async (payload: {
   teamType: string;
   ageGroup?: string | null;
   seasonLabel?: string | null;
+  logoUrl?: string | null;
+  kitShirt?: string;
+  kitShirtSecondary?: string;
+  kitShorts?: string;
+  kitSocks?: string;
+  kitVest?: string | null;
+  kitJerseyType?: "solid" | "split" | "stripe" | "sash" | "pinstripe";
 }) => {
   if (!supabase) {
     return { ok: false as const, error: "Supabase not configured." };
@@ -363,9 +394,16 @@ export const updateTeamDirectoryDetails = async (payload: {
     .from("teams")
     .update({
       name: nextName,
+      club_logo: payload.logoUrl ?? null,
       team_type: nextTeamType,
       age_group: payload.ageGroup?.trim() || null,
       season_label: payload.seasonLabel?.trim() || null,
+      kit_shirt: payload.kitShirt?.trim() || "#e4573f",
+      kit_shirt_secondary: payload.kitShirtSecondary?.trim() || "#f3f3f3",
+      kit_shorts: payload.kitShorts?.trim() || "#f3f3f3",
+      kit_socks: payload.kitSocks?.trim() || "#f3f3f3",
+      kit_vest: payload.kitVest?.trim() || null,
+      kit_jersey_type: payload.kitJerseyType ?? "solid",
     })
     .eq("id", payload.id);
   if (error) {

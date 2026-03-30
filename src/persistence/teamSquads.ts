@@ -6,6 +6,12 @@ type TeamRow = {
   owner_id: string;
   name: string;
   club_logo: string | null;
+  kit_shirt: string | null;
+  kit_shirt_secondary: string | null;
+  kit_shorts: string | null;
+  kit_socks: string | null;
+  kit_vest: string | null;
+  kit_jersey_type: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -144,7 +150,9 @@ const fetchTeamsByIds = async (teamIds: string[]) => {
   }
   const { data } = await supabase
     .from(TEAMS_TABLE)
-    .select("id, owner_id, name, club_logo, created_at, updated_at")
+    .select(
+      "id, owner_id, name, club_logo, kit_shirt, kit_shirt_secondary, kit_shorts, kit_socks, kit_vest, kit_jersey_type, created_at, updated_at"
+    )
     .in("id", teamIds);
   return (data ?? []) as TeamRow[];
 };
@@ -302,10 +310,18 @@ const buildTeamsFromRows = async (
         kit:
           squad?.kit_data ??
           ({
-            shirt: "#e4573f",
-            shirtSecondary: "#f3f3f3",
-            shorts: "#f3f3f3",
-            socks: "#f3f3f3",
+            shirt: team.kit_shirt ?? "#e4573f",
+            shirtSecondary: team.kit_shirt_secondary ?? "#f3f3f3",
+            shorts: team.kit_shorts ?? "#f3f3f3",
+            socks: team.kit_socks ?? "#f3f3f3",
+            vest: team.kit_vest ?? undefined,
+            jerseyType:
+              team.kit_jersey_type === "split" ||
+              team.kit_jersey_type === "stripe" ||
+              team.kit_jersey_type === "sash" ||
+              team.kit_jersey_type === "pinstripe"
+                ? team.kit_jersey_type
+                : "solid",
           } as Squad["kit"]),
         players: mappedPlayers,
         captainId,
@@ -583,7 +599,9 @@ export const fetchTeamsWithSquad = async () => {
 
   const { data: teamRows, error: teamError } = await supabase
     .from(TEAMS_TABLE)
-    .select("id, owner_id, name, club_logo, created_at, updated_at")
+    .select(
+      "id, owner_id, name, club_logo, kit_shirt, kit_shirt_secondary, kit_shorts, kit_socks, kit_vest, kit_jersey_type, created_at, updated_at"
+    )
     .eq("owner_id", user.id)
     .order("updated_at", { ascending: false });
 
@@ -618,9 +636,18 @@ export const createTeamWithSquad = async (payload: {
       owner_id: user.id,
       name: payload.name,
       club_logo: payload.squad.clubLogo ?? null,
+      kit_shirt: payload.squad.kit.shirt,
+      kit_shirt_secondary:
+        payload.squad.kit.shirtSecondary ?? payload.squad.kit.shirt,
+      kit_shorts: payload.squad.kit.shorts,
+      kit_socks: payload.squad.kit.socks,
+      kit_vest: payload.squad.kit.vest ?? null,
+      kit_jersey_type: payload.squad.kit.jerseyType ?? "solid",
       updated_at: now,
     })
-    .select("id, owner_id, name, club_logo, created_at, updated_at")
+    .select(
+      "id, owner_id, name, club_logo, kit_shirt, kit_shirt_secondary, kit_shorts, kit_socks, kit_vest, kit_jersey_type, created_at, updated_at"
+    )
     .single();
 
   if (teamError || !team) {
@@ -677,7 +704,9 @@ export const updateTeamWithSquad = async (payload: {
 
   const { data: team, error: teamError } = await supabase
     .from(TEAMS_TABLE)
-    .select("id, owner_id, name, club_logo, created_at, updated_at")
+    .select(
+      "id, owner_id, name, club_logo, kit_shirt, kit_shirt_secondary, kit_shorts, kit_socks, kit_vest, kit_jersey_type, created_at, updated_at"
+    )
     .eq("id", payload.id)
     .eq("owner_id", user.id)
     .maybeSingle();
@@ -697,6 +726,15 @@ export const updateTeamWithSquad = async (payload: {
   }
   if (payload.squad?.clubLogo !== undefined) {
     teamUpdate.club_logo = payload.squad.clubLogo ?? null;
+  }
+  if (payload.squad) {
+    teamUpdate.kit_shirt = payload.squad.kit.shirt;
+    teamUpdate.kit_shirt_secondary =
+      payload.squad.kit.shirtSecondary ?? payload.squad.kit.shirt;
+    teamUpdate.kit_shorts = payload.squad.kit.shorts;
+    teamUpdate.kit_socks = payload.squad.kit.socks;
+    teamUpdate.kit_vest = payload.squad.kit.vest ?? null;
+    teamUpdate.kit_jersey_type = payload.squad.kit.jerseyType ?? "solid";
   }
 
   const { error: teamUpdateError } = await supabase
