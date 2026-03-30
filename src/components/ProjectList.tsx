@@ -78,12 +78,12 @@ import {
 import { usePollLeader } from "@/hooks/usePollLeader";
 
 export default function ProjectList() {
-  const teamJerseyTypeOptions: JerseyType[] = [
-    "solid",
-    "split",
-    "stripe",
-    "sash",
-    "pinstripe",
+  const teamJerseyTypeOptions: Array<{ id: JerseyType; label: string }> = [
+    { id: "solid", label: "Solid" },
+    { id: "split", label: "Split" },
+    { id: "stripe", label: "Stripe" },
+    { id: "sash", label: "Sash" },
+    { id: "pinstripe", label: "Pinstripe" },
   ];
   type ShareListItem = {
     id: string;
@@ -114,6 +114,44 @@ export default function ProjectList() {
     "Fitness",
     "Other",
   ];
+  const renderShirtIcon = (
+    type: JerseyType,
+    primary: string,
+    secondary: string,
+    className: string
+  ) => (
+    <svg viewBox="0 0 100 100" className={className} aria-hidden>
+      <defs>
+        <clipPath id={`project-list-shirt-${type}`}>
+          <path d="M25 18h50l13 13-10 11-8-7v47H30V35l-8 7-10-11z" />
+        </clipPath>
+      </defs>
+      <path
+        d="M25 18h50l13 13-10 11-8-7v47H30V35l-8 7-10-11z"
+        fill="#0b1c1d"
+        stroke="rgba(255,255,255,0.2)"
+        strokeWidth="2"
+      />
+      <g clipPath={`url(#project-list-shirt-${type})`}>
+        <rect x="20" y="14" width="60" height="72" fill={primary} />
+        {type === "split" ? (
+          <rect x="50" y="14" width="30" height="72" fill={secondary} />
+        ) : null}
+        {type === "stripe" ? (
+          <rect x="42" y="14" width="16" height="72" fill={secondary} />
+        ) : null}
+        {type === "sash" ? (
+          <path d="M16 70L78 8l10 10-62 62z" fill={secondary} opacity="0.95" />
+        ) : null}
+        {type === "pinstripe"
+          ? [26, 34, 42, 50, 58, 66, 74].map((x) => (
+              <rect key={x} x={x} y="14" width="3" height="72" fill={secondary} />
+            ))
+          : null}
+      </g>
+      <rect x="42" y="18" width="16" height="10" rx="4" fill="#0b1c1d" />
+    </svg>
+  );
   const index = useProjectStore((state) => state.index);
   const openProject = useProjectStore((state) => state.openProject);
   const openProjectFromData = useProjectStore((state) => state.openProjectFromData);
@@ -1245,6 +1283,84 @@ export default function ProjectList() {
         ),
       },
     }));
+  };
+
+  const renderAdminKitPreview = (params: {
+    jerseyType: JerseyType;
+    shirt: string;
+    shirtSecondary: string;
+    shorts: string;
+    socks: string;
+    vest?: string | null;
+  }) => (
+    <div className="flex min-w-[88px] flex-col items-center gap-1 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/60 p-3">
+      {renderShirtIcon(
+        params.jerseyType,
+        params.shirt,
+        params.shirtSecondary,
+        "h-16 w-16"
+      )}
+      <svg viewBox="0 0 64 40" className="h-6 w-10" aria-hidden>
+        <path
+          d="M6 6h52l-4 28H36V22H28v12H10z"
+          fill={params.shorts}
+          stroke="rgba(255,255,255,0.25)"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <svg viewBox="0 0 64 40" className="h-6 w-10" aria-hidden>
+        <path
+          d="M16 5h12v14l8 6v8H16z"
+          fill={params.socks}
+          stroke="rgba(255,255,255,0.25)"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M36 5h12v14l8 6v8H36z"
+          fill={params.socks}
+          stroke="rgba(255,255,255,0.25)"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+      </svg>
+      {params.vest ? (
+        <div className="flex items-center gap-1 text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
+          <span>Vest</span>
+          <span
+            className="h-3 w-3 rounded-full border border-[var(--line)]"
+            style={{ backgroundColor: params.vest }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const getEffectiveAdminTeamKit = (membership: AdminTeamMembershipRow) => {
+    const clubMembership =
+      activeAdminMemberships?.clubMemberships.find(
+        (club) => club.clubId === membership.clubId
+      ) ?? null;
+    return {
+      shirt: membership.kitShirt ?? clubMembership?.kitShirt ?? "#e4573f",
+      shirtSecondary:
+        membership.kitShirtSecondary ??
+        clubMembership?.kitShirtSecondary ??
+        "#f3f3f3",
+      shorts: membership.kitShorts ?? clubMembership?.kitShorts ?? "#f3f3f3",
+      socks: membership.kitSocks ?? clubMembership?.kitSocks ?? "#f3f3f3",
+      vest: membership.kitVest ?? clubMembership?.kitVest ?? null,
+      jerseyType:
+        membership.kitJerseyType ?? clubMembership?.kitJerseyType ?? "solid",
+    } satisfies {
+      shirt: string;
+      shirtSecondary: string;
+      shorts: string;
+      socks: string;
+      vest: string | null;
+      jerseyType: JerseyType;
+    };
   };
 
   const saveAdminTeamDetails = async (
@@ -3283,7 +3399,7 @@ export default function ProjectList() {
                           placeholder="Club logo URL or data URL"
                         />
                         <div className="grid gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/50 p-3">
-                          <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                                 Club kit
@@ -3292,28 +3408,21 @@ export default function ProjectList() {
                                 Base colors inherited by all teams unless a team overrides them.
                               </p>
                             </div>
-                            <div className="flex items-end gap-2">
-                              {[
-                                membership.kitShirt,
-                                membership.kitShirtSecondary,
-                                membership.kitShorts,
-                                membership.kitSocks,
-                              ].map((color, index) => (
-                                <span
-                                  key={`${membership.id}-club-kit-swatch-${index}`}
-                                  className="h-7 w-7 rounded-full border border-[var(--line)]"
-                                  style={{ backgroundColor: color }}
-                                />
-                              ))}
-                            </div>
+                            {renderAdminKitPreview({
+                              jerseyType: membership.kitJerseyType,
+                              shirt: membership.kitShirt,
+                              shirtSecondary: membership.kitShirtSecondary,
+                              shorts: membership.kitShorts,
+                              socks: membership.kitSocks,
+                              vest: membership.kitVest,
+                            })}
                           </div>
                           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                               Shirt
-                              <input
-                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                              <ColorPalettePicker
                                 value={membership.kitShirt}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   setAdminMemberships((prev) => ({
                                     ...prev,
                                     [activeAdminMembershipUser.id]: {
@@ -3323,21 +3432,21 @@ export default function ProjectList() {
                                         activeAdminMemberships.clubMemberships
                                       ).map((entry) =>
                                         entry.id === membership.id
-                                          ? { ...entry, kitShirt: event.target.value }
+                                          ? { ...entry, kitShirt: value }
                                           : entry
                                       ),
                                     },
                                   }))
                                 }
-                                placeholder="#e4573f"
+                                title="Club shirt"
+                                className="w-fit"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                               Shirt secondary
-                              <input
-                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                              <ColorPalettePicker
                                 value={membership.kitShirtSecondary}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   setAdminMemberships((prev) => ({
                                     ...prev,
                                     [activeAdminMembershipUser.id]: {
@@ -3347,21 +3456,21 @@ export default function ProjectList() {
                                         activeAdminMemberships.clubMemberships
                                       ).map((entry) =>
                                         entry.id === membership.id
-                                          ? { ...entry, kitShirtSecondary: event.target.value }
+                                          ? { ...entry, kitShirtSecondary: value }
                                           : entry
                                       ),
                                     },
                                   }))
                                 }
-                                placeholder="#f3f3f3"
+                                title="Club shirt secondary"
+                                className="w-fit"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                               Shorts
-                              <input
-                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                              <ColorPalettePicker
                                 value={membership.kitShorts}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   setAdminMemberships((prev) => ({
                                     ...prev,
                                     [activeAdminMembershipUser.id]: {
@@ -3371,21 +3480,21 @@ export default function ProjectList() {
                                         activeAdminMemberships.clubMemberships
                                       ).map((entry) =>
                                         entry.id === membership.id
-                                          ? { ...entry, kitShorts: event.target.value }
+                                          ? { ...entry, kitShorts: value }
                                           : entry
                                       ),
                                     },
                                   }))
                                 }
-                                placeholder="#f3f3f3"
+                                title="Club shorts"
+                                className="w-fit"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                               Socks
-                              <input
-                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                              <ColorPalettePicker
                                 value={membership.kitSocks}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   setAdminMemberships((prev) => ({
                                     ...prev,
                                     [activeAdminMembershipUser.id]: {
@@ -3395,21 +3504,21 @@ export default function ProjectList() {
                                         activeAdminMemberships.clubMemberships
                                       ).map((entry) =>
                                         entry.id === membership.id
-                                          ? { ...entry, kitSocks: event.target.value }
+                                          ? { ...entry, kitSocks: value }
                                           : entry
                                       ),
                                     },
                                   }))
                                 }
-                                placeholder="#f3f3f3"
+                                title="Club socks"
+                                className="w-fit"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                               Vest
-                              <input
-                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                              <ColorPalettePicker
                                 value={membership.kitVest ?? ""}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   setAdminMemberships((prev) => ({
                                     ...prev,
                                     [activeAdminMembershipUser.id]: {
@@ -3419,48 +3528,60 @@ export default function ProjectList() {
                                         activeAdminMemberships.clubMemberships
                                       ).map((entry) =>
                                         entry.id === membership.id
-                                          ? { ...entry, kitVest: event.target.value || null }
+                                          ? { ...entry, kitVest: value || null }
                                           : entry
                                       ),
                                     },
                                   }))
                                 }
-                                placeholder="#f5d06a"
+                                title="Club vest"
+                                className="w-fit"
                               />
                             </label>
-                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                              Jersey type
-                              <select
-                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
-                                value={membership.kitJerseyType}
-                                onChange={(event) =>
-                                  setAdminMemberships((prev) => ({
-                                    ...prev,
-                                    [activeAdminMembershipUser.id]: {
-                                      ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
-                                      clubMemberships: (
-                                        prev[activeAdminMembershipUser.id]?.clubMemberships ??
-                                        activeAdminMemberships.clubMemberships
-                                      ).map((entry) =>
-                                        entry.id === membership.id
-                                          ? {
-                                              ...entry,
-                                              kitJerseyType:
-                                                event.target.value as AdminClubMembershipRow["kitJerseyType"],
-                                            }
-                                          : entry
-                                      ),
-                                    },
-                                  }))
-                                }
-                              >
+                            <div className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              <span>Jersey type</span>
+                              <div className="flex flex-wrap items-center gap-2">
                                 {teamJerseyTypeOptions.map((option) => (
-                                  <option key={`${membership.id}-club-jersey-${option}`} value={option}>
-                                    {option}
-                                  </option>
+                                  <button
+                                    key={`${membership.id}-club-jersey-${option.id}`}
+                                    type="button"
+                                    className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border ${
+                                      membership.kitJerseyType === option.id
+                                        ? "border-[var(--accent-0)]"
+                                        : "border-[var(--line)]"
+                                    }`}
+                                    onClick={() =>
+                                      setAdminMemberships((prev) => ({
+                                        ...prev,
+                                        [activeAdminMembershipUser.id]: {
+                                          ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                          clubMemberships: (
+                                            prev[activeAdminMembershipUser.id]?.clubMemberships ??
+                                            activeAdminMemberships.clubMemberships
+                                          ).map((entry) =>
+                                            entry.id === membership.id
+                                              ? {
+                                                  ...entry,
+                                                  kitJerseyType: option.id,
+                                                }
+                                              : entry
+                                          ),
+                                        },
+                                      }))
+                                    }
+                                    title={option.label}
+                                    aria-label={option.label}
+                                  >
+                                    {renderShirtIcon(
+                                      option.id,
+                                      membership.kitShirt,
+                                      membership.kitShirtSecondary,
+                                      "h-5 w-5"
+                                    )}
+                                  </button>
                                 ))}
-                              </select>
-                            </label>
+                              </div>
+                            </div>
                           </div>
                         </div>
                         <select
@@ -3624,7 +3745,9 @@ export default function ProjectList() {
                         {activeAdminMemberships.teamMemberships.length}
                       </span>
                     </div>
-                    {activeAdminMemberships.teamMemberships.map((membership) => (
+                    {activeAdminMemberships.teamMemberships.map((membership) => {
+                      const effectiveKit = getEffectiveAdminTeamKit(membership);
+                      return (
                       <div
                         key={membership.id}
                         className="grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3"
@@ -3716,7 +3839,7 @@ export default function ProjectList() {
                           />
                         </div>
                         <div className="grid gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/50 p-3">
-                          <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                                 Team kit override
@@ -3725,121 +3848,150 @@ export default function ProjectList() {
                                 Leave fields empty to inherit the club's default colors.
                               </p>
                             </div>
-                            <div className="flex items-end gap-2">
-                              {[
-                                membership.kitShirt || "transparent",
-                                membership.kitShirtSecondary || "transparent",
-                                membership.kitShorts || "transparent",
-                                membership.kitSocks || "transparent",
-                              ].map((color, index) => (
-                                <span
-                                  key={`${membership.id}-kit-swatch-${index}`}
-                                  className="h-7 w-7 rounded-full border border-[var(--line)]"
-                                  style={{ backgroundColor: color }}
-                                />
-                              ))}
-                            </div>
+                            {renderAdminKitPreview({
+                              jerseyType: effectiveKit.jerseyType,
+                              shirt: effectiveKit.shirt,
+                              shirtSecondary: effectiveKit.shirtSecondary,
+                              shorts: effectiveKit.shorts,
+                              socks: effectiveKit.socks,
+                              vest: effectiveKit.vest,
+                            })}
                           </div>
                           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                               Shirt
-                              <input
-                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                              <ColorPalettePicker
                                 value={membership.kitShirt ?? ""}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   patchAdminTeamMembershipDraft(
                                     activeAdminMembershipUser.id,
                                     membership.id,
-                                    { kitShirt: event.target.value || null }
+                                    { kitShirt: value === "transparent" ? null : value }
                                   )
                                 }
-                                placeholder="Use club default"
+                                title="Team shirt override"
+                                allowTransparent
+                                className="w-fit"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                               Shirt secondary
-                              <input
-                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                              <ColorPalettePicker
                                 value={membership.kitShirtSecondary ?? ""}
-                                onChange={(event) =>
-                                  patchAdminTeamMembershipDraft(
-                                    activeAdminMembershipUser.id,
-                                    membership.id,
-                                    { kitShirtSecondary: event.target.value || null }
-                                  )
-                                }
-                                placeholder="Use club default"
-                              />
-                            </label>
-                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                              Shorts
-                              <input
-                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
-                                value={membership.kitShorts ?? ""}
-                                onChange={(event) =>
-                                  patchAdminTeamMembershipDraft(
-                                    activeAdminMembershipUser.id,
-                                    membership.id,
-                                    { kitShorts: event.target.value || null }
-                                  )
-                                }
-                                placeholder="Use club default"
-                              />
-                            </label>
-                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                              Socks
-                              <input
-                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
-                                value={membership.kitSocks ?? ""}
-                                onChange={(event) =>
-                                  patchAdminTeamMembershipDraft(
-                                    activeAdminMembershipUser.id,
-                                    membership.id,
-                                    { kitSocks: event.target.value || null }
-                                  )
-                                }
-                                placeholder="Use club default"
-                              />
-                            </label>
-                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                              Vest
-                              <input
-                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
-                                value={membership.kitVest ?? ""}
-                                onChange={(event) =>
-                                  patchAdminTeamMembershipDraft(
-                                    activeAdminMembershipUser.id,
-                                    membership.id,
-                                    { kitVest: event.target.value || null }
-                                  )
-                                }
-                                placeholder="Use club default"
-                              />
-                            </label>
-                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                              Jersey type
-                              <select
-                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
-                                value={membership.kitJerseyType ?? ""}
-                                onChange={(event) =>
+                                onChange={(value) =>
                                   patchAdminTeamMembershipDraft(
                                     activeAdminMembershipUser.id,
                                     membership.id,
                                     {
-                                      kitJerseyType:
-                                        (event.target.value || null) as AdminTeamMembershipRow["kitJerseyType"],
+                                      kitShirtSecondary:
+                                        value === "transparent" ? null : value,
                                     }
                                   )
                                 }
-                              >
-                                <option value="">Use club default</option>
-                                {teamJerseyTypeOptions.map((option) => (
-                                  <option key={`${membership.id}-jersey-${option}`} value={option}>
-                                    {option}
-                                  </option>
-                                ))}
-                              </select>
+                                title="Team shirt secondary override"
+                                allowTransparent
+                                className="w-fit"
+                              />
                             </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Shorts
+                              <ColorPalettePicker
+                                value={membership.kitShorts ?? ""}
+                                onChange={(value) =>
+                                  patchAdminTeamMembershipDraft(
+                                    activeAdminMembershipUser.id,
+                                    membership.id,
+                                    { kitShorts: value === "transparent" ? null : value }
+                                  )
+                                }
+                                title="Team shorts override"
+                                allowTransparent
+                                className="w-fit"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Socks
+                              <ColorPalettePicker
+                                value={membership.kitSocks ?? ""}
+                                onChange={(value) =>
+                                  patchAdminTeamMembershipDraft(
+                                    activeAdminMembershipUser.id,
+                                    membership.id,
+                                    { kitSocks: value === "transparent" ? null : value }
+                                  )
+                                }
+                                title="Team socks override"
+                                allowTransparent
+                                className="w-fit"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Vest
+                              <ColorPalettePicker
+                                value={membership.kitVest ?? ""}
+                                onChange={(value) =>
+                                  patchAdminTeamMembershipDraft(
+                                    activeAdminMembershipUser.id,
+                                    membership.id,
+                                    { kitVest: value === "transparent" ? null : value }
+                                  )
+                                }
+                                title="Team vest override"
+                                allowTransparent
+                                className="w-fit"
+                              />
+                            </label>
+                            <div className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              <span>Jersey type</span>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  className={`inline-flex h-9 items-center justify-center rounded-lg border px-2 text-[9px] ${
+                                    membership.kitJerseyType === null
+                                      ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                                      : "border-[var(--line)]"
+                                  }`}
+                                  onClick={() =>
+                                    patchAdminTeamMembershipDraft(
+                                      activeAdminMembershipUser.id,
+                                      membership.id,
+                                      { kitJerseyType: null }
+                                    )
+                                  }
+                                >
+                                  Club
+                                </button>
+                                {teamJerseyTypeOptions.map((option) => (
+                                  <button
+                                    key={`${membership.id}-jersey-${option.id}`}
+                                    type="button"
+                                    className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border ${
+                                      membership.kitJerseyType === option.id
+                                        ? "border-[var(--accent-0)]"
+                                        : "border-[var(--line)]"
+                                    }`}
+                                    onClick={() =>
+                                      patchAdminTeamMembershipDraft(
+                                        activeAdminMembershipUser.id,
+                                        membership.id,
+                                        { kitJerseyType: option.id }
+                                      )
+                                    }
+                                    title={option.label}
+                                    aria-label={option.label}
+                                  >
+                                    {renderShirtIcon(
+                                      option.id,
+                                      membership.kitShirt ?? "#0f1b1a",
+                                      membership.kitShirtSecondary ??
+                                        membership.kitShirt ??
+                                        "#f3f3f3",
+                                      "h-5 w-5"
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                         </div>
                         <select
@@ -3918,7 +4070,7 @@ export default function ProjectList() {
                           </button>
                         </div>
                       </div>
-                    ))}
+                    )})}
                     <div className="grid gap-2 rounded-xl border border-dashed border-[var(--line)] p-3">
                       <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                         Add existing team
