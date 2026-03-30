@@ -247,6 +247,7 @@ export default function ProjectList() {
   const [adminMembershipEditorUserId, setAdminMembershipEditorUserId] = useState<string | null>(
     null
   );
+  const [adminExpandedUserId, setAdminExpandedUserId] = useState<string | null>(null);
   const [adminMembershipTab, setAdminMembershipTab] = useState<"clubs" | "teams">("clubs");
   const [adminMemberships, setAdminMemberships] = useState<Record<string, AdminUserMemberships>>(
     {}
@@ -1226,6 +1227,17 @@ export default function ProjectList() {
     setAdminMembershipTab("clubs");
     setAdminMembershipEditorUserId(userId);
     await loadAdminMembershipsForUser(userId);
+  };
+
+  const toggleAdminUserMembershipPreview = async (userId: string) => {
+    if (adminExpandedUserId === userId) {
+      setAdminExpandedUserId(null);
+      return;
+    }
+    setAdminExpandedUserId(userId);
+    if (!adminMemberships[userId]) {
+      await loadAdminMembershipsForUser(userId);
+    }
   };
 
   const saveAdminClubMembership = async (
@@ -2535,7 +2547,7 @@ export default function ProjectList() {
                       Users
                     </h4>
                     <p className="mt-1 text-[11px] text-[var(--ink-1)]">
-                      Search users, toggle flags and open memberships.
+                      Search users, toggle flags and inspect linked clubs and teams inline.
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -2577,100 +2589,231 @@ export default function ProjectList() {
                   <p className="text-xs text-[var(--accent-1)]">{adminUsersError}</p>
                 ) : (
                   <div className="space-y-2 pr-1">
-                    {paginatedAdminUsers.map((user) => (
-                      <article
-                        key={user.id}
-                        className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-3"
-                      >
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-[var(--ink-0)]">
-                              {user.email ?? user.id}
-                            </p>
-                            <p className="mt-1 text-[11px] text-[var(--ink-1)]">
-                              {user.name ?? "No name"} · {user.plan}
-                            </p>
-                            <p className="mt-1 truncate text-[10px] text-[var(--ink-1)]">
-                              {user.id}
-                            </p>
-                            <div className="mt-2 flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                              {user.isAdmin ? (
-                                <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[var(--accent-0)]">
-                                  Admin
-                                </span>
-                              ) : null}
-                              {user.betaUser ? (
-                                <span className="rounded-full border border-[var(--accent-2)] px-2 py-1 text-[var(--accent-2)]">
-                                  Beta
-                                </span>
-                              ) : null}
+                    {paginatedAdminUsers.map((user) => {
+                      const memberships = adminMemberships[user.id] ?? null;
+                      const isExpanded = adminExpandedUserId === user.id;
+                      const isLoadingMemberships =
+                        adminMembershipsLoadingUserId === user.id && !memberships;
+                      return (
+                        <article
+                          key={user.id}
+                          className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-3"
+                        >
+                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-[var(--ink-0)]">
+                                {user.email ?? user.id}
+                              </p>
+                              <p className="mt-1 text-[11px] text-[var(--ink-1)]">
+                                {user.name ?? "No name"} · {user.plan}
+                              </p>
+                              <p className="mt-1 truncate text-[10px] text-[var(--ink-1)]">
+                                {user.id}
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                                {user.isAdmin ? (
+                                  <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[var(--accent-0)]">
+                                    Admin
+                                  </span>
+                                ) : null}
+                                {user.betaUser ? (
+                                  <span className="rounded-full border border-[var(--accent-2)] px-2 py-1 text-[var(--accent-2)]">
+                                    Beta
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3 text-xs">
+                              <label className="inline-flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={user.betaUser}
+                                  disabled={adminUpdatingUserId === user.id}
+                                  onChange={async (event) => {
+                                    setAdminUpdatingUserId(user.id);
+                                    const result = await updateAdminUserFlags({
+                                      id: user.id,
+                                      betaUser: event.target.checked,
+                                    });
+                                    if (result.ok) {
+                                      setAdminUsers((prev) =>
+                                        prev.map((entry) =>
+                                          entry.id === user.id
+                                            ? { ...entry, betaUser: event.target.checked }
+                                            : entry
+                                        )
+                                      );
+                                    } else {
+                                      setAdminUsersError(result.error);
+                                    }
+                                    setAdminUpdatingUserId(null);
+                                  }}
+                                />
+                                Beta
+                              </label>
+                              <label className="inline-flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={user.isAdmin}
+                                  disabled={adminUpdatingUserId === user.id}
+                                  onChange={async (event) => {
+                                    setAdminUpdatingUserId(user.id);
+                                    const result = await updateAdminUserFlags({
+                                      id: user.id,
+                                      isAdmin: event.target.checked,
+                                    });
+                                    if (result.ok) {
+                                      setAdminUsers((prev) =>
+                                        prev.map((entry) =>
+                                          entry.id === user.id
+                                            ? { ...entry, isAdmin: event.target.checked }
+                                            : entry
+                                        )
+                                      );
+                                    } else {
+                                      setAdminUsersError(result.error);
+                                    }
+                                    setAdminUpdatingUserId(null);
+                                  }}
+                                />
+                                Admin
+                              </label>
+                              <button
+                                className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                                onClick={() => void toggleAdminUserMembershipPreview(user.id)}
+                              >
+                                {isExpanded ? "Hide links" : "Show links"}
+                              </button>
+                              <button
+                                className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                                onClick={() => void toggleAdminMembershipEditor(user.id)}
+                              >
+                                Manage
+                              </button>
                             </div>
                           </div>
-                          <div className="flex flex-wrap items-center gap-3 text-xs">
-                            <label className="inline-flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={user.betaUser}
-                                disabled={adminUpdatingUserId === user.id}
-                                onChange={async (event) => {
-                                  setAdminUpdatingUserId(user.id);
-                                  const result = await updateAdminUserFlags({
-                                    id: user.id,
-                                    betaUser: event.target.checked,
-                                  });
-                                  if (result.ok) {
-                                    setAdminUsers((prev) =>
-                                      prev.map((entry) =>
-                                        entry.id === user.id
-                                          ? { ...entry, betaUser: event.target.checked }
-                                          : entry
-                                      )
-                                    );
-                                  } else {
-                                    setAdminUsersError(result.error);
-                                  }
-                                  setAdminUpdatingUserId(null);
-                                }}
-                              />
-                              Beta
-                            </label>
-                            <label className="inline-flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={user.isAdmin}
-                                disabled={adminUpdatingUserId === user.id}
-                                onChange={async (event) => {
-                                  setAdminUpdatingUserId(user.id);
-                                  const result = await updateAdminUserFlags({
-                                    id: user.id,
-                                    isAdmin: event.target.checked,
-                                  });
-                                  if (result.ok) {
-                                    setAdminUsers((prev) =>
-                                      prev.map((entry) =>
-                                        entry.id === user.id
-                                          ? { ...entry, isAdmin: event.target.checked }
-                                          : entry
-                                      )
-                                    );
-                                  } else {
-                                    setAdminUsersError(result.error);
-                                  }
-                                  setAdminUpdatingUserId(null);
-                                }}
-                              />
-                              Admin
-                            </label>
-                            <button
-                              className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                              onClick={() => void toggleAdminMembershipEditor(user.id)}
-                            >
-                              Memberships
-                            </button>
-                          </div>
-                        </div>
-                      </article>
-                    ))}
+                          {isExpanded ? (
+                            <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3">
+                              {isLoadingMemberships ? (
+                                <p className="text-xs text-[var(--ink-1)]">
+                                  Loading linked clubs and teams...
+                                </p>
+                              ) : memberships ? (
+                                <div className="grid gap-3 lg:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <h5 className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                                        Clubs
+                                      </h5>
+                                      <span className="text-[10px] text-[var(--ink-1)]">
+                                        {memberships.clubMemberships.length}
+                                      </span>
+                                    </div>
+                                    {memberships.clubMemberships.length ? (
+                                      <div className="space-y-2">
+                                        {memberships.clubMemberships.map((membership) => (
+                                          <div
+                                            key={membership.id}
+                                            className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2"
+                                          >
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              <span className="text-xs font-semibold text-[var(--ink-0)]">
+                                                {membership.clubName}
+                                              </span>
+                                              <span
+                                                className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-wide ${
+                                                  membership.clubStatus === "archived"
+                                                    ? "border-[var(--accent-1)] text-[var(--accent-1)]"
+                                                    : "border-[var(--line)] text-[var(--ink-1)]"
+                                                }`}
+                                              >
+                                                {membership.clubStatus}
+                                              </span>
+                                              {membership.isClubAdmin ? (
+                                                <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--accent-0)]">
+                                                  Club admin
+                                                </span>
+                                              ) : null}
+                                            </div>
+                                            <p className="mt-1 text-[11px] text-[var(--ink-1)]">
+                                              Role: {membership.clubRole}
+                                            </p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs text-[var(--ink-1)]">
+                                        No linked clubs.
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <h5 className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                                        Teams
+                                      </h5>
+                                      <span className="text-[10px] text-[var(--ink-1)]">
+                                        {memberships.teamMemberships.length}
+                                      </span>
+                                    </div>
+                                    {memberships.teamMemberships.length ? (
+                                      <div className="space-y-2">
+                                        {memberships.teamMemberships.map((membership) => (
+                                          <div
+                                            key={membership.id}
+                                            className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2"
+                                          >
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              <span className="text-xs font-semibold text-[var(--ink-0)]">
+                                                {membership.teamName}
+                                              </span>
+                                              <span
+                                                className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-wide ${
+                                                  membership.teamStatus === "archived"
+                                                    ? "border-[var(--accent-1)] text-[var(--accent-1)]"
+                                                    : "border-[var(--line)] text-[var(--ink-1)]"
+                                                }`}
+                                              >
+                                                {membership.teamStatus}
+                                              </span>
+                                              {membership.isTeamAdmin ? (
+                                                <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--accent-0)]">
+                                                  Team admin
+                                                </span>
+                                              ) : null}
+                                            </div>
+                                            <p className="mt-1 text-[11px] text-[var(--ink-1)]">
+                                              {membership.teamRole}
+                                              {membership.teamPosition
+                                                ? ` · ${membership.teamPosition}`
+                                                : ""}
+                                              {membership.ageGroup
+                                                ? ` · ${membership.ageGroup}`
+                                                : ""}
+                                              {membership.seasonLabel
+                                                ? ` · ${membership.seasonLabel}`
+                                                : ""}
+                                            </p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs text-[var(--ink-1)]">
+                                        No linked teams.
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-[var(--ink-1)]">
+                                  No membership data loaded yet.
+                                </p>
+                              )}
+                            </div>
+                          ) : null}
+                        </article>
+                      );
+                    })}
                     {filteredAdminUsers.length > adminUsersPageSize ? (
                       <div className="mt-2 flex items-center justify-between text-xs text-[var(--ink-1)]">
                         <button
