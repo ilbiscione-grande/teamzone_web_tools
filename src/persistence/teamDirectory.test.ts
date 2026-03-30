@@ -129,4 +129,106 @@ describe("teamDirectory", () => {
       jerseyType: "sash",
     });
   });
+
+  it("filters out archived clubs and archived teams from the directory", () => {
+    const clubs = buildTeamDirectory({
+      currentUserId: "user-1",
+      clubMemberships: [
+        {
+          club_id: "club-1",
+          club_role: "staff",
+          is_club_admin: true,
+          clubs: {
+            id: "club-1",
+            name: "Archived Club",
+            slug: "archived-club",
+            logo_url: null,
+            status: "archived",
+            kit_shirt: "#111111",
+            kit_shirt_secondary: "#222222",
+            kit_shorts: "#333333",
+            kit_socks: "#444444",
+            kit_vest: null,
+            kit_jersey_type: "solid",
+          },
+        },
+        {
+          club_id: "club-2",
+          club_role: "staff",
+          is_club_admin: true,
+          clubs: {
+            id: "club-2",
+            name: "Active Club",
+            slug: "active-club",
+            logo_url: null,
+            status: "active",
+            kit_shirt: "#111111",
+            kit_shirt_secondary: "#222222",
+            kit_shorts: "#333333",
+            kit_socks: "#444444",
+            kit_vest: null,
+            kit_jersey_type: "solid",
+          },
+        },
+      ],
+      teams: [
+        {
+          id: "team-1",
+          club_id: "club-1",
+          name: "Archived Club Team",
+          slug: "archived-club-team",
+          team_type: "boys",
+          age_group: null,
+          season_label: null,
+          status: "active",
+          club_logo: null,
+          kit_shirt: null,
+          kit_shirt_secondary: null,
+          kit_shorts: null,
+          kit_socks: null,
+          kit_vest: null,
+          kit_jersey_type: null,
+        },
+        {
+          id: "team-2",
+          club_id: "club-2",
+          name: "Archived Team",
+          slug: "archived-team",
+          team_type: "boys",
+          age_group: null,
+          season_label: null,
+          status: "archived",
+          club_logo: null,
+          kit_shirt: null,
+          kit_shirt_secondary: null,
+          kit_shorts: null,
+          kit_socks: null,
+          kit_vest: null,
+          kit_jersey_type: null,
+        },
+        {
+          id: "team-3",
+          club_id: "club-2",
+          name: "Active Team",
+          slug: "active-team",
+          team_type: "boys",
+          age_group: null,
+          season_label: null,
+          status: "active",
+          club_logo: null,
+          kit_shirt: null,
+          kit_shirt_secondary: null,
+          kit_shorts: null,
+          kit_socks: null,
+          kit_vest: null,
+          kit_jersey_type: null,
+        },
+      ],
+      teamMembers: [],
+    });
+
+    expect(clubs).toHaveLength(1);
+    expect(clubs[0]?.name).toBe("Active Club");
+    expect(clubs[0]?.teams.map((team) => team.name)).toEqual(["Active Team"]);
+  });
 });

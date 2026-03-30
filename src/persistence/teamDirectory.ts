@@ -214,6 +214,7 @@ export const buildTeamDirectory = (params: {
   teams: TeamRow[];
   teamMembers: TeamMemberRow[];
   currentUserId: string;
+  includeArchived?: boolean;
 }): TeamDirectoryClub[] => {
   const teamsByClubId = new Map<string, TeamRow[]>();
   params.teams.forEach((team) => {
@@ -244,7 +245,13 @@ export const buildTeamDirectory = (params: {
         return;
       }
       const club = clubValue;
+      if (!params.includeArchived && club.status !== "active") {
+        return;
+      }
       const teams = (teamsByClubId.get(membership.club_id) ?? [])
+        .filter((team) =>
+          params.includeArchived ? true : (team.status ?? "active") === "active"
+        )
         .slice()
         .sort((a, b) => a.name.localeCompare(b.name, "sv"))
         .map((team) => {
@@ -293,6 +300,12 @@ export const buildTeamDirectory = (params: {
 };
 
 export const fetchClubTeamDirectory = async () => {
+  return fetchClubTeamDirectoryWithOptions();
+};
+
+export const fetchClubTeamDirectoryWithOptions = async (options?: {
+  includeArchived?: boolean;
+}) => {
   if (!supabase) {
     return { ok: false as const, error: "Supabase not configured." };
   }
@@ -319,7 +332,13 @@ export const fetchClubTeamDirectory = async () => {
   }
 
   const clubMemberships = (clubMembershipData ?? []) as ClubMembershipRow[];
-  const clubIds = clubMemberships.map((membership) => membership.club_id);
+  const visibleClubMemberships = (options?.includeArchived ? clubMemberships : clubMemberships.filter((membership) => {
+    const club = Array.isArray(membership.clubs)
+      ? membership.clubs[0] ?? null
+      : membership.clubs;
+    return club?.status === "active";
+  }));
+  const clubIds = visibleClubMemberships.map((membership) => membership.club_id);
   if (clubIds.length === 0) {
     const legacy = await fetchTeamsWithSquad();
     if (!legacy.ok) {
@@ -340,14 +359,17 @@ export const fetchClubTeamDirectory = async () => {
     return { ok: false as const, error: teamError.message };
   }
 
-  const teams = (teamData ?? []) as TeamRow[];
+  const teams = ((teamData ?? []) as TeamRow[]).filter((team) =>
+    options?.includeArchived ? true : (team.status ?? "active") === "active"
+  );
   const teamIds = teams.map((team) => team.id);
   if (teamIds.length === 0) {
     return { ok: true as const, clubs: buildTeamDirectory({
-      clubMemberships,
+      clubMemberships: visibleClubMemberships,
       teams: [],
       teamMembers: [],
       currentUserId,
+      includeArchived: options?.includeArchived,
     }) };
   }
 
@@ -365,12 +387,103 @@ export const fetchClubTeamDirectory = async () => {
   return {
     ok: true as const,
     clubs: buildTeamDirectory({
-      clubMemberships,
+      clubMemberships: visibleClubMemberships,
       teams,
       teamMembers: (teamMembersData ?? []) as TeamMemberRow[],
       currentUserId,
+      includeArchived: options?.includeArchived,
     }),
   };
+};
+
+export const archiveClubDirectory = async (clubId: string) => {
+  if (!supabase) {
+    return { ok: false as const, error: "Supabase not configured." };
+  }
+  const { error } = await supabase
+    .from("clubs")
+    .update({
+      status: "archived",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", clubId);
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+  return { ok: true as const };
+};
+
+export const restoreClubDirectory = async (clubId: string) => {
+  if (!supabase) {
+    return { ok: false as const, error: "Supabase not configured." };
+  }
+  const { error } = await supabase
+    .from("clubs")
+    .update({
+      status: "active",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", clubId);
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+  return { ok: true as const };
+};
+
+export const deleteClubDirectory = async (clubId: string) => {
+  if (!supabase) {
+    return { ok: false as const, error: "Supabase not configured." };
+  }
+  const { error } = await supabase.from("clubs").delete().eq("id", clubId);
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+  return { ok: true as const };
+};
+
+export const archiveTeamDirectory = async (teamId: string) => {
+  if (!supabase) {
+    return { ok: false as const, error: "Supabase not configured." };
+  }
+  const { error } = await supabase
+    .from("teams")
+    .update({
+      status: "archived",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", teamId);
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+  return { ok: true as const };
+};
+
+export const restoreTeamDirectory = async (teamId: string) => {
+  if (!supabase) {
+    return { ok: false as const, error: "Supabase not configured." };
+  }
+  const { error } = await supabase
+    .from("teams")
+    .update({
+      status: "active",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", teamId);
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+  return { ok: true as const };
+};
+
+export const deleteTeamDirectory = async (teamId: string) => {
+  if (!supabase) {
+    return { ok: false as const, error: "Supabase not configured." };
+  }
+  const { error } = await supabase.from("teams").delete().eq("id", teamId);
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+  return { ok: true as const };
 };
 
 export const updateClubDirectoryDetails = async (payload: {

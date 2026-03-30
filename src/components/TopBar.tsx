@@ -41,7 +41,13 @@ import {
   updateTeamWithSquad,
 } from "@/persistence/teamSquads";
 import {
-  fetchClubTeamDirectory,
+  archiveClubDirectory,
+  archiveTeamDirectory,
+  deleteClubDirectory,
+  deleteTeamDirectory,
+  fetchClubTeamDirectoryWithOptions,
+  restoreClubDirectory,
+  restoreTeamDirectory,
 } from "@/persistence/teamDirectory";
 import { saveDefaultTeamSquad } from "@/persistence/defaultTeamSquads";
 import { saveDefaultLinkedTeam } from "@/persistence/defaultLinkedTeams";
@@ -246,7 +252,7 @@ export default function TopBar() {
     }
     setSquadPresetsLoading(true);
     setSquadPresetsError(null);
-    const result = await fetchClubTeamDirectory();
+    const result = await fetchClubTeamDirectoryWithOptions({ includeArchived: true });
     if (!result.ok) {
       setSquadPresetsError(result.error);
       setSquadPresets([]);
@@ -436,7 +442,9 @@ export default function TopBar() {
   const editableSquad = manageBaseSquad;
   const manageDirectoryTeams = useMemo<ManageDirectoryTeamOption[]>(
     () =>
-      squadPresetDirectory.flatMap((club) =>
+      squadPresetDirectory
+        .filter((club) => club.status === "active")
+        .flatMap((club) =>
         club.teams.map((team) => ({
           clubId: club.id,
           clubName: club.name,
@@ -456,7 +464,39 @@ export default function TopBar() {
     [squadPresetDirectory]
   );
   const manageDirectoryClubs = useMemo(
-    () => squadPresetDirectory.filter((club) => club.teams.length > 0),
+    () =>
+      squadPresetDirectory.filter(
+        (club) => club.status === "active" && club.teams.some((team) => team.status === "active")
+      ),
+    [squadPresetDirectory]
+  );
+  const archivedDirectoryClubs = useMemo(
+    () =>
+      squadPresetDirectory
+        .filter((club) => club.status === "archived")
+        .map((club) => ({
+          id: club.id,
+          name: club.name,
+          canReactivate: club.isCurrentUserClubAdmin,
+        })),
+    [squadPresetDirectory]
+  );
+  const archivedDirectoryTeams = useMemo(
+    () =>
+      squadPresetDirectory.flatMap((club) =>
+        club.teams
+          .filter((team) => team.status === "archived")
+          .map((team) => ({
+            id: team.id,
+            clubId: club.id,
+            clubName: club.name,
+            teamName: team.name,
+            teamType: team.teamType,
+            ageGroup: team.ageGroup,
+            seasonLabel: team.seasonLabel,
+            canReactivate: club.isCurrentUserClubAdmin || team.isCurrentUserTeamAdmin,
+          }))
+      ),
     [squadPresetDirectory]
   );
   const currentHomeLinkedTeam =
@@ -520,6 +560,120 @@ export default function TopBar() {
       return;
     }
     setCurrentActiveTeam(nextTeam.id, nextClub.name, nextTeam.name);
+  };
+  const archiveManagedClub = async () => {
+    if (!managedDirectoryTeam || !managedDirectoryTeam.isCurrentUserClubAdmin) {
+      setManagePresetStatus("Club admin required.");
+      return;
+    }
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Archive club "${managedDirectoryTeam.clubName}"? It will be hidden from active team lists.`
+      )
+    ) {
+      return;
+    }
+    const result = await archiveClubDirectory(managedDirectoryTeam.clubId);
+    if (!result.ok) {
+      setManagePresetStatus(result.error);
+      return;
+    }
+    await refreshManageTeamDirectory();
+    setManageTopPanel("none");
+    setManagePresetStatus(`Archived club ${managedDirectoryTeam.clubName}.`);
+  };
+  const deleteManagedClub = async () => {
+    if (!managedDirectoryTeam || !managedDirectoryTeam.isCurrentUserClubAdmin) {
+      setManagePresetStatus("Club admin required.");
+      return;
+    }
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Delete club "${managedDirectoryTeam.clubName}" permanently? This also deletes its teams and memberships.`
+      )
+    ) {
+      return;
+    }
+    const result = await deleteClubDirectory(managedDirectoryTeam.clubId);
+    if (!result.ok) {
+      setManagePresetStatus(result.error);
+      return;
+    }
+    await refreshManageTeamDirectory();
+    setManageTopPanel("none");
+    setManagePresetStatus(`Deleted club ${managedDirectoryTeam.clubName}.`);
+  };
+  const archiveManagedTeam = async () => {
+    if (
+      !managedDirectoryTeam ||
+      (!managedDirectoryTeam.isCurrentUserClubAdmin &&
+        !managedDirectoryTeam.isCurrentUserTeamAdmin)
+    ) {
+      setManagePresetStatus("Team admin or club admin required.");
+      return;
+    }
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Archive team "${managedDirectoryTeam.teamName}"? It will be hidden from active team lists.`
+      )
+    ) {
+      return;
+    }
+    const result = await archiveTeamDirectory(managedDirectoryTeam.teamId);
+    if (!result.ok) {
+      setManagePresetStatus(result.error);
+      return;
+    }
+    await refreshManageTeamDirectory();
+    setManageTopPanel("none");
+    setManagePresetStatus(`Archived team ${managedDirectoryTeam.teamName}.`);
+  };
+  const deleteManagedTeam = async () => {
+    if (
+      !managedDirectoryTeam ||
+      (!managedDirectoryTeam.isCurrentUserClubAdmin &&
+        !managedDirectoryTeam.isCurrentUserTeamAdmin)
+    ) {
+      setManagePresetStatus("Team admin or club admin required.");
+      return;
+    }
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Delete team "${managedDirectoryTeam.teamName}" permanently?`
+      )
+    ) {
+      return;
+    }
+    const result = await deleteTeamDirectory(managedDirectoryTeam.teamId);
+    if (!result.ok) {
+      setManagePresetStatus(result.error);
+      return;
+    }
+    await refreshManageTeamDirectory();
+    setManageTopPanel("none");
+    setManagePresetStatus(`Deleted team ${managedDirectoryTeam.teamName}.`);
+  };
+  const restoreArchivedClub = async (clubId: string, clubName: string) => {
+    const result = await restoreClubDirectory(clubId);
+    if (!result.ok) {
+      setManagePresetStatus(result.error);
+      return;
+    }
+    await refreshManageTeamDirectory();
+    setManagePresetStatus(`Reactivated club ${clubName}.`);
+  };
+  const restoreArchivedTeam = async (teamId: string, teamName: string) => {
+    const result = await restoreTeamDirectory(teamId);
+    if (!result.ok) {
+      setManagePresetStatus(result.error);
+      return;
+    }
+    await refreshManageTeamDirectory();
+    setManagePresetStatus(`Reactivated team ${teamName}.`);
   };
   const managedDirectoryMemberMap = useMemo(() => {
     const entries = new Map<string, ManageDirectoryMemberOption>();
@@ -2964,6 +3118,22 @@ export default function TopBar() {
                               squadPresetsLoading={squadPresetsLoading}
                               squadPresetsError={squadPresetsError}
                               managePresetStatus={managePresetStatus}
+                              archivedClubs={archivedDirectoryClubs}
+                              archivedTeams={archivedDirectoryTeams}
+                              canArchiveCurrentClub={
+                                managedDirectoryTeam?.isCurrentUserClubAdmin === true
+                              }
+                              canDeleteCurrentClub={
+                                managedDirectoryTeam?.isCurrentUserClubAdmin === true
+                              }
+                              canArchiveCurrentTeam={
+                                managedDirectoryTeam?.isCurrentUserClubAdmin === true ||
+                                managedDirectoryTeam?.isCurrentUserTeamAdmin === true
+                              }
+                              canDeleteCurrentTeam={
+                                managedDirectoryTeam?.isCurrentUserClubAdmin === true ||
+                                managedDirectoryTeam?.isCurrentUserTeamAdmin === true
+                              }
                               onCurrentActiveClubIdChange={setCurrentActiveClub}
                               onCurrentActiveTeamIdChange={setCurrentActiveTeamById}
                               onManageSelectedDirectoryClubIdChange={setManageSelectedDirectoryClubId}
@@ -2980,6 +3150,24 @@ export default function TopBar() {
                                       )
                                   : null
                               }
+                              onArchiveCurrentClub={() => {
+                                void archiveManagedClub();
+                              }}
+                              onDeleteCurrentClub={() => {
+                                void deleteManagedClub();
+                              }}
+                              onArchiveCurrentTeam={() => {
+                                void archiveManagedTeam();
+                              }}
+                              onDeleteCurrentTeam={() => {
+                                void deleteManagedTeam();
+                              }}
+                              onRestoreArchivedClub={(clubId, clubName) => {
+                                void restoreArchivedClub(clubId, clubName);
+                              }}
+                              onRestoreArchivedTeam={(teamId, teamName) => {
+                                void restoreArchivedTeam(teamId, teamName);
+                              }}
                             />
                           ) : (
                             <ManageTeamsTeamSetup

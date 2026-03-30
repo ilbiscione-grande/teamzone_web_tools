@@ -1,6 +1,10 @@
 "use client";
 
+import { useState } from "react";
+
 type ManageTeamsSourceTeam = {
+  clubId: string;
+  teamId: string;
   clubName: string;
   teamName: string;
   clubMembershipRole: string;
@@ -24,6 +28,23 @@ type ManageTeamsDirectoryOption = {
 type ManageTeamsDirectoryClubOption = {
   id: string;
   name: string;
+};
+
+type ManageTeamsArchivedClubOption = {
+  id: string;
+  name: string;
+  canReactivate: boolean;
+};
+
+type ManageTeamsArchivedTeamOption = {
+  id: string;
+  clubId: string;
+  clubName: string;
+  teamName: string;
+  teamType: string;
+  ageGroup?: string | null;
+  seasonLabel?: string | null;
+  canReactivate: boolean;
 };
 
 type ManageTeamsSourcePanelProps = {
@@ -50,6 +71,12 @@ type ManageTeamsSourcePanelProps = {
   squadPresetsLoading: boolean;
   squadPresetsError: string | null;
   managePresetStatus: string | null;
+  archivedClubs: ManageTeamsArchivedClubOption[];
+  archivedTeams: ManageTeamsArchivedTeamOption[];
+  canArchiveCurrentClub: boolean;
+  canDeleteCurrentClub: boolean;
+  canArchiveCurrentTeam: boolean;
+  canDeleteCurrentTeam: boolean;
   onCurrentActiveClubIdChange: (clubId: string) => void;
   onCurrentActiveTeamIdChange: (teamId: string) => void;
   onManageSelectedDirectoryClubIdChange: (clubId: string) => void;
@@ -57,6 +84,12 @@ type ManageTeamsSourcePanelProps = {
   onLoadDirectoryTeamIntoSide: (teamId: string, side: "home" | "away") => void;
   onSaveReusableTeam: () => void;
   onSetManagedTeamAsCurrent?: (() => void) | null;
+  onArchiveCurrentClub: () => void;
+  onDeleteCurrentClub: () => void;
+  onArchiveCurrentTeam: () => void;
+  onDeleteCurrentTeam: () => void;
+  onRestoreArchivedClub: (clubId: string, clubName: string) => void;
+  onRestoreArchivedTeam: (teamId: string, teamName: string) => void;
 };
 
 export default function ManageTeamsSourcePanel({
@@ -77,6 +110,12 @@ export default function ManageTeamsSourcePanel({
   squadPresetsLoading,
   squadPresetsError,
   managePresetStatus,
+  archivedClubs,
+  archivedTeams,
+  canArchiveCurrentClub,
+  canDeleteCurrentClub,
+  canArchiveCurrentTeam,
+  canDeleteCurrentTeam,
   onCurrentActiveClubIdChange,
   onCurrentActiveTeamIdChange,
   onManageSelectedDirectoryClubIdChange,
@@ -84,9 +123,37 @@ export default function ManageTeamsSourcePanel({
   onLoadDirectoryTeamIntoSide,
   onSaveReusableTeam,
   onSetManagedTeamAsCurrent,
+  onArchiveCurrentClub,
+  onDeleteCurrentClub,
+  onArchiveCurrentTeam,
+  onDeleteCurrentTeam,
+  onRestoreArchivedClub,
+  onRestoreArchivedTeam,
 }: ManageTeamsSourcePanelProps) {
+  const [view, setView] = useState<"active" | "archived">("active");
+
   return (
     <>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {[
+          { id: "active", label: "Active" },
+          { id: "archived", label: `Archived (${archivedClubs.length + archivedTeams.length})` },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`rounded-full border px-3 py-2 text-[11px] uppercase tracking-wide ${
+              view === tab.id
+                ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                : "border-[var(--line)] text-[var(--ink-1)]"
+            }`}
+            onClick={() => setView(tab.id as "active" | "archived")}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      {view === "active" ? (
       <div className="space-y-4">
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
           <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -206,9 +273,83 @@ export default function ManageTeamsSourcePanel({
           <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
             Club and team details
           </p>
-          <p className="mt-2 text-[11px] text-[var(--ink-1)]">
-            Appearance in Team Manager is project-local. Edit club names, team names, metadata, and other shared defaults in Admin &gt; Memberships instead.
-          </p>
+          {managedDirectoryTeam ? (
+            <div className="mt-2 space-y-3">
+              <p className="text-[11px] text-[var(--ink-1)]">
+                Klubb- och lagdata delas mellan projekt. Du kan arkivera för att dölja objektet från normala listor eller radera permanent.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-3">
+                  <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                    Club
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--ink-0)]">
+                    {managedDirectoryTeam.clubName}
+                  </p>
+                  {canArchiveCurrentClub || canDeleteCurrentClub ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {canArchiveCurrentClub ? (
+                        <button
+                          className="rounded-full border border-amber-500/50 px-3 py-2 text-[11px] uppercase tracking-wide text-amber-300 hover:brightness-110"
+                          onClick={onArchiveCurrentClub}
+                        >
+                          Archive club
+                        </button>
+                      ) : null}
+                      {canDeleteCurrentClub ? (
+                        <button
+                          className="rounded-full border border-rose-500/50 px-3 py-2 text-[11px] uppercase tracking-wide text-rose-300 hover:brightness-110"
+                          onClick={onDeleteCurrentClub}
+                        >
+                          Delete club
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-[11px] text-[var(--ink-1)]">
+                      Club admin required.
+                    </p>
+                  )}
+                </div>
+                <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-3">
+                  <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                    Team
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--ink-0)]">
+                    {managedDirectoryTeam.teamName}
+                  </p>
+                  {canArchiveCurrentTeam || canDeleteCurrentTeam ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {canArchiveCurrentTeam ? (
+                        <button
+                          className="rounded-full border border-amber-500/50 px-3 py-2 text-[11px] uppercase tracking-wide text-amber-300 hover:brightness-110"
+                          onClick={onArchiveCurrentTeam}
+                        >
+                          Archive team
+                        </button>
+                      ) : null}
+                      {canDeleteCurrentTeam ? (
+                        <button
+                          className="rounded-full border border-rose-500/50 px-3 py-2 text-[11px] uppercase tracking-wide text-rose-300 hover:brightness-110"
+                          onClick={onDeleteCurrentTeam}
+                        >
+                          Delete team
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-[11px] text-[var(--ink-1)]">
+                      Team admin or club admin required.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-[11px] text-[var(--ink-1)]">
+              Link a team first to archive or delete a club or team from here.
+            </p>
+          )}
         </div>
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -318,6 +459,85 @@ export default function ManageTeamsSourcePanel({
           )}
         </div>
       </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
+            <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+              Archived clubs
+            </p>
+            {archivedClubs.length > 0 ? (
+              <div className="mt-3 grid gap-2">
+                {archivedClubs.map((club) => (
+                  <div
+                    key={club.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-3"
+                  >
+                    <p className="text-sm text-[var(--ink-0)]">{club.name}</p>
+                    {club.canReactivate ? (
+                      <button
+                        className="rounded-full border border-[var(--accent-0)] px-3 py-2 text-[11px] uppercase tracking-wide text-[var(--accent-0)]"
+                        onClick={() => onRestoreArchivedClub(club.id, club.name)}
+                      >
+                        Reactivate club
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-[var(--ink-1)]">
+                        Club admin required
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-[var(--ink-1)]">
+                No archived clubs.
+              </p>
+            )}
+          </div>
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-4">
+            <p className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+              Archived teams
+            </p>
+            {archivedTeams.length > 0 ? (
+              <div className="mt-3 grid gap-2">
+                {archivedTeams.map((team) => (
+                  <div
+                    key={team.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/40 p-3"
+                  >
+                    <div>
+                      <p className="text-sm text-[var(--ink-0)]">
+                        {team.clubName} / {team.teamName}
+                      </p>
+                      <p className="text-[11px] text-[var(--ink-1)]">
+                        {team.teamType}
+                        {team.ageGroup ? ` • ${team.ageGroup}` : ""}
+                        {team.seasonLabel ? ` • ${team.seasonLabel}` : ""}
+                      </p>
+                    </div>
+                    {team.canReactivate ? (
+                      <button
+                        className="rounded-full border border-[var(--accent-0)] px-3 py-2 text-[11px] uppercase tracking-wide text-[var(--accent-0)]"
+                        onClick={() => onRestoreArchivedTeam(team.id, team.teamName)}
+                      >
+                        Reactivate team
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-[var(--ink-1)]">
+                        Team admin or club admin required
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-[var(--ink-1)]">
+                No archived teams.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
       {squadPresetsLoading ? (
         <p className="text-xs text-[var(--ink-1)]">Loading teams...</p>
       ) : null}
