@@ -63,6 +63,10 @@ import {
   createAdminUserClubMembership,
   createAdminTeam,
   createAdminUserTeamMembership,
+  deleteAdminClub,
+  deleteAdminTeam,
+  setAdminClubStatus,
+  setAdminTeamStatus,
   updateAdminClubDetails,
   updateAdminTeamDetails,
   updateAdminUserClubMembership,
@@ -1383,6 +1387,66 @@ export default function ProjectList() {
       kitVest: membership.kitVest,
       kitJerseyType: membership.kitJerseyType,
     });
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    await loadAdminMembershipsForUser(userId);
+    setAdminUpdatingUserId(null);
+  };
+
+  const setAdminClubMembershipStatus = async (
+    userId: string,
+    clubId: string,
+    status: "active" | "archived"
+  ) => {
+    setAdminUpdatingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await setAdminClubStatus({ clubId, status });
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    await loadAdminMembershipsForUser(userId);
+    setAdminUpdatingUserId(null);
+  };
+
+  const setAdminTeamMembershipStatus = async (
+    userId: string,
+    teamId: string,
+    status: "active" | "archived"
+  ) => {
+    setAdminUpdatingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await setAdminTeamStatus({ teamId, status });
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    await loadAdminMembershipsForUser(userId);
+    setAdminUpdatingUserId(null);
+  };
+
+  const removeAdminClub = async (userId: string, clubId: string) => {
+    setAdminUpdatingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await deleteAdminClub(clubId);
+    if (!result.ok) {
+      setAdminMembershipsError(result.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    await loadAdminMembershipsForUser(userId);
+    setAdminUpdatingUserId(null);
+  };
+
+  const removeAdminTeam = async (userId: string, teamId: string) => {
+    setAdminUpdatingUserId(userId);
+    setAdminMembershipsError(null);
+    const result = await deleteAdminTeam(teamId);
     if (!result.ok) {
       setAdminMembershipsError(result.error);
       setAdminUpdatingUserId(null);
@@ -3351,6 +3415,9 @@ export default function ProjectList() {
                             <p className="text-xs text-[var(--ink-1)]">
                               Shared logo for the whole club.
                             </p>
+                            <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Status: {membership.clubStatus}
+                            </p>
                           </div>
                         </div>
                         <input
@@ -3662,6 +3729,47 @@ export default function ProjectList() {
                           >
                             Save membership
                           </button>
+                          <button
+                            className="rounded-full border border-amber-500/50 px-3 py-2 text-[10px] uppercase tracking-wide text-amber-300 hover:brightness-110"
+                            onClick={() => {
+                              if (
+                                typeof window !== "undefined" &&
+                                !window.confirm(
+                                  membership.clubStatus === "archived"
+                                    ? `Reactivate club "${membership.clubName}"?`
+                                    : `Archive club "${membership.clubName}"?`
+                                )
+                              ) {
+                                return;
+                              }
+                              void setAdminClubMembershipStatus(
+                                activeAdminMembershipUser.id,
+                                membership.clubId,
+                                membership.clubStatus === "archived" ? "active" : "archived"
+                              );
+                            }}
+                          >
+                            {membership.clubStatus === "archived" ? "Restore club" : "Archive club"}
+                          </button>
+                          <button
+                            className="rounded-full border border-rose-500/50 px-3 py-2 text-[10px] uppercase tracking-wide text-rose-300 hover:brightness-110"
+                            onClick={() => {
+                              if (
+                                typeof window !== "undefined" &&
+                                !window.confirm(
+                                  `Delete club "${membership.clubName}" permanently?`
+                                )
+                              ) {
+                                return;
+                              }
+                              void removeAdminClub(
+                                activeAdminMembershipUser.id,
+                                membership.clubId
+                              );
+                            }}
+                          >
+                            Delete club
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -3773,6 +3881,9 @@ export default function ProjectList() {
                             </p>
                             <p className="text-xs text-[var(--ink-1)]">
                               Shared logo for this team.
+                            </p>
+                            <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Status: {membership.teamStatus}
                             </p>
                           </div>
                         </div>
@@ -4067,6 +4178,47 @@ export default function ProjectList() {
                             }
                           >
                             Save membership
+                          </button>
+                          <button
+                            className="rounded-full border border-amber-500/50 px-3 py-2 text-[10px] uppercase tracking-wide text-amber-300 hover:brightness-110"
+                            onClick={() => {
+                              if (
+                                typeof window !== "undefined" &&
+                                !window.confirm(
+                                  membership.teamStatus === "archived"
+                                    ? `Reactivate team "${membership.teamName}"?`
+                                    : `Archive team "${membership.teamName}"?`
+                                )
+                              ) {
+                                return;
+                              }
+                              void setAdminTeamMembershipStatus(
+                                activeAdminMembershipUser.id,
+                                membership.teamId,
+                                membership.teamStatus === "archived" ? "active" : "archived"
+                              );
+                            }}
+                          >
+                            {membership.teamStatus === "archived" ? "Restore team" : "Archive team"}
+                          </button>
+                          <button
+                            className="rounded-full border border-rose-500/50 px-3 py-2 text-[10px] uppercase tracking-wide text-rose-300 hover:brightness-110"
+                            onClick={() => {
+                              if (
+                                typeof window !== "undefined" &&
+                                !window.confirm(
+                                  `Delete team "${membership.teamName}" permanently?`
+                                )
+                              ) {
+                                return;
+                              }
+                              void removeAdminTeam(
+                                activeAdminMembershipUser.id,
+                                membership.teamId
+                              );
+                            }}
+                          >
+                            Delete team
                           </button>
                         </div>
                       </div>

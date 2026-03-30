@@ -45,9 +45,7 @@ import {
   archiveTeamDirectory,
   deleteClubDirectory,
   deleteTeamDirectory,
-  fetchClubTeamDirectoryWithOptions,
-  restoreClubDirectory,
-  restoreTeamDirectory,
+  fetchClubTeamDirectory,
 } from "@/persistence/teamDirectory";
 import { saveDefaultTeamSquad } from "@/persistence/defaultTeamSquads";
 import { saveDefaultLinkedTeam } from "@/persistence/defaultLinkedTeams";
@@ -252,7 +250,7 @@ export default function TopBar() {
     }
     setSquadPresetsLoading(true);
     setSquadPresetsError(null);
-    const result = await fetchClubTeamDirectoryWithOptions({ includeArchived: true });
+    const result = await fetchClubTeamDirectory();
     if (!result.ok) {
       setSquadPresetsError(result.error);
       setSquadPresets([]);
@@ -470,35 +468,6 @@ export default function TopBar() {
       ),
     [squadPresetDirectory]
   );
-  const archivedDirectoryClubs = useMemo(
-    () =>
-      squadPresetDirectory
-        .filter((club) => club.status === "archived")
-        .map((club) => ({
-          id: club.id,
-          name: club.name,
-          canReactivate: club.isCurrentUserClubAdmin,
-        })),
-    [squadPresetDirectory]
-  );
-  const archivedDirectoryTeams = useMemo(
-    () =>
-      squadPresetDirectory.flatMap((club) =>
-        club.teams
-          .filter((team) => team.status === "archived")
-          .map((team) => ({
-            id: team.id,
-            clubId: club.id,
-            clubName: club.name,
-            teamName: team.name,
-            teamType: team.teamType,
-            ageGroup: team.ageGroup,
-            seasonLabel: team.seasonLabel,
-            canReactivate: club.isCurrentUserClubAdmin || team.isCurrentUserTeamAdmin,
-          }))
-      ),
-    [squadPresetDirectory]
-  );
   const currentHomeLinkedTeam =
     manageDirectoryTeams.find((team) => team.teamId === currentHomeLinkedTeamId) ?? null;
   const currentAwayLinkedTeam =
@@ -656,24 +625,6 @@ export default function TopBar() {
     await refreshManageTeamDirectory();
     setManageTopPanel("none");
     setManagePresetStatus(`Deleted team ${managedDirectoryTeam.teamName}.`);
-  };
-  const restoreArchivedClub = async (clubId: string, clubName: string) => {
-    const result = await restoreClubDirectory(clubId);
-    if (!result.ok) {
-      setManagePresetStatus(result.error);
-      return;
-    }
-    await refreshManageTeamDirectory();
-    setManagePresetStatus(`Reactivated club ${clubName}.`);
-  };
-  const restoreArchivedTeam = async (teamId: string, teamName: string) => {
-    const result = await restoreTeamDirectory(teamId);
-    if (!result.ok) {
-      setManagePresetStatus(result.error);
-      return;
-    }
-    await refreshManageTeamDirectory();
-    setManagePresetStatus(`Reactivated team ${teamName}.`);
   };
   const managedDirectoryMemberMap = useMemo(() => {
     const entries = new Map<string, ManageDirectoryMemberOption>();
@@ -3118,8 +3069,6 @@ export default function TopBar() {
                               squadPresetsLoading={squadPresetsLoading}
                               squadPresetsError={squadPresetsError}
                               managePresetStatus={managePresetStatus}
-                              archivedClubs={archivedDirectoryClubs}
-                              archivedTeams={archivedDirectoryTeams}
                               canArchiveCurrentClub={
                                 managedDirectoryTeam?.isCurrentUserClubAdmin === true
                               }
@@ -3161,12 +3110,6 @@ export default function TopBar() {
                               }}
                               onDeleteCurrentTeam={() => {
                                 void deleteManagedTeam();
-                              }}
-                              onRestoreArchivedClub={(clubId, clubName) => {
-                                void restoreArchivedClub(clubId, clubName);
-                              }}
-                              onRestoreArchivedTeam={(teamId, teamName) => {
-                                void restoreArchivedTeam(teamId, teamName);
                               }}
                             />
                           ) : (

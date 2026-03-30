@@ -9,6 +9,7 @@ type ClubMembershipRow = {
   clubs: {
     id: string;
     name: string;
+    status: string | null;
     logo_url: string | null;
     kit_shirt: string | null;
     kit_shirt_secondary: string | null;
@@ -28,6 +29,7 @@ type TeamMembershipRow = {
   teams: {
     id: string;
     name: string;
+    status: string | null;
     club_id: string | null;
     team_type: string | null;
     age_group: string | null;
@@ -45,12 +47,14 @@ type TeamMembershipRow = {
 type ClubOptionRow = {
   id: string;
   name: string;
+  status: string | null;
 };
 
 type TeamOptionRow = {
   id: string;
   club_id: string | null;
   name: string;
+  status: string | null;
 };
 
 export async function GET(request: Request) {
@@ -67,18 +71,18 @@ export async function GET(request: Request) {
 
   const [{ data: clubsData, error: clubsError }, { data: teamsData, error: teamsError }, { data: clubMembershipsData, error: clubMembershipsError }, { data: teamMembershipsData, error: teamMembershipsError }] =
     await Promise.all([
-      admin.service.from("clubs").select("id,name").order("name", { ascending: true }),
+      admin.service.from("clubs").select("id,name,status").order("name", { ascending: true }),
       admin.service
         .from("teams")
-        .select("id,club_id,name")
+        .select("id,club_id,name,status")
         .order("name", { ascending: true }),
       admin.service
         .from("club_members")
-        .select("id,club_id,club_role,is_club_admin,clubs(id,name,logo_url,kit_shirt,kit_shirt_secondary,kit_shorts,kit_socks,kit_vest,kit_jersey_type)")
+        .select("id,club_id,club_role,is_club_admin,clubs(id,name,status,logo_url,kit_shirt,kit_shirt_secondary,kit_shorts,kit_socks,kit_vest,kit_jersey_type)")
         .eq("user_id", userId),
       admin.service
         .from("team_members")
-        .select("id,team_id,team_role,team_position,is_team_admin,teams(id,name,club_id,team_type,age_group,season_label,club_logo,kit_shirt,kit_shirt_secondary,kit_shorts,kit_socks,kit_vest,kit_jersey_type)")
+        .select("id,team_id,team_role,team_position,is_team_admin,teams(id,name,status,club_id,team_type,age_group,season_label,club_logo,kit_shirt,kit_shirt_secondary,kit_shorts,kit_socks,kit_vest,kit_jersey_type)")
         .eq("user_id", userId),
     ]);
 
@@ -90,12 +94,16 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     memberships: {
-      clubs: ((clubsData ?? []) as ClubOptionRow[]).map((club) => ({
+      clubs: ((clubsData ?? []) as ClubOptionRow[])
+        .filter((club) => (club.status ?? "active") === "active")
+        .map((club) => ({
         id: club.id,
         name: club.name,
       })),
       teams: ((teamsData ?? []) as TeamOptionRow[])
-        .filter((team) => !!team.club_id)
+        .filter(
+          (team) => !!team.club_id && (team.status ?? "active") === "active"
+        )
         .map((team) => ({
           id: team.id,
           clubId: team.club_id as string,
@@ -105,6 +113,8 @@ export async function GET(request: Request) {
         id: membership.id,
         clubId: membership.club_id,
         clubName: membership.clubs?.name ?? "Club",
+        clubStatus:
+          (membership.clubs?.status ?? "active") === "archived" ? "archived" : "active",
         clubLogoUrl: membership.clubs?.logo_url ?? null,
         kitShirt: membership.clubs?.kit_shirt ?? "#e4573f",
         kitShirtSecondary: membership.clubs?.kit_shirt_secondary ?? "#f3f3f3",
@@ -128,6 +138,8 @@ export async function GET(request: Request) {
           teamId: membership.team_id,
           clubId: membership.teams?.club_id as string,
           teamName: membership.teams?.name ?? "Team",
+          teamStatus:
+            (membership.teams?.status ?? "active") === "archived" ? "archived" : "active",
           teamLogoUrl: membership.teams?.club_logo ?? null,
           teamType: membership.teams?.team_type ?? "other",
           ageGroup: membership.teams?.age_group ?? null,
@@ -513,6 +525,80 @@ export async function PATCH(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", teamId);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (kind === "club_status") {
+    const clubId = String(body.clubId ?? "").trim();
+    const status = body.status === "archived" ? "archived" : "active";
+    if (!clubId) {
+      return NextResponse.json({ error: "Missing club id." }, { status: 400 });
+    }
+    const { error } = await admin.service
+      .from("clubs")
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", clubId);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (kind === "team_status") {
+    const teamId = String(body.teamId ?? "").trim();
+    const status = body.status === "archived" ? "archived" : "active";
+    if (!teamId) {
+      return NextResponse.json({ error: "Missing team id." }, { status: 400 });
+    }
+    const { error } = await admin.service
+      .from("teams")
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", teamId);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ error: "Unsupported membership kind." }, { status: 400 });
+}
+
+export async function DELETE(request: Request) {
+  const admin = await requireAdmin(request);
+  if (!admin.ok) {
+    return NextResponse.json({ error: admin.error }, { status: admin.status });
+  }
+
+  const body = (await request.json()) as Record<string, unknown>;
+  const kind = String(body.kind ?? "").trim();
+
+  if (kind === "club_delete") {
+    const clubId = String(body.clubId ?? "").trim();
+    if (!clubId) {
+      return NextResponse.json({ error: "Missing club id." }, { status: 400 });
+    }
+    const { error } = await admin.service.from("clubs").delete().eq("id", clubId);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (kind === "team_delete") {
+    const teamId = String(body.teamId ?? "").trim();
+    if (!teamId) {
+      return NextResponse.json({ error: "Missing team id." }, { status: 400 });
+    }
+    const { error } = await admin.service.from("teams").delete().eq("id", teamId);
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }

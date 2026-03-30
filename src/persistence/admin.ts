@@ -26,6 +26,7 @@ export type AdminClubMembershipRow = {
   id: string;
   clubId: string;
   clubName: string;
+  clubStatus: "active" | "archived";
   clubLogoUrl: string | null;
   kitShirt: string;
   kitShirtSecondary: string;
@@ -42,6 +43,7 @@ export type AdminTeamMembershipRow = {
   teamId: string;
   clubId: string;
   teamName: string;
+  teamStatus: "active" | "archived";
   teamLogoUrl: string | null;
   teamType: string;
   ageGroup: string | null;
@@ -358,6 +360,68 @@ export const updateAdminTeamDetails = async (payload: {
     body: JSON.stringify({
       kind: "team_details",
       ...payload,
+    }),
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const };
+};
+
+export const setAdminClubStatus = async (payload: {
+  clubId: string;
+  status: "active" | "archived";
+}) => {
+  const result = await adminFetch("/api/admin/memberships", {
+    method: "PATCH",
+    body: JSON.stringify({
+      kind: "club_status",
+      ...payload,
+    }),
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const };
+};
+
+export const setAdminTeamStatus = async (payload: {
+  teamId: string;
+  status: "active" | "archived";
+}) => {
+  const result = await adminFetch("/api/admin/memberships", {
+    method: "PATCH",
+    body: JSON.stringify({
+      kind: "team_status",
+      ...payload,
+    }),
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const };
+};
+
+export const deleteAdminClub = async (clubId: string) => {
+  const result = await adminFetch("/api/admin/memberships", {
+    method: "DELETE",
+    body: JSON.stringify({
+      kind: "club_delete",
+      clubId,
+    }),
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true as const };
+};
+
+export const deleteAdminTeam = async (teamId: string) => {
+  const result = await adminFetch("/api/admin/memberships", {
+    method: "DELETE",
+    body: JSON.stringify({
+      kind: "team_delete",
+      teamId,
     }),
   });
   if (!result.ok) {
