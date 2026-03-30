@@ -27,6 +27,12 @@ export type AdminClubMembershipRow = {
   clubId: string;
   clubName: string;
   clubLogoUrl: string | null;
+  kitShirt: string;
+  kitShirtSecondary: string;
+  kitShorts: string;
+  kitSocks: string;
+  kitVest: string | null;
+  kitJerseyType: "solid" | "split" | "stripe" | "sash" | "pinstripe";
   clubRole: string;
   isClubAdmin: boolean;
 };
@@ -40,12 +46,12 @@ export type AdminTeamMembershipRow = {
   teamType: string;
   ageGroup: string | null;
   seasonLabel: string | null;
-  kitShirt: string;
-  kitShirtSecondary: string;
-  kitShorts: string;
-  kitSocks: string;
+  kitShirt: string | null;
+  kitShirtSecondary: string | null;
+  kitShorts: string | null;
+  kitSocks: string | null;
   kitVest: string | null;
-  kitJerseyType: "solid" | "split" | "stripe" | "sash" | "pinstripe";
+  kitJerseyType: "solid" | "split" | "stripe" | "sash" | "pinstripe" | null;
   teamRole: string;
   teamPosition: string | null;
   isTeamAdmin: boolean;
@@ -313,6 +319,12 @@ export const updateAdminClubDetails = async (payload: {
   clubId: string;
   clubName: string;
   clubLogoUrl?: string | null;
+  kitShirt: string;
+  kitShirtSecondary: string;
+  kitShorts: string;
+  kitSocks: string;
+  kitVest?: string | null;
+  kitJerseyType: "solid" | "split" | "stripe" | "sash" | "pinstripe";
 }) => {
   const result = await adminFetch("/api/admin/memberships", {
     method: "PATCH",
@@ -334,12 +346,12 @@ export const updateAdminTeamDetails = async (payload: {
   teamType: string;
   ageGroup?: string | null;
   seasonLabel?: string | null;
-  kitShirt: string;
-  kitShirtSecondary: string;
-  kitShorts: string;
-  kitSocks: string;
+  kitShirt?: string | null;
+  kitShirtSecondary?: string | null;
+  kitShorts?: string | null;
+  kitSocks?: string | null;
   kitVest?: string | null;
-  kitJerseyType: "solid" | "split" | "stripe" | "sash" | "pinstripe";
+  kitJerseyType?: "solid" | "split" | "stripe" | "sash" | "pinstripe" | null;
 }) => {
   const result = await adminFetch("/api/admin/memberships", {
     method: "PATCH",

@@ -19,12 +19,24 @@ type ClubMembershipRow = {
     slug: string | null;
     logo_url: string | null;
     status: string;
+    kit_shirt: string | null;
+    kit_shirt_secondary: string | null;
+    kit_shorts: string | null;
+    kit_socks: string | null;
+    kit_vest: string | null;
+    kit_jersey_type: string | null;
   } | {
     id: string;
     name: string;
     slug: string | null;
     logo_url: string | null;
     status: string;
+    kit_shirt: string | null;
+    kit_shirt_secondary: string | null;
+    kit_shorts: string | null;
+    kit_socks: string | null;
+    kit_vest: string | null;
+    kit_jersey_type: string | null;
   }[] | null;
 };
 
@@ -62,6 +74,16 @@ type TeamMemberRow = {
 };
 
 const buildSquadFromMembers = (
+  club: Pick<
+    NonNullable<Exclude<ClubMembershipRow["clubs"], null | unknown[]>>,
+    | "logo_url"
+    | "kit_shirt"
+    | "kit_shirt_secondary"
+    | "kit_shorts"
+    | "kit_socks"
+    | "kit_vest"
+    | "kit_jersey_type"
+  >,
   team: Pick<
     TeamRow,
     | "id"
@@ -102,20 +124,28 @@ const buildSquadFromMembers = (
   return {
     id: team.id,
     name: team.name,
-    clubLogo: team.club_logo ?? undefined,
+    clubLogo: team.club_logo ?? club.logo_url ?? undefined,
     kit: {
-      shirt: team.kit_shirt ?? "#e4573f",
-      shirtSecondary: team.kit_shirt_secondary ?? "#f3f3f3",
-      shorts: team.kit_shorts ?? "#f3f3f3",
-      socks: team.kit_socks ?? "#f3f3f3",
-      vest: team.kit_vest ?? undefined,
+      shirt: team.kit_shirt ?? club.kit_shirt ?? "#e4573f",
+      shirtSecondary:
+        team.kit_shirt_secondary ??
+        club.kit_shirt_secondary ??
+        "#f3f3f3",
+      shorts: team.kit_shorts ?? club.kit_shorts ?? "#f3f3f3",
+      socks: team.kit_socks ?? club.kit_socks ?? "#f3f3f3",
+      vest: team.kit_vest ?? club.kit_vest ?? undefined,
       jerseyType:
         team.kit_jersey_type === "split" ||
         team.kit_jersey_type === "stripe" ||
         team.kit_jersey_type === "sash" ||
         team.kit_jersey_type === "pinstripe"
           ? team.kit_jersey_type
-          : "solid",
+          : club.kit_jersey_type === "split" ||
+              club.kit_jersey_type === "stripe" ||
+              club.kit_jersey_type === "sash" ||
+              club.kit_jersey_type === "pinstripe"
+            ? club.kit_jersey_type
+            : "solid",
     },
     players,
   };
@@ -228,7 +258,7 @@ export const buildTeamDirectory = (params: {
             ageGroup: team.age_group,
             seasonLabel: team.season_label,
             status: team.status ?? "active",
-            squad: buildSquadFromMembers(team, teamMembers),
+            squad: buildSquadFromMembers(club, team, teamMembers),
             members: teamMembers
               .map(toDirectoryMember)
               .sort(
@@ -276,7 +306,7 @@ export const fetchClubTeamDirectory = async () => {
   const { data: clubMembershipData, error: clubMembershipError } = await supabase
     .from("club_members")
     .select(
-      "club_id,club_role,is_club_admin,clubs(id,name,slug,logo_url,status)"
+      "club_id,club_role,is_club_admin,clubs(id,name,slug,logo_url,status,kit_shirt,kit_shirt_secondary,kit_shorts,kit_socks,kit_vest,kit_jersey_type)"
     )
     .eq("user_id", currentUserId);
 
@@ -347,6 +377,12 @@ export const updateClubDirectoryDetails = async (payload: {
   id: string;
   name: string;
   logoUrl?: string | null;
+  kitShirt?: string;
+  kitShirtSecondary?: string;
+  kitShorts?: string;
+  kitSocks?: string;
+  kitVest?: string | null;
+  kitJerseyType?: "solid" | "split" | "stripe" | "sash" | "pinstripe";
 }) => {
   if (!supabase) {
     return { ok: false as const, error: "Supabase not configured." };
@@ -360,6 +396,12 @@ export const updateClubDirectoryDetails = async (payload: {
     .update({
       name: nextName,
       logo_url: payload.logoUrl ?? null,
+      kit_shirt: payload.kitShirt?.trim() || "#e4573f",
+      kit_shirt_secondary: payload.kitShirtSecondary?.trim() || "#f3f3f3",
+      kit_shorts: payload.kitShorts?.trim() || "#f3f3f3",
+      kit_socks: payload.kitSocks?.trim() || "#f3f3f3",
+      kit_vest: payload.kitVest?.trim() || null,
+      kit_jersey_type: payload.kitJerseyType ?? "solid",
     })
     .eq("id", payload.id);
   if (error) {
@@ -398,12 +440,12 @@ export const updateTeamDirectoryDetails = async (payload: {
       team_type: nextTeamType,
       age_group: payload.ageGroup?.trim() || null,
       season_label: payload.seasonLabel?.trim() || null,
-      kit_shirt: payload.kitShirt?.trim() || "#e4573f",
-      kit_shirt_secondary: payload.kitShirtSecondary?.trim() || "#f3f3f3",
-      kit_shorts: payload.kitShorts?.trim() || "#f3f3f3",
-      kit_socks: payload.kitSocks?.trim() || "#f3f3f3",
+      kit_shirt: payload.kitShirt?.trim() || null,
+      kit_shirt_secondary: payload.kitShirtSecondary?.trim() || null,
+      kit_shorts: payload.kitShorts?.trim() || null,
+      kit_socks: payload.kitSocks?.trim() || null,
       kit_vest: payload.kitVest?.trim() || null,
-      kit_jersey_type: payload.kitJerseyType ?? "solid",
+      kit_jersey_type: payload.kitJerseyType ?? null,
     })
     .eq("id", payload.id);
   if (error) {

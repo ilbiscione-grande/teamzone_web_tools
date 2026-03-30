@@ -10,6 +10,12 @@ type ClubMembershipRow = {
     id: string;
     name: string;
     logo_url: string | null;
+    kit_shirt: string | null;
+    kit_shirt_secondary: string | null;
+    kit_shorts: string | null;
+    kit_socks: string | null;
+    kit_vest: string | null;
+    kit_jersey_type: string | null;
   } | null;
 };
 
@@ -68,7 +74,7 @@ export async function GET(request: Request) {
         .order("name", { ascending: true }),
       admin.service
         .from("club_members")
-        .select("id,club_id,club_role,is_club_admin,clubs(id,name,logo_url)")
+        .select("id,club_id,club_role,is_club_admin,clubs(id,name,logo_url,kit_shirt,kit_shirt_secondary,kit_shorts,kit_socks,kit_vest,kit_jersey_type)")
         .eq("user_id", userId),
       admin.service
         .from("team_members")
@@ -100,6 +106,18 @@ export async function GET(request: Request) {
         clubId: membership.club_id,
         clubName: membership.clubs?.name ?? "Club",
         clubLogoUrl: membership.clubs?.logo_url ?? null,
+        kitShirt: membership.clubs?.kit_shirt ?? "#e4573f",
+        kitShirtSecondary: membership.clubs?.kit_shirt_secondary ?? "#f3f3f3",
+        kitShorts: membership.clubs?.kit_shorts ?? "#f3f3f3",
+        kitSocks: membership.clubs?.kit_socks ?? "#f3f3f3",
+        kitVest: membership.clubs?.kit_vest ?? null,
+        kitJerseyType:
+          membership.clubs?.kit_jersey_type === "split" ||
+          membership.clubs?.kit_jersey_type === "stripe" ||
+          membership.clubs?.kit_jersey_type === "sash" ||
+          membership.clubs?.kit_jersey_type === "pinstripe"
+            ? membership.clubs.kit_jersey_type
+            : "solid",
         clubRole: membership.club_role,
         isClubAdmin: membership.is_club_admin === true,
       })),
@@ -114,10 +132,10 @@ export async function GET(request: Request) {
           teamType: membership.teams?.team_type ?? "other",
           ageGroup: membership.teams?.age_group ?? null,
           seasonLabel: membership.teams?.season_label ?? null,
-          kitShirt: membership.teams?.kit_shirt ?? "#e4573f",
-          kitShirtSecondary: membership.teams?.kit_shirt_secondary ?? "#f3f3f3",
-          kitShorts: membership.teams?.kit_shorts ?? "#f3f3f3",
-          kitSocks: membership.teams?.kit_socks ?? "#f3f3f3",
+          kitShirt: membership.teams?.kit_shirt ?? null,
+          kitShirtSecondary: membership.teams?.kit_shirt_secondary ?? null,
+          kitShorts: membership.teams?.kit_shorts ?? null,
+          kitSocks: membership.teams?.kit_socks ?? null,
           kitVest: membership.teams?.kit_vest ?? null,
           kitJerseyType:
             membership.teams?.kit_jersey_type === "split" ||
@@ -125,7 +143,7 @@ export async function GET(request: Request) {
             membership.teams?.kit_jersey_type === "sash" ||
             membership.teams?.kit_jersey_type === "pinstripe"
               ? membership.teams.kit_jersey_type
-              : "solid",
+              : null,
           teamRole: membership.team_role ?? "other",
           teamPosition: membership.team_position,
           isTeamAdmin: membership.is_team_admin === true,
@@ -406,6 +424,19 @@ export async function PATCH(request: Request) {
       typeof body.clubLogoUrl === "string" && body.clubLogoUrl.trim()
         ? body.clubLogoUrl.trim()
         : null;
+    const kitShirt = String(body.kitShirt ?? "").trim() || "#e4573f";
+    const kitShirtSecondary = String(body.kitShirtSecondary ?? "").trim() || "#f3f3f3";
+    const kitShorts = String(body.kitShorts ?? "").trim() || "#f3f3f3";
+    const kitSocks = String(body.kitSocks ?? "").trim() || "#f3f3f3";
+    const kitVest =
+      typeof body.kitVest === "string" && body.kitVest.trim() ? body.kitVest.trim() : null;
+    const kitJerseyType =
+      body.kitJerseyType === "split" ||
+      body.kitJerseyType === "stripe" ||
+      body.kitJerseyType === "sash" ||
+      body.kitJerseyType === "pinstripe"
+        ? body.kitJerseyType
+        : "solid";
     if (!clubId || !clubName) {
       return NextResponse.json({ error: "Missing club id or name." }, { status: 400 });
     }
@@ -414,6 +445,12 @@ export async function PATCH(request: Request) {
       .update({
         name: clubName,
         logo_url: clubLogoUrl,
+        kit_shirt: kitShirt,
+        kit_shirt_secondary: kitShirtSecondary,
+        kit_shorts: kitShorts,
+        kit_socks: kitSocks,
+        kit_vest: kitVest,
+        kit_jersey_type: kitJerseyType,
         updated_at: new Date().toISOString(),
       })
       .eq("id", clubId);
@@ -437,10 +474,16 @@ export async function PATCH(request: Request) {
       typeof body.seasonLabel === "string" && body.seasonLabel.trim()
         ? body.seasonLabel.trim()
         : null;
-    const kitShirt = String(body.kitShirt ?? "").trim() || "#e4573f";
-    const kitShirtSecondary = String(body.kitShirtSecondary ?? "").trim() || "#f3f3f3";
-    const kitShorts = String(body.kitShorts ?? "").trim() || "#f3f3f3";
-    const kitSocks = String(body.kitSocks ?? "").trim() || "#f3f3f3";
+    const kitShirt =
+      typeof body.kitShirt === "string" && body.kitShirt.trim() ? body.kitShirt.trim() : null;
+    const kitShirtSecondary =
+      typeof body.kitShirtSecondary === "string" && body.kitShirtSecondary.trim()
+        ? body.kitShirtSecondary.trim()
+        : null;
+    const kitShorts =
+      typeof body.kitShorts === "string" && body.kitShorts.trim() ? body.kitShorts.trim() : null;
+    const kitSocks =
+      typeof body.kitSocks === "string" && body.kitSocks.trim() ? body.kitSocks.trim() : null;
     const kitVest =
       typeof body.kitVest === "string" && body.kitVest.trim() ? body.kitVest.trim() : null;
     const kitJerseyType =
@@ -449,7 +492,7 @@ export async function PATCH(request: Request) {
       body.kitJerseyType === "sash" ||
       body.kitJerseyType === "pinstripe"
         ? body.kitJerseyType
-        : "solid";
+        : null;
     if (!teamId || !teamName) {
       return NextResponse.json({ error: "Missing team id or name." }, { status: 400 });
     }

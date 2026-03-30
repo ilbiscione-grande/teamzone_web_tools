@@ -607,6 +607,12 @@ create table if not exists clubs (
   name text not null,
   slug text unique,
   logo_url text,
+  kit_shirt text not null default '#e4573f',
+  kit_shirt_secondary text not null default '#f3f3f3',
+  kit_shorts text not null default '#f3f3f3',
+  kit_socks text not null default '#f3f3f3',
+  kit_vest text,
+  kit_jersey_type text not null default 'solid',
   created_by_user_id uuid references auth.users(id) on delete set null,
   primary_admin_user_id uuid references auth.users(id) on delete set null,
   status text not null default 'active',
@@ -814,6 +820,16 @@ alter table teams add column if not exists kit_shorts text not null default '#f3
 alter table teams add column if not exists kit_socks text not null default '#f3f3f3';
 alter table teams add column if not exists kit_vest text;
 alter table teams add column if not exists kit_jersey_type text not null default 'solid';
+alter table teams alter column kit_shirt drop not null;
+alter table teams alter column kit_shirt_secondary drop not null;
+alter table teams alter column kit_shorts drop not null;
+alter table teams alter column kit_socks drop not null;
+alter table teams alter column kit_jersey_type drop not null;
+alter table teams alter column kit_shirt drop default;
+alter table teams alter column kit_shirt_secondary drop default;
+alter table teams alter column kit_shorts drop default;
+alter table teams alter column kit_socks drop default;
+alter table teams alter column kit_jersey_type drop default;
 
 create index if not exists teams_club_id_idx on teams(club_id);
 create index if not exists teams_club_status_idx on teams(club_id, status);

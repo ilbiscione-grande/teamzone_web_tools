@@ -1213,6 +1213,12 @@ export default function ProjectList() {
       clubId: membership.clubId,
       clubName: membership.clubName,
       clubLogoUrl: membership.clubLogoUrl,
+      kitShirt: membership.kitShirt,
+      kitShirtSecondary: membership.kitShirtSecondary,
+      kitShorts: membership.kitShorts,
+      kitSocks: membership.kitSocks,
+      kitVest: membership.kitVest,
+      kitJerseyType: membership.kitJerseyType,
     });
     if (!result.ok) {
       setAdminMembershipsError(result.error);
@@ -3276,6 +3282,187 @@ export default function ProjectList() {
                           }
                           placeholder="Club logo URL or data URL"
                         />
+                        <div className="grid gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/50 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                                Club kit
+                              </p>
+                              <p className="text-xs text-[var(--ink-1)]">
+                                Base colors inherited by all teams unless a team overrides them.
+                              </p>
+                            </div>
+                            <div className="flex items-end gap-2">
+                              {[
+                                membership.kitShirt,
+                                membership.kitShirtSecondary,
+                                membership.kitShorts,
+                                membership.kitSocks,
+                              ].map((color, index) => (
+                                <span
+                                  key={`${membership.id}-club-kit-swatch-${index}`}
+                                  className="h-7 w-7 rounded-full border border-[var(--line)]"
+                                  style={{ backgroundColor: color }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Shirt
+                              <input
+                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                                value={membership.kitShirt}
+                                onChange={(event) =>
+                                  setAdminMemberships((prev) => ({
+                                    ...prev,
+                                    [activeAdminMembershipUser.id]: {
+                                      ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                      clubMemberships: (
+                                        prev[activeAdminMembershipUser.id]?.clubMemberships ??
+                                        activeAdminMemberships.clubMemberships
+                                      ).map((entry) =>
+                                        entry.id === membership.id
+                                          ? { ...entry, kitShirt: event.target.value }
+                                          : entry
+                                      ),
+                                    },
+                                  }))
+                                }
+                                placeholder="#e4573f"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Shirt secondary
+                              <input
+                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                                value={membership.kitShirtSecondary}
+                                onChange={(event) =>
+                                  setAdminMemberships((prev) => ({
+                                    ...prev,
+                                    [activeAdminMembershipUser.id]: {
+                                      ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                      clubMemberships: (
+                                        prev[activeAdminMembershipUser.id]?.clubMemberships ??
+                                        activeAdminMemberships.clubMemberships
+                                      ).map((entry) =>
+                                        entry.id === membership.id
+                                          ? { ...entry, kitShirtSecondary: event.target.value }
+                                          : entry
+                                      ),
+                                    },
+                                  }))
+                                }
+                                placeholder="#f3f3f3"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Shorts
+                              <input
+                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                                value={membership.kitShorts}
+                                onChange={(event) =>
+                                  setAdminMemberships((prev) => ({
+                                    ...prev,
+                                    [activeAdminMembershipUser.id]: {
+                                      ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                      clubMemberships: (
+                                        prev[activeAdminMembershipUser.id]?.clubMemberships ??
+                                        activeAdminMemberships.clubMemberships
+                                      ).map((entry) =>
+                                        entry.id === membership.id
+                                          ? { ...entry, kitShorts: event.target.value }
+                                          : entry
+                                      ),
+                                    },
+                                  }))
+                                }
+                                placeholder="#f3f3f3"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Socks
+                              <input
+                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                                value={membership.kitSocks}
+                                onChange={(event) =>
+                                  setAdminMemberships((prev) => ({
+                                    ...prev,
+                                    [activeAdminMembershipUser.id]: {
+                                      ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                      clubMemberships: (
+                                        prev[activeAdminMembershipUser.id]?.clubMemberships ??
+                                        activeAdminMemberships.clubMemberships
+                                      ).map((entry) =>
+                                        entry.id === membership.id
+                                          ? { ...entry, kitSocks: event.target.value }
+                                          : entry
+                                      ),
+                                    },
+                                  }))
+                                }
+                                placeholder="#f3f3f3"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Vest
+                              <input
+                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                                value={membership.kitVest ?? ""}
+                                onChange={(event) =>
+                                  setAdminMemberships((prev) => ({
+                                    ...prev,
+                                    [activeAdminMembershipUser.id]: {
+                                      ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                      clubMemberships: (
+                                        prev[activeAdminMembershipUser.id]?.clubMemberships ??
+                                        activeAdminMemberships.clubMemberships
+                                      ).map((entry) =>
+                                        entry.id === membership.id
+                                          ? { ...entry, kitVest: event.target.value || null }
+                                          : entry
+                                      ),
+                                    },
+                                  }))
+                                }
+                                placeholder="#f5d06a"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                              Jersey type
+                              <select
+                                className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
+                                value={membership.kitJerseyType}
+                                onChange={(event) =>
+                                  setAdminMemberships((prev) => ({
+                                    ...prev,
+                                    [activeAdminMembershipUser.id]: {
+                                      ...(prev[activeAdminMembershipUser.id] ?? activeAdminMemberships),
+                                      clubMemberships: (
+                                        prev[activeAdminMembershipUser.id]?.clubMemberships ??
+                                        activeAdminMemberships.clubMemberships
+                                      ).map((entry) =>
+                                        entry.id === membership.id
+                                          ? {
+                                              ...entry,
+                                              kitJerseyType:
+                                                event.target.value as AdminClubMembershipRow["kitJerseyType"],
+                                            }
+                                          : entry
+                                      ),
+                                    },
+                                  }))
+                                }
+                              >
+                                {teamJerseyTypeOptions.map((option) => (
+                                  <option key={`${membership.id}-club-jersey-${option}`} value={option}>
+                                    {option}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+                        </div>
                         <select
                           className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
                           value={membership.clubRole}
@@ -3532,18 +3719,18 @@ export default function ProjectList() {
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
-                                Team kit
+                                Team kit override
                               </p>
                               <p className="text-xs text-[var(--ink-1)]">
-                                Default appearance used when a new project starts from this team.
+                                Leave fields empty to inherit the club's default colors.
                               </p>
                             </div>
                             <div className="flex items-end gap-2">
                               {[
-                                membership.kitShirt,
-                                membership.kitShirtSecondary,
-                                membership.kitShorts,
-                                membership.kitSocks,
+                                membership.kitShirt || "transparent",
+                                membership.kitShirtSecondary || "transparent",
+                                membership.kitShorts || "transparent",
+                                membership.kitSocks || "transparent",
                               ].map((color, index) => (
                                 <span
                                   key={`${membership.id}-kit-swatch-${index}`}
@@ -3558,60 +3745,60 @@ export default function ProjectList() {
                               Shirt
                               <input
                                 className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
-                                value={membership.kitShirt}
+                                value={membership.kitShirt ?? ""}
                                 onChange={(event) =>
                                   patchAdminTeamMembershipDraft(
                                     activeAdminMembershipUser.id,
                                     membership.id,
-                                    { kitShirt: event.target.value }
+                                    { kitShirt: event.target.value || null }
                                   )
                                 }
-                                placeholder="#e4573f"
+                                placeholder="Use club default"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                               Shirt secondary
                               <input
                                 className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
-                                value={membership.kitShirtSecondary}
+                                value={membership.kitShirtSecondary ?? ""}
                                 onChange={(event) =>
                                   patchAdminTeamMembershipDraft(
                                     activeAdminMembershipUser.id,
                                     membership.id,
-                                    { kitShirtSecondary: event.target.value }
+                                    { kitShirtSecondary: event.target.value || null }
                                   )
                                 }
-                                placeholder="#f3f3f3"
+                                placeholder="Use club default"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                               Shorts
                               <input
                                 className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
-                                value={membership.kitShorts}
+                                value={membership.kitShorts ?? ""}
                                 onChange={(event) =>
                                   patchAdminTeamMembershipDraft(
                                     activeAdminMembershipUser.id,
                                     membership.id,
-                                    { kitShorts: event.target.value }
+                                    { kitShorts: event.target.value || null }
                                   )
                                 }
-                                placeholder="#f3f3f3"
+                                placeholder="Use club default"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                               Socks
                               <input
                                 className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
-                                value={membership.kitSocks}
+                                value={membership.kitSocks ?? ""}
                                 onChange={(event) =>
                                   patchAdminTeamMembershipDraft(
                                     activeAdminMembershipUser.id,
                                     membership.id,
-                                    { kitSocks: event.target.value }
+                                    { kitSocks: event.target.value || null }
                                   )
                                 }
-                                placeholder="#f3f3f3"
+                                placeholder="Use club default"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -3626,25 +3813,26 @@ export default function ProjectList() {
                                     { kitVest: event.target.value || null }
                                   )
                                 }
-                                placeholder="#f5d06a"
+                                placeholder="Use club default"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
                               Jersey type
                               <select
                                 className="h-10 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs normal-case tracking-normal text-[var(--ink-0)]"
-                                value={membership.kitJerseyType}
+                                value={membership.kitJerseyType ?? ""}
                                 onChange={(event) =>
                                   patchAdminTeamMembershipDraft(
                                     activeAdminMembershipUser.id,
                                     membership.id,
                                     {
                                       kitJerseyType:
-                                        event.target.value as AdminTeamMembershipRow["kitJerseyType"],
+                                        (event.target.value || null) as AdminTeamMembershipRow["kitJerseyType"],
                                     }
                                   )
                                 }
                               >
+                                <option value="">Use club default</option>
                                 {teamJerseyTypeOptions.map((option) => (
                                   <option key={`${membership.id}-jersey-${option}`} value={option}>
                                     {option}
