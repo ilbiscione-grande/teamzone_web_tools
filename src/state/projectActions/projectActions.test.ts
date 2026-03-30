@@ -319,6 +319,20 @@ describe("project actions", () => {
     const project = createDefaultProject("Preset Project", {
       homeTeamId: "team-home",
       awayTeamId: "team-away",
+      homeTeamSnapshot: {
+        teamId: "team-home",
+        teamName: "Preset Home",
+        clubId: "club-home",
+        clubName: "Home Club",
+        capturedAt: "2026-03-11T10:00:00.000Z",
+      },
+      awayTeamSnapshot: {
+        teamId: "team-away",
+        teamName: "Away Team",
+        clubId: "club-away",
+        clubName: "Away Club",
+        capturedAt: "2026-03-11T10:01:00.000Z",
+      },
       homeSquadPreset: {
         id: "preset-home",
         name: "Preset Home",
@@ -346,6 +360,20 @@ describe("project actions", () => {
     expect(project.teamContext).toEqual({
       homeTeamId: "team-home",
       awayTeamId: "team-away",
+      homeTeamSnapshot: {
+        teamId: "team-home",
+        teamName: "Preset Home",
+        clubId: "club-home",
+        clubName: "Home Club",
+        capturedAt: "2026-03-11T10:00:00.000Z",
+      },
+      awayTeamSnapshot: {
+        teamId: "team-away",
+        teamName: "Away Team",
+        clubId: "club-away",
+        clubName: "Away Club",
+        capturedAt: "2026-03-11T10:01:00.000Z",
+      },
     });
     expect(project.squads[0]?.players[0]?.id).not.toBe("preset-player-1");
   });

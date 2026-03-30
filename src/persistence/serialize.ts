@@ -126,10 +126,22 @@ const isSquad = (value: unknown) =>
   value.players.every(isSquadPlayer) &&
   (value.substituteIds === undefined || isStringArray(value.substituteIds));
 
+const isProjectTeamLinkSnapshot = (value: unknown) =>
+  isObject(value) &&
+  (value.teamId === undefined || isString(value.teamId)) &&
+  isString(value.teamName) &&
+  (value.clubId === undefined || isString(value.clubId)) &&
+  (value.clubName === undefined || isString(value.clubName)) &&
+  isString(value.capturedAt);
+
 const isTeamContext = (value: unknown) =>
   isObject(value) &&
   (value.homeTeamId === undefined || isString(value.homeTeamId)) &&
-  (value.awayTeamId === undefined || isString(value.awayTeamId));
+  (value.awayTeamId === undefined || isString(value.awayTeamId)) &&
+  (value.homeTeamSnapshot === undefined ||
+    isProjectTeamLinkSnapshot(value.homeTeamSnapshot)) &&
+  (value.awayTeamSnapshot === undefined ||
+    isProjectTeamLinkSnapshot(value.awayTeamSnapshot));
 
 const isPlayerLink = (value: unknown) =>
   isObject(value) &&

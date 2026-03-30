@@ -12,6 +12,7 @@ import type {
   PitchOverlay,
   PitchView,
   ProjectMode,
+  ProjectTeamLinkSnapshot,
   SquadPlayer,
   SquadPreset,
   TeamDirectoryClub,
@@ -127,6 +128,40 @@ const SHIRT_TYPES: Array<{
 
 type ManageDirectoryMemberOption = TeamDirectoryClub["teams"][number]["members"][number];
 
+const createProjectTeamLinkSnapshot = (team: {
+  clubId?: string | null;
+  clubName?: string | null;
+  teamId?: string | null;
+  teamName: string;
+}): ProjectTeamLinkSnapshot => ({
+  teamId: team.teamId ?? undefined,
+  teamName: team.teamName,
+  clubId: team.clubId ?? undefined,
+  clubName: team.clubName ?? undefined,
+  capturedAt: new Date().toISOString(),
+});
+
+const findDirectoryTeamSnapshot = (
+  clubs: TeamDirectoryClub[],
+  teamId?: string
+): ProjectTeamLinkSnapshot | undefined => {
+  if (!teamId) {
+    return undefined;
+  }
+  for (const club of clubs) {
+    const team = club.teams.find((entry) => entry.id === teamId);
+    if (team) {
+      return createProjectTeamLinkSnapshot({
+        clubId: club.id,
+        clubName: club.name,
+        teamId: team.id,
+        teamName: team.name,
+      });
+    }
+  }
+  return undefined;
+};
+
 const flattenDirectoryTeamsToPresets = (clubs: TeamDirectoryClub[]): SquadPreset[] =>
   clubs.flatMap((club) =>
     club.teams.map((team) => ({
@@ -238,6 +273,7 @@ export default function TopBar() {
   const [projectActionsOpen, setProjectActionsOpen] = useState(false);
   const [newProjectChoiceOpen, setNewProjectChoiceOpen] = useState(false);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const snapshotBackfillAttemptRef = useRef<string | null>(null);
   const [titleWidth, setTitleWidth] = useState<number | null>(null);
   const showAds = plan === "FREE";
   const canUseTemplates = plan === "PAID" && !!authUser;
@@ -297,6 +333,8 @@ export default function TopBar() {
       attachBallToPlayer: project.settings?.attachBallToPlayer ?? false,
       homeTeamId: project.teamContext?.homeTeamId,
       awayTeamId: project.teamContext?.awayTeamId,
+      homeTeamSnapshot: project.teamContext?.homeTeamSnapshot,
+      awayTeamSnapshot: project.teamContext?.awayTeamSnapshot,
     });
   };
 
@@ -401,6 +439,80 @@ export default function TopBar() {
     void refreshManageTeamDirectory();
   }, [squadPresetsOpen, authUser, plan]);
   useEffect(() => {
+    if (!project || project.isShared) {
+      snapshotBackfillAttemptRef.current = null;
+      return;
+    }
+    const homeTeamId = project.teamContext?.homeTeamId;
+    const awayTeamId = project.teamContext?.awayTeamId;
+    const needsHomeSnapshot =
+      Boolean(homeTeamId) && !project.teamContext?.homeTeamSnapshot;
+    const needsAwaySnapshot =
+      Boolean(awayTeamId) && !project.teamContext?.awayTeamSnapshot;
+    if (!needsHomeSnapshot && !needsAwaySnapshot) {
+      snapshotBackfillAttemptRef.current = null;
+      return;
+    }
+    if (!authUser || plan !== "PAID") {
+      return;
+    }
+    const attemptKey = [
+      project.id,
+      homeTeamId ?? "",
+      awayTeamId ?? "",
+      needsHomeSnapshot ? "home" : "",
+      needsAwaySnapshot ? "away" : "",
+    ].join(":");
+    if (snapshotBackfillAttemptRef.current === attemptKey) {
+      return;
+    }
+    snapshotBackfillAttemptRef.current = attemptKey;
+    let cancelled = false;
+    fetchClubTeamDirectory()
+      .then((result) => {
+        if (cancelled || !result.ok) {
+          return;
+        }
+        const homeSnapshot = needsHomeSnapshot
+          ? findDirectoryTeamSnapshot(result.clubs, homeTeamId)
+          : undefined;
+        const awaySnapshot = needsAwaySnapshot
+          ? findDirectoryTeamSnapshot(result.clubs, awayTeamId)
+          : undefined;
+        if (!homeSnapshot && !awaySnapshot) {
+          return;
+        }
+        const currentProject = useProjectStore.getState().project;
+        if (!currentProject || currentProject.id !== project.id) {
+          return;
+        }
+        useProjectStore.getState().updateProjectMeta({
+          teamContext: {
+            homeTeamId: currentProject.teamContext?.homeTeamId,
+            awayTeamId: currentProject.teamContext?.awayTeamId,
+            homeTeamSnapshot:
+              currentProject.teamContext?.homeTeamSnapshot ?? homeSnapshot,
+            awayTeamSnapshot:
+              currentProject.teamContext?.awayTeamSnapshot ?? awaySnapshot,
+          },
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    authUser,
+    plan,
+    project,
+    project?.id,
+    project?.isShared,
+    project?.teamContext?.awayTeamId,
+    project?.teamContext?.awayTeamSnapshot,
+    project?.teamContext?.homeTeamId,
+    project?.teamContext?.homeTeamSnapshot,
+  ]);
+  useEffect(() => {
     if (!manageTemplatesOpen) {
       setTemplateStatus(null);
       return;
@@ -426,8 +538,14 @@ export default function TopBar() {
     manageSide === "home" ? activeBoard?.homeSquadId : activeBoard?.awaySquadId;
   const currentHomeLinkedTeamId = project?.teamContext?.homeTeamId;
   const currentAwayLinkedTeamId = project?.teamContext?.awayTeamId;
+  const currentHomeLinkedTeamSnapshot = project?.teamContext?.homeTeamSnapshot;
+  const currentAwayLinkedTeamSnapshot = project?.teamContext?.awayTeamSnapshot;
   const manageLinkedTeamId =
     manageSide === "home" ? currentHomeLinkedTeamId : currentAwayLinkedTeamId;
+  const manageLinkedTeamSnapshot =
+    manageSide === "home"
+      ? currentHomeLinkedTeamSnapshot
+      : currentAwayLinkedTeamSnapshot;
   const manageBaseSquad =
     project?.squads.find((item) => item.id === manageSquadId) ?? null;
   const currentHomeManagedSquad =
@@ -486,6 +604,30 @@ export default function TopBar() {
     activeTeamSelection?.teamId
       ? manageDirectoryTeams.find((team) => team.teamId === activeTeamSelection.teamId) ?? null
       : null;
+  const currentHomeTeamDisplayName =
+    currentHomeLinkedTeam?.teamName ??
+    currentHomeLinkedTeamSnapshot?.teamName ??
+    currentHomeManagedSquad?.name;
+  const currentAwayTeamDisplayName =
+    currentAwayLinkedTeam?.teamName ??
+    currentAwayLinkedTeamSnapshot?.teamName ??
+    currentAwayManagedSquad?.name;
+  const currentManageSourceName = managedDirectoryTeam
+    ? `${managedDirectoryTeam.clubName} / ${managedDirectoryTeam.teamName}`
+    : manageLinkedTeamSnapshot
+      ? manageLinkedTeamSnapshot.clubName
+        ? `${manageLinkedTeamSnapshot.clubName} / ${manageLinkedTeamSnapshot.teamName}`
+        : manageLinkedTeamSnapshot.teamName
+      : manageSquad?.name?.trim() || manageLinkedTeamId || null;
+  const isUsingSavedManageSourceSnapshot =
+    !managedDirectoryTeam && Boolean(manageLinkedTeamSnapshot);
+  const currentManageSourceDescription = managedDirectoryTeam
+    ? null
+    : isUsingSavedManageSourceSnapshot
+      ? "The linked club or team is no longer in the directory. This project is using its saved team snapshot."
+      : manageLinkedTeamId
+        ? "This side is linked to a saved team outside the loaded club directory view."
+        : null;
   const currentActiveClubId =
     currentActiveDirectoryTeam?.clubId ??
     activeTeamSelection?.clubId ??
@@ -530,6 +672,25 @@ export default function TopBar() {
     }
     setCurrentActiveTeam(nextTeam.id, nextClub.name, nextTeam.name);
   };
+  const confirmDestructiveNameMatch = (
+    entityLabel: "club" | "team",
+    entityName: string
+  ) => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    const confirmation = window.confirm(
+      `Delete ${entityLabel} "${entityName}" permanently?`
+    );
+    if (!confirmation) {
+      return false;
+    }
+    const typed = window.prompt(
+      `Type the exact ${entityLabel} name to confirm deletion:`,
+      ""
+    );
+    return typed?.trim() === entityName.trim();
+  };
   const archiveManagedClub = async () => {
     if (!managedDirectoryTeam || !managedDirectoryTeam.isCurrentUserClubAdmin) {
       setManagePresetStatus("Club admin required.");
@@ -558,11 +719,9 @@ export default function TopBar() {
       return;
     }
     if (
-      typeof window !== "undefined" &&
-      !window.confirm(
-        `Delete club "${managedDirectoryTeam.clubName}" permanently? This also deletes its teams and memberships.`
-      )
+      !confirmDestructiveNameMatch("club", managedDirectoryTeam.clubName)
     ) {
+      setManagePresetStatus("Club deletion cancelled. Exact name required.");
       return;
     }
     const result = await deleteClubDirectory(managedDirectoryTeam.clubId);
@@ -610,11 +769,9 @@ export default function TopBar() {
       return;
     }
     if (
-      typeof window !== "undefined" &&
-      !window.confirm(
-        `Delete team "${managedDirectoryTeam.teamName}" permanently?`
-      )
+      !confirmDestructiveNameMatch("team", managedDirectoryTeam.teamName)
     ) {
+      setManagePresetStatus("Team deletion cancelled. Exact name required.");
       return;
     }
     const result = await deleteTeamDirectory(managedDirectoryTeam.teamId);
@@ -921,7 +1078,8 @@ export default function TopBar() {
   };
   const setProjectTeamContextForSide = (
     side: "home" | "away",
-    teamId?: string
+    teamId?: string,
+    snapshot?: ProjectTeamLinkSnapshot
   ) => {
     if (!project) {
       return;
@@ -931,10 +1089,17 @@ export default function TopBar() {
         side === "home" ? teamId : project.teamContext?.homeTeamId,
       awayTeamId:
         side === "away" ? teamId : project.teamContext?.awayTeamId,
+      homeTeamSnapshot:
+        side === "home" ? snapshot : project.teamContext?.homeTeamSnapshot,
+      awayTeamSnapshot:
+        side === "away" ? snapshot : project.teamContext?.awayTeamSnapshot,
     };
     updateProjectMeta({
       teamContext:
-        nextTeamContext.homeTeamId || nextTeamContext.awayTeamId
+        nextTeamContext.homeTeamId ||
+        nextTeamContext.awayTeamId ||
+        nextTeamContext.homeTeamSnapshot ||
+        nextTeamContext.awayTeamSnapshot
           ? nextTeamContext
           : undefined,
     });
@@ -1133,7 +1298,20 @@ export default function TopBar() {
       setSquadPresets((prev) =>
         prev.map((item) => (item.id === result.team.id ? result.team : item))
       );
-      setProjectTeamContextForSide(manageSide, result.team.id);
+      setProjectTeamContextForSide(
+        manageSide,
+        result.team.id,
+        managedDirectoryTeam
+          ? createProjectTeamLinkSnapshot({
+              clubId: managedDirectoryTeam.clubId,
+              clubName: managedDirectoryTeam.clubName,
+              teamId: result.team.id,
+              teamName: result.team.teamName ?? result.team.name,
+            })
+          : project?.teamContext?.[
+              manageSide === "home" ? "homeTeamSnapshot" : "awayTeamSnapshot"
+            ]
+      );
       setManageSelectedDirectoryTeamId(result.team.id);
       saveDefaultLinkedTeam(manageSide, result.team.id, authUser?.id ?? null);
       saveDefaultTeamSquad(manageSide, result.team.squad, authUser?.id ?? null);
@@ -1212,7 +1390,16 @@ export default function TopBar() {
     if (!nextSquadId) {
       return;
     }
-    setProjectTeamContextForSide(side, teamId);
+    setProjectTeamContextForSide(
+      side,
+      teamId,
+      createProjectTeamLinkSnapshot({
+        clubId: selectedTeam.clubId,
+        clubName: selectedTeam.clubName,
+        teamId,
+        teamName: selectedTeam.teamName,
+      })
+    );
     setManageSide(side);
     setManageSelectedDirectoryTeamId(teamId);
     setManagePresetStatus(
@@ -1239,7 +1426,7 @@ export default function TopBar() {
     if (!nextSquadId) {
       return;
     }
-    setProjectTeamContextForSide(side, manageLinkedTeamId);
+    setProjectTeamContextForSide(side, manageLinkedTeamId, manageLinkedTeamSnapshot);
     setManageSide(side);
     setManagePresetStatus(
       side === "home"
@@ -2834,8 +3021,8 @@ export default function TopBar() {
         <ManageTeamsModal
           open={squadPresetsOpen}
           manageSide={manageSide}
-          currentHomeTeamName={currentHomeLinkedTeam?.teamName ?? currentHomeManagedSquad?.name}
-          currentAwayTeamName={currentAwayLinkedTeam?.teamName ?? currentAwayManagedSquad?.name}
+          currentHomeTeamName={currentHomeTeamDisplayName}
+          currentAwayTeamName={currentAwayTeamDisplayName}
           topControls={
             <>
               <button
@@ -3041,16 +3228,10 @@ export default function TopBar() {
                                 name: team.name,
                               }))}
                               currentSourceName={
-                                managedDirectoryTeam
-                                  ? `${managedDirectoryTeam.clubName} / ${managedDirectoryTeam.teamName}`
-                                  : manageSquad?.name?.trim() || manageLinkedTeamId || null
+                                currentManageSourceName
                               }
                               currentSourceDescription={
-                                managedDirectoryTeam
-                                  ? null
-                                  : manageLinkedTeamId
-                                    ? "This side is linked to a saved team outside the loaded club directory view."
-                                  : null
+                                currentManageSourceDescription
                               }
                               manageDirectoryClubs={manageDirectoryClubs.map((club) => ({
                                 id: club.id,

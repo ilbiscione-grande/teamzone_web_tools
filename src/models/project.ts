@@ -3,6 +3,20 @@ import type { Squad } from "./squad";
 
 export type ProjectMode = "training" | "match" | "education";
 export type PitchShape = "none" | "circle" | "square" | "rect";
+export type ProjectTeamLinkSnapshot = {
+  teamId?: string;
+  teamName: string;
+  clubId?: string;
+  clubName?: string;
+  capturedAt: string;
+};
+
+export type ProjectTeamContext = {
+  homeTeamId?: string;
+  awayTeamId?: string;
+  homeTeamSnapshot?: ProjectTeamLinkSnapshot;
+  awayTeamSnapshot?: ProjectTeamLinkSnapshot;
+};
 
 export type Project = {
   id: string;
@@ -45,10 +59,7 @@ export type Project = {
   };
   sessionNotes: string;
   sessionNotesFields?: Board["notesFields"];
-  teamContext?: {
-    homeTeamId?: string;
-    awayTeamId?: string;
-  };
+  teamContext?: ProjectTeamContext;
   boards: Board[];
   squads: Squad[];
   activeBoardId?: string;

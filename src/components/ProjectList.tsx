@@ -268,7 +268,13 @@ export default function ProjectList() {
   const [adminNewTeamRole, setAdminNewTeamRole] = useState("player");
   const [adminNewTeamPosition, setAdminNewTeamPosition] = useState("");
   const [adminNewTeamAdmin, setAdminNewTeamAdmin] = useState(false);
+  const [adminSection, setAdminSection] = useState<"users" | "reports" | "analytics">(
+    "users"
+  );
   const [adminQuery, setAdminQuery] = useState("");
+  const [adminUserFilter, setAdminUserFilter] = useState<
+    "all" | "admins" | "beta" | "paid"
+  >("all");
   const [adminUsersPage, setAdminUsersPage] = useState(1);
   const [recentProjectsPage, setRecentProjectsPage] = useState(1);
   const [projectsQuery, setProjectsQuery] = useState("");
@@ -339,6 +345,15 @@ export default function ProjectList() {
   const adminUsersPageSize = 15;
   const filteredAdminUsers = adminUsers.filter((user) => {
     const q = adminQuery.trim().toLowerCase();
+    if (adminUserFilter === "admins" && !user.isAdmin) {
+      return false;
+    }
+    if (adminUserFilter === "beta" && !user.betaUser) {
+      return false;
+    }
+    if (adminUserFilter === "paid" && user.plan !== "PAID") {
+      return false;
+    }
     if (!q) {
       return true;
     }
@@ -365,6 +380,13 @@ export default function ProjectList() {
   const adminAvailableTeamsForNewMembership = activeAdminMemberships
     ? activeAdminMemberships.teams.filter((team) => team.clubId === adminNewTeamClubId)
     : [];
+  const adminSummary = {
+    users: adminUsers.length,
+    admins: adminUsers.filter((user) => user.isAdmin).length,
+    betaUsers: adminUsers.filter((user) => user.betaUser).length,
+    paidUsers: adminUsers.filter((user) => user.plan === "PAID").length,
+    reports: adminReports.length,
+  };
 
   const getBoardTemplates = (
     mode: "training" | "match" | "education",
@@ -893,11 +915,13 @@ export default function ProjectList() {
     );
   }, [createOpen, availableCreateTeams, authUser?.id, activeTeamSelection?.teamId]);
 
-  const getCreateTeamById = (teamId: string): TeamDirectoryTeam | null =>
-    availableCreateTeams.find(({ team }) => team.id === teamId)?.team ?? null;
+  const getCreateTeamEntryById = (teamId: string) =>
+    availableCreateTeams.find(({ team }) => team.id === teamId) ?? null;
 
-  const selectedHomeTeam = getCreateTeamById(selectedHomeTeamId);
-  const selectedAwayTeam = getCreateTeamById(selectedAwayTeamId);
+  const selectedHomeTeamEntry = getCreateTeamEntryById(selectedHomeTeamId);
+  const selectedAwayTeamEntry = getCreateTeamEntryById(selectedAwayTeamId);
+  const selectedHomeTeam = selectedHomeTeamEntry?.team ?? null;
+  const selectedAwayTeam = selectedAwayTeamEntry?.team ?? null;
   const createEmptySquadPreset = (
     sideName: string,
     kit: {
@@ -1080,7 +1104,7 @@ export default function ProjectList() {
 
   useEffect(() => {
     setAdminUsersPage(1);
-  }, [adminQuery]);
+  }, [adminQuery, adminUserFilter]);
 
   useEffect(() => {
     if (adminUsersPage > totalAdminUsersPages) {
@@ -1454,6 +1478,26 @@ export default function ProjectList() {
     }
     await loadAdminMembershipsForUser(userId);
     setAdminUpdatingUserId(null);
+  };
+
+  const confirmDeleteByName = (
+    entityLabel: "club" | "team",
+    entityName: string
+  ) => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    const confirmed = window.confirm(
+      `Delete ${entityLabel} "${entityName}" permanently?`
+    );
+    if (!confirmed) {
+      return false;
+    }
+    const typed = window.prompt(
+      `Type the exact ${entityLabel} name to confirm deletion:`,
+      ""
+    );
+    return typed?.trim() === entityName.trim();
   };
 
   const addAdminClubMembership = async (userId: string) => {
@@ -2433,12 +2477,6 @@ export default function ProjectList() {
                 Admin
               </h3>
               <div className="flex items-center gap-2">
-                <input
-                  className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
-                  placeholder="Search email/name/id"
-                  value={adminQuery}
-                  onChange={(event) => setAdminQuery(event.target.value)}
-                />
                 <button
                   className="rounded-full border border-[var(--line)] px-3 py-2 text-xs hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                   onClick={() => void refreshAdminData()}
@@ -2447,11 +2485,92 @@ export default function ProjectList() {
                 </button>
               </div>
             </div>
-            <div className="grid gap-4 xl:grid-cols-2">
-              <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/50 p-3">
-                <h4 className="text-xs uppercase tracking-widest text-[var(--ink-1)]">
-                  Users
-                </h4>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+              {[
+                { label: "Users", value: String(adminSummary.users) },
+                { label: "Admins", value: String(adminSummary.admins) },
+                { label: "Beta", value: String(adminSummary.betaUsers) },
+                { label: "Paid", value: String(adminSummary.paidUsers) },
+                { label: "Reports", value: String(adminSummary.reports) },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/50 px-4 py-3"
+                >
+                  <p className="text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
+                    {item.label}
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-[var(--ink-0)]">
+                    {item.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: "users", label: `Users (${adminSummary.users})` },
+                { id: "reports", label: `Reports (${adminSummary.reports})` },
+                { id: "analytics", label: "Analytics" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`rounded-full border px-4 py-2 text-xs uppercase tracking-widest ${
+                    adminSection === tab.id
+                      ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                      : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                  }`}
+                  onClick={() =>
+                    setAdminSection(tab.id as "users" | "reports" | "analytics")
+                  }
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            {adminSection === "users" ? (
+              <div className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/50 p-3">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h4 className="text-xs uppercase tracking-widest text-[var(--ink-1)]">
+                      Users
+                    </h4>
+                    <p className="mt-1 text-[11px] text-[var(--ink-1)]">
+                      Search users, toggle flags and open memberships.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                      className="h-9 rounded-full border border-[var(--line)] bg-transparent px-3 text-xs text-[var(--ink-0)]"
+                      placeholder="Search email/name/id"
+                      value={adminQuery}
+                      onChange={(event) => setAdminQuery(event.target.value)}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: "all", label: "All" },
+                        { id: "admins", label: "Admins" },
+                        { id: "beta", label: "Beta" },
+                        { id: "paid", label: "Paid" },
+                      ].map((filter) => (
+                        <button
+                          key={filter.id}
+                          className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-wide ${
+                            adminUserFilter === filter.id
+                              ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                              : "border-[var(--line)] text-[var(--ink-1)]"
+                          }`}
+                          onClick={() =>
+                            setAdminUserFilter(
+                              filter.id as "all" | "admins" | "beta" | "paid"
+                            )
+                          }
+                        >
+                          {filter.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
                 {adminUsersLoading ? (
                   <p className="text-xs text-[var(--ink-1)]">Loading users...</p>
                 ) : adminUsersError ? (
@@ -2459,20 +2578,35 @@ export default function ProjectList() {
                 ) : (
                   <div className="space-y-2 pr-1">
                     {paginatedAdminUsers.map((user) => (
-                        <article
-                          key={user.id}
-                          className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2"
-                        >
-                          <p className="text-xs font-semibold text-[var(--ink-0)]">
-                            {user.email ?? user.id}
-                          </p>
-                          <p className="text-[11px] text-[var(--ink-1)]">
-                            {user.name ?? "No name"} · {user.plan}
-                          </p>
-                          <p className="truncate text-[10px] text-[var(--ink-1)]">
-                            {user.id}
-                          </p>
-                          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                      <article
+                        key={user.id}
+                        className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-3"
+                      >
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-[var(--ink-0)]">
+                              {user.email ?? user.id}
+                            </p>
+                            <p className="mt-1 text-[11px] text-[var(--ink-1)]">
+                              {user.name ?? "No name"} · {user.plan}
+                            </p>
+                            <p className="mt-1 truncate text-[10px] text-[var(--ink-1)]">
+                              {user.id}
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                              {user.isAdmin ? (
+                                <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[var(--accent-0)]">
+                                  Admin
+                                </span>
+                              ) : null}
+                              {user.betaUser ? (
+                                <span className="rounded-full border border-[var(--accent-2)] px-2 py-1 text-[var(--accent-2)]">
+                                  Beta
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-xs">
                             <label className="inline-flex items-center gap-2">
                               <input
                                 type="checkbox"
@@ -2498,7 +2632,7 @@ export default function ProjectList() {
                                   setAdminUpdatingUserId(null);
                                 }}
                               />
-                              Beta user
+                              Beta
                             </label>
                             <label className="inline-flex items-center gap-2">
                               <input
@@ -2534,8 +2668,9 @@ export default function ProjectList() {
                               Memberships
                             </button>
                           </div>
-                        </article>
-                      ))}
+                        </div>
+                      </article>
+                    ))}
                     {filteredAdminUsers.length > adminUsersPageSize ? (
                       <div className="mt-2 flex items-center justify-between text-xs text-[var(--ink-1)]">
                         <button
@@ -2566,6 +2701,8 @@ export default function ProjectList() {
                   </div>
                 )}
               </div>
+            ) : null}
+            {adminSection === "reports" ? (
               <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/50 p-3">
                 <h4 className="text-xs uppercase tracking-widest text-[var(--ink-1)]">
                   Reports / Moderation
@@ -2602,7 +2739,8 @@ export default function ProjectList() {
                   </div>
                 )}
               </div>
-            </div>
+            ) : null}
+            {adminSection === "analytics" ? (
             <div className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3">
               <h4 className="text-xs uppercase tracking-widest text-[var(--ink-1)]">
                 Usage analytics (last 30 days)
@@ -2779,6 +2917,7 @@ export default function ProjectList() {
                 </>
               )}
             </div>
+            ) : null}
           </section>
         )}
       </div>
@@ -3297,6 +3436,24 @@ export default function ProjectList() {
                         : undefined,
                     homeTeamId: selectedHomeTeam?.id,
                     awayTeamId: selectedAwayTeam?.id,
+                    homeTeamSnapshot: selectedHomeTeam
+                      ? {
+                          teamId: selectedHomeTeam.id,
+                          teamName: selectedHomeTeam.name,
+                          clubId: selectedHomeTeam.clubId,
+                          clubName: selectedHomeTeamEntry?.club.name,
+                          capturedAt: new Date().toISOString(),
+                        }
+                      : undefined,
+                    awayTeamSnapshot: selectedAwayTeam
+                      ? {
+                          teamId: selectedAwayTeam.id,
+                          teamName: selectedAwayTeam.name,
+                          clubId: selectedAwayTeam.clubId,
+                          clubName: selectedAwayTeamEntry?.club.name,
+                          capturedAt: new Date().toISOString(),
+                        }
+                      : undefined,
                     homeSquadPreset,
                     awaySquadPreset,
                     startingFormation:
@@ -3754,12 +3911,7 @@ export default function ProjectList() {
                           <button
                             className="rounded-full border border-rose-500/50 px-3 py-2 text-[10px] uppercase tracking-wide text-rose-300 hover:brightness-110"
                             onClick={() => {
-                              if (
-                                typeof window !== "undefined" &&
-                                !window.confirm(
-                                  `Delete club "${membership.clubName}" permanently?`
-                                )
-                              ) {
+                              if (!confirmDeleteByName("club", membership.clubName)) {
                                 return;
                               }
                               void removeAdminClub(
@@ -4204,12 +4356,7 @@ export default function ProjectList() {
                           <button
                             className="rounded-full border border-rose-500/50 px-3 py-2 text-[10px] uppercase tracking-wide text-rose-300 hover:brightness-110"
                             onClick={() => {
-                              if (
-                                typeof window !== "undefined" &&
-                                !window.confirm(
-                                  `Delete team "${membership.teamName}" permanently?`
-                                )
-                              ) {
+                              if (!confirmDeleteByName("team", membership.teamName)) {
                                 return;
                               }
                               void removeAdminTeam(

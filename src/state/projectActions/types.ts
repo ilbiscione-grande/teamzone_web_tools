@@ -3,6 +3,7 @@ import type {
   DrawableObject,
   Plan,
   Project,
+  ProjectTeamLinkSnapshot,
   ProjectSummary,
   Squad,
   SquadPlayer,
@@ -52,6 +53,8 @@ export type ProjectActions = {
       }[];
       homeTeamId?: string;
       awayTeamId?: string;
+      homeTeamSnapshot?: ProjectTeamLinkSnapshot;
+      awayTeamSnapshot?: ProjectTeamLinkSnapshot;
       homeSquadPreset?: Squad;
       awaySquadPreset?: Squad;
       startingFormation?: string;

@@ -51,6 +51,20 @@ describe("serialize/deserialize", () => {
     teamContext: {
       homeTeamId: "team-home",
       awayTeamId: "team-away",
+      homeTeamSnapshot: {
+        teamId: "team-home",
+        teamName: "Home Team",
+        clubId: "club-home",
+        clubName: "Home Club",
+        capturedAt: "2026-03-11T10:30:00.000Z",
+      },
+      awayTeamSnapshot: {
+        teamId: "team-away",
+        teamName: "Away Team",
+        clubId: "club-away",
+        clubName: "Away Club",
+        capturedAt: "2026-03-11T10:31:00.000Z",
+      },
     },
     squads: [
       {

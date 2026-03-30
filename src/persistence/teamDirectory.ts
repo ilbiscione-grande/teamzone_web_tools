@@ -434,9 +434,13 @@ export const deleteClubDirectory = async (clubId: string) => {
   if (!supabase) {
     return { ok: false as const, error: "Supabase not configured." };
   }
-  const { error } = await supabase.from("clubs").delete().eq("id", clubId);
-  if (error) {
-    return { ok: false as const, error: error.message };
+  const { error: teamsError } = await supabase.from("teams").delete().eq("club_id", clubId);
+  if (teamsError) {
+    return { ok: false as const, error: teamsError.message };
+  }
+  const { error: clubError } = await supabase.from("clubs").delete().eq("id", clubId);
+  if (clubError) {
+    return { ok: false as const, error: clubError.message };
   }
   return { ok: true as const };
 };

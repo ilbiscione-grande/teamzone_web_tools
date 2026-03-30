@@ -586,9 +586,16 @@ export async function DELETE(request: Request) {
     if (!clubId) {
       return NextResponse.json({ error: "Missing club id." }, { status: 400 });
     }
-    const { error } = await admin.service.from("clubs").delete().eq("id", clubId);
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    const { error: teamsError } = await admin.service
+      .from("teams")
+      .delete()
+      .eq("club_id", clubId);
+    if (teamsError) {
+      return NextResponse.json({ error: teamsError.message }, { status: 500 });
+    }
+    const { error: clubError } = await admin.service.from("clubs").delete().eq("id", clubId);
+    if (clubError) {
+      return NextResponse.json({ error: clubError.message }, { status: 500 });
     }
     return NextResponse.json({ ok: true });
   }

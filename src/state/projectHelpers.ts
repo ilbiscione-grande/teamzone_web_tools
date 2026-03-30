@@ -7,6 +7,7 @@ import type {
   Project,
   ProjectMode,
   ProjectSummary,
+  ProjectTeamLinkSnapshot,
   Squad,
   SharedBoardSnapshot,
   PitchShape,
@@ -328,6 +329,8 @@ export const createDefaultProject = (
       boardTemplates?: CreateBoardTemplate[];
       homeTeamId?: string;
       awayTeamId?: string;
+      homeTeamSnapshot?: ProjectTeamLinkSnapshot;
+      awayTeamSnapshot?: ProjectTeamLinkSnapshot;
       homeSquadPreset?: Squad;
       awaySquadPreset?: Squad;
       startingFormation?: string;
@@ -462,10 +465,15 @@ export const createDefaultProject = (
     sessionNotes: "",
     sessionNotesFields: {},
     teamContext:
-      options?.homeTeamId || options?.awayTeamId
+      options?.homeTeamId ||
+      options?.awayTeamId ||
+      options?.homeTeamSnapshot ||
+      options?.awayTeamSnapshot
         ? {
             homeTeamId: options?.homeTeamId,
             awayTeamId: options?.awayTeamId,
+            homeTeamSnapshot: options?.homeTeamSnapshot,
+            awayTeamSnapshot: options?.awayTeamSnapshot,
           }
         : undefined,
     boards,
