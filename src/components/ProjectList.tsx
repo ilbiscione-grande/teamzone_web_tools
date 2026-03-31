@@ -1219,7 +1219,7 @@ export default function ProjectList() {
     if (!result.ok) {
       setAdminMembershipsError(result.error);
       setAdminMembershipsLoadingUserId(null);
-      return;
+      return null;
     }
     setAdminMemberships((prev) => ({
       ...prev,
@@ -1243,6 +1243,17 @@ export default function ProjectList() {
     setAdminNewTeamPosition("");
     setAdminNewTeamAdmin(false);
     setAdminMembershipsLoadingUserId(null);
+    return result.memberships;
+  };
+
+  const getFirstAdminInlineClubKey = (memberships: AdminUserMemberships) => {
+    if (memberships.clubMemberships[0]) {
+      return memberships.clubMemberships[0].id;
+    }
+    if (memberships.teamMemberships[0]) {
+      return `group-${memberships.teamMemberships[0].clubId}`;
+    }
+    return null;
   };
 
   const toggleAdminMembershipEditor = async (userId: string) => {
@@ -1257,7 +1268,10 @@ export default function ProjectList() {
     setAdminFocusedClubMembershipId(null);
     setAdminFocusedTeamMembershipId(null);
     setAdminMembershipEditorUserId(userId);
-    await loadAdminMembershipsForUser(userId);
+    const loadedMemberships = await loadAdminMembershipsForUser(userId);
+    setAdminExpandedClubMembershipId(
+      loadedMemberships ? getFirstAdminInlineClubKey(loadedMemberships) : null
+    );
   };
 
   const openAdminClubMembershipEditor = async (userId: string, membershipId: string) => {
@@ -1287,10 +1301,12 @@ export default function ProjectList() {
       return;
     }
     setAdminExpandedUserId(userId);
-    setAdminExpandedClubMembershipId(null);
-    if (!adminMemberships[userId]) {
-      await loadAdminMembershipsForUser(userId);
+    const cachedMemberships = adminMemberships[userId];
+    if (cachedMemberships) {
+      setAdminExpandedClubMembershipId(getFirstAdminInlineClubKey(cachedMemberships));
+      return;
     }
+    await loadAdminMembershipsForUser(userId);
   };
 
   const saveAdminClubMembership = async (
@@ -2860,8 +2876,13 @@ export default function ProjectList() {
                                                     : ""}
                                                 </p>
                                               </div>
-                                              <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
-                                                {isClubExpanded ? "Hide" : "Show"}
+                                              <span
+                                                className={`text-base leading-none text-[var(--ink-1)] transition-transform ${
+                                                  isClubExpanded ? "rotate-180" : ""
+                                                }`}
+                                                aria-hidden="true"
+                                              >
+                                                ▾
                                               </span>
                                             </button>
                                             <div className="mt-2 flex flex-wrap gap-2">
