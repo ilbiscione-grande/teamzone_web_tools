@@ -1394,7 +1394,7 @@ export default function ProjectList() {
   ) => {
     setAdminUpdatingUserId(userId);
     setAdminMembershipsError(null);
-    const result = await updateAdminClubDetails({
+    const detailsResult = await updateAdminClubDetails({
       clubId: membership.clubId,
       clubName: membership.clubName,
       clubLogoUrl: membership.clubLogoUrl,
@@ -1405,8 +1405,18 @@ export default function ProjectList() {
       kitVest: membership.kitVest,
       kitJerseyType: membership.kitJerseyType,
     });
-    if (!result.ok) {
-      setAdminMembershipsError(result.error);
+    if (!detailsResult.ok) {
+      setAdminMembershipsError(detailsResult.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    const membershipResult = await updateAdminUserClubMembership({
+      membershipId: membership.id,
+      clubRole: membership.clubRole,
+      isClubAdmin: membership.isClubAdmin,
+    });
+    if (!membershipResult.ok) {
+      setAdminMembershipsError(membershipResult.error);
       setAdminUpdatingUserId(null);
       return;
     }
@@ -1524,7 +1534,7 @@ export default function ProjectList() {
   ) => {
     setAdminUpdatingUserId(userId);
     setAdminMembershipsError(null);
-    const result = await updateAdminTeamDetails({
+    const detailsResult = await updateAdminTeamDetails({
       teamId: membership.teamId,
       teamName: membership.teamName,
       teamLogoUrl: membership.teamLogoUrl,
@@ -1538,8 +1548,19 @@ export default function ProjectList() {
       kitVest: membership.kitVest,
       kitJerseyType: membership.kitJerseyType,
     });
-    if (!result.ok) {
-      setAdminMembershipsError(result.error);
+    if (!detailsResult.ok) {
+      setAdminMembershipsError(detailsResult.error);
+      setAdminUpdatingUserId(null);
+      return;
+    }
+    const membershipResult = await updateAdminUserTeamMembership({
+      membershipId: membership.id,
+      teamRole: membership.teamRole,
+      teamPosition: membership.teamPosition,
+      isTeamAdmin: membership.isTeamAdmin,
+    });
+    if (!membershipResult.ok) {
+      setAdminMembershipsError(membershipResult.error);
       setAdminUpdatingUserId(null);
       return;
     }
