@@ -248,6 +248,9 @@ export default function ProjectList() {
     null
   );
   const [adminExpandedUserId, setAdminExpandedUserId] = useState<string | null>(null);
+  const [adminExpandedClubMembershipId, setAdminExpandedClubMembershipId] = useState<string | null>(
+    null
+  );
   const [adminMembershipTab, setAdminMembershipTab] = useState<"clubs" | "teams">("clubs");
   const [adminFocusedClubMembershipId, setAdminFocusedClubMembershipId] = useState<string | null>(
     null
@@ -1280,9 +1283,11 @@ export default function ProjectList() {
   const toggleAdminUserMembershipPreview = async (userId: string) => {
     if (adminExpandedUserId === userId) {
       setAdminExpandedUserId(null);
+      setAdminExpandedClubMembershipId(null);
       return;
     }
     setAdminExpandedUserId(userId);
+    setAdminExpandedClubMembershipId(null);
     if (!adminMemberships[userId]) {
       await loadAdminMembershipsForUser(userId);
     }
@@ -2670,6 +2675,34 @@ export default function ProjectList() {
                             return groups;
                           }, [])
                         : [];
+                      const inlineClubSections = memberships
+                        ? [
+                            ...memberships.clubMemberships.map((membership) => ({
+                              key: membership.id,
+                              clubId: membership.clubId,
+                              clubName: membership.clubName,
+                              clubMembership: membership,
+                              teamItems:
+                                teamMembershipGroups.find(
+                                  (group) => group.clubId === membership.clubId
+                                )?.items ?? [],
+                            })),
+                            ...teamMembershipGroups
+                              .filter(
+                                (group) =>
+                                  !memberships.clubMemberships.some(
+                                    (membership) => membership.clubId === group.clubId
+                                  )
+                              )
+                              .map((group) => ({
+                                key: `group-${group.clubId}`,
+                                clubId: group.clubId,
+                                clubName: group.clubName,
+                                clubMembership: null,
+                                teamItems: group.items,
+                              })),
+                          ]
+                        : [];
                       return (
                         <article
                           key={user.id}
@@ -2769,154 +2802,153 @@ export default function ProjectList() {
                                   Loading linked clubs and teams...
                                 </p>
                               ) : memberships ? (
-                                <div className="grid gap-3 lg:grid-cols-2">
-                                  <div className="space-y-2">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <h5 className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                                        Clubs
-                                      </h5>
-                                      <span className="text-[10px] text-[var(--ink-1)]">
-                                        {memberships.clubMemberships.length}
-                                      </span>
-                                    </div>
-                                    {memberships.clubMemberships.length ? (
-                                      <div className="space-y-2">
-                                        {memberships.clubMemberships.map((membership) => (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <h5 className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
+                                      Clubs
+                                    </h5>
+                                    <span className="text-[10px] text-[var(--ink-1)]">
+                                      {inlineClubSections.length}
+                                    </span>
+                                  </div>
+                                  {inlineClubSections.length ? (
+                                    <div className="space-y-2">
+                                      {inlineClubSections.map((section) => {
+                                        const isClubExpanded =
+                                          adminExpandedClubMembershipId === section.key;
+                                        return (
                                           <div
-                                            key={membership.id}
+                                            key={section.key}
                                             className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2"
                                           >
-                                            <div className="flex flex-wrap items-center gap-2">
-                                              <span className="text-xs font-semibold text-[var(--ink-0)]">
-                                                {membership.clubName}
-                                              </span>
-                                              <span
-                                                className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-wide ${
-                                                  membership.clubStatus === "archived"
-                                                    ? "border-[var(--accent-1)] text-[var(--accent-1)]"
-                                                    : "border-[var(--line)] text-[var(--ink-1)]"
-                                                }`}
-                                              >
-                                                {membership.clubStatus}
-                                              </span>
-                                              {membership.isClubAdmin ? (
-                                                <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--accent-0)]">
-                                                  Club admin
-                                                </span>
-                                              ) : null}
-                                            </div>
-                                            <p className="mt-1 text-[11px] text-[var(--ink-1)]">
-                                              Role: {membership.clubRole}
-                                            </p>
-                                            <div className="mt-2">
-                                              <button
-                                                className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                                                onClick={() =>
-                                                  void openAdminClubMembershipEditor(
-                                                    user.id,
-                                                    membership.id
-                                                  )
-                                                }
-                                              >
-                                                Manage
-                                              </button>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <p className="text-xs text-[var(--ink-1)]">
-                                        No linked clubs.
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="space-y-2">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <h5 className="text-[11px] uppercase tracking-widest text-[var(--ink-1)]">
-                                        Teams
-                                      </h5>
-                                      <span className="text-[10px] text-[var(--ink-1)]">
-                                        {memberships.teamMemberships.length}
-                                      </span>
-                                    </div>
-                                    {memberships.teamMemberships.length ? (
-                                      <div className="space-y-2">
-                                        {teamMembershipGroups.map((group) => (
-                                          <div
-                                            key={group.clubId}
-                                            className="rounded-xl border border-[var(--line)] bg-[var(--panel)]/80 px-3 py-2"
-                                          >
-                                            <div className="mb-2 flex items-center justify-between gap-2">
-                                              <p className="text-[10px] uppercase tracking-widest text-[var(--accent-2)]">
-                                                {group.clubName}
-                                              </p>
-                                              <span className="text-[10px] text-[var(--ink-1)]">
-                                                {group.items.length} team
-                                                {group.items.length === 1 ? "" : "s"}
-                                              </span>
-                                            </div>
-                                            <div className="space-y-2">
-                                              {group.items.map((membership) => (
-                                                <div
-                                                  key={membership.id}
-                                                  className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2"
-                                                >
-                                                  <div className="flex flex-wrap items-center gap-2">
-                                                    <span className="text-xs font-semibold text-[var(--ink-0)]">
-                                                      {membership.teamName}
-                                                    </span>
+                                            <button
+                                              className="flex w-full items-start justify-between gap-3 text-left"
+                                              onClick={() =>
+                                                setAdminExpandedClubMembershipId((current) =>
+                                                  current === section.key ? null : section.key
+                                                )
+                                              }
+                                            >
+                                              <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                  <span className="text-xs font-semibold text-[var(--ink-0)]">
+                                                    {section.clubName}
+                                                  </span>
+                                                  {section.clubMembership ? (
                                                     <span
                                                       className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-wide ${
-                                                        membership.teamStatus === "archived"
+                                                        section.clubMembership.clubStatus === "archived"
                                                           ? "border-[var(--accent-1)] text-[var(--accent-1)]"
                                                           : "border-[var(--line)] text-[var(--ink-1)]"
                                                       }`}
                                                     >
-                                                      {membership.teamStatus}
+                                                      {section.clubMembership.clubStatus}
                                                     </span>
-                                                    {membership.isTeamAdmin ? (
-                                                      <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--accent-0)]">
-                                                        Team admin
-                                                      </span>
-                                                    ) : null}
-                                                  </div>
-                                                  <p className="mt-1 text-[11px] text-[var(--ink-1)]">
-                                                    {membership.teamRole}
-                                                    {membership.teamPosition
-                                                      ? ` · ${membership.teamPosition}`
-                                                      : ""}
-                                                    {membership.ageGroup
-                                                      ? ` · ${membership.ageGroup}`
-                                                      : ""}
-                                                    {membership.seasonLabel
-                                                      ? ` · ${membership.seasonLabel}`
-                                                      : ""}
-                                                  </p>
-                                                  <div className="mt-2">
-                                                    <button
-                                                      className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                                                      onClick={() =>
-                                                        void openAdminTeamMembershipEditor(
-                                                          user.id,
-                                                          membership.id
-                                                        )
-                                                      }
-                                                    >
-                                                      Manage
-                                                    </button>
-                                                  </div>
+                                                  ) : null}
+                                                  {section.clubMembership?.isClubAdmin ? (
+                                                    <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--accent-0)]">
+                                                      Club admin
+                                                    </span>
+                                                  ) : null}
                                                 </div>
-                                              ))}
+                                                <p className="mt-1 text-[11px] text-[var(--ink-1)]">
+                                                  {section.clubMembership
+                                                    ? `Role: ${section.clubMembership.clubRole}`
+                                                    : "No direct club membership"}
+                                                  {section.teamItems.length
+                                                    ? ` · ${section.teamItems.length} team${section.teamItems.length === 1 ? "" : "s"}`
+                                                    : ""}
+                                                </p>
+                                              </div>
+                                              <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                                                {isClubExpanded ? "Hide" : "Show"}
+                                              </span>
+                                            </button>
+                                            <div className="mt-2 flex flex-wrap gap-2">
+                                              {section.clubMembership ? (
+                                                <button
+                                                  className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                                                  onClick={() =>
+                                                    void openAdminClubMembershipEditor(
+                                                      user.id,
+                                                      section.clubMembership.id
+                                                    )
+                                                  }
+                                                >
+                                                  Manage club
+                                                </button>
+                                              ) : null}
                                             </div>
+                                            {isClubExpanded ? (
+                                              <div className="mt-3 space-y-2 border-t border-[var(--line)] pt-3">
+                                                {section.teamItems.length ? (
+                                                  section.teamItems.map((membership) => (
+                                                    <div
+                                                      key={membership.id}
+                                                      className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)]/50 px-3 py-2"
+                                                    >
+                                                      <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="text-xs font-semibold text-[var(--ink-0)]">
+                                                          {membership.teamName}
+                                                        </span>
+                                                        <span
+                                                          className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-wide ${
+                                                            membership.teamStatus === "archived"
+                                                              ? "border-[var(--accent-1)] text-[var(--accent-1)]"
+                                                              : "border-[var(--line)] text-[var(--ink-1)]"
+                                                          }`}
+                                                        >
+                                                          {membership.teamStatus}
+                                                        </span>
+                                                        {membership.isTeamAdmin ? (
+                                                          <span className="rounded-full border border-[var(--accent-0)] px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--accent-0)]">
+                                                            Team admin
+                                                          </span>
+                                                        ) : null}
+                                                      </div>
+                                                      <p className="mt-1 text-[11px] text-[var(--ink-1)]">
+                                                        {membership.teamRole}
+                                                        {membership.teamPosition
+                                                          ? ` · ${membership.teamPosition}`
+                                                          : ""}
+                                                        {membership.ageGroup
+                                                          ? ` · ${membership.ageGroup}`
+                                                          : ""}
+                                                        {membership.seasonLabel
+                                                          ? ` · ${membership.seasonLabel}`
+                                                          : ""}
+                                                      </p>
+                                                      <div className="mt-2">
+                                                        <button
+                                                          className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                                                          onClick={() =>
+                                                            void openAdminTeamMembershipEditor(
+                                                              user.id,
+                                                              membership.id
+                                                            )
+                                                          }
+                                                        >
+                                                          Manage team
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  ))
+                                                ) : (
+                                                  <p className="text-xs text-[var(--ink-1)]">
+                                                    No linked teams in this club.
+                                                  </p>
+                                                )}
+                                              </div>
+                                            ) : null}
                                           </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <p className="text-xs text-[var(--ink-1)]">
-                                        No linked teams.
-                                      </p>
-                                    )}
-                                  </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-[var(--ink-1)]">
+                                      No linked clubs or teams.
+                                    </p>
+                                  )}
                                 </div>
                               ) : (
                                 <p className="text-xs text-[var(--ink-1)]">
