@@ -1267,31 +1267,46 @@ export default function ProjectList() {
     setAdminMembershipTab("clubs");
     setAdminFocusedClubMembershipId(null);
     setAdminFocusedTeamMembershipId(null);
-    setAdminMembershipEditorUserId(userId);
+    const cachedMemberships = adminMemberships[userId];
+    if (cachedMemberships) {
+      setAdminMembershipEditorUserId(userId);
+      setAdminExpandedClubMembershipId(getFirstAdminInlineClubKey(cachedMemberships));
+      return;
+    }
     const loadedMemberships = await loadAdminMembershipsForUser(userId);
-    setAdminExpandedClubMembershipId(
-      loadedMemberships ? getFirstAdminInlineClubKey(loadedMemberships) : null
-    );
+    if (!loadedMemberships) {
+      return;
+    }
+    setAdminMembershipEditorUserId(userId);
+    setAdminExpandedClubMembershipId(getFirstAdminInlineClubKey(loadedMemberships));
   };
 
   const openAdminClubMembershipEditor = async (userId: string, membershipId: string) => {
     setAdminMembershipTab("clubs");
     setAdminFocusedClubMembershipId(membershipId);
     setAdminFocusedTeamMembershipId(null);
-    setAdminMembershipEditorUserId(userId);
-    if (!adminMemberships[userId]) {
-      await loadAdminMembershipsForUser(userId);
+    const cachedMemberships = adminMemberships[userId];
+    if (!cachedMemberships) {
+      const loadedMemberships = await loadAdminMembershipsForUser(userId);
+      if (!loadedMemberships) {
+        return;
+      }
     }
+    setAdminMembershipEditorUserId(userId);
   };
 
   const openAdminTeamMembershipEditor = async (userId: string, membershipId: string) => {
     setAdminMembershipTab("teams");
     setAdminFocusedClubMembershipId(null);
     setAdminFocusedTeamMembershipId(membershipId);
-    setAdminMembershipEditorUserId(userId);
-    if (!adminMemberships[userId]) {
-      await loadAdminMembershipsForUser(userId);
+    const cachedMemberships = adminMemberships[userId];
+    if (!cachedMemberships) {
+      const loadedMemberships = await loadAdminMembershipsForUser(userId);
+      if (!loadedMemberships) {
+        return;
+      }
     }
+    setAdminMembershipEditorUserId(userId);
   };
 
   const toggleAdminUserMembershipPreview = async (userId: string) => {
