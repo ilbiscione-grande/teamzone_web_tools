@@ -39,6 +39,7 @@ type ColorPalettePickerProps = {
   allowTransparent?: boolean;
   className?: string;
   colors?: string[];
+  fallbackColor?: string;
 };
 
 export default function ColorPalettePicker({
@@ -49,6 +50,7 @@ export default function ColorPalettePicker({
   allowTransparent,
   className,
   colors,
+  fallbackColor,
 }: ColorPalettePickerProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -83,7 +85,9 @@ export default function ColorPalettePicker({
 
   const triggerIsTransparent = value === "transparent";
   const triggerColor =
-    normalizedValue ?? DEFAULT_COLOR_PALETTE[0];
+    normalizedValue ??
+    normalizeHexColor(fallbackColor) ??
+    DEFAULT_COLOR_PALETTE[0];
 
   return (
     <div

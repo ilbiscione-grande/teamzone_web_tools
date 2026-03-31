@@ -57,6 +57,23 @@ type TeamOptionRow = {
   status: string | null;
 };
 
+const normalizeHexColor = (value?: string | null) => {
+  const next = String(value ?? "").trim().toLowerCase();
+  if (/^#[0-9a-f]{3}$/.test(next)) {
+    return `#${next[1]}${next[1]}${next[2]}${next[2]}${next[3]}${next[3]}`;
+  }
+  if (/^#[0-9a-f]{6}$/.test(next)) {
+    return next;
+  }
+  return null;
+};
+
+const normalizeRequiredKitColor = (value: string | null | undefined, fallback: string) =>
+  normalizeHexColor(value) ?? fallback;
+
+const normalizeOptionalKitColor = (value: string | null | undefined) =>
+  normalizeHexColor(value);
+
 export async function GET(request: Request) {
   const admin = await requireAdmin(request);
   if (!admin.ok) {
@@ -116,11 +133,14 @@ export async function GET(request: Request) {
         clubStatus:
           (membership.clubs?.status ?? "active") === "archived" ? "archived" : "active",
         clubLogoUrl: membership.clubs?.logo_url ?? null,
-        kitShirt: membership.clubs?.kit_shirt ?? "#e4573f",
-        kitShirtSecondary: membership.clubs?.kit_shirt_secondary ?? "#f3f3f3",
-        kitShorts: membership.clubs?.kit_shorts ?? "#f3f3f3",
-        kitSocks: membership.clubs?.kit_socks ?? "#f3f3f3",
-        kitVest: membership.clubs?.kit_vest ?? null,
+        kitShirt: normalizeRequiredKitColor(membership.clubs?.kit_shirt, "#e4573f"),
+        kitShirtSecondary: normalizeRequiredKitColor(
+          membership.clubs?.kit_shirt_secondary,
+          "#f3f3f3"
+        ),
+        kitShorts: normalizeRequiredKitColor(membership.clubs?.kit_shorts, "#f3f3f3"),
+        kitSocks: normalizeRequiredKitColor(membership.clubs?.kit_socks, "#f3f3f3"),
+        kitVest: normalizeOptionalKitColor(membership.clubs?.kit_vest),
         kitJerseyType:
           membership.clubs?.kit_jersey_type === "split" ||
           membership.clubs?.kit_jersey_type === "stripe" ||
@@ -144,11 +164,13 @@ export async function GET(request: Request) {
           teamType: membership.teams?.team_type ?? "other",
           ageGroup: membership.teams?.age_group ?? null,
           seasonLabel: membership.teams?.season_label ?? null,
-          kitShirt: membership.teams?.kit_shirt ?? null,
-          kitShirtSecondary: membership.teams?.kit_shirt_secondary ?? null,
-          kitShorts: membership.teams?.kit_shorts ?? null,
-          kitSocks: membership.teams?.kit_socks ?? null,
-          kitVest: membership.teams?.kit_vest ?? null,
+          kitShirt: normalizeOptionalKitColor(membership.teams?.kit_shirt),
+          kitShirtSecondary: normalizeOptionalKitColor(
+            membership.teams?.kit_shirt_secondary
+          ),
+          kitShorts: normalizeOptionalKitColor(membership.teams?.kit_shorts),
+          kitSocks: normalizeOptionalKitColor(membership.teams?.kit_socks),
+          kitVest: normalizeOptionalKitColor(membership.teams?.kit_vest),
           kitJerseyType:
             membership.teams?.kit_jersey_type === "split" ||
             membership.teams?.kit_jersey_type === "stripe" ||

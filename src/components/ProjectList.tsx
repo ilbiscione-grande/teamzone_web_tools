@@ -82,6 +82,20 @@ import {
 import { usePollLeader } from "@/hooks/usePollLeader";
 
 export default function ProjectList() {
+  const normalizeHexColor = (
+    value: string | null | undefined,
+    fallback: string
+  ) => {
+    const next = String(value ?? "").trim().toLowerCase();
+    if (/^#[0-9a-f]{3}$/.test(next)) {
+      return `#${next[1]}${next[1]}${next[2]}${next[2]}${next[3]}${next[3]}`;
+    }
+    if (/^#[0-9a-f]{6}$/.test(next)) {
+      return next;
+    }
+    return fallback;
+  };
+
   const teamJerseyTypeOptions: Array<{ id: JerseyType; label: string }> = [
     { id: "solid", label: "Solid" },
     { id: "split", label: "Split" },
@@ -1416,18 +1430,25 @@ export default function ProjectList() {
     shorts: string;
     socks: string;
     vest?: string | null;
-  }) => (
-    <div className="flex min-w-[88px] flex-col items-center gap-1 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/60 p-3">
-      {renderShirtIcon(
-        params.jerseyType,
-        params.shirt,
-        params.shirtSecondary,
-        "h-16 w-16"
-      )}
+  }) => {
+    const shirt = normalizeHexColor(params.shirt, "#e4573f");
+    const shirtSecondary = normalizeHexColor(params.shirtSecondary, "#f3f3f3");
+    const shorts = normalizeHexColor(params.shorts, "#f3f3f3");
+    const socks = normalizeHexColor(params.socks, "#f3f3f3");
+    const vest = params.vest ? normalizeHexColor(params.vest, "#f3f3f3") : null;
+
+    return (
+      <div className="flex min-w-[88px] flex-col items-center gap-1 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/60 p-3">
+        {renderShirtIcon(
+          params.jerseyType,
+          shirt,
+          shirtSecondary,
+          "h-16 w-16"
+        )}
       <svg viewBox="0 0 64 40" className="h-6 w-10" aria-hidden>
         <path
           d="M6 6h52l-4 28H36V22H28v12H10z"
-          fill={params.shorts}
+          fill={shorts}
           stroke="rgba(255,255,255,0.25)"
           strokeWidth="2"
           strokeLinejoin="round"
@@ -1436,30 +1457,31 @@ export default function ProjectList() {
       <svg viewBox="0 0 64 40" className="h-6 w-10" aria-hidden>
         <path
           d="M16 5h12v14l8 6v8H16z"
-          fill={params.socks}
+          fill={socks}
           stroke="rgba(255,255,255,0.25)"
           strokeWidth="2"
           strokeLinejoin="round"
         />
         <path
           d="M36 5h12v14l8 6v8H36z"
-          fill={params.socks}
+          fill={socks}
           stroke="rgba(255,255,255,0.25)"
           strokeWidth="2"
           strokeLinejoin="round"
         />
       </svg>
-      {params.vest ? (
+      {vest ? (
         <div className="flex items-center gap-1 text-[9px] uppercase tracking-widest text-[var(--ink-1)]">
           <span>Vest</span>
           <span
             className="h-3 w-3 rounded-full border border-[var(--line)]"
-            style={{ backgroundColor: params.vest }}
+            style={{ backgroundColor: vest }}
           />
         </div>
       ) : null}
-    </div>
-  );
+      </div>
+    );
+  };
 
   const getEffectiveAdminTeamKit = (membership: AdminTeamMembershipRow) => {
     const clubMembership =
@@ -4029,6 +4051,7 @@ export default function ProjectList() {
                                 }
                                 title="Club shirt"
                                 className="w-fit"
+                                fallbackColor="#e4573f"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -4053,6 +4076,7 @@ export default function ProjectList() {
                                 }
                                 title="Club shirt secondary"
                                 className="w-fit"
+                                fallbackColor="#f3f3f3"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -4077,6 +4101,7 @@ export default function ProjectList() {
                                 }
                                 title="Club shorts"
                                 className="w-fit"
+                                fallbackColor="#f3f3f3"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -4101,6 +4126,7 @@ export default function ProjectList() {
                                 }
                                 title="Club socks"
                                 className="w-fit"
+                                fallbackColor="#f3f3f3"
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -4125,6 +4151,7 @@ export default function ProjectList() {
                                 }
                                 title="Club vest"
                                 className="w-fit"
+                                fallbackColor="#f3f3f3"
                               />
                             </label>
                             <div className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -4504,6 +4531,7 @@ export default function ProjectList() {
                                 title="Team shirt override"
                                 allowTransparent
                                 className="w-fit"
+                                fallbackColor={effectiveKit.shirt}
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -4523,6 +4551,7 @@ export default function ProjectList() {
                                 title="Team shirt secondary override"
                                 allowTransparent
                                 className="w-fit"
+                                fallbackColor={effectiveKit.shirtSecondary}
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -4539,6 +4568,7 @@ export default function ProjectList() {
                                 title="Team shorts override"
                                 allowTransparent
                                 className="w-fit"
+                                fallbackColor={effectiveKit.shorts}
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -4555,6 +4585,7 @@ export default function ProjectList() {
                                 title="Team socks override"
                                 allowTransparent
                                 className="w-fit"
+                                fallbackColor={effectiveKit.socks}
                               />
                             </label>
                             <label className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
@@ -4571,6 +4602,7 @@ export default function ProjectList() {
                                 title="Team vest override"
                                 allowTransparent
                                 className="w-fit"
+                                fallbackColor={effectiveKit.vest ?? "#f3f3f3"}
                               />
                             </label>
                             <div className="grid gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-1)]">
