@@ -18,6 +18,16 @@ const DEFAULT_COLOR_PALETTE = [
   "#6a4cff",
   "#b5179e",
   "#ff7aa2",
+  "#c9d1d9",
+  "#8b5e3c",
+  "#7a8f3b",
+  "#3d7ea6",
+  "#1d3557",
+  "#264653",
+  "#6d597a",
+  "#b56576",
+  "#d4a373",
+  "#a8dadc",
 ] as const;
 
 const normalizeHexColor = (value?: string | null) => {

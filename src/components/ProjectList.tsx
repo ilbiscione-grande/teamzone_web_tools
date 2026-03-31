@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useProjectStore } from "@/state/useProjectStore";
 import { deserializeProject } from "@/persistence/serialize";
 import { loadProject } from "@/persistence/storage";
@@ -132,44 +132,53 @@ export default function ProjectList() {
     "Fitness",
     "Other",
   ];
-  const renderShirtIcon = (
-    type: JerseyType,
-    primary: string,
-    secondary: string,
-    className: string
-  ) => (
-    <svg viewBox="0 0 100 100" className={className} aria-hidden>
-      <defs>
-        <clipPath id={`project-list-shirt-${type}`}>
-          <path d="M25 18h50l13 13-10 11-8-7v47H30V35l-8 7-10-11z" />
-        </clipPath>
-      </defs>
-      <path
-        d="M25 18h50l13 13-10 11-8-7v47H30V35l-8 7-10-11z"
-        fill="#0b1c1d"
-        stroke="rgba(255,255,255,0.2)"
-        strokeWidth="2"
-      />
-      <g clipPath={`url(#project-list-shirt-${type})`}>
-        <rect x="20" y="14" width="60" height="72" fill={primary} />
-        {type === "split" ? (
-          <rect x="50" y="14" width="30" height="72" fill={secondary} />
-        ) : null}
-        {type === "stripe" ? (
-          <rect x="42" y="14" width="16" height="72" fill={secondary} />
-        ) : null}
-        {type === "sash" ? (
-          <path d="M16 70L78 8l10 10-62 62z" fill={secondary} opacity="0.95" />
-        ) : null}
-        {type === "pinstripe"
-          ? [26, 34, 42, 50, 58, 66, 74].map((x) => (
-              <rect key={x} x={x} y="14" width="3" height="72" fill={secondary} />
-            ))
-          : null}
-      </g>
-      <rect x="42" y="18" width="16" height="10" rx="4" fill="#0b1c1d" />
-    </svg>
-  );
+  const ShirtIcon = ({
+    type,
+    primary,
+    secondary,
+    className,
+  }: {
+    type: JerseyType;
+    primary: string;
+    secondary: string;
+    className: string;
+  }) => {
+    const clipPathId = useId().replace(/:/g, "");
+
+    return (
+      <svg viewBox="0 0 100 100" className={className} aria-hidden>
+        <defs>
+          <clipPath id={clipPathId}>
+            <path d="M25 18h50l13 13-10 11-8-7v47H30V35l-8 7-10-11z" />
+          </clipPath>
+        </defs>
+        <path
+          d="M25 18h50l13 13-10 11-8-7v47H30V35l-8 7-10-11z"
+          fill="#0b1c1d"
+          stroke="rgba(255,255,255,0.2)"
+          strokeWidth="2"
+        />
+        <g clipPath={`url(#${clipPathId})`}>
+          <rect x="20" y="14" width="60" height="72" fill={primary} />
+          {type === "split" ? (
+            <rect x="50" y="14" width="30" height="72" fill={secondary} />
+          ) : null}
+          {type === "stripe" ? (
+            <rect x="42" y="14" width="16" height="72" fill={secondary} />
+          ) : null}
+          {type === "sash" ? (
+            <path d="M16 70L78 8l10 10-62 62z" fill={secondary} opacity="0.95" />
+          ) : null}
+          {type === "pinstripe"
+            ? [26, 34, 42, 50, 58, 66, 74].map((x) => (
+                <rect key={x} x={x} y="14" width="3" height="72" fill={secondary} />
+              ))
+            : null}
+        </g>
+        <rect x="42" y="18" width="16" height="10" rx="4" fill="#0b1c1d" />
+      </svg>
+    );
+  };
   const index = useProjectStore((state) => state.index);
   const openProject = useProjectStore((state) => state.openProject);
   const openProjectFromData = useProjectStore((state) => state.openProjectFromData);
@@ -1439,12 +1448,12 @@ export default function ProjectList() {
 
     return (
       <div className="flex min-w-[88px] flex-col items-center gap-1 rounded-2xl border border-[var(--line)] bg-[var(--panel)]/60 p-3">
-        {renderShirtIcon(
-          params.jerseyType,
-          shirt,
-          shirtSecondary,
-          "h-16 w-16"
-        )}
+      <ShirtIcon
+        type={params.jerseyType}
+        primary={shirt}
+        secondary={shirtSecondary}
+        className="h-16 w-16"
+      />
       <svg viewBox="0 0 64 40" className="h-6 w-10" aria-hidden>
         <path
           d="M6 6h52l-4 28H36V22H28v12H10z"
@@ -4188,15 +4197,18 @@ export default function ProjectList() {
                                     title={option.label}
                                     aria-label={option.label}
                                   >
-                                    {renderShirtIcon(
-                                      option.id,
-                                      normalizeHexColor(membership.kitShirt, "#e4573f"),
-                                      normalizeHexColor(
+                                    <ShirtIcon
+                                      type={option.id}
+                                      primary={normalizeHexColor(
+                                        membership.kitShirt,
+                                        "#e4573f"
+                                      )}
+                                      secondary={normalizeHexColor(
                                         membership.kitShirtSecondary,
                                         "#f3f3f3"
-                                      ),
-                                      "h-5 w-5"
-                                    )}
+                                      )}
+                                      className="h-5 w-5"
+                                    />
                                   </button>
                                 ))}
                               </div>
@@ -4647,12 +4659,12 @@ export default function ProjectList() {
                                     title={option.label}
                                     aria-label={option.label}
                                   >
-                                    {renderShirtIcon(
-                                      option.id,
-                                      effectiveKit.shirt,
-                                      effectiveKit.shirtSecondary,
-                                      "h-5 w-5"
-                                    )}
+                                    <ShirtIcon
+                                      type={option.id}
+                                      primary={effectiveKit.shirt}
+                                      secondary={effectiveKit.shirtSecondary}
+                                      className="h-5 w-5"
+                                    />
                                   </button>
                                 ))}
                               </div>
