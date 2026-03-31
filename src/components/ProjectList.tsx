@@ -4190,8 +4190,11 @@ export default function ProjectList() {
                                   >
                                     {renderShirtIcon(
                                       option.id,
-                                      membership.kitShirt,
-                                      membership.kitShirtSecondary,
+                                      normalizeHexColor(membership.kitShirt, "#e4573f"),
+                                      normalizeHexColor(
+                                        membership.kitShirtSecondary,
+                                        "#f3f3f3"
+                                      ),
                                       "h-5 w-5"
                                     )}
                                   </button>
@@ -4646,10 +4649,8 @@ export default function ProjectList() {
                                   >
                                     {renderShirtIcon(
                                       option.id,
-                                      membership.kitShirt ?? "#0f1b1a",
-                                      membership.kitShirtSecondary ??
-                                        membership.kitShirt ??
-                                        "#f3f3f3",
+                                      effectiveKit.shirt,
+                                      effectiveKit.shirtSecondary,
                                       "h-5 w-5"
                                     )}
                                   </button>
