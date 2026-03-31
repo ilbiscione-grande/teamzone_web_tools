@@ -2737,7 +2737,17 @@ export default function ProjectList() {
                       return (
                         <article
                           key={user.id}
-                          className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-3"
+                          className="cursor-pointer rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-3 transition hover:border-[var(--accent-2)]"
+                          onClick={() => void toggleAdminUserMembershipPreview(user.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              void toggleAdminUserMembershipPreview(user.id);
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
+                          aria-expanded={isExpanded}
                         >
                           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                             <div className="min-w-0">
@@ -2769,7 +2779,9 @@ export default function ProjectList() {
                                   type="checkbox"
                                   checked={user.betaUser}
                                   disabled={adminUpdatingUserId === user.id}
+                                  onClick={(event) => event.stopPropagation()}
                                   onChange={async (event) => {
+                                    event.stopPropagation();
                                     setAdminUpdatingUserId(user.id);
                                     const result = await updateAdminUserFlags({
                                       id: user.id,
@@ -2796,7 +2808,9 @@ export default function ProjectList() {
                                   type="checkbox"
                                   checked={user.isAdmin}
                                   disabled={adminUpdatingUserId === user.id}
+                                  onClick={(event) => event.stopPropagation()}
                                   onChange={async (event) => {
+                                    event.stopPropagation();
                                     setAdminUpdatingUserId(user.id);
                                     const result = await updateAdminUserFlags({
                                       id: user.id,
@@ -2818,16 +2832,16 @@ export default function ProjectList() {
                                 />
                                 Admin
                               </label>
-                              <button
-                                className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                                onClick={() => void toggleAdminUserMembershipPreview(user.id)}
-                              >
-                                {isExpanded ? "Hide links" : "Show links"}
-                              </button>
+                              <span className="text-[10px] uppercase tracking-wide text-[var(--ink-1)]">
+                                {isExpanded ? "Open" : "Closed"}
+                              </span>
                             </div>
                           </div>
                           {isExpanded ? (
-                            <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3">
+                            <div
+                              className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--panel-2)]/40 p-3"
+                              onClick={(event) => event.stopPropagation()}
+                            >
                               {isLoadingMemberships ? (
                                 <p className="text-xs text-[var(--ink-1)]">
                                   Loading linked clubs and teams...
@@ -2854,11 +2868,12 @@ export default function ProjectList() {
                                           >
                                             <button
                                               className="flex w-full items-start justify-between gap-3 text-left"
-                                              onClick={() =>
+                                              onClick={(event) => {
+                                                event.stopPropagation();
                                                 setAdminExpandedClubMembershipId((current) =>
                                                   current === section.key ? null : section.key
-                                                )
-                                              }
+                                                );
+                                              }}
                                             >
                                               <div className="min-w-0">
                                                 <div className="flex flex-wrap items-center gap-2">
@@ -2904,12 +2919,13 @@ export default function ProjectList() {
                                               {section.clubMembership ? (
                                                 <button
                                                   className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                                                  onClick={() =>
+                                                  onClick={(event) => {
+                                                    event.stopPropagation();
                                                     void openAdminClubMembershipEditor(
                                                       user.id,
                                                       section.clubMembership.id
-                                                    )
-                                                  }
+                                                    );
+                                                  }}
                                                 >
                                                   Manage club
                                                 </button>
@@ -2957,12 +2973,13 @@ export default function ProjectList() {
                                                       <div className="mt-2">
                                                         <button
                                                           className="rounded-full border border-[var(--line)] px-3 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                                                          onClick={() =>
+                                                          onClick={(event) => {
+                                                            event.stopPropagation();
                                                             void openAdminTeamMembershipEditor(
                                                               user.id,
                                                               membership.id
-                                                            )
-                                                          }
+                                                            );
+                                                          }}
                                                         >
                                                           Manage team
                                                         </button>
