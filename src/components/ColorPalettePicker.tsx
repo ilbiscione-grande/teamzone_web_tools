@@ -20,8 +20,8 @@ const DEFAULT_COLOR_PALETTE = [
   "#ff7aa2",
 ] as const;
 
-const normalizeHexColor = (value: string) => {
-  const next = value.trim().toLowerCase();
+const normalizeHexColor = (value?: string | null) => {
+  const next = String(value ?? "").trim().toLowerCase();
   if (/^#[0-9a-f]{3}$/.test(next)) {
     return `#${next[1]}${next[1]}${next[2]}${next[2]}${next[3]}${next[3]}`;
   }
@@ -32,7 +32,7 @@ const normalizeHexColor = (value: string) => {
 };
 
 type ColorPalettePickerProps = {
-  value: string;
+  value?: string | null;
   onChange: (value: string) => void;
   title?: string;
   disabled?: boolean;
