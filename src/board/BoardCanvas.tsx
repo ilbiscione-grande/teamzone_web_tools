@@ -2668,6 +2668,10 @@ export default function BoardCanvas({
               if (points.length < 2) {
                 return null;
               }
+              const isClosedLink =
+                link.playerIds.length >= 4 &&
+                link.playerIds[0] === link.playerIds[link.playerIds.length - 1] &&
+                new Set(link.playerIds.slice(0, -1)).size >= 3;
               const isSelectedLink = selectedLinkId === link.id;
               const style = {
                 ...getDefaultPlayerLinkStyle(),
@@ -2709,7 +2713,7 @@ export default function BoardCanvas({
                 ) + 4;
               return (
                 <Group key={link.id}>
-                  {points.length >= 3 && (
+                  {isClosedLink && (
                     <Group
                       listening={false}
                       clipFunc={(ctx) => {
