@@ -55,17 +55,6 @@ const PLAYER_LINK_COLOR_OPTIONS = [
   "#111111",
 ];
 
-const DEFAULT_PLAYER_HIGHLIGHT_COLOR = "#f9bf4a";
-const PLAYER_HIGHLIGHT_COLOR_OPTIONS = [
-  DEFAULT_PLAYER_HIGHLIGHT_COLOR,
-  "#ffffff",
-  "#ef4444",
-  "#60a5fa",
-  "#34d399",
-  "#a78bfa",
-  "#111111",
-];
-
 const getArrowHeadSize = (strokeWidth: number) => {
   const base = Math.max(0.35, strokeWidth);
   return {
@@ -1163,23 +1152,41 @@ export default function BoardCanvas({
     "#f9bf4a";
   const rawPlayerHighlights =
     activeFrame?.playerHighlights ?? board.playerHighlights ?? [];
+  const highlightedPlayers = useMemo(
+    () =>
+      rawPlayerHighlights
+        .map((entry) => (typeof entry === "string" ? entry : entry?.playerId))
+        .filter((entry): entry is string => !!entry),
+    [rawPlayerHighlights]
+  );
   const highlightedPlayerColorById = useMemo(() => {
+    const highlightedPlayerIds = new Set(highlightedPlayers);
+    if (highlightedPlayerIds.size === 0) {
+      return {};
+    }
     const map: Record<string, string> = {};
-    rawPlayerHighlights.forEach((entry) => {
-      if (typeof entry === "string") {
-        map[entry] = DEFAULT_PLAYER_HIGHLIGHT_COLOR;
+    objects.forEach((item) => {
+      if (item.type !== "player" || !highlightedPlayerIds.has(item.id)) {
         return;
       }
-      if (entry?.playerId) {
-        map[entry.playerId] = entry.color ?? DEFAULT_PLAYER_HIGHLIGHT_COLOR;
+      const resolved = resolvedSquadPlayerByTokenId.get(item.id);
+      const playerKey = resolved?.id ?? getPlayerTokenLinkKey(item);
+      const color = playerKey
+        ? vestByPlayerId[playerKey] ?? kitByPlayerId[playerKey]
+        : item.vestColor ?? item.style.fill ?? defaultPlayerFill;
+      if (color) {
+        map[item.id] = color;
       }
     });
     return map;
-  }, [rawPlayerHighlights]);
-  const highlightedPlayers = useMemo(
-    () => Object.keys(highlightedPlayerColorById),
-    [highlightedPlayerColorById]
-  );
+  }, [
+    defaultPlayerFill,
+    highlightedPlayers,
+    kitByPlayerId,
+    objects,
+    resolvedSquadPlayerByTokenId,
+    vestByPlayerId,
+  ]);
   const playerLinks = activeFrame?.playerLinks ?? board.playerLinks ?? [];
   const linkMarkerColorByPlayerId = useMemo(() => {
     const linkedPlayerIds = new Set(
@@ -1335,23 +1342,11 @@ export default function BoardCanvas({
   );
   const updatePlayerHighlights = useCallback(
     (
-      updater: (
-        highlights: Array<{ playerId: string; color: string }>
-      ) => Array<{ playerId: string; color: string }>
+      updater: (highlights: string[]) => string[]
     ) => {
       const current = (activeFrame?.playerHighlights ?? board.playerHighlights ?? [])
-        .map((entry) =>
-          typeof entry === "string"
-            ? {
-                playerId: entry,
-                color: DEFAULT_PLAYER_HIGHLIGHT_COLOR,
-              }
-            : {
-                playerId: entry.playerId,
-                color: entry.color ?? DEFAULT_PLAYER_HIGHLIGHT_COLOR,
-              }
-        )
-        .filter((entry) => !!entry.playerId);
+        .map((entry) => (typeof entry === "string" ? entry : entry.playerId))
+        .filter((entry): entry is string => !!entry);
       const next = updater(current);
       const nextFrames = board.frames.map((frame, index) =>
         index === frameIndex ? { ...frame, playerHighlights: next } : frame
@@ -1682,16 +1677,10 @@ export default function BoardCanvas({
     const target = objects.find((item) => item.id === id);
     if (isHighlighting && target?.type === "player") {
       updatePlayerHighlights((current) => {
-        const exists = current.some((entry) => entry.playerId === id);
+        const exists = current.includes(id);
         return exists
-          ? current.filter((entry) => entry.playerId !== id)
-          : [
-              ...current,
-              {
-                playerId: id,
-                color: DEFAULT_PLAYER_HIGHLIGHT_COLOR,
-              },
-            ];
+          ? current.filter((entry) => entry !== id)
+          : [...current, id];
       });
       return;
     }
@@ -3825,18 +3814,13 @@ export default function BoardCanvas({
               if (!selectedItem) {
                 return null;
               }
-              const selectedHighlightColor =
-                selectedItem.type === "player"
-                  ? highlightedPlayerColorById[selectedItem.id]
-                  : undefined;
-              const showHighlightColorControls = !!selectedHighlightColor;
               const shouldLock = !selectedItems.every((item) => item.locked);
               const anchor = getObjectActionAnchor(selectedItem);
               const isObjectMenuOpen = objectActionMenuId === selectedItem.id;
               const actionAnchorOffsetX = 1.4;
               const actionAnchorOffsetY = -1.4;
               const menuWidth = 9.9;
-              const menuHeight = showHighlightColorControls ? 8.15 : 5.3;
+              const menuHeight = 5.3;
               const menuSpacingX = 1.6;
               const menuSpacingYUp = -1.3;
               const menuSpacingYDown = 1.6;
@@ -3978,77 +3962,6 @@ export default function BoardCanvas({
                         fontSize={0.88}
                         fill="#ffffff"
                       />
-                      {showHighlightColorControls && (
-                        <>
-                          <Rect
-                            x={0.35}
-                            y={5.25}
-                            width={9.2}
-                            height={2.2}
-                            cornerRadius={0.45}
-                            fill="rgba(20,35,32,0.9)"
-                            stroke="#ffffff"
-                            strokeWidth={0.08}
-                          />
-                          <Text
-                            x={0.9}
-                            y={5.68}
-                            text="Highlight color"
-                            fontSize={0.72}
-                            fill="#ffffff"
-                          />
-                          {PLAYER_HIGHLIGHT_COLOR_OPTIONS.map((color, index) => {
-                            const x = 1.25 + index * 1.15;
-                            const isActive = selectedHighlightColor === color;
-                            return (
-                              <Group key={`${selectedItem.id}-highlight-${color}`}>
-                                <Circle
-                                  x={x}
-                                  y={6.68}
-                                  radius={0.36}
-                                  fill={color}
-                                  stroke={isActive ? "#ffffff" : "#111111"}
-                                  strokeWidth={isActive ? 0.12 : 0.08}
-                                />
-                                <Circle
-                                  x={x}
-                                  y={6.68}
-                                  radius={0.58}
-                                  stroke={isActive ? "#f9bf4a" : "rgba(255,255,255,0.14)"}
-                                  strokeWidth={0.07}
-                                  listening={false}
-                                />
-                                <Circle
-                                  x={x}
-                                  y={6.68}
-                                  radius={0.64}
-                                  opacity={0}
-                                  onClick={(event) => {
-                                    event.cancelBubble = true;
-                                    updatePlayerHighlights((current) =>
-                                      current.map((entry) =>
-                                        entry.playerId === selectedItem.id
-                                          ? { ...entry, color }
-                                          : entry
-                                      )
-                                    );
-                                  }}
-                                  onTap={(event) => {
-                                    event.cancelBubble = true;
-                                    updatePlayerHighlights((current) =>
-                                      current.map((entry) =>
-                                        entry.playerId === selectedItem.id
-                                          ? { ...entry, color }
-                                          : entry
-                                      )
-                                    );
-                                  }}
-                                />
-                              </Group>
-                            );
-                          })}
-                        </>
-                      )}
                       <Rect
                         x={0.35}
                         y={0.35}
