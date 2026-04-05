@@ -182,6 +182,7 @@ type BoardObjectProps = {
   secondaryKitByPlayerId: Record<string, string | undefined>;
   jerseyTypeByPlayerId: Record<string, string | undefined>;
   vestByPlayerId: Record<string, string | undefined>;
+  linkMarkerColorByPlayerId: Record<string, string | undefined>;
   defaultPlayerFill: string;
   playerTokenSize: number;
   showPlayerName: boolean;
@@ -215,6 +216,7 @@ export default function BoardObject({
   secondaryKitByPlayerId,
   jerseyTypeByPlayerId,
   vestByPlayerId,
+  linkMarkerColorByPlayerId,
   defaultPlayerFill,
   playerTokenSize,
   showPlayerName,
@@ -529,6 +531,10 @@ export default function BoardObject({
     const vestColor =
       player.vestColor ??
       (playerKey ? vestByPlayerId[playerKey] : undefined);
+    const linkMarkerColor =
+      linkMarkerColorByPlayerId[player.id] ??
+      vestColor ??
+      fillColor;
     const squadPlayer =
       resolvedSquadPlayer ??
       (playerKey
@@ -700,6 +706,14 @@ export default function BoardObject({
             stroke="var(--accent-1)"
             strokeWidth={depthStroke(0.3)}
             dash={[0.6, 0.6]}
+          />
+        )}
+        {linkMarkerColorByPlayerId[player.id] && (
+          <Circle
+            radius={playerTokenSize + 1.85}
+            stroke={linkMarkerColor}
+            strokeWidth={depthStroke(0.34)}
+            listening={false}
           />
         )}
         {isSelected && (

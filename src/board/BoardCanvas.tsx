@@ -1134,6 +1134,29 @@ export default function BoardCanvas({
   const highlightedPlayers =
     activeFrame?.playerHighlights ?? board.playerHighlights ?? [];
   const playerLinks = activeFrame?.playerLinks ?? board.playerLinks ?? [];
+  const linkMarkerColorByPlayerId = useMemo(() => {
+    const map: Record<string, string | undefined> = {};
+    objects.forEach((item) => {
+      if (item.type !== "player") {
+        return;
+      }
+      const resolved = resolvedSquadPlayerByTokenId.get(item.id);
+      const playerKey = resolved?.id ?? getPlayerTokenLinkKey(item);
+      const color = playerKey
+        ? vestByPlayerId[playerKey] ?? kitByPlayerId[playerKey]
+        : item.vestColor ?? item.style.fill ?? defaultPlayerFill;
+      if (color) {
+        map[item.id] = color;
+      }
+    });
+    return map;
+  }, [
+    defaultPlayerFill,
+    kitByPlayerId,
+    objects,
+    resolvedSquadPlayerByTokenId,
+    vestByPlayerId,
+  ]);
 
   useEffect(() => {
     if (!isThreeDView) {
@@ -2493,6 +2516,7 @@ export default function BoardCanvas({
                 secondaryKitByPlayerId={secondaryKitByPlayerId}
                 jerseyTypeByPlayerId={jerseyTypeByPlayerId}
                 vestByPlayerId={vestByPlayerId}
+                linkMarkerColorByPlayerId={linkMarkerColorByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}
                 playerTokenSize={effectivePlayerTokenSize}
                 showPlayerName={board.playerLabel?.showName ?? true}
@@ -2557,6 +2581,14 @@ export default function BoardCanvas({
               const linkShadowOffsetY = 0.03 + 0.32 * depthEase;
               return (
                 <Group key={link.id}>
+                  {points.length >= 3 && (
+                    <Line
+                      points={points.flatMap((point) => [point.x, point.y])}
+                      closed
+                      fill="rgba(220, 38, 38, 0.18)"
+                      listening={false}
+                    />
+                  )}
                   {outlineStroke && outlineWidth > 0 && (
                     <Line
                       points={points.flatMap((point) => [point.x, point.y])}
@@ -2611,6 +2643,7 @@ export default function BoardCanvas({
                 secondaryKitByPlayerId={secondaryKitByPlayerId}
                 jerseyTypeByPlayerId={jerseyTypeByPlayerId}
                 vestByPlayerId={vestByPlayerId}
+                linkMarkerColorByPlayerId={linkMarkerColorByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}
                 playerTokenSize={effectivePlayerTokenSize}
                 showPlayerName={board.playerLabel?.showName ?? true}
