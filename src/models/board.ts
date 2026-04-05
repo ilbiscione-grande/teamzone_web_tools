@@ -20,6 +20,7 @@ export type PlayerLink = {
   id: string;
   playerIds: string[];
   style?: Style;
+  showLine?: boolean;
 };
 
 export type BoardSquadOverride = {

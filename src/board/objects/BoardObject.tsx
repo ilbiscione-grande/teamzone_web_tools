@@ -535,6 +535,10 @@ export default function BoardObject({
       linkMarkerColorByPlayerId[player.id] ??
       vestColor ??
       fillColor;
+    const tokenOutlineWidth = depthStroke(player.style.strokeWidth);
+    const linkRingStrokeWidth = depthStroke(0.62);
+    const linkRingRadius =
+      playerTokenSize + tokenOutlineWidth / 2 + linkRingStrokeWidth / 2;
     const squadPlayer =
       resolvedSquadPlayer ??
       (playerKey
@@ -710,9 +714,9 @@ export default function BoardObject({
         )}
         {linkMarkerColorByPlayerId[player.id] && (
           <Circle
-            radius={playerTokenSize + 1.85}
+            radius={linkRingRadius}
             stroke={linkMarkerColor}
-            strokeWidth={depthStroke(0.34)}
+            strokeWidth={linkRingStrokeWidth}
             listening={false}
           />
         )}
@@ -734,7 +738,7 @@ export default function BoardObject({
           radius={playerTokenSize}
           fill={fillColor}
           stroke={player.style.stroke}
-          strokeWidth={depthStroke(player.style.strokeWidth)}
+          strokeWidth={tokenOutlineWidth}
           shadowEnabled={!!isThreeDView}
           shadowColor="#000000"
           shadowOpacity={isThreeDView ? 0.28 : 0}
@@ -794,7 +798,7 @@ export default function BoardObject({
           radius={playerTokenSize}
           fillEnabled={false}
           stroke={player.style.stroke}
-          strokeWidth={depthStroke(player.style.strokeWidth)}
+          strokeWidth={tokenOutlineWidth}
           listening={false}
         />
         {hasLabel && (

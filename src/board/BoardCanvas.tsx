@@ -36,6 +36,25 @@ import {
 const getLineOutlineWidth = (strokeWidth: number) =>
   Math.max(0.15, strokeWidth * 0.6);
 
+const getDefaultPlayerLinkStyle = () => ({
+  stroke: "#f9bf4a",
+  strokeWidth: 0.65,
+  fill: "transparent",
+  dash: [] as number[],
+  opacity: 1,
+  outlineStroke: "#111111",
+});
+
+const PLAYER_LINK_COLOR_OPTIONS = [
+  "#f9bf4a",
+  "#ffffff",
+  "#ef4444",
+  "#60a5fa",
+  "#34d399",
+  "#a78bfa",
+  "#111111",
+];
+
 const getArrowHeadSize = (strokeWidth: number) => {
   const base = Math.max(0.35, strokeWidth);
   return {
@@ -1135,9 +1154,15 @@ export default function BoardCanvas({
     activeFrame?.playerHighlights ?? board.playerHighlights ?? [];
   const playerLinks = activeFrame?.playerLinks ?? board.playerLinks ?? [];
   const linkMarkerColorByPlayerId = useMemo(() => {
+    const linkedPlayerIds = new Set(
+      playerLinks.flatMap((link) => link.playerIds ?? [])
+    );
+    if (linkedPlayerIds.size === 0) {
+      return {};
+    }
     const map: Record<string, string | undefined> = {};
     objects.forEach((item) => {
-      if (item.type !== "player") {
+      if (item.type !== "player" || !linkedPlayerIds.has(item.id)) {
         return;
       }
       const resolved = resolvedSquadPlayerByTokenId.get(item.id);
@@ -1154,6 +1179,7 @@ export default function BoardCanvas({
     defaultPlayerFill,
     kitByPlayerId,
     objects,
+    playerLinks,
     resolvedSquadPlayerByTokenId,
     vestByPlayerId,
   ]);
@@ -1215,14 +1241,8 @@ export default function BoardCanvas({
         {
           id: createId(),
           playerIds: [...linkingPlayerIds],
-          style: {
-            stroke: "#f9bf4a",
-            strokeWidth: 0.65,
-            fill: "transparent",
-            dash: [],
-            opacity: 1,
-            outlineStroke: "#111111",
-          },
+          style: getDefaultPlayerLinkStyle(),
+          showLine: true,
         },
       ];
       const nextFrames = board.frames.map((frame, index) =>
@@ -1242,6 +1262,49 @@ export default function BoardCanvas({
     setLinkingPlayers,
     updateBoard,
   ]);
+  const updatePlayerLink = useCallback(
+    (
+      linkId: string,
+      updater: (link: {
+        id: string;
+        playerIds: string[];
+        style: ReturnType<typeof getDefaultPlayerLinkStyle>;
+        showLine: boolean;
+      }) => {
+        id: string;
+        playerIds: string[];
+        style: ReturnType<typeof getDefaultPlayerLinkStyle>;
+        showLine: boolean;
+      }
+    ) => {
+      const baseLinks = (activeFrame?.playerLinks ?? board.playerLinks ?? []).map(
+        (entry) => ({
+          ...entry,
+          playerIds: [...entry.playerIds],
+          style: {
+            ...getDefaultPlayerLinkStyle(),
+            ...(entry.style ?? {}),
+          },
+          showLine: entry.showLine ?? true,
+        })
+      );
+      const nextLinks = baseLinks.map((entry) =>
+        entry.id === linkId ? updater(entry) : entry
+      );
+      const nextFrames = board.frames.map((frame, index) =>
+        index === frameIndex ? { ...frame, playerLinks: nextLinks } : frame
+      );
+      updateBoard(board.id, { frames: nextFrames });
+    },
+    [
+      activeFrame?.playerLinks,
+      board.frames,
+      board.id,
+      board.playerLinks,
+      frameIndex,
+      updateBoard,
+    ]
+  );
   const latestLinkingPlayerPosition = useMemo(() => {
     if (!isLinkingPlayers || linkingPlayerIds.length < 2) {
       return null;
@@ -2554,14 +2617,11 @@ export default function BoardCanvas({
                 return null;
               }
               const isSelectedLink = selectedLinkId === link.id;
-              const style = link.style ?? {
-                stroke: "#f9bf4a",
-                strokeWidth: 0.65,
-                fill: "transparent",
-                dash: [],
-                opacity: 1,
-                outlineStroke: "#111111",
+              const style = {
+                ...getDefaultPlayerLinkStyle(),
+                ...(link.style ?? {}),
               };
+              const showLine = link.showLine ?? true;
               const strokeWidth = style.strokeWidth + (isSelectedLink ? 0.1 : 0);
               const avgY =
                 points.reduce((sum, point) => sum + point.y, 0) / points.length;
@@ -2579,19 +2639,64 @@ export default function BoardCanvas({
               const linkShadowBlur = 0.14 + 1.05 * depthEase;
               const linkShadowOpacity = 0.04 + 0.2 * depthEase;
               const linkShadowOffsetY = 0.03 + 0.32 * depthEase;
+              const polygonPoints = points.flatMap((point) => [point.x, point.y]);
+              const polygonBounds = getPolygonBounds(polygonPoints);
+              const stripeSpacing = Math.max(
+                2.6,
+                (polygonBounds.width + polygonBounds.height) / 10
+              );
+              const stripeWidth = Math.max(0.95, stripeSpacing * 0.42);
+              const stripeHeight = Math.max(
+                polygonBounds.height * 3,
+                polygonBounds.width + polygonBounds.height * 2.4
+              );
+              const stripeCount =
+                Math.ceil(
+                  (polygonBounds.width + polygonBounds.height * 2.2) /
+                    stripeSpacing
+                ) + 4;
               return (
                 <Group key={link.id}>
                   {points.length >= 3 && (
-                    <Line
-                      points={points.flatMap((point) => [point.x, point.y])}
-                      closed
-                      fill="rgba(220, 38, 38, 0.18)"
+                    <Group
                       listening={false}
-                    />
+                      clipFunc={(ctx) => {
+                        ctx.beginPath();
+                        ctx.moveTo(points[0]!.x, points[0]!.y);
+                        points.slice(1).forEach((point) => {
+                          ctx.lineTo(point.x, point.y);
+                        });
+                        ctx.closePath();
+                      }}
+                    >
+                      <Rect
+                        x={polygonBounds.minX}
+                        y={polygonBounds.minY}
+                        width={Math.max(0.1, polygonBounds.width)}
+                        height={Math.max(0.1, polygonBounds.height)}
+                        fill="rgba(145, 53, 40, 0.42)"
+                      />
+                      <Group
+                        x={polygonBounds.minX - polygonBounds.height * 0.85}
+                        y={polygonBounds.minY - polygonBounds.height * 0.4}
+                        rotation={-28}
+                      >
+                        {Array.from({ length: stripeCount }).map((_, index) => (
+                          <Rect
+                            key={`${link.id}-stripe-${index}`}
+                            x={index * stripeSpacing}
+                            y={0}
+                            width={stripeWidth}
+                            height={stripeHeight}
+                            fill="rgba(217, 152, 122, 0.28)"
+                          />
+                        ))}
+                      </Group>
+                    </Group>
                   )}
-                  {outlineStroke && outlineWidth > 0 && (
+                  {showLine && outlineStroke && outlineWidth > 0 && (
                     <Line
-                      points={points.flatMap((point) => [point.x, point.y])}
+                      points={polygonPoints}
                       stroke={outlineStroke}
                       strokeWidth={depthStrokeWidth + outlineWidth * 2}
                       lineCap="round"
@@ -2600,11 +2705,12 @@ export default function BoardCanvas({
                     />
                   )}
                   <Line
-                    points={points.flatMap((point) => [point.x, point.y])}
+                    points={polygonPoints}
                     stroke={style.stroke}
                     strokeWidth={depthStrokeWidth}
                     hitStrokeWidth={lineHitStrokeWidth}
-                    opacity={style.opacity}
+                    opacity={showLine ? style.opacity : 0.001}
+                    dash={style.dash}
                     lineCap="round"
                     lineJoin="round"
                     shadowEnabled={isThreeDView}
@@ -3866,6 +3972,11 @@ export default function BoardCanvas({
               if (!link) {
                 return null;
               }
+              const linkStyle = {
+                ...getDefaultPlayerLinkStyle(),
+                ...(link.style ?? {}),
+              };
+              const showLine = link.showLine ?? true;
               const points = link.playerIds
                 .map((id) => playerPositions.get(id))
                 .filter(Boolean) as { x: number; y: number }[];
@@ -3891,7 +4002,7 @@ export default function BoardCanvas({
               const anchor = segmentCenters[centerIndex]!;
               return (
                 <Group
-                  key={`${link.id}-delete`}
+                  key={`${link.id}-controls`}
                   x={anchor.x}
                   y={anchor.y}
                   rotation={labelRotation}
@@ -3899,54 +4010,141 @@ export default function BoardCanvas({
                   scaleY={mobileActionScale}
                 >
                   <Rect
-                    x={-1.3}
-                    y={-1.3}
-                    width={2.6}
-                    height={2.6}
-                    cornerRadius={0.5}
+                    x={-7.1}
+                    y={-2.4}
+                    width={14.2}
+                    height={4.8}
+                    cornerRadius={0.7}
                     fill="#0f1b1a"
-                    opacity={0.85}
+                    opacity={0.9}
                     stroke="#ffffff"
                     strokeWidth={0.12}
                   />
-                  <Circle
-                    x={-0.28}
-                    y={0}
-                    radius={0.42}
-                    stroke="#ffffff"
-                    strokeWidth={0.11}
+                  <Text
+                    x={-6.25}
+                    y={-1.6}
+                    text="Link line"
+                    fontSize={0.9}
+                    fill="#ffffff"
+                    fontStyle="bold"
                   />
-                  <Circle
-                    x={0.46}
-                    y={0}
-                    radius={0.42}
+                  <Rect
+                    x={-6.15}
+                    y={-0.55}
+                    width={3.9}
+                    height={1.4}
+                    cornerRadius={0.45}
+                    fill={showLine ? "rgba(249,191,74,0.18)" : "rgba(255,255,255,0.06)"}
+                    stroke={showLine ? "#f9bf4a" : "#7d8b88"}
+                    strokeWidth={0.1}
+                  />
+                  <Text
+                    x={-5.5}
+                    y={-0.13}
+                    text={showLine ? "Hide line" : "Show line"}
+                    fontSize={0.62}
+                    fill="#ffffff"
+                  />
+                  <Rect
+                    x={-6.15}
+                    y={-0.55}
+                    width={3.9}
+                    height={1.4}
+                    cornerRadius={0.45}
+                    opacity={0}
+                    onClick={(event) => {
+                      event.cancelBubble = true;
+                      updatePlayerLink(link.id, (current) => ({
+                        ...current,
+                        showLine: !current.showLine,
+                      }));
+                    }}
+                    onTap={(event) => {
+                      event.cancelBubble = true;
+                      updatePlayerLink(link.id, (current) => ({
+                        ...current,
+                        showLine: !current.showLine,
+                      }));
+                    }}
+                  />
+                  {PLAYER_LINK_COLOR_OPTIONS.map((color, index) => {
+                    const x = -2.05 + index * 1.08;
+                    const isActive = linkStyle.stroke === color;
+                    return (
+                      <Group key={`${link.id}-color-${color}`}>
+                        <Circle
+                          x={x}
+                          y={0.12}
+                          radius={0.42}
+                          fill={color}
+                          stroke={isActive ? "#ffffff" : "#111111"}
+                          strokeWidth={isActive ? 0.13 : 0.09}
+                        />
+                        <Circle
+                          x={x}
+                          y={0.12}
+                          radius={0.66}
+                          stroke={isActive ? "#f9bf4a" : "rgba(255,255,255,0.14)"}
+                          strokeWidth={0.08}
+                          listening={false}
+                        />
+                        <Circle
+                          x={x}
+                          y={0.12}
+                          radius={0.72}
+                          opacity={0}
+                          onClick={(event) => {
+                            event.cancelBubble = true;
+                            updatePlayerLink(link.id, (current) => ({
+                              ...current,
+                              style: {
+                                ...current.style,
+                                stroke: color,
+                              },
+                            }));
+                          }}
+                          onTap={(event) => {
+                            event.cancelBubble = true;
+                            updatePlayerLink(link.id, (current) => ({
+                              ...current,
+                              style: {
+                                ...current.style,
+                                stroke: color,
+                              },
+                            }));
+                          }}
+                        />
+                      </Group>
+                    );
+                  })}
+                  <Rect
+                    x={5.2}
+                    y={-1.7}
+                    width={1.1}
+                    height={1.1}
+                    cornerRadius={0.45}
+                    fill="rgba(72,20,20,0.92)"
                     stroke="#ffffff"
-                    strokeWidth={0.11}
+                    strokeWidth={0.1}
                   />
                   <Line
-                    points={[-0.02, -0.24, 0.2, -0.04]}
+                    points={[5.48, -1.42, 6.02, -0.88]}
                     stroke="#ffffff"
-                    strokeWidth={0.11}
+                    strokeWidth={0.12}
                     lineCap="round"
                   />
                   <Line
-                    points={[-0.02, 0.24, 0.2, 0.04]}
+                    points={[5.48, -0.88, 6.02, -1.42]}
                     stroke="#ffffff"
-                    strokeWidth={0.11}
-                    lineCap="round"
-                  />
-                  <Line
-                    points={[-0.86, 0.62, 0.9, -0.66]}
-                    stroke="#ffffff"
-                    strokeWidth={0.11}
+                    strokeWidth={0.12}
                     lineCap="round"
                   />
                   <Rect
-                    x={-1.3}
-                    y={-1.3}
-                    width={2.6}
-                    height={2.6}
-                    cornerRadius={0.5}
+                    x={5.2}
+                    y={-1.7}
+                    width={1.1}
+                    height={1.1}
+                    cornerRadius={0.45}
                     opacity={0}
                     onClick={(event) => {
                       event.cancelBubble = true;
