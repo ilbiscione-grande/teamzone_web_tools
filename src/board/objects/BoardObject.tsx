@@ -634,6 +634,7 @@ export default function BoardObject({
       0,
       Math.min(1, Number(player.style.outlineWidth ?? 0))
     );
+    const highlightGlowColor = vestColor ?? fillColor;
     return (
       <Group
         {...commonProps}
@@ -654,11 +655,19 @@ export default function BoardObject({
               fillRadialGradientEndRadius={playerTokenSize + 2.2 + highlightGlowStrength * 2.2}
               fillRadialGradientColorStops={[
                 0,
-                `rgba(249,191,74,${0.45 * highlightGlowStrength})`,
+                `${highlightGlowColor}${Math.round(
+                  0.45 * highlightGlowStrength * 255
+                )
+                  .toString(16)
+                  .padStart(2, "0")}`,
                 0.45,
-                `rgba(249,191,74,${0.22 * highlightGlowStrength})`,
+                `${highlightGlowColor}${Math.round(
+                  0.22 * highlightGlowStrength * 255
+                )
+                  .toString(16)
+                  .padStart(2, "0")}`,
                 1,
-                "rgba(249,191,74,0)",
+                `${highlightGlowColor}00`,
               ]}
             />
             <Circle
@@ -670,11 +679,19 @@ export default function BoardObject({
               fillRadialGradientEndRadius={playerTokenSize + 3.4 + highlightGlowStrength * 3.2}
               fillRadialGradientColorStops={[
                 0,
-                `rgba(240,109,79,${0.22 * highlightGlowStrength})`,
+                `${highlightGlowColor}${Math.round(
+                  0.22 * highlightGlowStrength * 255
+                )
+                  .toString(16)
+                  .padStart(2, "0")}`,
                 0.6,
-                `rgba(240,109,79,${0.1 * highlightGlowStrength})`,
+                `${highlightGlowColor}${Math.round(
+                  0.1 * highlightGlowStrength * 255
+                )
+                  .toString(16)
+                  .padStart(2, "0")}`,
                 1,
-                "rgba(240,109,79,0)",
+                `${highlightGlowColor}00`,
               ]}
             />
           </>
