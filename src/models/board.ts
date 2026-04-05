@@ -12,9 +12,16 @@ export type BoardFrame = {
   action?: string;
   notes?: string;
   durationMs?: number;
-  playerHighlights?: string[];
+  playerHighlights?: PlayerHighlight[];
   playerLinks?: PlayerLink[];
 };
+
+export type PlayerHighlight =
+  | string
+  | {
+      playerId: string;
+      color?: string;
+    };
 
 export type PlayerLink = {
   id: string;
@@ -82,7 +89,7 @@ export type Board = {
     showPosition: boolean;
     showNumber: boolean;
   };
-  playerHighlights: string[];
+  playerHighlights: PlayerHighlight[];
   playerLinks: PlayerLink[];
   layers: DrawableObject[];
   frames: BoardFrame[];

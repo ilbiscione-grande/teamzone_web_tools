@@ -172,7 +172,7 @@ type BoardObjectProps = {
   objects: DrawableObject[];
   activeTool: Tool;
   isSelected: boolean;
-  isHighlighted: boolean;
+  highlightColor?: string;
   isLinking: boolean;
   isLinkCandidate: boolean;
   onLinkPlayer: (id: string) => void;
@@ -206,7 +206,7 @@ export default function BoardObject({
   objects,
   activeTool,
   isSelected,
-  isHighlighted,
+  highlightColor,
   isLinking,
   isLinkCandidate,
   onLinkPlayer,
@@ -234,6 +234,7 @@ export default function BoardObject({
   onBallDragStart,
   registerNode,
 }: BoardObjectProps) {
+  const isHighlighted = !!highlightColor;
   if (!object.visible) {
     return null;
   }
@@ -692,14 +693,14 @@ export default function BoardObject({
           <>
             <Circle
               radius={playerTokenSize + 1.6}
-              stroke="#111111"
+              stroke={highlightColor}
               strokeWidth={depthStroke(0.85)}
               dash={[1, 1]}
             />
             <Circle
               radius={playerTokenSize + 1.6}
               stroke="#ffffff"
-              strokeWidth={depthStroke(0.5)}
+              strokeWidth={depthStroke(0.42)}
               dash={[1, 1]}
             />
           </>
