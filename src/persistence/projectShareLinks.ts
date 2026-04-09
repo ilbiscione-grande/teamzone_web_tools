@@ -1,7 +1,12 @@
 import { supabase } from "@/utils/supabaseClient";
 import type { Project } from "@/models";
 import { createId } from "@/utils/id";
-import { hasEffectivePaidAccess, type ProfilePlanSnapshot } from "@/utils/effectivePlan";
+import {
+  resolveTacticsboardPlan,
+  TACTICSBOARD_APP_SLUG,
+  type AppEntitlementSnapshot,
+  type ProfilePlanSnapshot,
+} from "@/utils/appEntitlements";
 import { recordNetworkCall } from "@/persistence/networkCounters";
 
 const TABLE = "project_share_links";
@@ -29,10 +34,20 @@ export const createProjectShareLink = async (project: Project) => {
     .eq("id", userData.user.id)
     .maybeSingle<ProfilePlanSnapshot>();
   recordNetworkCall("supabase.profiles.plan_check", !profileError);
-  if (profileError || !profile) {
+  const { data: entitlement, error: entitlementError } = await supabase
+    .from("app_entitlements")
+    .select("app_slug,tier,status,manual_access_override,current_period_end")
+    .eq("user_id", userData.user.id)
+    .eq("app_slug", TACTICSBOARD_APP_SLUG)
+    .maybeSingle<AppEntitlementSnapshot>();
+  recordNetworkCall(
+    "supabase.app_entitlements.tacticsboard_check",
+    !entitlementError
+  );
+  if (profileError || !profile || entitlementError) {
     return { ok: false as const, error: "Unable to verify plan." };
   }
-  if (!hasEffectivePaidAccess(profile)) {
+  if (resolveTacticsboardPlan({ profile, entitlement }) !== "PAID") {
     return {
       ok: false as const,
       error: "Paid plan required to create share links.",

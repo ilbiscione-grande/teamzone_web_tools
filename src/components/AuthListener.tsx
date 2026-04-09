@@ -4,9 +4,11 @@ import { useEffect } from "react";
 import { supabase } from "@/utils/supabaseClient";
 import { trackAnalyticsEvent } from "@/persistence/analytics";
 import {
-  hasEffectivePaidAccess,
+  resolveTacticsboardPlan,
+  TACTICSBOARD_APP_SLUG,
+  type AppEntitlementSnapshot,
   type ProfilePlanSnapshot,
-} from "@/utils/effectivePlan";
+} from "@/utils/appEntitlements";
 import {
   useProjectStore,
   persistActiveProject,
@@ -291,31 +293,45 @@ export default function AuthListener() {
       if (typeof window !== "undefined" && !window.navigator.onLine) {
         return;
       }
-      let data: ProfileAuthSnapshot | null = null;
-      let error: unknown = null;
+      let profile: ProfileAuthSnapshot | null = null;
+      let profileError: unknown = null;
+      let entitlement: AppEntitlementSnapshot | null = null;
+      let entitlementError: unknown = null;
       for (let attempt = 0; attempt < 3; attempt += 1) {
-        const result = await supabase
+        const profileResult = await supabase
           .from("profiles")
           .select("plan,manual_paid_override,beta_user,is_admin")
           .eq("id", userId)
           .single();
-        data = result.data as ProfileAuthSnapshot | null;
-        error = result.error;
-        if (!error && data) {
+        profile = profileResult.data as ProfileAuthSnapshot | null;
+        profileError = profileResult.error;
+
+        const entitlementResult = await supabase
+          .from("app_entitlements")
+          .select(
+            "app_slug,tier,status,manual_access_override,current_period_end"
+          )
+          .eq("user_id", userId)
+          .eq("app_slug", TACTICSBOARD_APP_SLUG)
+          .maybeSingle();
+        entitlement = entitlementResult.data as AppEntitlementSnapshot | null;
+        entitlementError = entitlementResult.error;
+
+        if (!profileError && profile && !entitlementError) {
           break;
         }
         await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)));
       }
-      if (error || !data) {
+      if (profileError || !profile || entitlementError) {
         return;
       }
-      const plan = hasEffectivePaidAccess(data) ? "PAID" : "AUTH";
+      const plan = resolveTacticsboardPlan({ profile, entitlement });
       const currentUser = useProjectStore.getState().authUser;
       if (currentUser?.id === userId) {
         setAuthUser({
           ...currentUser,
-          betaUser: data.beta_user === true,
-          isAdmin: data.is_admin === true,
+          betaUser: profile.beta_user === true,
+          isAdmin: profile.is_admin === true,
         });
       }
       setPlanFromProfile(plan);

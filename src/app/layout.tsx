@@ -18,8 +18,9 @@ const body = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Tactics Board Web",
-  description: "Digital tactics board for football.",
+  title: "Webtools",
+  description:
+    "Webtools is a shared home for focused sports apps like Tacticsboard and future coaching tools.",
   manifest: "/manifest.json",
   themeColor: "#0f1b1a",
   icons: {

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/utils/stripe";
+import {
+  getStripePriceIdForApp,
+  TACTICSBOARD_APP_SLUG,
+} from "@/utils/appEntitlements";
 
 export async function GET() {
   if (!stripe) {
@@ -8,7 +12,7 @@ export async function GET() {
       { status: 500 }
     );
   }
-  const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID ?? "";
+  const priceId = getStripePriceIdForApp(TACTICSBOARD_APP_SLUG);
   if (!priceId) {
     return NextResponse.json(
       { error: "Missing Stripe price ID." },

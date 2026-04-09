@@ -281,7 +281,7 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
     const response = await fetch("/api/stripe/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accessToken }),
+      body: JSON.stringify({ accessToken, appSlug: "tacticsboard" }),
     });
     const result = (await response.json()) as { url?: string; error?: string };
     if (!response.ok || !result.url) {
@@ -331,8 +331,8 @@ export default function PlanModal({ open, onClose }: PlanModalProps) {
               Account & Plans
             </h2>
             <p className="text-xs text-[var(--ink-1)]">
-              Manage your plan and billing. Sign in to save and sync across
-              devices.
+              Manage Tacticsboard access and billing. Your Webtools account can
+              be shared across apps, while subscriptions stay app-specific.
             </p>
             <p className="mt-2 text-[11px] text-[var(--ink-1)]">
               Beta notice: this app is still in active development and may

@@ -94,12 +94,14 @@ create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   plan text not null default 'FREE',
   stripe_customer_id text,
+  manual_paid_override boolean not null default false,
   beta_user boolean not null default false,
   is_admin boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+alter table profiles add column if not exists manual_paid_override boolean not null default false;
 alter table profiles add column if not exists beta_user boolean not null default false;
 alter table profiles add column if not exists is_admin boolean not null default false;
 
@@ -111,6 +113,75 @@ create policy "Users can view their profile"
 on profiles
 for select
 using (auth.uid() = id);
+
+create table if not exists app_entitlements (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  app_slug text not null,
+  tier text not null default 'FREE',
+  status text not null default 'inactive',
+  stripe_customer_id text,
+  stripe_subscription_id text unique,
+  stripe_price_id text,
+  manual_access_override boolean not null default false,
+  current_period_end timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(user_id, app_slug)
+);
+
+create index if not exists app_entitlements_user_id_idx on app_entitlements(user_id);
+create index if not exists app_entitlements_app_slug_idx on app_entitlements(app_slug);
+create index if not exists app_entitlements_user_app_idx on app_entitlements(user_id, app_slug);
+create index if not exists app_entitlements_status_idx on app_entitlements(status);
+
+alter table app_entitlements enable row level security;
+
+drop policy if exists "Users can view their app entitlements" on app_entitlements;
+
+create policy "Users can view their app entitlements"
+on app_entitlements
+for select
+using (auth.uid() = user_id);
+
+insert into app_entitlements (
+  user_id,
+  app_slug,
+  tier,
+  status,
+  stripe_customer_id,
+  manual_access_override,
+  created_at,
+  updated_at
+)
+select
+  p.id,
+  'tacticsboard',
+  case
+    when upper(coalesce(p.plan, '')) = 'PAID' or coalesce(p.manual_paid_override, false) then 'PAID'
+    else 'FREE'
+  end as tier,
+  case
+    when upper(coalesce(p.plan, '')) = 'PAID' or coalesce(p.manual_paid_override, false) then 'active'
+    else 'inactive'
+  end as status,
+  p.stripe_customer_id,
+  coalesce(p.manual_paid_override, false) as manual_access_override,
+  p.created_at,
+  p.updated_at
+from profiles p
+on conflict (user_id, app_slug) do update set
+  stripe_customer_id = coalesce(excluded.stripe_customer_id, app_entitlements.stripe_customer_id),
+  manual_access_override = app_entitlements.manual_access_override or excluded.manual_access_override,
+  tier = case
+    when app_entitlements.tier = 'PAID' or excluded.tier = 'PAID' then 'PAID'
+    else app_entitlements.tier
+  end,
+  status = case
+    when app_entitlements.status in ('active', 'trialing', 'past_due') then app_entitlements.status
+    else excluded.status
+  end,
+  updated_at = greatest(app_entitlements.updated_at, excluded.updated_at);
 
 create table if not exists user_sessions (
   user_id uuid primary key references auth.users(id) on delete cascade,
