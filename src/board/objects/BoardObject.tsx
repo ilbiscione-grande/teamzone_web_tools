@@ -379,26 +379,26 @@ export default function BoardObject({
     return (
       <Line
         points={[
-          -radius * 0.65,
-          -radius * 0.15,
-          -radius * 0.95,
-          -radius * 0.7,
-          -radius * 0.45,
-          -radius * 1.0,
-          -radius * 0.2,
-          -radius * 0.65,
-          radius * 0.2,
-          -radius * 0.65,
-          radius * 0.45,
-          -radius * 1.0,
-          radius * 0.95,
-          -radius * 0.7,
-          radius * 0.65,
-          -radius * 0.15,
-          radius * 0.42,
-          radius * 0.95,
-          -radius * 0.42,
-          radius * 0.95,
+          -radius * 0.34,
+          -radius * 0.92, // vänster axel inre
+          -radius * 0.72,
+          -radius * 0.78, // vänster axel/ärm yttre
+          -radius * 0.98,
+          -radius * 0.22, // vänster ärm ned
+          -radius * 0.64,
+          -radius * 0.02, // vänster armhåla
+          -radius * 0.56,
+          radius * 0.96, // vänster nederkant
+          radius * 0.56,
+          radius * 0.96, // höger nederkant
+          radius * 0.64,
+          -radius * 0.02, // höger armhåla
+          radius * 0.98,
+          -radius * 0.22, // höger ärm ned
+          radius * 0.72,
+          -radius * 0.78, // höger axel/ärm yttre
+          radius * 0.34,
+          -radius * 0.92, // höger axel inre
         ]}
         closed
         fill={fill}
@@ -434,26 +434,26 @@ export default function BoardObject({
     return (
       <Line
         points={[
-          -radius * 0.65,
-          -radius * 0.15,
-          -radius * 0.95,
-          -radius * 0.7,
-          -radius * 0.45,
-          -radius * 1.0,
-          -radius * 0.2,
-          -radius * 0.65,
-          radius * 0.2,
-          -radius * 0.65,
-          radius * 0.45,
-          -radius * 1.0,
-          radius * 0.95,
-          -radius * 0.7,
-          radius * 0.65,
-          -radius * 0.15,
-          radius * 0.42,
-          radius * 0.95,
-          -radius * 0.42,
-          radius * 0.95,
+          -radius * 0.34,
+          -radius * 0.92, // vänster axel inre
+          -radius * 0.72,
+          -radius * 0.78, // vänster axel/ärm yttre
+          -radius * 0.98,
+          -radius * 0.22, // vänster ärm ned
+          -radius * 0.64,
+          -radius * 0.02, // vänster armhåla
+          -radius * 0.56,
+          radius * 0.96, // vänster nederkant
+          radius * 0.56,
+          radius * 0.96, // höger nederkant
+          radius * 0.64,
+          -radius * 0.02, // höger armhåla
+          radius * 0.98,
+          -radius * 0.22, // höger ärm ned
+          radius * 0.72,
+          -radius * 0.78, // höger axel/ärm yttre
+          radius * 0.34,
+          -radius * 0.92, // höger axel inre
         ]}
         closed
         fillEnabled={false}
@@ -696,9 +696,9 @@ export default function BoardObject({
           ? positionLabel
           : initials;
     const circleFontSize = isJerseyView
-      ? playerTokenSize * 0.62
+      ? playerTokenSize * 0.54
       : playerTokenSize * 0.76;
-    const circleTextYOffset = isJerseyView ? -playerTokenSize * 0.08 : 0;
+    const circleTextYOffset = isJerseyView ? -playerTokenSize * 0.14 : 0;
     const belowText = !hasLabel
       ? ""
       : showPlayerNumber
@@ -885,6 +885,7 @@ export default function BoardObject({
           player.style.stroke,
           tokenOutlineWidth,
         )}
+
         {renderPlayerJerseyPattern(
           playerTokenSize,
           fillColor,
