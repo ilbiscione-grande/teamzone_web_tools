@@ -137,6 +137,7 @@ export const getDefaultBoardSettings = (mode: ProjectMode) => {
       pitchView: "GREEN_EMPTY" as PitchView,
       pitchOverlay: "NONE" as PitchOverlay,
       pitchShape: "square" as PitchShape,
+            playerVisualization: "circle" as const,
       playerLabel: {
         showName: false,
         showPosition: false,
@@ -157,6 +158,7 @@ export const getDefaultBoardSettings = (mode: ProjectMode) => {
       pitchView: "FULL" as PitchView,
       pitchOverlay: "NONE" as PitchOverlay,
       pitchShape: "none" as PitchShape,
+            playerVisualization: "circle" as const,
       playerLabel: {
         showName: false,
         showPosition: true,
@@ -173,6 +175,7 @@ export const getDefaultBoardSettings = (mode: ProjectMode) => {
     pitchView: "FULL" as PitchView,
     pitchOverlay: "NONE" as PitchOverlay,
     pitchShape: "none" as PitchShape,
+          playerVisualization: "circle" as const,
     playerLabel: {
       showName: true,
       showPosition: true,
@@ -256,6 +259,8 @@ export const createEmptyBoard = (
     pitchOverlay?: PitchOverlay;
     pitchShape?: PitchShape;
     playerLabel?: Board["playerLabel"];
+    
+    playerVisualization?: Board["playerVisualization"];
     pitchRotation?: Board["pitchRotation"];
   }
 ): Board => ({
@@ -281,6 +286,7 @@ export const createEmptyBoard = (
       showPosition: false,
       showNumber: false,
     },
+  playerVisualization: overrides?.playerVisualization ?? "circle",
   playerHighlights: [],
   playerLinks: [],
   layers: createPitchShapeObjects(
@@ -392,9 +398,10 @@ export const createDefaultProject = (
     pitchOverlay: options?.pitchOverlay ?? defaults.pitchOverlay,
     pitchShape: options?.pitchShape ?? defaults.pitchShape,
     playerLabel: options?.playerLabel ?? defaults.playerLabel,
+    playerVisualization: defaults.playerVisualization,
     pitchRotation: options?.pitchRotation ?? 0,
   };
-  const templates =
+    const templates =
     options?.boardTemplates && options.boardTemplates.length > 0
       ? options.boardTemplates
       : [{ id: "board-1", name: "Board 1" }];
@@ -411,8 +418,8 @@ export const createDefaultProject = (
         pitchOverlay: template.pitchOverlay ?? baseOverrides.pitchOverlay,
         pitchShape: template.pitchShape ?? baseOverrides.pitchShape,
         playerLabel: baseOverrides.playerLabel,
-      }
-    )
+        playerVisualization: baseOverrides.playerVisualization,
+      }    )
   );
   if (options?.startingFormation && FORMATION_PRESETS[options.startingFormation]) {
     const formation = FORMATION_PRESETS[options.startingFormation];
@@ -505,6 +512,9 @@ export const ensureBoardSquads = (project: Project): Project => {
       ["Team Setup", "Build-up", "Offensive Setup"].includes(board.name)
     ) {
       board.pitchRotation = 180;
+    }
+        if (!board.playerVisualization) {
+      board.playerVisualization = "circle";
     }
     // Normalize all boards to shared squads in the project to avoid board-local
     // empty squads replacing linked players in older projects.

@@ -2633,6 +2633,7 @@ export default function BoardCanvas({
                 vestByPlayerId={vestByPlayerId}
                 linkMarkerColorByPlayerId={linkMarkerColorByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}
+                playerVisualization={board.playerVisualization ?? "circle"}
                 playerTokenSize={effectivePlayerTokenSize}
                 showPlayerName={board.playerLabel?.showName ?? true}
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}
@@ -2807,6 +2808,7 @@ export default function BoardCanvas({
                 vestByPlayerId={vestByPlayerId}
                 linkMarkerColorByPlayerId={linkMarkerColorByPlayerId}
                 defaultPlayerFill={defaultPlayerFill}
+                playerVisualization={board.playerVisualization ?? "circle"}
                 playerTokenSize={effectivePlayerTokenSize}
                 showPlayerName={board.playerLabel?.showName ?? true}
                 showPlayerPosition={board.playerLabel?.showPosition ?? false}

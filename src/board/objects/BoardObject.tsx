@@ -184,6 +184,7 @@ type BoardObjectProps = {
   vestByPlayerId: Record<string, string | undefined>;
   linkMarkerColorByPlayerId: Record<string, string | undefined>;
   defaultPlayerFill: string;
+  playerVisualization: "circle" | "jersey";
   playerTokenSize: number;
   showPlayerName: boolean;
   showPlayerPosition: boolean;
@@ -218,6 +219,7 @@ export default function BoardObject({
   vestByPlayerId,
   linkMarkerColorByPlayerId,
   defaultPlayerFill,
+  playerVisualization,
   playerTokenSize,
   showPlayerName,
   showPlayerPosition,
@@ -243,10 +245,13 @@ export default function BoardObject({
     if (!isThreeDView || !threeDDepthRange) {
       return 1;
     }
-    const range = Math.max(0.001, threeDDepthRange.maxY - threeDDepthRange.minY);
+    const range = Math.max(
+      0.001,
+      threeDDepthRange.maxY - threeDDepthRange.minY,
+    );
     const t = Math.max(
       0,
-      Math.min(1, (object.position.y - threeDDepthRange.minY) / range)
+      Math.min(1, (object.position.y - threeDDepthRange.minY) / range),
     );
     const strength = Math.max(0, Math.min(1, (threeDStrength ?? 55) / 100));
     // Top of pitch appears farther away.
@@ -260,10 +265,13 @@ export default function BoardObject({
     if (!isThreeDView || !threeDDepthRange) {
       return 1;
     }
-    const range = Math.max(0.001, threeDDepthRange.maxY - threeDDepthRange.minY);
+    const range = Math.max(
+      0.001,
+      threeDDepthRange.maxY - threeDDepthRange.minY,
+    );
     return Math.max(
       0,
-      Math.min(1, (object.position.y - threeDDepthRange.minY) / range)
+      Math.min(1, (object.position.y - threeDDepthRange.minY) / range),
     );
   })();
   const depthStrokeFactor =
@@ -271,9 +279,7 @@ export default function BoardObject({
   const depthStroke = (value: number) =>
     Math.max(0.05, value * depthStrokeFactor);
   const textForeshorten =
-    isThreeDView && threeDDepthRange
-      ? 0.9 + 0.1 * depthScale
-      : 1;
+    isThreeDView && threeDDepthRange ? 0.9 + 0.1 * depthScale : 1;
   const ambientShadowEnabled = !!isThreeDView;
   const depthEase = depthT * depthT;
   const ambientShadowBlur = 0.14 + 1.05 * depthEase;
@@ -283,9 +289,9 @@ export default function BoardObject({
     radius: number,
     primary: string,
     secondary: string,
-    jerseyType: JerseyType
+    jerseyType: JerseyType,
   ) => {
-    if (jerseyType === "solid" || primary === secondary) {
+    if (isJerseyView || jerseyType === "solid" || primary === secondary) {
       return null;
     }
     const innerRadius = Math.max(0.2, radius - 0.02);
@@ -346,6 +352,119 @@ export default function BoardObject({
     );
   };
 
+  const isJerseyView = playerVisualization === "jersey";
+
+  const renderPlayerBody = (
+    radius: number,
+    fill: string,
+    stroke: string,
+    strokeWidth: number,
+  ) => {
+    if (!isJerseyView) {
+      return (
+        <Circle
+          radius={radius}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+          shadowEnabled={!!isThreeDView}
+          shadowColor="#000000"
+          shadowOpacity={isThreeDView ? 0.28 : 0}
+          shadowBlur={isThreeDView ? 0.8 : 0}
+          shadowOffsetY={isThreeDView ? 0.35 : 0}
+        />
+      );
+    }
+
+    return (
+      <Line
+        points={[
+          -radius * 0.65,
+          -radius * 0.15,
+          -radius * 0.95,
+          -radius * 0.7,
+          -radius * 0.45,
+          -radius * 1.0,
+          -radius * 0.2,
+          -radius * 0.65,
+          radius * 0.2,
+          -radius * 0.65,
+          radius * 0.45,
+          -radius * 1.0,
+          radius * 0.95,
+          -radius * 0.7,
+          radius * 0.65,
+          -radius * 0.15,
+          radius * 0.42,
+          radius * 0.95,
+          -radius * 0.42,
+          radius * 0.95,
+        ]}
+        closed
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+        lineJoin="round"
+        shadowEnabled={!!isThreeDView}
+        shadowColor="#000000"
+        shadowOpacity={isThreeDView ? 0.28 : 0}
+        shadowBlur={isThreeDView ? 0.8 : 0}
+        shadowOffsetY={isThreeDView ? 0.35 : 0}
+      />
+    );
+  };
+
+  const renderPlayerOutline = (
+    radius: number,
+    stroke: string,
+    strokeWidth: number,
+  ) => {
+    if (!isJerseyView) {
+      return (
+        <Circle
+          radius={radius}
+          fillEnabled={false}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+          listening={false}
+        />
+      );
+    }
+
+    return (
+      <Line
+        points={[
+          -radius * 0.65,
+          -radius * 0.15,
+          -radius * 0.95,
+          -radius * 0.7,
+          -radius * 0.45,
+          -radius * 1.0,
+          -radius * 0.2,
+          -radius * 0.65,
+          radius * 0.2,
+          -radius * 0.65,
+          radius * 0.45,
+          -radius * 1.0,
+          radius * 0.95,
+          -radius * 0.7,
+          radius * 0.65,
+          -radius * 0.15,
+          radius * 0.42,
+          radius * 0.95,
+          -radius * 0.42,
+          radius * 0.95,
+        ]}
+        closed
+        fillEnabled={false}
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+        lineJoin="round"
+        listening={false}
+      />
+    );
+  };
+
   const commonProps = {
     x: object.position.x,
     y: object.position.y,
@@ -377,17 +496,17 @@ export default function BoardObject({
   };
   const shimmerStrength = Math.max(
     0,
-    Math.min(1, Number(object.style.fxShimmerStrength ?? 0))
+    Math.min(1, Number(object.style.fxShimmerStrength ?? 0)),
   );
   const shimmerProgress = Math.max(
     0,
-    Math.min(1, Number(object.style.fxShimmerProgress ?? 0))
+    Math.min(1, Number(object.style.fxShimmerProgress ?? 0)),
   );
   const renderShimmerSweepInBox = (
     x: number,
     y: number,
     width: number,
-    height: number
+    height: number,
   ) => {
     if (shimmerStrength <= 0 || width <= 0 || height <= 0) {
       return null;
@@ -396,7 +515,7 @@ export default function BoardObject({
     const travel = width + height + bandWidth * 2;
     const shimmerTravelProgress = Math.max(
       0,
-      Math.min(1, shimmerProgress * 0.78 + 0.02)
+      Math.min(1, shimmerProgress * 0.78 + 0.02),
     );
     const sweepX = x - bandWidth + travel * shimmerTravelProgress;
     const sweepY = y - height * 0.18;
@@ -449,7 +568,7 @@ export default function BoardObject({
     const travel = diameter + bandWidth * 2;
     const shimmerTravelProgress = Math.max(
       0,
-      Math.min(1, shimmerProgress * 0.78 + 0.02)
+      Math.min(1, shimmerProgress * 0.78 + 0.02),
     );
     const sweepX = x - radius - bandWidth + travel * shimmerTravelProgress;
     const sweepY = y - radius * 1.25;
@@ -503,7 +622,9 @@ export default function BoardObject({
     }
     const dx = (width * (1 - sx)) / 2;
     const dy = (height * (1 - sy)) / 2;
-    const radians = ((Number.isFinite(object.rotation) ? object.rotation : 0) * Math.PI) / 180;
+    const radians =
+      ((Number.isFinite(object.rotation) ? object.rotation : 0) * Math.PI) /
+      180;
     const cos = Math.cos(radians);
     const sin = Math.sin(radians);
     return {
@@ -517,25 +638,19 @@ export default function BoardObject({
     const resolvedSquadPlayer = resolvedSquadPlayerByTokenId.get(player.id);
     const playerKey = resolvedSquadPlayer?.id ?? getPlayerTokenLinkKey(player);
     const fillColor = playerKey
-      ? kitByPlayerId[playerKey] ?? player.style.fill
+      ? (kitByPlayerId[playerKey] ?? player.style.fill)
       : player.style.fill === "#f9bf4a"
         ? defaultPlayerFill
         : player.style.fill;
     const secondaryFillColor =
-      (playerKey
-        ? secondaryKitByPlayerId[playerKey]
-        : undefined) ??
-      fillColor;
+      (playerKey ? secondaryKitByPlayerId[playerKey] : undefined) ?? fillColor;
     const jerseyType = ((playerKey
       ? jerseyTypeByPlayerId[playerKey]
       : undefined) ?? "solid") as JerseyType;
     const vestColor =
-      player.vestColor ??
-      (playerKey ? vestByPlayerId[playerKey] : undefined);
+      player.vestColor ?? (playerKey ? vestByPlayerId[playerKey] : undefined);
     const linkMarkerColor =
-      linkMarkerColorByPlayerId[player.id] ??
-      vestColor ??
-      fillColor;
+      linkMarkerColorByPlayerId[player.id] ?? vestColor ?? fillColor;
     const tokenOutlineWidth = depthStroke(player.style.strokeWidth);
     const linkRingStrokeWidth = depthStroke(0.62);
     const linkRingRadius =
@@ -544,7 +659,7 @@ export default function BoardObject({
       resolvedSquadPlayer ??
       (playerKey
         ? squadPlayers.find(
-            (item) => item.id === playerKey || item.teamMemberId === playerKey
+            (item) => item.id === playerKey || item.teamMemberId === playerKey,
           )
         : undefined);
     const compactName = (() => {
@@ -570,7 +685,7 @@ export default function BoardObject({
           .slice(0, 2)
       : "PL";
     const positionLabel = toPositionAbbreviation(
-      player.boardPositionLabel ?? squadPlayer?.positionLabel
+      player.boardPositionLabel ?? squadPlayer?.positionLabel,
     );
     const hasLabel = showPlayerName || showPlayerPosition || showPlayerNumber;
     const circleText = !hasLabel
@@ -580,7 +695,10 @@ export default function BoardObject({
         : showPlayerPosition && positionLabel
           ? positionLabel
           : initials;
-    const circleFontSize = playerTokenSize * 0.76;
+    const circleFontSize = isJerseyView
+      ? playerTokenSize * 0.62
+      : playerTokenSize * 0.76;
+    const circleTextYOffset = isJerseyView ? -playerTokenSize * 0.08 : 0;
     const belowText = !hasLabel
       ? ""
       : showPlayerNumber
@@ -606,13 +724,18 @@ export default function BoardObject({
       }
       return "#0f1b1a";
     })();
-    const textStrokeColor = textColor === "#0f1b1a" ? "rgba(255,255,255,0.9)" : "rgba(5,20,16,0.92)";
+    const textStrokeColor =
+      textColor === "#0f1b1a" ? "rgba(255,255,255,0.9)" : "rgba(5,20,16,0.92)";
     const circleTextSize = playerTokenSize * 2;
-    const belowTextWidth = compactPlayerLabels ? playerTokenSize * 5.8 : playerTokenSize * 6;
+    const belowTextWidth = compactPlayerLabels
+      ? playerTokenSize * 5.8
+      : playerTokenSize * 6;
     const belowTextHeight = compactPlayerLabels ? 2.35 : 2.2;
     const belowTextFontSize = compactPlayerLabels ? 1.34 : 1.24;
     const belowTextBgPaddingX = compactPlayerLabels ? 0.34 : 0;
-    const belowTextBgHeight = compactPlayerLabels ? belowTextHeight + 0.22 : belowTextHeight;
+    const belowTextBgHeight = compactPlayerLabels
+      ? belowTextHeight + 0.22
+      : belowTextHeight;
     const rotateOffset = (x: number, y: number, degrees: number) => {
       const radians = (degrees * Math.PI) / 180;
       const cos = Math.cos(radians);
@@ -625,14 +748,14 @@ export default function BoardObject({
     const belowOffset = rotateOffset(
       0,
       playerTokenSize + 0.28 + belowTextHeight / 2,
-      labelRotation
+      labelRotation,
     );
     const hasAttachedBall = objects.some(
-      (item) => item.type === "ball" && item.attachedToId === player.id
+      (item) => item.type === "ball" && item.attachedToId === player.id,
     );
     const highlightGlowStrength = Math.max(
       0,
-      Math.min(1, Number(player.style.outlineWidth ?? 0))
+      Math.min(1, Number(player.style.outlineWidth ?? 0)),
     );
     const highlightGlowColor = vestColor ?? fillColor;
     return (
@@ -652,17 +775,19 @@ export default function BoardObject({
               fillRadialGradientStartPoint={{ x: 0, y: 0 }}
               fillRadialGradientStartRadius={0}
               fillRadialGradientEndPoint={{ x: 0, y: 0 }}
-              fillRadialGradientEndRadius={playerTokenSize + 2.2 + highlightGlowStrength * 2.2}
+              fillRadialGradientEndRadius={
+                playerTokenSize + 2.2 + highlightGlowStrength * 2.2
+              }
               fillRadialGradientColorStops={[
                 0,
                 `${highlightGlowColor}${Math.round(
-                  0.45 * highlightGlowStrength * 255
+                  0.45 * highlightGlowStrength * 255,
                 )
                   .toString(16)
                   .padStart(2, "0")}`,
                 0.45,
                 `${highlightGlowColor}${Math.round(
-                  0.22 * highlightGlowStrength * 255
+                  0.22 * highlightGlowStrength * 255,
                 )
                   .toString(16)
                   .padStart(2, "0")}`,
@@ -676,17 +801,19 @@ export default function BoardObject({
               fillRadialGradientStartPoint={{ x: 0, y: 0 }}
               fillRadialGradientStartRadius={0}
               fillRadialGradientEndPoint={{ x: 0, y: 0 }}
-              fillRadialGradientEndRadius={playerTokenSize + 3.4 + highlightGlowStrength * 3.2}
+              fillRadialGradientEndRadius={
+                playerTokenSize + 3.4 + highlightGlowStrength * 3.2
+              }
               fillRadialGradientColorStops={[
                 0,
                 `${highlightGlowColor}${Math.round(
-                  0.22 * highlightGlowStrength * 255
+                  0.22 * highlightGlowStrength * 255,
                 )
                   .toString(16)
                   .padStart(2, "0")}`,
                 0.6,
                 `${highlightGlowColor}${Math.round(
-                  0.1 * highlightGlowStrength * 255
+                  0.1 * highlightGlowStrength * 255,
                 )
                   .toString(16)
                   .padStart(2, "0")}`,
@@ -752,22 +879,17 @@ export default function BoardObject({
             strokeWidth={depthStroke(0.3)}
           />
         )}
-        <Circle
-          radius={playerTokenSize}
-          fill={fillColor}
-          stroke={player.style.stroke}
-          strokeWidth={tokenOutlineWidth}
-          shadowEnabled={!!isThreeDView}
-          shadowColor="#000000"
-          shadowOpacity={isThreeDView ? 0.28 : 0}
-          shadowBlur={isThreeDView ? 0.8 : 0}
-          shadowOffsetY={isThreeDView ? 0.35 : 0}
-        />
+        {renderPlayerBody(
+          playerTokenSize,
+          fillColor,
+          player.style.stroke,
+          tokenOutlineWidth,
+        )}
         {renderPlayerJerseyPattern(
           playerTokenSize,
           fillColor,
           secondaryFillColor,
-          jerseyType
+          jerseyType,
         )}
         {renderShimmerSweepInCircle(0, 0, playerTokenSize)}
         {isThreeDView && (
@@ -812,13 +934,11 @@ export default function BoardObject({
             />
           </Group>
         )}
-        <Circle
-          radius={playerTokenSize}
-          fillEnabled={false}
-          stroke={player.style.stroke}
-          strokeWidth={tokenOutlineWidth}
-          listening={false}
-        />
+        {renderPlayerOutline(
+          playerTokenSize,
+          player.style.stroke,
+          tokenOutlineWidth,
+        )}
         {hasLabel && (
           <Group rotation={labelRotation} scaleY={textForeshorten}>
             <Text
@@ -826,7 +946,7 @@ export default function BoardObject({
               width={circleTextSize}
               height={circleTextSize}
               x={-circleTextSize / 2}
-              y={-circleTextSize / 2}
+              y={-circleTextSize / 2 + circleTextYOffset}
               align="center"
               verticalAlign="middle"
               wrap="none"
@@ -907,12 +1027,13 @@ export default function BoardObject({
         y: (rawY / length) * defaultAttachDistance,
       };
     })();
-    const position = attachedPlayer && normalizedOffset
-      ? {
-          x: attachedPlayer.position.x + normalizedOffset.x,
-          y: attachedPlayer.position.y + normalizedOffset.y,
-        }
-      : ball.position;
+    const position =
+      attachedPlayer && normalizedOffset
+        ? {
+            x: attachedPlayer.position.x + normalizedOffset.x,
+            y: attachedPlayer.position.y + normalizedOffset.y,
+          }
+        : ball.position;
     return (
       <Group
         {...commonProps}
@@ -926,7 +1047,10 @@ export default function BoardObject({
         onDragStart={(event) => {
           onDragStart();
           if (ball.attachedToId && onBallDragStart) {
-            onBallDragStart(ball.id, { x: event.target.x(), y: event.target.y() });
+            onBallDragStart(ball.id, {
+              x: event.target.x(),
+              y: event.target.y(),
+            });
           }
         }}
       >
@@ -1000,9 +1124,12 @@ export default function BoardObject({
 
   if (object.type === "cone") {
     const cone = object as ConeToken;
-    const coneScaleAnchorOffset = getCenterScaleAnchorOffset(cone.width, cone.height);
+    const coneScaleAnchorOffset = getCenterScaleAnchorOffset(
+      cone.width,
+      cone.height,
+    );
     const lowAlphaWhite = cone.style.fill.match(
-      /^rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([0-9.]+)\s*\)$/i
+      /^rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([0-9.]+)\s*\)$/i,
     );
     const lowAlpha = lowAlphaWhite ? Number(lowAlphaWhite[1]) : NaN;
     const coneFill =
@@ -1043,7 +1170,12 @@ export default function BoardObject({
           fill="rgba(0,0,0,0.001)"
           strokeEnabled={false}
         />
-        <Group y={coneOffsetY} scaleX={scaleX} scaleY={scaleY} listening={false}>
+        <Group
+          y={coneOffsetY}
+          scaleX={scaleX}
+          scaleY={scaleY}
+          listening={false}
+        >
           <Path
             data={CONE_FILL_PATH}
             fill={coneFill}
@@ -1059,7 +1191,10 @@ export default function BoardObject({
 
   if (object.type === "goal") {
     const goal = object as MiniGoal;
-    const goalScaleAnchorOffset = getCenterScaleAnchorOffset(goal.width, goal.height);
+    const goalScaleAnchorOffset = getCenterScaleAnchorOffset(
+      goal.width,
+      goal.height,
+    );
     return (
       <Group
         {...commonProps}
@@ -1079,7 +1214,10 @@ export default function BoardObject({
 
   if (object.type === "pole") {
     const pole = object as PoleToken;
-    const poleScaleAnchorOffset = getCenterScaleAnchorOffset(pole.width, pole.height);
+    const poleScaleAnchorOffset = getCenterScaleAnchorOffset(
+      pole.width,
+      pole.height,
+    );
     const standRadiusX = Math.max(0.35, pole.width * 0.4);
     const standRadiusY = Math.max(0.18, pole.width * 0.2);
     const shaftWidth = Math.max(0.24, pole.width * 0.22);
@@ -1130,7 +1268,7 @@ export default function BoardObject({
     const mannequin = object as MannequinToken;
     const mannequinScaleAnchorOffset = getCenterScaleAnchorOffset(
       mannequin.width,
-      mannequin.height
+      mannequin.height,
     );
     const headRadius = Math.max(0.38, mannequin.width * 0.2);
     const headCenterX = mannequin.width / 2;
@@ -1200,7 +1338,10 @@ export default function BoardObject({
 
   if (object.type === "rect") {
     const rect = object as ShapeRect;
-    const rectScaleAnchorOffset = getCenterScaleAnchorOffset(rect.width, rect.height);
+    const rectScaleAnchorOffset = getCenterScaleAnchorOffset(
+      rect.width,
+      rect.height,
+    );
     return (
       <Group
         {...commonProps}
@@ -1235,9 +1376,16 @@ export default function BoardObject({
     const triangle = object as ShapeTriangle;
     const triangleScaleAnchorOffset = getCenterScaleAnchorOffset(
       triangle.width,
-      triangle.height
+      triangle.height,
     );
-    const points = [0, 0, triangle.width, triangle.height / 2, 0, triangle.height];
+    const points = [
+      0,
+      0,
+      triangle.width,
+      triangle.height / 2,
+      0,
+      triangle.height,
+    ];
     return (
       <Group
         {...commonProps}
@@ -1271,7 +1419,7 @@ export default function BoardObject({
     const arrow = object as ArrowLine;
     const drawProgress = Math.max(
       0,
-      Math.min(1, Number(arrow.style.fxDrawProgress ?? 1))
+      Math.min(1, Number(arrow.style.fxDrawProgress ?? 1)),
     );
     const end = {
       x: arrow.points[2],
@@ -1454,7 +1602,10 @@ export default function BoardObject({
     const lineCount = label.text.split("\n").length;
     const textHeight = label.height ?? lineHeight * lineCount;
     const padding = Math.max(0.4, label.fontSize * 0.25);
-    const textScaleAnchorOffset = getCenterScaleAnchorOffset(label.width, textHeight);
+    const textScaleAnchorOffset = getCenterScaleAnchorOffset(
+      label.width,
+      textHeight,
+    );
     return (
       <Group
         {...commonProps}
@@ -1544,4 +1695,3 @@ export default function BoardObject({
 
   return null;
 }
-

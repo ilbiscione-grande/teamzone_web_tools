@@ -36,11 +36,13 @@ import {
   buildManageTeamRosterRows,
   findManageTeamRosterRow,
 } from "@/components/manage-teams/manageTeamRosterModel";
-import { getActiveBoard, getBoardOverridePlayerKey, getBoardSquads } from "@/utils/board";
-import { createId } from "@/utils/id";
 import {
-  updateTeamWithSquad,
-} from "@/persistence/teamSquads";
+  getActiveBoard,
+  getBoardOverridePlayerKey,
+  getBoardSquads,
+} from "@/utils/board";
+import { createId } from "@/utils/id";
+import { updateTeamWithSquad } from "@/persistence/teamSquads";
 import {
   archiveClubDirectory,
   archiveTeamDirectory,
@@ -126,7 +128,8 @@ const SHIRT_TYPES: Array<{
   { id: "pinstripe", label: "Pinstripe" },
 ];
 
-type ManageDirectoryMemberOption = TeamDirectoryClub["teams"][number]["members"][number];
+type ManageDirectoryMemberOption =
+  TeamDirectoryClub["teams"][number]["members"][number];
 
 const createProjectTeamLinkSnapshot = (team: {
   clubId?: string | null;
@@ -143,7 +146,7 @@ const createProjectTeamLinkSnapshot = (team: {
 
 const findDirectoryTeamSnapshot = (
   clubs: TeamDirectoryClub[],
-  teamId?: string
+  teamId?: string,
 ): ProjectTeamLinkSnapshot | undefined => {
   if (!teamId) {
     return undefined;
@@ -162,7 +165,9 @@ const findDirectoryTeamSnapshot = (
   return undefined;
 };
 
-const flattenDirectoryTeamsToPresets = (clubs: TeamDirectoryClub[]): SquadPreset[] =>
+const flattenDirectoryTeamsToPresets = (
+  clubs: TeamDirectoryClub[],
+): SquadPreset[] =>
   clubs.flatMap((club) =>
     club.teams.map((team) => ({
       id: team.id,
@@ -173,7 +178,7 @@ const flattenDirectoryTeamsToPresets = (clubs: TeamDirectoryClub[]): SquadPreset
       squad: team.squad,
       createdAt: new Date(0).toISOString(),
       updatedAt: new Date(0).toISOString(),
-    }))
+    })),
   );
 
 export default function TopBar() {
@@ -184,7 +189,7 @@ export default function TopBar() {
   const setBoardMode = useProjectStore((state) => state.setBoardMode);
   const setBoardPitchView = useProjectStore((state) => state.setBoardPitchView);
   const setActiveFrameIndex = useProjectStore(
-    (state) => state.setActiveFrameIndex
+    (state) => state.setActiveFrameIndex,
   );
   const updateSquad = useProjectStore((state) => state.updateSquad);
   const addSquadWithData = useProjectStore((state) => state.addSquadWithData);
@@ -192,7 +197,9 @@ export default function TopBar() {
   const updateSquadPlayer = useProjectStore((state) => state.updateSquadPlayer);
   const removeSquadPlayer = useProjectStore((state) => state.removeSquadPlayer);
   const openProject = useProjectStore((state) => state.openProject);
-  const openProjectFromData = useProjectStore((state) => state.openProjectFromData);
+  const openProjectFromData = useProjectStore(
+    (state) => state.openProjectFromData,
+  );
   const closeProject = useProjectStore((state) => state.closeProject);
   const addBoard = useProjectStore((state) => state.addBoard);
   const duplicateBoard = useProjectStore((state) => state.duplicateBoard);
@@ -207,14 +214,14 @@ export default function TopBar() {
   const fileRef = useRef<HTMLInputElement>(null);
   const setTool = useEditorStore((state) => state.setTool);
   const attachBallToPlayer = useEditorStore(
-    (state) => state.attachBallToPlayer
+    (state) => state.attachBallToPlayer,
   );
   const setAttachBallToPlayer = useEditorStore(
-    (state) => state.setAttachBallToPlayer
+    (state) => state.setAttachBallToPlayer,
   );
   const playerTokenSize = useEditorStore((state) => state.playerTokenSize);
   const setPlayerTokenSize = useEditorStore(
-    (state) => state.setPlayerTokenSize
+    (state) => state.setPlayerTokenSize,
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
@@ -223,17 +230,23 @@ export default function TopBar() {
   const [betaOpen, setBetaOpen] = useState(false);
   const [squadPresetsOpen, setSquadPresetsOpen] = useState(false);
   const [squadPresets, setSquadPresets] = useState<SquadPreset[]>([]);
-  const [squadPresetDirectory, setSquadPresetDirectory] = useState<TeamDirectoryClub[]>([]);
+  const [squadPresetDirectory, setSquadPresetDirectory] = useState<
+    TeamDirectoryClub[]
+  >([]);
   const [squadPresetsLoading, setSquadPresetsLoading] = useState(false);
-  const [squadPresetsError, setSquadPresetsError] = useState<string | null>(null);
+  const [squadPresetsError, setSquadPresetsError] = useState<string | null>(
+    null,
+  );
   const [manageSide, setManageSide] = useState<"home" | "away">("home");
-  const [manageSelectedDirectoryClubId, setManageSelectedDirectoryClubId] = useState("");
-  const [manageSelectedDirectoryTeamId, setManageSelectedDirectoryTeamId] = useState("");
+  const [manageSelectedDirectoryClubId, setManageSelectedDirectoryClubId] =
+    useState("");
+  const [manageSelectedDirectoryTeamId, setManageSelectedDirectoryTeamId] =
+    useState("");
   const [managePlayersSortKey, setManagePlayersSortKey] =
     useState<ManagePlayersSortKey>("default");
-  const [managePlayersSortDir, setManagePlayersSortDir] = useState<"asc" | "desc">(
-    "asc"
-  );
+  const [managePlayersSortDir, setManagePlayersSortDir] = useState<
+    "asc" | "desc"
+  >("asc");
   const [manageRosterView, setManageRosterView] =
     useState<ManageRosterView>("base");
   const [manageBoardSearch, setManageBoardSearch] = useState("");
@@ -244,7 +257,7 @@ export default function TopBar() {
   const [manageGuestPosition, setManageGuestPosition] = useState("");
   const [manageGuestNumber, setManageGuestNumber] = useState("");
   const [managePresetStatus, setManagePresetStatus] = useState<string | null>(
-    null
+    null,
   );
   const [manageTopPanel, setManageTopPanel] =
     useState<ManageTeamsTopPanel>("none");
@@ -306,18 +319,7 @@ export default function TopBar() {
     Date.now() -
       Number(window.localStorage.getItem("tacticsboard:planCheckAt") ?? 0) >
       7 * 24 * 60 * 60 * 1000;
-  const playerSizeOptions = [
-    1.0,
-    1.2,
-    1.4,
-    1.5,
-    1.6,
-    1.8,
-    2.0,
-    2.2,
-    2.4,
-    2.6,
-  ];
+  const playerSizeOptions = [1.0, 1.2, 1.4, 1.5, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6];
 
   const createEmptyProjectFromCurrentDefaults = () => {
     if (!project) {
@@ -383,12 +385,12 @@ export default function TopBar() {
     const onOpenManageTeams = () => setSquadPresetsOpen(true);
     window.addEventListener(
       "tacticsboard:open-manage-teams",
-      onOpenManageTeams as EventListener
+      onOpenManageTeams as EventListener,
     );
     return () => {
       window.removeEventListener(
         "tacticsboard:open-manage-teams",
-        onOpenManageTeams as EventListener
+        onOpenManageTeams as EventListener,
       );
     };
   }, []);
@@ -532,7 +534,8 @@ export default function TopBar() {
   }, []);
 
   const activeBoard = useMemo(() => getActiveBoard(project ?? null), [project]);
-  const activeBoardId = activeBoard?.id ?? project?.activeBoardId ?? project?.boards[0]?.id;
+  const activeBoardId =
+    activeBoard?.id ?? project?.activeBoardId ?? project?.boards[0]?.id;
   const boardSquads = getBoardSquads(project ?? null, activeBoard ?? null);
   const manageSquadId =
     manageSide === "home" ? activeBoard?.homeSquadId : activeBoard?.awaySquadId;
@@ -549,9 +552,11 @@ export default function TopBar() {
   const manageBaseSquad =
     project?.squads.find((item) => item.id === manageSquadId) ?? null;
   const currentHomeManagedSquad =
-    project?.squads.find((item) => item.id === activeBoard?.homeSquadId) ?? null;
+    project?.squads.find((item) => item.id === activeBoard?.homeSquadId) ??
+    null;
   const currentAwayManagedSquad =
-    project?.squads.find((item) => item.id === activeBoard?.awaySquadId) ?? null;
+    project?.squads.find((item) => item.id === activeBoard?.awaySquadId) ??
+    null;
   const manageBoardSquad =
     manageSide === "home" ? boardSquads.home : boardSquads.away;
   const manageSquad = manageBaseSquad;
@@ -561,49 +566,60 @@ export default function TopBar() {
       squadPresetDirectory
         .filter((club) => club.status === "active")
         .flatMap((club) =>
-        club.teams.map((team) => ({
-          clubId: club.id,
-          clubName: club.name,
-          clubMembershipRole: club.membershipRole,
-          isCurrentUserClubAdmin: club.isCurrentUserClubAdmin,
-          teamId: team.id,
-          teamName: team.name,
-          teamType: team.teamType,
-          ageGroup: team.ageGroup,
-          seasonLabel: team.seasonLabel,
-          status: team.status,
-          isCurrentUserTeamAdmin: team.isCurrentUserTeamAdmin,
-          squad: team.squad,
-          members: team.members,
-        }))
-      ),
-    [squadPresetDirectory]
+          club.teams.map((team) => ({
+            clubId: club.id,
+            clubName: club.name,
+            clubMembershipRole: club.membershipRole,
+            isCurrentUserClubAdmin: club.isCurrentUserClubAdmin,
+            teamId: team.id,
+            teamName: team.name,
+            teamType: team.teamType,
+            ageGroup: team.ageGroup,
+            seasonLabel: team.seasonLabel,
+            status: team.status,
+            isCurrentUserTeamAdmin: team.isCurrentUserTeamAdmin,
+            squad: team.squad,
+            members: team.members,
+          })),
+        ),
+    [squadPresetDirectory],
   );
   const manageDirectoryClubs = useMemo(
     () =>
       squadPresetDirectory.filter(
-        (club) => club.status === "active" && club.teams.some((team) => team.status === "active")
+        (club) =>
+          club.status === "active" &&
+          club.teams.some((team) => team.status === "active"),
       ),
-    [squadPresetDirectory]
+    [squadPresetDirectory],
   );
   const currentHomeLinkedTeam =
-    manageDirectoryTeams.find((team) => team.teamId === currentHomeLinkedTeamId) ?? null;
+    manageDirectoryTeams.find(
+      (team) => team.teamId === currentHomeLinkedTeamId,
+    ) ?? null;
   const currentAwayLinkedTeam =
-    manageDirectoryTeams.find((team) => team.teamId === currentAwayLinkedTeamId) ?? null;
+    manageDirectoryTeams.find(
+      (team) => team.teamId === currentAwayLinkedTeamId,
+    ) ?? null;
   const managedDirectoryTeam =
     manageDirectoryTeams.find((team) => team.teamId === manageLinkedTeamId) ??
     manageDirectoryTeams.find((team) => team.teamId === manageSquad?.id) ??
     null;
   const selectedManageDirectoryTeam =
-    manageDirectoryTeams.find((team) => team.teamId === manageSelectedDirectoryTeamId) ??
-    null;
+    manageDirectoryTeams.find(
+      (team) => team.teamId === manageSelectedDirectoryTeamId,
+    ) ?? null;
   const selectedManageDirectoryClub =
-    manageDirectoryClubs.find((club) => club.id === manageSelectedDirectoryClubId) ?? null;
-  const selectedManageDirectoryClubTeams = selectedManageDirectoryClub?.teams ?? [];
-  const currentActiveDirectoryTeam =
-    activeTeamSelection?.teamId
-      ? manageDirectoryTeams.find((team) => team.teamId === activeTeamSelection.teamId) ?? null
-      : null;
+    manageDirectoryClubs.find(
+      (club) => club.id === manageSelectedDirectoryClubId,
+    ) ?? null;
+  const selectedManageDirectoryClubTeams =
+    selectedManageDirectoryClub?.teams ?? [];
+  const currentActiveDirectoryTeam = activeTeamSelection?.teamId
+    ? (manageDirectoryTeams.find(
+        (team) => team.teamId === activeTeamSelection.teamId,
+      ) ?? null)
+    : null;
   const currentHomeTeamDisplayName =
     currentHomeLinkedTeam?.teamName ??
     currentHomeLinkedTeamSnapshot?.teamName ??
@@ -634,8 +650,13 @@ export default function TopBar() {
     manageDirectoryClubs[0]?.id ??
     "";
   const currentActiveClubTeams =
-    manageDirectoryClubs.find((club) => club.id === currentActiveClubId)?.teams ?? [];
-  const setCurrentActiveTeam = (teamId: string, clubName: string, teamName: string) => {
+    manageDirectoryClubs.find((club) => club.id === currentActiveClubId)
+      ?.teams ?? [];
+  const setCurrentActiveTeam = (
+    teamId: string,
+    clubName: string,
+    teamName: string,
+  ) => {
     const nextTeam =
       manageDirectoryTeams.find((team) => team.teamId === teamId) ?? null;
     const nextSelection: ActiveTeamSelection = {
@@ -653,19 +674,21 @@ export default function TopBar() {
         clubName,
         teamName,
       },
-      authUser?.id ?? null
+      authUser?.id ?? null,
     );
     setManagePresetStatus(`Current team set to ${clubName} / ${teamName}.`);
   };
   const setCurrentActiveTeamById = (teamId: string) => {
-    const nextTeam = manageDirectoryTeams.find((team) => team.teamId === teamId) ?? null;
+    const nextTeam =
+      manageDirectoryTeams.find((team) => team.teamId === teamId) ?? null;
     if (!nextTeam) {
       return;
     }
     setCurrentActiveTeam(nextTeam.teamId, nextTeam.clubName, nextTeam.teamName);
   };
   const setCurrentActiveClub = (clubId: string) => {
-    const nextClub = manageDirectoryClubs.find((club) => club.id === clubId) ?? null;
+    const nextClub =
+      manageDirectoryClubs.find((club) => club.id === clubId) ?? null;
     const nextTeam = nextClub?.teams[0] ?? null;
     if (!nextClub || !nextTeam) {
       return;
@@ -674,20 +697,20 @@ export default function TopBar() {
   };
   const confirmDestructiveNameMatch = (
     entityLabel: "club" | "team",
-    entityName: string
+    entityName: string,
   ) => {
     if (typeof window === "undefined") {
       return false;
     }
     const confirmation = window.confirm(
-      `Delete ${entityLabel} "${entityName}" permanently?`
+      `Delete ${entityLabel} "${entityName}" permanently?`,
     );
     if (!confirmation) {
       return false;
     }
     const typed = window.prompt(
       `Type the exact ${entityLabel} name to confirm deletion:`,
-      ""
+      "",
     );
     return typed?.trim() === entityName.trim();
   };
@@ -699,7 +722,7 @@ export default function TopBar() {
     if (
       typeof window !== "undefined" &&
       !window.confirm(
-        `Archive club "${managedDirectoryTeam.clubName}"? It will be hidden from active team lists.`
+        `Archive club "${managedDirectoryTeam.clubName}"? It will be hidden from active team lists.`,
       )
     ) {
       return;
@@ -718,9 +741,7 @@ export default function TopBar() {
       setManagePresetStatus("Club admin required.");
       return;
     }
-    if (
-      !confirmDestructiveNameMatch("club", managedDirectoryTeam.clubName)
-    ) {
+    if (!confirmDestructiveNameMatch("club", managedDirectoryTeam.clubName)) {
       setManagePresetStatus("Club deletion cancelled. Exact name required.");
       return;
     }
@@ -745,7 +766,7 @@ export default function TopBar() {
     if (
       typeof window !== "undefined" &&
       !window.confirm(
-        `Archive team "${managedDirectoryTeam.teamName}"? It will be hidden from active team lists.`
+        `Archive team "${managedDirectoryTeam.teamName}"? It will be hidden from active team lists.`,
       )
     ) {
       return;
@@ -768,9 +789,7 @@ export default function TopBar() {
       setManagePresetStatus("Team admin or club admin required.");
       return;
     }
-    if (
-      !confirmDestructiveNameMatch("team", managedDirectoryTeam.teamName)
-    ) {
+    if (!confirmDestructiveNameMatch("team", managedDirectoryTeam.teamName)) {
       setManagePresetStatus("Team deletion cancelled. Exact name required.");
       return;
     }
@@ -805,7 +824,7 @@ export default function TopBar() {
         linkedTeamId: managedDirectoryTeam?.teamId,
         linkedTeamName: managedDirectoryTeam?.teamName,
       }),
-    [manageSquad, managedDirectoryTeam]
+    [manageSquad, managedDirectoryTeam],
   );
   const manageMembershipSummary = useMemo(() => {
     let linkedMembers = 0;
@@ -839,7 +858,7 @@ export default function TopBar() {
       return;
     }
     setManageSelectedDirectoryTeamId(
-      (current) => current || manageDirectoryTeams[0]?.teamId || ""
+      (current) => current || manageDirectoryTeams[0]?.teamId || "",
     );
   }, [
     manageDirectoryClubs,
@@ -852,13 +871,17 @@ export default function TopBar() {
     if (!squadPresetsOpen || !manageSelectedDirectoryClubId) {
       return;
     }
-    const nextClub = manageDirectoryClubs.find((club) => club.id === manageSelectedDirectoryClubId);
+    const nextClub = manageDirectoryClubs.find(
+      (club) => club.id === manageSelectedDirectoryClubId,
+    );
     const nextTeams = nextClub?.teams ?? [];
     if (nextTeams.length === 0) {
       return;
     }
     setManageSelectedDirectoryTeamId((current) =>
-      nextTeams.some((team) => team.id === current) ? current : nextTeams[0]!.id
+      nextTeams.some((team) => team.id === current)
+        ? current
+        : nextTeams[0]!.id,
     );
   }, [manageDirectoryClubs, manageSelectedDirectoryClubId, squadPresetsOpen]);
   const sortedManagePlayers = useMemo(() => {
@@ -878,7 +901,7 @@ export default function TopBar() {
     const textValue = (value?: string) => value?.trim().toLowerCase() ?? "";
     const defaultCompare = (
       a: (typeof withIndex)[number],
-      b: (typeof withIndex)[number]
+      b: (typeof withIndex)[number],
     ) => {
       const aMemberOrder =
         (a.player.teamMemberId
@@ -914,20 +937,29 @@ export default function TopBar() {
       if (aNumber !== bNumber) {
         return aNumber - bNumber;
       }
-      return textValue(a.player.name).localeCompare(textValue(b.player.name), "sv");
+      return textValue(a.player.name).localeCompare(
+        textValue(b.player.name),
+        "sv",
+      );
     };
-    const compare = (a: (typeof withIndex)[number], b: (typeof withIndex)[number]) => {
+    const compare = (
+      a: (typeof withIndex)[number],
+      b: (typeof withIndex)[number],
+    ) => {
       if (managePlayersSortKey === "default") {
         const value = defaultCompare(a, b);
         return value !== 0 ? value : a.index - b.index;
       }
       let value = 0;
       if (managePlayersSortKey === "name") {
-        value = textValue(a.player.name).localeCompare(textValue(b.player.name), "sv");
+        value = textValue(a.player.name).localeCompare(
+          textValue(b.player.name),
+          "sv",
+        );
       } else if (managePlayersSortKey === "position") {
         value = textValue(a.player.positionLabel).localeCompare(
           textValue(b.player.positionLabel),
-          "sv"
+          "sv",
         );
       } else if (managePlayersSortKey === "number") {
         value = numberValue(a.player.number) - numberValue(b.player.number);
@@ -947,9 +979,7 @@ export default function TopBar() {
     manageSquad,
     managedDirectoryMemberOrderMap,
   ]);
-  const updateEditableSquad = (
-    payload: Partial<SquadPreset["squad"]>
-  ) => {
+  const updateEditableSquad = (payload: Partial<SquadPreset["squad"]>) => {
     if (manageSquad) {
       updateSquad(manageSquad.id, payload);
     }
@@ -959,12 +989,15 @@ export default function TopBar() {
       return null;
     }
     const row = findManageTeamRosterRow(manageBaseRosterRows, playerId);
-    const existing =
-      row?.localSnapshotId
-        ? manageSquad.players.find((player) => player.id === row.localSnapshotId)
-        : manageSquad.players.find((player) => player.id === playerId) ??
-          manageSquad.players.find((player) => player.teamMemberId === playerId) ??
-          manageSquad.players.find((player) => player.sourcePlayerId === playerId);
+    const existing = row?.localSnapshotId
+      ? manageSquad.players.find((player) => player.id === row.localSnapshotId)
+      : (manageSquad.players.find((player) => player.id === playerId) ??
+        manageSquad.players.find(
+          (player) => player.teamMemberId === playerId,
+        ) ??
+        manageSquad.players.find(
+          (player) => player.sourcePlayerId === playerId,
+        ));
     if (existing && row?.hasLocalSnapshot !== false) {
       return existing;
     }
@@ -991,7 +1024,7 @@ export default function TopBar() {
   const updateManageBasePlayer = (
     squadId: string,
     playerId: string,
-    payload: Partial<SquadPlayer>
+    payload: Partial<SquadPlayer>,
   ) => {
     if (!manageSquad || squadId !== manageSquad.id) {
       return;
@@ -1027,7 +1060,7 @@ export default function TopBar() {
           (player.id === row.localSnapshotId ||
             player.id === row.identity ||
             player.teamMemberId === row.identity ||
-            player.sourcePlayerId === row.identity)
+            player.sourcePlayerId === row.identity),
       ) ?? false
     );
   };
@@ -1044,7 +1077,7 @@ export default function TopBar() {
           (player.id === row.localSnapshotId ||
             player.id === row.identity ||
             player.teamMemberId === row.identity ||
-            player.sourcePlayerId === row.identity)
+            player.sourcePlayerId === row.identity),
       ) ?? false
     );
   };
@@ -1079,16 +1112,14 @@ export default function TopBar() {
   const setProjectTeamContextForSide = (
     side: "home" | "away",
     teamId?: string,
-    snapshot?: ProjectTeamLinkSnapshot
+    snapshot?: ProjectTeamLinkSnapshot,
   ) => {
     if (!project) {
       return;
     }
     const nextTeamContext = {
-      homeTeamId:
-        side === "home" ? teamId : project.teamContext?.homeTeamId,
-      awayTeamId:
-        side === "away" ? teamId : project.teamContext?.awayTeamId,
+      homeTeamId: side === "home" ? teamId : project.teamContext?.homeTeamId,
+      awayTeamId: side === "away" ? teamId : project.teamContext?.awayTeamId,
       homeTeamSnapshot:
         side === "home" ? snapshot : project.teamContext?.homeTeamSnapshot,
       awayTeamSnapshot:
@@ -1115,7 +1146,7 @@ export default function TopBar() {
       guestPlayers?: SquadPlayer[];
       numberOverrides?: Record<string, number | undefined>;
       positionOverrides?: Record<string, string>;
-    }
+    },
   ) => {
     if (!activeBoard || !manageBaseSquad) {
       return;
@@ -1163,8 +1194,8 @@ export default function TopBar() {
       .map((player) =>
         findManageTeamRosterRow(
           manageBaseRosterRows,
-          player.teamMemberId ?? player.sourcePlayerId ?? player.id
-        )
+          player.teamMemberId ?? player.sourcePlayerId ?? player.id,
+        ),
       )
       .filter((row): row is NonNullable<typeof row> => Boolean(row));
     const needle = manageBaseSearch.trim().toLowerCase();
@@ -1181,7 +1212,7 @@ export default function TopBar() {
   const isSharedView = project?.isShared ?? false;
   const limits = getPlanLimits(plan);
   const projectCount = new Set(
-    [...index.map((item) => item.id), project?.id].filter(Boolean)
+    [...index.map((item) => item.id), project?.id].filter(Boolean),
   ).size;
   const projectLimitReached =
     Number.isFinite(limits.maxProjects) && projectCount >= limits.maxProjects;
@@ -1194,14 +1225,16 @@ export default function TopBar() {
   const canUsePresetStorage = plan === "PAID" && Boolean(authUser);
   const shareLinkQrUrl = shareLinkUrl
     ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=16&data=${encodeURIComponent(
-        shareLinkUrl
+        shareLinkUrl,
       )}`
     : null;
-  const shareLinkQrDownloadName = `${(project?.name ?? "project")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "project"}-share-qr.png`;
+  const shareLinkQrDownloadName = `${
+    (project?.name ?? "project")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "project"
+  }-share-qr.png`;
   useEffect(() => {
     if (!shareLinkOpen || !project || !authUser || plan !== "PAID") {
       return;
@@ -1267,7 +1300,7 @@ export default function TopBar() {
     };
     if (!manageLinkedTeamId) {
       setManagePresetStatus(
-        "This side is not linked to a team yet. Use Switch team first."
+        "This side is not linked to a team yet. Use Switch team first.",
       );
       return;
     }
@@ -1296,7 +1329,7 @@ export default function TopBar() {
         return;
       }
       setSquadPresets((prev) =>
-        prev.map((item) => (item.id === result.team.id ? result.team : item))
+        prev.map((item) => (item.id === result.team.id ? result.team : item)),
       );
       setProjectTeamContextForSide(
         manageSide,
@@ -1310,22 +1343,24 @@ export default function TopBar() {
             })
           : project?.teamContext?.[
               manageSide === "home" ? "homeTeamSnapshot" : "awayTeamSnapshot"
-            ]
+            ],
       );
       setManageSelectedDirectoryTeamId(result.team.id);
       saveDefaultLinkedTeam(manageSide, result.team.id, authUser?.id ?? null);
       saveDefaultTeamSquad(manageSide, result.team.squad, authUser?.id ?? null);
       setManagePresetStatus(
-        "Linked roster updated. Appearance stays local to this project."
+        "Linked roster updated. Appearance stays local to this project.",
       );
       return;
     }
-    setManagePresetStatus("Linked team could not be found in your team directory.");
+    setManagePresetStatus(
+      "Linked team could not be found in your team directory.",
+    );
   };
 
   const cloneSquadIntoTargetSide = (
     sourceSquad: SquadPreset["squad"],
-    side: "home" | "away"
+    side: "home" | "away",
   ) => {
     if (!activeBoard) {
       setManagePresetStatus("No active board available.");
@@ -1398,14 +1433,14 @@ export default function TopBar() {
         clubName: selectedTeam.clubName,
         teamId,
         teamName: selectedTeam.teamName,
-      })
+      }),
     );
     setManageSide(side);
     setManageSelectedDirectoryTeamId(teamId);
     setManagePresetStatus(
       `${selectedTeam.clubName} / ${selectedTeam.teamName} loaded as ${
         side === "home" ? "Home" : "Away"
-      } team.`
+      } team.`,
     );
   };
 
@@ -1418,7 +1453,7 @@ export default function TopBar() {
       setManagePresetStatus(
         side === "home"
           ? "You are already editing the Home team."
-          : "You are already editing the Away team."
+          : "You are already editing the Away team.",
       );
       return;
     }
@@ -1426,12 +1461,16 @@ export default function TopBar() {
     if (!nextSquadId) {
       return;
     }
-    setProjectTeamContextForSide(side, manageLinkedTeamId, manageLinkedTeamSnapshot);
+    setProjectTeamContextForSide(
+      side,
+      manageLinkedTeamId,
+      manageLinkedTeamSnapshot,
+    );
     setManageSide(side);
     setManagePresetStatus(
       side === "home"
         ? "Current side copied to Home team."
-        : "Current side copied to Away team."
+        : "Current side copied to Away team.",
     );
   };
   const toggleManagePlayersSort = (key: ManagePlayersSortKey) => {
@@ -1441,7 +1480,9 @@ export default function TopBar() {
       return;
     }
     if (managePlayersSortKey === key) {
-      setManagePlayersSortDir((current) => (current === "asc" ? "desc" : "asc"));
+      setManagePlayersSortDir((current) =>
+        current === "asc" ? "desc" : "asc",
+      );
       return;
     }
     setManagePlayersSortKey(key);
@@ -1456,7 +1497,10 @@ export default function TopBar() {
     }
     return managePlayersSortDir === "asc" ? " ↑" : " ↓";
   };
-  const manageToggleBoardPlayerVisible = (playerId: string, nextVisible: boolean) => {
+  const manageToggleBoardPlayerVisible = (
+    playerId: string,
+    nextVisible: boolean,
+  ) => {
     const overridePlayer =
       manageBaseSquad?.players.find((item) => item.id === playerId) ??
       manageBoardSquad?.players.find((item) => item.id === playerId);
@@ -1490,8 +1534,12 @@ export default function TopBar() {
         return { ...current, guestPlayers: guests };
       }
       const nextOverrides = { ...(current.positionOverrides ?? {}) };
-      const basePlayer = manageBaseSquad?.players.find((item) => item.id === playerId);
-      const overrideKey = basePlayer ? getBoardOverridePlayerKey(basePlayer) : playerId;
+      const basePlayer = manageBaseSquad?.players.find(
+        (item) => item.id === playerId,
+      );
+      const overrideKey = basePlayer
+        ? getBoardOverridePlayerKey(basePlayer)
+        : playerId;
       const basePosition = basePlayer?.positionLabel ?? "";
       if (!trimmed || trimmed === basePosition) {
         delete nextOverrides[playerId];
@@ -1515,8 +1563,12 @@ export default function TopBar() {
         return { ...current, guestPlayers: guests };
       }
       const nextOverrides = { ...(current.numberOverrides ?? {}) };
-      const basePlayer = manageBaseSquad?.players.find((item) => item.id === playerId);
-      const overrideKey = basePlayer ? getBoardOverridePlayerKey(basePlayer) : playerId;
+      const basePlayer = manageBaseSquad?.players.find(
+        (item) => item.id === playerId,
+      );
+      const overrideKey = basePlayer
+        ? getBoardOverridePlayerKey(basePlayer)
+        : playerId;
       const baseNumber = basePlayer?.number;
       if (!Number.isFinite(parsed) || parsed <= 0 || parsed === baseNumber) {
         delete nextOverrides[playerId];
@@ -1556,9 +1608,11 @@ export default function TopBar() {
   const manageRemoveBoardGuest = (playerId: string) => {
     updateManageBoardOverride((current) => {
       const nextGuests = (current.guestPlayers ?? []).filter(
-        (item) => item.id !== playerId
+        (item) => item.id !== playerId,
       );
-      const nextHidden = (current.hiddenPlayerIds ?? []).filter((id) => id !== playerId);
+      const nextHidden = (current.hiddenPlayerIds ?? []).filter(
+        (id) => id !== playerId,
+      );
       const nextNumberOverrides = { ...(current.numberOverrides ?? {}) };
       const nextPositionOverrides = { ...(current.positionOverrides ?? {}) };
       delete nextNumberOverrides[playerId];
@@ -1589,7 +1643,7 @@ export default function TopBar() {
     type: JerseyType,
     primary: string,
     secondary: string,
-    className: string
+    className: string,
   ) => (
     <svg viewBox="0 0 100 100" className={className} aria-hidden>
       <defs>
@@ -1616,7 +1670,14 @@ export default function TopBar() {
         ) : null}
         {type === "pinstripe"
           ? [26, 34, 42, 50, 58, 66, 74].map((x) => (
-              <rect key={x} x={x} y="14" width="3" height="72" fill={secondary} />
+              <rect
+                key={x}
+                x={x}
+                y="14"
+                width="3"
+                height="72"
+                fill={secondary}
+              />
             ))
           : null}
       </g>
@@ -1723,8 +1784,12 @@ export default function TopBar() {
   };
 
   const waitForPaint = async () => {
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
   };
 
   const formatFieldLabel = (key: string) =>
@@ -1766,9 +1831,9 @@ export default function TopBar() {
     const scopedSessionFields = (project.sessionNotesFields?.[
       templateKey as keyof typeof project.sessionNotesFields
     ] ?? {}) as Record<string, unknown>;
-    const scopedBoardFields = (
-      board.notesFields?.[templateKey as keyof typeof board.notesFields] ?? {}
-    ) as Record<string, unknown>;
+    const scopedBoardFields = (board.notesFields?.[
+      templateKey as keyof typeof board.notesFields
+    ] ?? {}) as Record<string, unknown>;
     const boardText = board.notes?.trim() ?? "";
     const dateText = toText(scopedSessionFields.dateTime) || "";
 
@@ -1776,8 +1841,11 @@ export default function TopBar() {
     const makeBlock = (title: string, text: string) =>
       text ? { title, text } : null;
     const compactBlocks = (
-      items: Array<{ title: string; text: string } | null>
-    ) => items.filter((item): item is { title: string; text: string } => Boolean(item));
+      items: Array<{ title: string; text: string } | null>,
+    ) =>
+      items.filter((item): item is { title: string; text: string } =>
+        Boolean(item),
+      );
 
     if (templateKey === "training") {
       return {
@@ -1869,7 +1937,9 @@ export default function TopBar() {
 
     const pitchBounds = getPitchViewBounds(board.pitchView);
     const viewRotation =
-      board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF" ? -90 : 0;
+      board.pitchView === "DEF_HALF" || board.pitchView === "OFF_HALF"
+        ? -90
+        : 0;
     const effectiveBounds =
       viewRotation === 0
         ? pitchBounds
@@ -1913,7 +1983,7 @@ export default function TopBar() {
         0,
         0,
         canvas.width,
-        canvas.height
+        canvas.height,
       );
     });
     const imageData = canvas.toDataURL("image/png");
@@ -1944,7 +2014,7 @@ export default function TopBar() {
         text: string | string[],
         x: number,
         y: number,
-        options?: Record<string, unknown>
+        options?: Record<string, unknown>,
       ) => void;
       line: (x1: number, y1: number, x2: number, y2: number) => void;
       roundedRect: (
@@ -1954,7 +2024,7 @@ export default function TopBar() {
         h: number,
         rx: number,
         ry: number,
-        style?: string
+        style?: string,
       ) => void;
       addImage: (
         imageData: string,
@@ -1964,14 +2034,14 @@ export default function TopBar() {
         width: number,
         height: number,
         alias?: string,
-        compression?: string
+        compression?: string,
       ) => void;
       splitTextToSize: (text: string, maxWidth: number) => string[];
       save: (filename: string) => void;
     };
     type JsPdfCtor = new (options?: Record<string, unknown>) => JsPdfInstance;
-    const existing = (window as unknown as { jspdf?: { jsPDF?: unknown } }).jspdf
-      ?.jsPDF;
+    const existing = (window as unknown as { jspdf?: { jsPDF?: unknown } })
+      .jspdf?.jsPDF;
     if (existing) {
       return existing as JsPdfCtor;
     }
@@ -1987,7 +2057,9 @@ export default function TopBar() {
     try {
       await loadFrom("/vendor/jspdf.umd.min.js");
     } catch {
-      await loadFrom("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js");
+      await loadFrom(
+        "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js",
+      );
     }
     const loaded = (window as unknown as { jspdf?: { jsPDF?: unknown } }).jspdf
       ?.jsPDF;
@@ -2001,7 +2073,10 @@ export default function TopBar() {
     new Promise<{ width: number; height: number }>((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
-        resolve({ width: img.naturalWidth || 1, height: img.naturalHeight || 1 });
+        resolve({
+          width: img.naturalWidth || 1,
+          height: img.naturalHeight || 1,
+        });
       };
       img.onerror = () => reject(new Error("Failed to read captured image."));
       img.src = src;
@@ -2009,16 +2084,24 @@ export default function TopBar() {
 
   const downloadPdfFile = async (
     pages: Array<{ boardName: string; image: string; board: Board }>,
-    generatedAtLabel: string
+    generatedAtLabel: string,
   ) => {
     const JsPdf = await loadJsPdf();
-    const doc = new JsPdf({ orientation: "portrait", unit: "mm", format: "a4" });
+    const doc = new JsPdf({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
     const pageWidth = 210;
     const pageHeight = 297;
     const margin = 12;
     const contentWidth = pageWidth - margin * 2;
 
-    const renderHeaderFooter = (pageNumber: number, totalPages: number, dateText: string) => {
+    const renderHeaderFooter = (
+      pageNumber: number,
+      totalPages: number,
+      dateText: string,
+    ) => {
       doc.setLineWidth(0.2);
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
@@ -2028,10 +2111,19 @@ export default function TopBar() {
       });
       doc.line(margin, 9.5, pageWidth - margin, 9.5);
       doc.line(margin, pageHeight - 9.5, pageWidth - margin, pageHeight - 9.5);
-      doc.text("Teamzone Web Tools - webtools.teamzoneapp.se", margin, pageHeight - 4.5);
-      doc.text(`Page ${pageNumber}/${totalPages}`, pageWidth - margin, pageHeight - 4.5, {
-        align: "right",
-      });
+      doc.text(
+        "Teamzone Web Tools - webtools.teamzoneapp.se",
+        margin,
+        pageHeight - 4.5,
+      );
+      doc.text(
+        `Page ${pageNumber}/${totalPages}`,
+        pageWidth - margin,
+        pageHeight - 4.5,
+        {
+          align: "right",
+        },
+      );
     };
 
     let pageNumber = 1;
@@ -2055,7 +2147,7 @@ export default function TopBar() {
       const maxImageHeight = 105;
       const ratio = Math.min(
         maxImageWidth / imageDims.width,
-        maxImageHeight / imageDims.height
+        maxImageHeight / imageDims.height,
       );
       const imageWidth = imageDims.width * ratio;
       const imageHeight = imageDims.height * ratio;
@@ -2097,17 +2189,20 @@ export default function TopBar() {
         yLeft += leftLineHeight;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
-        const descriptionLines = doc.splitTextToSize(layout.description, leftWidth);
+        const descriptionLines = doc.splitTextToSize(
+          layout.description,
+          leftWidth,
+        );
         const maxDescriptionLinesOnFirstPage = Math.max(
           1,
-          Math.floor((bodyBottom - yLeft) / 3.8)
+          Math.floor((bodyBottom - yLeft) / 3.8),
         );
         const firstDescriptionChunk = descriptionLines.slice(
           0,
-          maxDescriptionLinesOnFirstPage
+          maxDescriptionLinesOnFirstPage,
         );
         const remainingDescription = descriptionLines.slice(
-          maxDescriptionLinesOnFirstPage
+          maxDescriptionLinesOnFirstPage,
         );
         doc.text(firstDescriptionChunk, margin, yLeft);
 
@@ -2123,7 +2218,9 @@ export default function TopBar() {
       layout.right.forEach((block) => {
         doc.setFont("helvetica", "bold");
         doc.setFontSize(8.8);
-        doc.text(block.title, rightX + rightBoxWidth / 2, yRight, { align: "center" });
+        doc.text(block.title, rightX + rightBoxWidth / 2, yRight, {
+          align: "center",
+        });
         yRight += 4.2;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
@@ -2153,9 +2250,14 @@ export default function TopBar() {
       doc.setPage(i as unknown as number);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
-      doc.text(`Page ${i}/${totalPages}`, pageWidth - margin, pageHeight - 4.5, {
-        align: "right",
-      });
+      doc.text(
+        `Page ${i}/${totalPages}`,
+        pageWidth - margin,
+        pageHeight - 4.5,
+        {
+          align: "right",
+        },
+      );
     }
 
     const safeName = project.name.replace(/[^\w\d-_]+/g, "_").slice(0, 60);
@@ -2181,12 +2283,13 @@ export default function TopBar() {
           ? pdfSelectedBoardIds
               .map((id) => project.boards.find((board) => board.id === id))
               .filter((board): board is Board => Boolean(board))
-          : [activeBoard].filter(Boolean) as Board[];
+          : ([activeBoard].filter(Boolean) as Board[]);
       if (targets.length === 0) {
         setPdfStatus("Select at least one board.");
         return;
       }
-      const pages: Array<{ boardName: string; image: string; board: Board }> = [];
+      const pages: Array<{ boardName: string; image: string; board: Board }> =
+        [];
 
       for (const targetBoard of targets) {
         if (project.activeBoardId !== targetBoard.id) {
@@ -2220,11 +2323,7 @@ export default function TopBar() {
         minute: "2-digit",
       }).format(new Date());
       const opened = await downloadPdfFile(pages, generatedAtLabel);
-      setPdfStatus(
-        opened
-          ? "PDF downloaded."
-          : "Could not generate PDF."
-      );
+      setPdfStatus(opened ? "PDF downloaded." : "Could not generate PDF.");
     } finally {
       setPdfBusy(false);
     }
@@ -2333,7 +2432,8 @@ export default function TopBar() {
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
                   onClick={() => {
                     setProjectActionsOpen(false);
-                    const name = window.prompt("Project name", project.name) ?? "";
+                    const name =
+                      window.prompt("Project name", project.name) ?? "";
                     if (name.trim()) {
                       updateProjectMeta({ name: name.trim() });
                     }
@@ -2617,7 +2717,10 @@ export default function TopBar() {
             </select>
           )}
           {!isSharedView && (
-            <div className="relative flex flex-col items-center gap-1" data-actions-menu>
+            <div
+              className="relative flex flex-col items-center gap-1"
+              data-actions-menu
+            >
               <button
                 className="rounded-full border border-[var(--line)] p-2 text-[var(--ink-1)] hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
                 onClick={() => setActionsOpen((prev) => !prev)}
@@ -2651,7 +2754,10 @@ export default function TopBar() {
                       value={activeBoard?.mode ?? "STATIC"}
                       onChange={(event) =>
                         activeBoard &&
-                        setBoardMode(activeBoard.id, event.target.value as BoardMode)
+                        setBoardMode(
+                          activeBoard.id,
+                          event.target.value as BoardMode,
+                        )
                       }
                     >
                       <option value="STATIC">STATIC</option>
@@ -2706,7 +2812,7 @@ export default function TopBar() {
                       const result = saveProjectTemplate(
                         project,
                         name,
-                        authUser?.id ?? null
+                        authUser?.id ?? null,
                       );
                       if (!result.ok) {
                         window.alert(result.error);
@@ -2862,13 +2968,13 @@ export default function TopBar() {
                   )}
                   <button
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--panel-2)]"
-                      onClick={() => {
-                        setActionsOpen(false);
-                        setShareLinkOpen(true);
-                        setShareLinkStatus(null);
-                        setShareLinkUrl(null);
-                        setShareLinkCopied(false);
-                      }}
+                    onClick={() => {
+                      setActionsOpen(false);
+                      setShareLinkOpen(true);
+                      setShareLinkStatus(null);
+                      setShareLinkUrl(null);
+                      setShareLinkCopied(false);
+                    }}
                     disabled={plan !== "PAID" || !authUser}
                     data-locked={plan !== "PAID" || !authUser}
                   >
@@ -2984,9 +3090,12 @@ export default function TopBar() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
           <div className="w-full max-w-md rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
             <div className="space-y-1">
-              <h2 className="display-font text-lg text-[var(--accent-0)]">Create project</h2>
+              <h2 className="display-font text-lg text-[var(--accent-0)]">
+                Create project
+              </h2>
               <p className="text-xs text-[var(--ink-1)]">
-                Choose if you want an empty project or a copy of the current one.
+                Choose if you want an empty project or a copy of the current
+                one.
               </p>
             </div>
             <div className="mt-4 grid gap-2">
@@ -3018,298 +3127,311 @@ export default function TopBar() {
           </div>
         </div>
       )}
-        <ManageTeamsModal
-          open={squadPresetsOpen}
-          manageSide={manageSide}
-          currentHomeTeamName={currentHomeTeamDisplayName}
-          currentAwayTeamName={currentAwayTeamDisplayName}
-          topControls={
-            <>
-              <button
-                className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-[10px] uppercase tracking-wide ${
-                  manageTopPanel === "source"
-                    ? "border-[var(--accent-0)] text-[var(--accent-0)]"
-                    : "border-[var(--line)] text-[var(--ink-1)]"
-                }`}
-                onClick={() =>
-                  setManageTopPanel((current) =>
-                    current === "source" ? "none" : "source"
-                  )
-                }
+      <ManageTeamsModal
+        open={squadPresetsOpen}
+        manageSide={manageSide}
+        currentHomeTeamName={currentHomeTeamDisplayName}
+        currentAwayTeamName={currentAwayTeamDisplayName}
+        topControls={
+          <>
+            <button
+              className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-[10px] uppercase tracking-wide ${
+                manageTopPanel === "source"
+                  ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                  : "border-[var(--line)] text-[var(--ink-1)]"
+              }`}
+              onClick={() =>
+                setManageTopPanel((current) =>
+                  current === "source" ? "none" : "source",
+                )
+              }
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <svg
-                  aria-hidden
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 3v18" />
-                  <path d="M3 12h18" />
-                </svg>
-                Source
-              </button>
-              <button
-                className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-[10px] uppercase tracking-wide ${
-                  manageTopPanel === "appearance"
-                    ? "border-[var(--accent-0)] text-[var(--accent-0)]"
-                    : "border-[var(--line)] text-[var(--ink-1)]"
-                }`}
-                onClick={() =>
-                  setManageTopPanel((current) =>
-                    current === "appearance" ? "none" : "appearance"
-                  )
-                }
+                <path d="M12 3v18" />
+                <path d="M3 12h18" />
+              </svg>
+              Source
+            </button>
+            <button
+              className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-[10px] uppercase tracking-wide ${
+                manageTopPanel === "appearance"
+                  ? "border-[var(--accent-0)] text-[var(--accent-0)]"
+                  : "border-[var(--line)] text-[var(--ink-1)]"
+              }`}
+              onClick={() =>
+                setManageTopPanel((current) =>
+                  current === "appearance" ? "none" : "appearance",
+                )
+              }
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <svg
-                  aria-hidden
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 1-3 0 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 1 0-3 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 1 3 0 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c0 .38.22.74.6 1a1.7 1.7 0 0 1 0 3c-.38.26-.6.62-.6 1Z" />
-                </svg>
-                Appearance
-              </button>
-            </>
-          }
-          onManageSideChange={setManageSide}
-          onApplyToHome={() => setManagedTeamToSide("home")}
-          onApplyToAway={() => setManagedTeamToSide("away")}
-          onClose={closeSquadPresetsModal}
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.7 1.7 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 1-3 0 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 1 0-3 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 1 3 0 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c0 .38.22.74.6 1a1.7 1.7 0 0 1 0 3c-.38.26-.6.62-.6 1Z" />
+              </svg>
+              Appearance
+            </button>
+          </>
+        }
+        onManageSideChange={setManageSide}
+        onApplyToHome={() => setManagedTeamToSide("home")}
+        onApplyToAway={() => setManagedTeamToSide("away")}
+        onClose={closeSquadPresetsModal}
+      >
+        <div
+          className="px-4 py-4 text-xs text-[var(--ink-1)] sm:px-6"
+          data-scrollable
         >
-                <div className="px-4 py-4 text-xs text-[var(--ink-1)] sm:px-6" data-scrollable>
-                <div className="mx-auto max-w-5xl">
-                  <div className="relative">
-                    <ManageTeamsRoster
-                      manageSquad={manageSquad}
-                      manageSide={manageSide}
-                      manageRosterView={manageRosterView}
-                      manageMembershipSummary={manageMembershipSummary}
-                      manageBaseSearch={manageBaseSearch}
-                      manageBoardSearch={manageBoardSearch}
-                      manageBoardFilter={manageBoardFilter}
-                      manageGuestName={manageGuestName}
-                      manageGuestPosition={manageGuestPosition}
-                      manageGuestNumber={manageGuestNumber}
-                      onManageRosterViewChange={setManageRosterView}
-                      onManageBaseSearchChange={setManageBaseSearch}
-                      onManageBoardSearchChange={setManageBoardSearch}
-                      onManageBoardFilterChange={setManageBoardFilter}
-                      onManageGuestNameChange={setManageGuestName}
-                      onManageGuestPositionChange={setManageGuestPosition}
-                      onManageGuestNumberChange={setManageGuestNumber}
-                      onAddMember={() =>
-                        manageSquad &&
-                        addSquadPlayer(manageSquad.id, {
-                          id: createId(),
-                          name: "New Member",
-                          positionLabel: "",
-                          guest: false,
-                          active: true,
-                          number: undefined,
-                          vestColor: undefined,
-                        })
+          <div className="mx-auto max-w-5xl">
+            <div className="relative">
+              <ManageTeamsRoster
+                manageSquad={manageSquad}
+                manageSide={manageSide}
+                manageRosterView={manageRosterView}
+                manageMembershipSummary={manageMembershipSummary}
+                manageBaseSearch={manageBaseSearch}
+                manageBoardSearch={manageBoardSearch}
+                manageBoardFilter={manageBoardFilter}
+                manageGuestName={manageGuestName}
+                manageGuestPosition={manageGuestPosition}
+                manageGuestNumber={manageGuestNumber}
+                onManageRosterViewChange={setManageRosterView}
+                onManageBaseSearchChange={setManageBaseSearch}
+                onManageBoardSearchChange={setManageBoardSearch}
+                onManageBoardFilterChange={setManageBoardFilter}
+                onManageGuestNameChange={setManageGuestName}
+                onManageGuestPositionChange={setManageGuestPosition}
+                onManageGuestNumberChange={setManageGuestNumber}
+                onAddMember={() =>
+                  manageSquad &&
+                  addSquadPlayer(manageSquad.id, {
+                    id: createId(),
+                    name: "New Member",
+                    positionLabel: "",
+                    guest: false,
+                    active: true,
+                    number: undefined,
+                    vestColor: undefined,
+                  })
+                }
+                onAddGuestMember={() =>
+                  manageSquad &&
+                  addSquadPlayer(manageSquad.id, {
+                    id: createId(),
+                    name: "Guest Member",
+                    positionLabel: "",
+                    guest: true,
+                    active: true,
+                    number: undefined,
+                    vestColor: undefined,
+                  })
+                }
+                onAddBoardGuest={manageAddBoardGuest}
+                onShowAllBoardPlayers={() =>
+                  updateManageBoardOverride((current) => ({
+                    ...current,
+                    hiddenPlayerIds: [],
+                  }))
+                }
+                onResetBoardPositions={() =>
+                  updateManageBoardOverride((current) => ({
+                    ...current,
+                    positionOverrides: {},
+                  }))
+                }
+                onResetBoardRoster={() =>
+                  updateManageBoardOverride(() => ({
+                    hiddenPlayerIds: [],
+                    guestPlayers: [],
+                    numberOverrides: {},
+                    positionOverrides: {},
+                  }))
+                }
+                baseRosterToolbar={
+                  <button
+                    className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+                    onClick={() => toggleManagePlayersSort("default")}
+                    title="Reset to default sort"
+                  >
+                    Default sort{manageSortIndicator("default")}
+                  </button>
+                }
+              >
+                {manageSquad ? (
+                  manageRosterView === "base" ? (
+                    <ManageTeamsBaseRoster
+                      manageSquadId={manageSquad.id}
+                      filteredManageBasePlayers={filteredManageBasePlayers}
+                      manageSortIndicator={manageSortIndicator}
+                      managedDirectoryMemberMap={managedDirectoryMemberMap}
+                      onToggleManagePlayersSort={toggleManagePlayersSort}
+                      onUpdateSquadPlayer={updateManageBasePlayer}
+                      onToggleCaptain={toggleManageBaseCaptain}
+                      onToggleSubstitute={toggleManageBaseSubstitute}
+                      isCaptain={isManageBaseCaptain}
+                      isSubstitute={isManageBaseSubstitute}
+                      onRemoveSquadPlayer={removeManageBasePlayer}
+                      positionOptions={MANAGE_POSITION_OPTIONS}
+                    />
+                  ) : (
+                    <ManageTeamsBoardRoster
+                      sortedManageBoardPlayers={sortedManageBoardPlayers}
+                      onSetBoardPlayerNumber={manageSetBoardPlayerNumber}
+                      onSetBoardPlayerPosition={manageSetBoardPlayerPosition}
+                      onToggleBoardPlayerVisible={
+                        manageToggleBoardPlayerVisible
                       }
-                      onAddGuestMember={() =>
-                        manageSquad &&
-                        addSquadPlayer(manageSquad.id, {
-                          id: createId(),
-                          name: "Guest Member",
-                          positionLabel: "",
-                          guest: true,
-                          active: true,
-                          number: undefined,
-                          vestColor: undefined,
-                        })
-                      }
-                      onAddBoardGuest={manageAddBoardGuest}
-                      onShowAllBoardPlayers={() =>
-                        updateManageBoardOverride((current) => ({
-                          ...current,
-                          hiddenPlayerIds: [],
-                        }))
-                      }
-                      onResetBoardPositions={() =>
-                        updateManageBoardOverride((current) => ({
-                          ...current,
-                          positionOverrides: {},
-                        }))
-                      }
-                    onResetBoardRoster={() =>
-                      updateManageBoardOverride(() => ({
-                        hiddenPlayerIds: [],
-                        guestPlayers: [],
-                        numberOverrides: {},
-                        positionOverrides: {},
-                      }))
-                    }
-                    baseRosterToolbar={
-                      <button
-                        className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] uppercase tracking-wide hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
-                        onClick={() => toggleManagePlayersSort("default")}
-                        title="Reset to default sort"
-                      >
-                        Default sort{manageSortIndicator("default")}
-                      </button>
-                    }
-                    >
-                        {manageSquad ? (
-                          manageRosterView === "base" ? (
-                            <ManageTeamsBaseRoster
-                              manageSquadId={manageSquad.id}
-                              filteredManageBasePlayers={filteredManageBasePlayers}
-                              manageSortIndicator={manageSortIndicator}
-                              managedDirectoryMemberMap={managedDirectoryMemberMap}
-                              onToggleManagePlayersSort={toggleManagePlayersSort}
-                              onUpdateSquadPlayer={updateManageBasePlayer}
-                              onToggleCaptain={toggleManageBaseCaptain}
-                              onToggleSubstitute={toggleManageBaseSubstitute}
-                              isCaptain={isManageBaseCaptain}
-                              isSubstitute={isManageBaseSubstitute}
-                              onRemoveSquadPlayer={removeManageBasePlayer}
-                              positionOptions={MANAGE_POSITION_OPTIONS}
-                            />
-                        ) : (
-                          <ManageTeamsBoardRoster
-                            sortedManageBoardPlayers={sortedManageBoardPlayers}
-                          onSetBoardPlayerNumber={manageSetBoardPlayerNumber}
-                          onSetBoardPlayerPosition={manageSetBoardPlayerPosition}
-                          onToggleBoardPlayerVisible={manageToggleBoardPlayerVisible}
-                          onPromoteBoardGuest={managePromoteBoardGuest}
-                          onRemoveBoardGuest={manageRemoveBoardGuest}
-                          />
-                        )
-                        ) : null}
-                      </ManageTeamsRoster>
+                      onPromoteBoardGuest={managePromoteBoardGuest}
+                      onRemoveBoardGuest={manageRemoveBoardGuest}
+                    />
+                  )
+                ) : null}
+              </ManageTeamsRoster>
+            </div>
+            {manageTopPanel !== "none" ? (
+              <div className="absolute inset-0 z-20 flex items-start justify-center rounded-[28px] bg-black/35 p-3 backdrop-blur-[1px] sm:p-5">
+                <div className="w-full max-w-3xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-2xl shadow-black/35 sm:p-5">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-widest text-[var(--accent-0)]">
+                        {manageTopPanel === "source" ? "Source" : "Appearance"}
+                      </p>
+                      <p className="text-xs text-[var(--ink-1)]">
+                        {manageTopPanel === "source"
+                          ? "Load teams, inspect the current source, or save this side for reuse."
+                          : "Update the visual setup for the currently edited side."}
+                      </p>
                     </div>
-                    {manageTopPanel !== "none" ? (
-                      <div className="absolute inset-0 z-20 flex items-start justify-center rounded-[28px] bg-black/35 p-3 backdrop-blur-[1px] sm:p-5">
-                        <div className="w-full max-w-3xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-2xl shadow-black/35 sm:p-5">
-                          <div className="mb-4 flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-[11px] uppercase tracking-widest text-[var(--accent-0)]">
-                                {manageTopPanel === "source" ? "Source" : "Appearance"}
-                              </p>
-                              <p className="text-xs text-[var(--ink-1)]">
-                                {manageTopPanel === "source"
-                                  ? "Load teams, inspect the current source, or save this side for reuse."
-                                  : "Update the visual setup for the currently edited side."}
-                              </p>
-                            </div>
-                            <button
-                              className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
-                              onClick={() => setManageTopPanel("none")}
-                            >
-                              Close
-                            </button>
-                          </div>
-                          {manageTopPanel === "source" ? (
-                            <ManageTeamsSourcePanel
-                              canUsePresetStorage={canUsePresetStorage}
-                              managedDirectoryTeam={managedDirectoryTeam}
-                              currentActiveTeamName={
-                                activeTeamSelection
-                                  ? `${activeTeamSelection.clubName ?? "Team"} / ${activeTeamSelection.teamName}`
-                                  : null
-                              }
-                              currentActiveClubId={currentActiveClubId}
-                              currentActiveTeamId={activeTeamSelection?.teamId ?? ""}
-                              currentActiveClubTeams={currentActiveClubTeams.map((team) => ({
-                                id: team.id,
-                                name: team.name,
-                              }))}
-                              currentSourceName={
-                                currentManageSourceName
-                              }
-                              currentSourceDescription={
-                                currentManageSourceDescription
-                              }
-                              manageDirectoryClubs={manageDirectoryClubs.map((club) => ({
-                                id: club.id,
-                                name: club.name,
-                              }))}
-                              manageDirectoryTeams={manageDirectoryTeams}
-                              manageSelectedDirectoryClubId={manageSelectedDirectoryClubId}
-                              manageSelectedDirectoryTeamId={manageSelectedDirectoryTeamId}
-                              selectedManageDirectoryTeam={selectedManageDirectoryTeam}
-                              selectedManageDirectoryClubTeams={selectedManageDirectoryClubTeams.map(
-                                (team) => ({
-                                  id: team.id,
-                                  name: team.name,
-                                })
-                              )}
-                              squadPresetsLoading={squadPresetsLoading}
-                              squadPresetsError={squadPresetsError}
-                              managePresetStatus={managePresetStatus}
-                              canArchiveCurrentClub={
-                                managedDirectoryTeam?.isCurrentUserClubAdmin === true
-                              }
-                              canDeleteCurrentClub={
-                                managedDirectoryTeam?.isCurrentUserClubAdmin === true
-                              }
-                              canArchiveCurrentTeam={
-                                managedDirectoryTeam?.isCurrentUserClubAdmin === true ||
-                                managedDirectoryTeam?.isCurrentUserTeamAdmin === true
-                              }
-                              canDeleteCurrentTeam={
-                                managedDirectoryTeam?.isCurrentUserClubAdmin === true ||
-                                managedDirectoryTeam?.isCurrentUserTeamAdmin === true
-                              }
-                              onCurrentActiveClubIdChange={setCurrentActiveClub}
-                              onCurrentActiveTeamIdChange={setCurrentActiveTeamById}
-                              onManageSelectedDirectoryClubIdChange={setManageSelectedDirectoryClubId}
-                              onManageSelectedDirectoryTeamIdChange={setManageSelectedDirectoryTeamId}
-                              onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
-                              onSaveReusableTeam={saveManagePreset}
-                              onSetManagedTeamAsCurrent={
-                                managedDirectoryTeam
-                                  ? () =>
-                                      setCurrentActiveTeam(
-                                        managedDirectoryTeam.teamId,
-                                        managedDirectoryTeam.clubName,
-                                        managedDirectoryTeam.teamName
-                                      )
-                                  : null
-                              }
-                              onArchiveCurrentClub={() => {
-                                void archiveManagedClub();
-                              }}
-                              onDeleteCurrentClub={() => {
-                                void deleteManagedClub();
-                              }}
-                              onArchiveCurrentTeam={() => {
-                                void archiveManagedTeam();
-                              }}
-                              onDeleteCurrentTeam={() => {
-                                void deleteManagedTeam();
-                              }}
-                            />
-                          ) : (
-                            <ManageTeamsTeamSetup
-                              editableSquad={editableSquad}
-                              jerseyType={jerseyType}
-                              shirtTypes={SHIRT_TYPES}
-                              manageLogoRef={manageLogoRef}
-                              updateEditableSquad={updateEditableSquad}
-                              onJerseyTypeChange={setJerseyType}
-                              renderShirtIcon={renderShirtIcon}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    ) : null}
+                    <button
+                      className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide text-[var(--ink-1)] hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
+                      onClick={() => setManageTopPanel("none")}
+                    >
+                      Close
+                    </button>
                   </div>
+                  {manageTopPanel === "source" ? (
+                    <ManageTeamsSourcePanel
+                      canUsePresetStorage={canUsePresetStorage}
+                      managedDirectoryTeam={managedDirectoryTeam}
+                      currentActiveTeamName={
+                        activeTeamSelection
+                          ? `${activeTeamSelection.clubName ?? "Team"} / ${activeTeamSelection.teamName}`
+                          : null
+                      }
+                      currentActiveClubId={currentActiveClubId}
+                      currentActiveTeamId={activeTeamSelection?.teamId ?? ""}
+                      currentActiveClubTeams={currentActiveClubTeams.map(
+                        (team) => ({
+                          id: team.id,
+                          name: team.name,
+                        }),
+                      )}
+                      currentSourceName={currentManageSourceName}
+                      currentSourceDescription={currentManageSourceDescription}
+                      manageDirectoryClubs={manageDirectoryClubs.map(
+                        (club) => ({
+                          id: club.id,
+                          name: club.name,
+                        }),
+                      )}
+                      manageDirectoryTeams={manageDirectoryTeams}
+                      manageSelectedDirectoryClubId={
+                        manageSelectedDirectoryClubId
+                      }
+                      manageSelectedDirectoryTeamId={
+                        manageSelectedDirectoryTeamId
+                      }
+                      selectedManageDirectoryTeam={selectedManageDirectoryTeam}
+                      selectedManageDirectoryClubTeams={selectedManageDirectoryClubTeams.map(
+                        (team) => ({
+                          id: team.id,
+                          name: team.name,
+                        }),
+                      )}
+                      squadPresetsLoading={squadPresetsLoading}
+                      squadPresetsError={squadPresetsError}
+                      managePresetStatus={managePresetStatus}
+                      canArchiveCurrentClub={
+                        managedDirectoryTeam?.isCurrentUserClubAdmin === true
+                      }
+                      canDeleteCurrentClub={
+                        managedDirectoryTeam?.isCurrentUserClubAdmin === true
+                      }
+                      canArchiveCurrentTeam={
+                        managedDirectoryTeam?.isCurrentUserClubAdmin === true ||
+                        managedDirectoryTeam?.isCurrentUserTeamAdmin === true
+                      }
+                      canDeleteCurrentTeam={
+                        managedDirectoryTeam?.isCurrentUserClubAdmin === true ||
+                        managedDirectoryTeam?.isCurrentUserTeamAdmin === true
+                      }
+                      onCurrentActiveClubIdChange={setCurrentActiveClub}
+                      onCurrentActiveTeamIdChange={setCurrentActiveTeamById}
+                      onManageSelectedDirectoryClubIdChange={
+                        setManageSelectedDirectoryClubId
+                      }
+                      onManageSelectedDirectoryTeamIdChange={
+                        setManageSelectedDirectoryTeamId
+                      }
+                      onLoadDirectoryTeamIntoSide={loadDirectoryTeamIntoSide}
+                      onSaveReusableTeam={saveManagePreset}
+                      onSetManagedTeamAsCurrent={
+                        managedDirectoryTeam
+                          ? () =>
+                              setCurrentActiveTeam(
+                                managedDirectoryTeam.teamId,
+                                managedDirectoryTeam.clubName,
+                                managedDirectoryTeam.teamName,
+                              )
+                          : null
+                      }
+                      onArchiveCurrentClub={() => {
+                        void archiveManagedClub();
+                      }}
+                      onDeleteCurrentClub={() => {
+                        void deleteManagedClub();
+                      }}
+                      onArchiveCurrentTeam={() => {
+                        void archiveManagedTeam();
+                      }}
+                      onDeleteCurrentTeam={() => {
+                        void deleteManagedTeam();
+                      }}
+                    />
+                  ) : (
+                    <ManageTeamsTeamSetup
+                      editableSquad={editableSquad}
+                      jerseyType={jerseyType}
+                      shirtTypes={SHIRT_TYPES}
+                      manageLogoRef={manageLogoRef}
+                      updateEditableSquad={updateEditableSquad}
+                      onJerseyTypeChange={setJerseyType}
+                      renderShirtIcon={renderShirtIcon}
+                    />
+                  )}
                 </div>
-            </ManageTeamsModal>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </ManageTeamsModal>
       {manageTemplatesOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
           <div className="w-full max-w-2xl rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-6 text-[var(--ink-0)] shadow-2xl shadow-black/40">
@@ -3332,7 +3454,10 @@ export default function TopBar() {
                 Close
               </button>
             </div>
-            <div className="mt-4 max-h-[50vh] space-y-2 overflow-y-auto pr-1" data-scrollable>
+            <div
+              className="mt-4 max-h-[50vh] space-y-2 overflow-y-auto pr-1"
+              data-scrollable
+            >
               {templates.length === 0 ? (
                 <p className="rounded-2xl border border-[var(--line)] bg-[var(--panel-2)] p-3 text-xs text-[var(--ink-1)]">
                   No templates saved yet.
@@ -3356,7 +3481,7 @@ export default function TopBar() {
                       onClick={() => {
                         const nextName = window.prompt(
                           "Rename template",
-                          template.name
+                          template.name,
                         );
                         if (!nextName || !nextName.trim()) {
                           return;
@@ -3364,7 +3489,7 @@ export default function TopBar() {
                         const result = renameProjectTemplate(
                           template.id,
                           nextName,
-                          authUser?.id ?? null
+                          authUser?.id ?? null,
                         );
                         if (!result.ok) {
                           setTemplateStatus(result.error);
@@ -3379,12 +3504,14 @@ export default function TopBar() {
                     <button
                       className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] uppercase tracking-wide hover:border-[var(--accent-1)] hover:text-[var(--accent-1)]"
                       onClick={() => {
-                        if (!window.confirm(`Delete template "${template.name}"?`)) {
+                        if (
+                          !window.confirm(`Delete template "${template.name}"?`)
+                        ) {
                           return;
                         }
                         const result = deleteProjectTemplate(
                           template.id,
-                          authUser?.id ?? null
+                          authUser?.id ?? null,
                         );
                         if (!result.ok) {
                           setTemplateStatus(result.error);
@@ -3408,7 +3535,9 @@ export default function TopBar() {
                 Refresh
               </button>
               {templateStatus ? (
-                <p className="text-xs text-[var(--accent-1)]">{templateStatus}</p>
+                <p className="text-xs text-[var(--accent-1)]">
+                  {templateStatus}
+                </p>
               ) : null}
             </div>
           </div>
@@ -3481,11 +3610,14 @@ export default function TopBar() {
                           await navigator.clipboard.writeText(shareLinkUrl);
                           setShareLinkCopied(true);
                           setShareLinkStatus("Link copied.");
-                          window.setTimeout(() => setShareLinkCopied(false), 1600);
+                          window.setTimeout(
+                            () => setShareLinkCopied(false),
+                            1600,
+                          );
                         } catch {
                           setShareLinkCopied(false);
                           setShareLinkStatus(
-                            "Could not copy automatically. Copy from the field above."
+                            "Could not copy automatically. Copy from the field above.",
                           );
                         }
                       }}
@@ -3534,7 +3666,7 @@ export default function TopBar() {
                                 setShareLinkStatus("QR code downloaded.");
                               } catch {
                                 setShareLinkStatus(
-                                  "Could not download QR automatically. Open QR image and save manually."
+                                  "Could not download QR automatically. Open QR image and save manually.",
                                 );
                               }
                             }}
@@ -3606,7 +3738,9 @@ export default function TopBar() {
                   }`}
                   onClick={() => {
                     setPdfScope("project");
-                    setPdfSelectedBoardIds(project.boards.map((board) => board.id));
+                    setPdfSelectedBoardIds(
+                      project.boards.map((board) => board.id),
+                    );
                   }}
                 >
                   Whole project
@@ -3658,22 +3792,22 @@ export default function TopBar() {
                             </button>
                           </>
                         ) : null}
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        disabled={isLockedToActive}
-                        onChange={(event) => {
-                          const checked = event.target.checked;
-                          setPdfSelectedBoardIds((prev) => {
-                            if (checked) {
-                              return prev.includes(board.id)
-                                ? prev
-                                : [...prev, board.id];
-                            }
-                            return prev.filter((id) => id !== board.id);
-                          });
-                        }}
-                      />
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          disabled={isLockedToActive}
+                          onChange={(event) => {
+                            const checked = event.target.checked;
+                            setPdfSelectedBoardIds((prev) => {
+                              if (checked) {
+                                return prev.includes(board.id)
+                                  ? prev
+                                  : [...prev, board.id];
+                              }
+                              return prev.filter((id) => id !== board.id);
+                            });
+                          }}
+                        />
                       </div>
                     </label>
                   );
@@ -3788,7 +3922,7 @@ export default function TopBar() {
                       onClick={() =>
                         setBoardPitchView(
                           activeBoard.id,
-                          option.value as PitchView
+                          option.value as PitchView,
                         )
                       }
                     >
@@ -3860,6 +3994,7 @@ export default function TopBar() {
                   Show overlay text
                 </label>
               </div>
+
               <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
                 <p className="mb-2 text-[11px] uppercase">Player labels</p>
                 <div className="grid grid-cols-3 gap-2">
@@ -3911,6 +4046,36 @@ export default function TopBar() {
                 </div>
               </div>
               <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
+                <p className="mb-2 text-[11px] uppercase">
+                  Player visualization
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: "circle", label: "Circles" },
+                    { value: "jersey", label: "Jerseys" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      className={`rounded-2xl border px-3 py-2 text-xs ${
+                        (activeBoard.playerVisualization ?? "circle") ===
+                        option.value
+                          ? "border-[var(--accent-0)] bg-[var(--panel-2)] text-[var(--ink-0)]"
+                          : "border-[var(--line)] text-[var(--ink-1)] hover:border-[var(--accent-2)]"
+                      }`}
+                      onClick={() =>
+                        updateBoard(activeBoard.id, {
+                          playerVisualization: option.value as
+                            | "circle"
+                            | "jersey",
+                        })
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-3xl border border-[var(--line)] bg-[var(--panel-2)]/25 p-4">
                 <p className="mb-2 text-[11px] uppercase">Video watermark</p>
                 <div className="grid gap-2">
                   <label className="flex items-center gap-2 rounded-2xl border border-[var(--line)] px-3 py-2 text-[11px]">
@@ -3919,7 +4084,7 @@ export default function TopBar() {
                       checked={
                         plan !== "PAID"
                           ? true
-                          : activeBoard.watermarkEnabled ?? true
+                          : (activeBoard.watermarkEnabled ?? true)
                       }
                       onChange={(event) => {
                         if (plan !== "PAID") {
@@ -4005,7 +4170,7 @@ export default function TopBar() {
                       const next = event.target.checked;
                       if (next) {
                         const confirmed = window.confirm(
-                          "I understand and accept that this app is in beta and may contain bugs, even if the banner is hidden."
+                          "I understand and accept that this app is in beta and may contain bugs, even if the banner is hidden.",
                         );
                         if (!confirmed) {
                           return;
@@ -4015,7 +4180,7 @@ export default function TopBar() {
                       if (typeof window !== "undefined") {
                         window.localStorage.setItem(
                           "tacticsboard:hideBetaBanner",
-                          next ? "true" : "false"
+                          next ? "true" : "false",
                         );
                       }
                     }}

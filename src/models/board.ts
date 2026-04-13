@@ -84,6 +84,7 @@ export type Board = {
   homeSquadId?: string;
   awaySquadId?: string;
   squadOverrides?: Record<string, BoardSquadOverride>;
+  playerVisualization?: "circle" | "jersey";
   playerLabel: {
     showName: boolean;
     showPosition: boolean;
