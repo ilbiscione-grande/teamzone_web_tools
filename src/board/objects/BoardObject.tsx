@@ -655,6 +655,7 @@ export default function BoardObject({
     const linkRingStrokeWidth = depthStroke(0.62);
     const linkRingRadius =
       playerTokenSize + tokenOutlineWidth / 2 + linkRingStrokeWidth / 2;
+          const playerVisualRotation = isJerseyView ? labelRotation : 0;
     const squadPlayer =
       resolvedSquadPlayer ??
       (playerKey
@@ -879,68 +880,74 @@ export default function BoardObject({
             strokeWidth={depthStroke(0.3)}
           />
         )}
-        {renderPlayerBody(
-          playerTokenSize,
-          fillColor,
-          player.style.stroke,
-          tokenOutlineWidth,
-        )}
+        <Group rotation={playerVisualRotation}>
+          {renderPlayerBody(
+            playerTokenSize,
+            fillColor,
+            player.style.stroke,
+            tokenOutlineWidth
+          )}
 
-        {renderPlayerJerseyPattern(
-          playerTokenSize,
-          fillColor,
-          secondaryFillColor,
-          jerseyType,
-        )}
-        {renderShimmerSweepInCircle(0, 0, playerTokenSize)}
-        {isThreeDView && (
-          <>
-            <Circle
-              x={-playerTokenSize * 0.28}
-              y={-playerTokenSize * 0.3}
-              radius={playerTokenSize * 0.55}
-              fill="#ffffff"
-              opacity={0.18}
-              listening={false}
-            />
-            <Circle
-              x={playerTokenSize * 0.24}
-              y={playerTokenSize * 0.28}
-              radius={playerTokenSize * 0.7}
-              fill="#000000"
-              opacity={0.09}
-              listening={false}
-            />
-          </>
-        )}
-        {vestColor && (
-          <Group>
-            <Rect
-              x={-playerTokenSize * 0.9}
-              y={-playerTokenSize * 0.36}
-              width={playerTokenSize * 1.8}
-              height={playerTokenSize * 0.72}
-              fill={vestColor}
-              opacity={0.9}
-              cornerRadius={playerTokenSize * 0.08}
-            />
-            <Rect
-              x={-playerTokenSize * 0.36}
-              y={-playerTokenSize * 0.9}
-              width={playerTokenSize * 0.72}
-              height={playerTokenSize * 1.8}
-              fill={vestColor}
-              opacity={0.9}
-              cornerRadius={playerTokenSize * 0.08}
-            />
-          </Group>
-        )}
-        {renderPlayerOutline(
-          playerTokenSize,
-          player.style.stroke,
-          tokenOutlineWidth,
-        )}
-        {hasLabel && (
+          {renderPlayerJerseyPattern(
+            playerTokenSize,
+            fillColor,
+            secondaryFillColor,
+            jerseyType
+          )}
+
+          {!isJerseyView && renderShimmerSweepInCircle(0, 0, playerTokenSize)}
+
+          {isThreeDView && !isJerseyView && (
+            <>
+              <Circle
+                x={-playerTokenSize * 0.28}
+                y={-playerTokenSize * 0.3}
+                radius={playerTokenSize * 0.55}
+                fill="#ffffff"
+                opacity={0.18}
+                listening={false}
+              />
+              <Circle
+                x={playerTokenSize * 0.24}
+                y={playerTokenSize * 0.28}
+                radius={playerTokenSize * 0.7}
+                fill="#000000"
+                opacity={0.09}
+                listening={false}
+              />
+            </>
+          )}
+
+          {vestColor && (
+            <Group>
+              <Rect
+                x={-playerTokenSize * 0.9}
+                y={-playerTokenSize * 0.36}
+                width={playerTokenSize * 1.8}
+                height={playerTokenSize * 0.72}
+                fill={vestColor}
+                opacity={0.9}
+                cornerRadius={playerTokenSize * 0.08}
+              />
+              <Rect
+                x={-playerTokenSize * 0.36}
+                y={-playerTokenSize * 0.9}
+                width={playerTokenSize * 0.72}
+                height={playerTokenSize * 1.8}
+                fill={vestColor}
+                opacity={0.9}
+                cornerRadius={playerTokenSize * 0.08}
+              />
+            </Group>
+          )}
+
+          {renderPlayerOutline(
+            playerTokenSize,
+            player.style.stroke,
+            tokenOutlineWidth
+          )}
+        </Group>
+                {hasLabel && (
           <Group rotation={labelRotation} scaleY={textForeshorten}>
             <Text
               text={circleText}
